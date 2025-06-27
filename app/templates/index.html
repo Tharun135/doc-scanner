@@ -843,6 +843,26 @@ dropzone.addEventListener('drop', (e) => {
             return processedContent;
         }
 
+        // Format AI suggestion (structured output)
+        function formatAISuggestion(suggestionText) {
+            // Try to parse and format structured AI output
+            if (!suggestionText) return '';
+            // Split by newlines and look for KEY: value pairs
+            const lines = suggestionText.split(/\n|<br\s*\/?>(?=\w+:)/g);
+            let html = '';
+            lines.forEach(line => {
+                const match = line.match(/^([A-Z][A-Z_ \-]+):\s*(.*)$/i);
+                if (match) {
+                    const key = match[1].replace(/_/g, ' ').replace(/\b([a-z])/g, c => c.toUpperCase());
+                    const value = match[2];
+                    html += `<div style="margin-bottom:4px;"><strong>${key}:</strong> <span style="color:#333;background:rgba(255,255,255,0.7);padding:2px 4px;border-radius:3px;">${value}</span></div>`;
+                } else if (line.trim()) {
+                    html += `<div style="margin-bottom:4px;">${line}</div>`;
+                }
+            });
+            return html || suggestionText;
+        }
+
         // Enhanced feedback rendering with AI suggestions and hover highlighting
         async function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
             const feedbackContainer = document.getElementById('feedbackContent');
@@ -887,11 +907,11 @@ dropzone.addEventListener('drop', (e) => {
                                 <div class="suggestion-card mt-2 p-2">
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-robot"></i>
-                                        <span class="ms-2">AI Suggestion</span>
+                                        <span class="ms-2">AI Analysis & Solution</span>
                                         <span class="confidence-indicator confidence-${aiSuggestion.confidence}"></span>
                                         <span class="ai-enhancement-badge">${aiSuggestion.method}</span>
                                     </div>
-                                    <div class="suggestion-text">${aiSuggestion.suggestion}</div>
+                                    <div class="suggestion-text">${formatAISuggestion(aiSuggestion.suggestion)}</div>
                                     <div class="feedback-buttons">
                                         <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'helpful')">
                                             <i class="fas fa-thumbs-up"></i> Helpful

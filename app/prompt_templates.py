@@ -31,18 +31,53 @@ class AdvancedPromptTemplates:
     def get_system_prompt(document_type: DocumentType) -> str:
         """Get specialized system prompt based on document type."""
         
+        base_analytical_approach = """
+
+CRITICAL OUTPUT FORMAT:
+You MUST output EXACTLY this format, nothing else:
+
+CORRECTED TEXT: "[the exact sentence with the specific fix applied]"
+CHANGE MADE: [brief description of what was changed]
+
+RULES:
+1. Make ONLY the specific change mentioned in the issue
+2. Do NOT add extra improvements
+3. Do NOT provide general writing advice
+4. Do NOT explain why the change is important
+5. Use the EXACT format shown above
+
+Example:
+ISSUE: "Capitalize 'enter' key name"
+ORIGINAL: "Press the enter key to continue"
+CORRECTED TEXT: "Press the Enter key to continue"
+CHANGE MADE: Capitalized "enter" to "Enter"
+
+Be surgical and precise. Fix only what is requested."""
+
         system_prompts = {
-            DocumentType.TECHNICAL: """You are an expert technical writing editor with 15+ years of experience. You specialize in making complex technical content clear, accurate, and accessible. You understand software documentation, API guides, user manuals, and engineering specifications. Focus on precision, clarity, and user-friendliness.""",
+            DocumentType.TECHNICAL: f"""You are a precision technical text editor. You fix specific technical writing issues by applying the exact correction requested. You provide the corrected text with the precise change made.{base_analytical_approach}
+
+FOCUS: Apply the exact technical writing fix requested.""",
             
-            DocumentType.ACADEMIC: """You are a distinguished academic writing consultant with expertise in scholarly communication. You help researchers, students, and academics improve their papers, theses, and publications. Focus on argument strength, evidence support, formal tone, and academic conventions.""",
+            DocumentType.ACADEMIC: f"""You are a precision academic text editor. You fix specific academic writing issues by applying the exact correction requested. You provide the corrected text with the precise change made.{base_analytical_approach}
+
+FOCUS: Apply the exact academic writing fix requested.""",
             
-            DocumentType.BUSINESS: """You are a professional business communication expert. You specialize in corporate writing including reports, proposals, emails, and presentations. Focus on professionalism, clarity, persuasiveness, and executive-level communication.""",
+            DocumentType.BUSINESS: f"""You are a precision business text editor. You fix specific business writing issues by applying the exact correction requested. You provide the corrected text with the precise change made.{base_analytical_approach}
+
+FOCUS: Apply the exact business writing fix requested.""",
             
-            DocumentType.MARKETING: """You are a marketing copywriting specialist with expertise in persuasive, engaging content. You understand brand voice, audience psychology, and conversion-focused writing. Focus on engagement, clarity, and compelling calls-to-action.""",
+            DocumentType.MARKETING: f"""You are a precision marketing text editor. You fix specific marketing copy issues by applying the exact correction requested. You provide the corrected text with the precise change made.{base_analytical_approach}
+
+FOCUS: Apply the exact marketing copy fix requested.""",
             
-            DocumentType.CREATIVE: """You are a creative writing mentor with expertise in storytelling, narrative flow, and engaging prose. You help with fiction, creative nonfiction, and artistic expression. Focus on voice, flow, imagery, and reader engagement.""",
+            DocumentType.CREATIVE: f"""You are a precision creative text editor. You fix specific creative writing issues by applying the exact correction requested. You provide the corrected text with the precise change made.{base_analytical_approach}
+
+FOCUS: Apply the exact creative writing fix requested.""",
             
-            DocumentType.GENERAL: """You are a versatile writing coach with broad expertise across multiple writing contexts. You provide clear, actionable feedback to improve any type of writing. Focus on fundamental principles of clear, effective communication."""
+            DocumentType.GENERAL: f"""You are a precision text editor. You fix specific writing issues by applying the exact correction requested. You provide the corrected text with the precise change made.{base_analytical_approach}
+
+FOCUS: Apply the exact writing fix requested."""
         }
         
         return system_prompts.get(document_type, system_prompts[DocumentType.GENERAL])
@@ -53,83 +88,130 @@ class AdvancedPromptTemplates:
         """Get specialized prompt for specific feedback types."""
         
         base_context = f"""
-DOCUMENT TYPE: {document_type.value.title()}
-SENTENCE/TEXT: "{sentence_context}"
-ISSUE IDENTIFIED: {issue_description}
+ORIGINAL SENTENCE: "{sentence_context}"
+SPECIFIC ISSUE: {issue_description}
+
+CRITICAL: YOU MUST OUTPUT EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[the exact corrected sentence]"
+CHANGE MADE: [what specific change was made]
+
+DO NOT OUTPUT ANYTHING ELSE. NO EXPLANATIONS. NO ADDITIONAL ADVICE.
 """
         
         feedback_prompts = {
             FeedbackType.GRAMMAR: f"""{base_context}
 
-TASK: Fix the grammatical issue and explain the rule.
+TASK: Fix the grammar issue in the sentence.
 
-Provide your response in this format:
-PROBLEM: [Specific grammatical error]
-CORRECTION: [Exact corrected text]
-RULE: [Grammar rule explanation]
-EXAMPLE: [Additional example of correct usage]
+EXAMPLES:
+ORIGINAL: "The report was completed by the team"
+ISSUE: "Convert passive voice to active voice"
+CORRECTED TEXT: "The team completed the report"
+CHANGE MADE: Changed passive voice to active voice
 
-Focus on standard grammar rules, proper punctuation, and sentence structure.""",
+ORIGINAL: "The students can submit their assignments"
+ISSUE: "Replace 'can' with better alternative"
+CORRECTED TEXT: "The students may submit their assignments"
+CHANGE MADE: Replaced "can" with "may"
+
+YOU MUST USE EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[exact sentence with the fix applied]"
+CHANGE MADE: [brief description of what changed]""",
 
             FeedbackType.STYLE: f"""{base_context}
 
-TASK: Improve the writing style while maintaining the original meaning.
+TASK: Fix the style issue in the sentence.
 
-Provide your response in this format:
-STYLE ISSUE: [What makes this awkward or unclear]
-IMPROVED VERSION: [Rewritten text with better style]
-EXPLANATION: [Why this version is better]
-PRINCIPLE: [Style principle being applied]
+EXAMPLES:
+ORIGINAL: "It is important to note that we should consider implementing this feature"
+ISSUE: "Remove unnecessary words"
+CORRECTED TEXT: "We should implement this feature"
+CHANGE MADE: Removed unnecessary words "It is important to note that" and "consider"
 
-Focus on flow, word choice, rhythm, and readability.""",
+ORIGINAL: "The thing is that users can access the system"
+ISSUE: "Remove filler words"
+CORRECTED TEXT: "Users can access the system"
+CHANGE MADE: Removed filler phrase "The thing is that"
+
+YOU MUST USE EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[exact sentence with the fix applied]"
+CHANGE MADE: [brief description of what changed]""",
 
             FeedbackType.CLARITY: f"""{base_context}
 
-TASK: Make this text clearer and more understandable.
+TASK: Fix the clarity issue in the sentence.
 
-Provide your response in this format:
-CLARITY PROBLEM: [What makes this confusing]
-CLEARER VERSION: [Rewritten for maximum clarity]
-EXPLANATION: [How this improves understanding]
-AUDIENCE BENEFIT: [Why readers will appreciate this change]
+EXAMPLES:
+ORIGINAL: "The system processes it automatically"
+ISSUE: "Clarify ambiguous pronoun 'it'"
+CORRECTED TEXT: "The system processes user data automatically"
+CHANGE MADE: Replaced ambiguous pronoun "it" with "user data"
 
-Focus on removing ambiguity, simplifying complex ideas, and improving comprehension.""",
+ORIGINAL: "Click the enter key"
+ISSUE: "Capitalize key names: 'Enter'"
+CORRECTED TEXT: "Click the Enter key"
+CHANGE MADE: Capitalized "enter" to "Enter"
+
+YOU MUST USE EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[exact sentence with the fix applied]"
+CHANGE MADE: [brief description of what changed]""",
 
             FeedbackType.STRUCTURE: f"""{base_context}
 
-TASK: Improve the logical structure and organization.
+TASK: Fix the structural issue in the sentence.
 
-Provide your response in this format:
-STRUCTURAL ISSUE: [Problems with organization or flow]
-RESTRUCTURED VERSION: [Better organized text]
-LOGIC: [How the new structure improves logic]
-FLOW: [How this helps reader follow the argument]
+EXAMPLES:
+ORIGINAL: "After installation, first download the software"
+ISSUE: "Fix logical order"
+CORRECTED TEXT: "First download the software, then install it"
+CHANGE MADE: Reordered steps to follow logical sequence
 
-Focus on logical progression, transitions, and information hierarchy.""",
+ORIGINAL: "The API, which was developed last year, handles requests"
+ISSUE: "Simplify complex structure"
+CORRECTED TEXT: "The API handles requests. It was developed last year."
+CHANGE MADE: Split complex sentence into two simpler sentences
+
+YOU MUST USE EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[exact sentence with the fix applied]"
+CHANGE MADE: [brief description of what changed]""",
 
             FeedbackType.TONE: f"""{base_context}
 
-TASK: Adjust the tone to be more appropriate for the context and audience.
+TASK: Fix the tone issue in the sentence.
 
-Provide your response in this format:
-TONE ISSUE: [Current tone problems]
-ADJUSTED VERSION: [Text with improved tone]
-TONE ACHIEVED: [Description of the new tone]
-AUDIENCE FIT: [Why this tone works better for the intended audience]
+EXAMPLES:
+ORIGINAL: "This is totally broken and we gotta fix it now"
+ISSUE: "Make more professional"
+CORRECTED TEXT: "This requires immediate attention and resolution"
+CHANGE MADE: Made language more professional and formal
 
-Focus on formality level, warmth, authority, and audience appropriateness.""",
+ORIGINAL: "The utilization of this methodology facilitates optimization"
+ISSUE: "Make less formal"
+CORRECTED TEXT: "This method helps improve results"
+CHANGE MADE: Replaced formal words with simpler alternatives
+
+YOU MUST USE EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[exact sentence with the fix applied]"
+CHANGE MADE: [brief description of what changed]""",
 
             FeedbackType.CONCISENESS: f"""{base_context}
 
-TASK: Make this text more concise without losing important information.
+TASK: Fix the wordiness issue in the sentence.
 
-Provide your response in this format:
-WORDINESS PROBLEM: [What makes this unnecessarily long]
-CONCISE VERSION: [Shortened text maintaining meaning]
-WORDS SAVED: [Original word count → New word count]
-IMPACT: [How conciseness improves the text]
+EXAMPLES:
+ORIGINAL: "In order to be able to access the system successfully"
+ISSUE: "Remove redundant words"
+CORRECTED TEXT: "To access the system"
+CHANGE MADE: Removed redundant words "in order", "be able to", and "successfully"
 
-Focus on eliminating redundancy, unnecessary words, and verbose constructions."""
+ORIGINAL: "The fact of the matter is that we need to make improvements"
+ISSUE: "Eliminate unnecessary phrases"
+CORRECTED TEXT: "We need to make improvements"
+CHANGE MADE: Removed unnecessary phrase "The fact of the matter is that"
+
+YOU MUST USE EXACTLY THIS FORMAT:
+CORRECTED TEXT: "[exact sentence with the fix applied]"
+CHANGE MADE: [brief description of what changed]"""
         }
         
         return feedback_prompts.get(feedback_type, feedback_prompts[FeedbackType.CLARITY])
@@ -141,31 +223,29 @@ Focus on eliminating redundancy, unnecessary words, and verbose constructions.""
         examples = {
             (FeedbackType.CLARITY, DocumentType.TECHNICAL): """
 EXAMPLE 1:
-ISSUE: Technical jargon without explanation
-ORIGINAL: "The API endpoint utilizes RESTful architecture with JWT authentication."
-IMPROVED: "The API endpoint uses RESTful architecture (a standard web service design) with JWT authentication (a secure login method)."
-EXPLANATION: Added brief explanations for technical terms to help non-technical readers.
+ISSUE: "Capitalize key names: 'Enter'"
+ORIGINAL: "Press the enter key to continue"
+CORRECTED TEXT: "Press the Enter key to continue"
+CHANGE MADE: Capitalized "enter" to "Enter"
 
 EXAMPLE 2:
-ISSUE: Complex sentence with multiple concepts
-ORIGINAL: "When implementing the caching mechanism, ensure that the TTL values are configured appropriately to balance performance gains with data freshness requirements."
-IMPROVED: "When implementing caching, set TTL (time-to-live) values carefully. Balance faster performance with up-to-date data."
-EXPLANATION: Broke complex sentence into shorter ones and defined the acronym.""",
+ISSUE: "Define acronym API"
+ORIGINAL: "Use the API to fetch data"
+CORRECTED TEXT: "Use the API (Application Programming Interface) to fetch data"
+CHANGE MADE: Added definition for acronym API""",
 
             (FeedbackType.CONCISENESS, DocumentType.BUSINESS): """
 EXAMPLE 1:
-ISSUE: Unnecessary business jargon
-ORIGINAL: "In order to optimize our operational efficiency and maximize our ROI, we should leverage our core competencies."
-IMPROVED: "To work more efficiently and increase profits, we should use our strengths."
-WORDS SAVED: 19 → 13 words
-EXPLANATION: Replaced jargon with plain language while keeping the meaning.
+ISSUE: "Remove redundant phrase 'in order to'"
+ORIGINAL: "In order to improve efficiency, we need to streamline processes"
+CORRECTED TEXT: "To improve efficiency, we need to streamline processes"
+CHANGE MADE: Removed redundant phrase "in order"
 
 EXAMPLE 2:
-ISSUE: Redundant phrases
-ORIGINAL: "The end result of this analysis shows that we need to make improvements to our customer service."
-IMPROVED: "This analysis shows we need better customer service."
-WORDS SAVED: 16 → 9 words
-EXPLANATION: Removed redundant "end result" and simplified the conclusion."""
+ISSUE: "Eliminate filler words"
+ORIGINAL: "We basically need to sort of implement this solution"
+CORRECTED TEXT: "We need to implement this solution"
+CHANGE MADE: Removed filler words "basically" and "sort of"""
         }
         
         key = (feedback_type, document_type)
@@ -173,7 +253,7 @@ EXPLANATION: Removed redundant "end result" and simplified the conclusion."""
             return f"\nHERE ARE EXAMPLES OF GOOD IMPROVEMENTS:\n{examples[key]}\n"
         
         # Return general examples if no specific match
-        return f"\nFOLLOW THESE PRINCIPLES:\n- Be specific and actionable\n- Maintain the original meaning\n- Consider the {document_type.value} audience\n- Focus on {feedback_type.value} improvements\n"
+        return f"\nEXAMPLE FORMAT:\nISSUE: [The specific problem to fix]\nORIGINAL: [Original text]\nCORRECTED TEXT: [Fixed text]\nCHANGE MADE: [What was changed]\n\nFOCUS: Make ONLY the change specified in the issue.\n"
     
     @staticmethod
     def build_complete_prompt(feedback_type: FeedbackType, issue_description: str,
@@ -191,14 +271,24 @@ EXPLANATION: Removed redundant "end result" and simplified the conclusion."""
         )
         
         user_prompt = f"""
-WRITING GOALS: {goals_text}
+ISSUE TO FIX: {issue_description}
+ORIGINAL TEXT: "{sentence_context}"
+
+TASK: Fix ONLY the issue specified above. Make no other changes.
+
+MANDATORY OUTPUT FORMAT (use exactly this):
+CORRECTED TEXT: "[exact sentence with only the specified fix]"
+CHANGE MADE: [what was changed]
 
 {few_shot_examples}
 
-{feedback_prompt}
+CRITICAL REMINDER:
+- Fix ONLY the issue mentioned
+- Use EXACTLY the format shown above
+- Do not add explanations or extra advice
+- Be precise and surgical
 
-Remember: Provide specific, actionable feedback that aligns with {document_type.value} writing standards and helps achieve {goals_text}.
-"""
+NOW APPLY THE FIX:"""
         
         return {
             "system": system_prompt,

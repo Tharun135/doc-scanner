@@ -133,14 +133,20 @@ Now provide your suggestion for the current issue:"""
                     }
                 ],
                 options={
-                    'temperature': 0.2,  # Even lower for more consistent responses
-                    'top_p': 0.85,
-                    'max_tokens': 400,
-                    'repeat_penalty': 1.1
+                    'temperature': 0.01,  # Extremely low for maximum consistency
+                    'top_p': 0.3,        # Even lower to focus on most likely tokens
+                    'max_tokens': 150,   # Shorter limit to force concise responses
+                    'repeat_penalty': 1.3,  # Higher to prevent repetition
+                    'top_k': 10,        # Very low to focus responses extremely
+                    'seed': 42,         # For consistency
+                    'stop': ['\n\n', 'ADDITIONAL', 'ALSO', 'FURTHERMORE', 'MOREOVER', 'EXPLANATION:', 'ANALYSIS:', 'NOTE:', 'REMEMBER:', 'CONSIDER:', 'However,', 'Additionally,', 'In conclusion']  # Stop generating if AI tries to add extra info
                 }
             )
             
             suggestion = response['message']['content'].strip()
+            
+            # Post-process to ensure exact format
+            suggestion = self._post_process_ai_response(suggestion, sentence_context, feedback_text)
             
             return {
                 "suggestion": suggestion,
@@ -281,6 +287,61 @@ Now provide your suggestion for the current issue:"""
             suggestions.append("• Adjust formality level to match your audience and purpose")
         
         return "\n".join(suggestions)
+    
+    def _post_process_ai_response(self, ai_response: str, original_sentence: str, issue: str) -> str:
+        """
+        Post-process AI response to ensure it follows the exact required format.
+        """
+        try:
+            # Clean up the response
+            response = ai_response.strip()
+            
+            # Check if response already has the correct format
+            if "CORRECTED TEXT:" in response and "CHANGE MADE:" in response:
+                return response
+            
+            # Try to extract corrected text from various formats the AI might use
+            corrected_text = original_sentence  # fallback
+            change_made = "Applied requested fix"  # fallback
+            
+            # Look for common patterns
+            patterns = [
+                r'"([^"]+)"',  # Text in quotes
+                r'REWRITTEN:\s*"([^"]+)"',
+                r'CORRECTED:\s*"([^"]+)"',
+                r'FIXED:\s*"([^"]+)"',
+                r'SUGGESTION:\s*"([^"]+)"'
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, response, re.IGNORECASE)
+                if match:
+                    corrected_text = match.group(1)
+                    break
+            
+            # Look for change explanation
+            change_patterns = [
+                r'CHANGE MADE:\s*(.+?)(?:\n|$)',
+                r'WHAT CHANGED:\s*(.+?)(?:\n|$)',
+                r'FIXED:\s*(.+?)(?:\n|$)',
+                r'CHANGED:\s*(.+?)(?:\n|$)'
+            ]
+            
+            for pattern in change_patterns:
+                match = re.search(pattern, response, re.IGNORECASE)
+                if match:
+                    change_made = match.group(1).strip()
+                    break
+            
+            # Force the exact format
+            formatted_response = f'CORRECTED TEXT: "{corrected_text}"\nCHANGE MADE: {change_made}'
+            
+            return formatted_response
+            
+        except Exception as e:
+            logger.warning(f"Post-processing failed: {str(e)}")
+            # Return a minimal format if everything fails
+            return f'CORRECTED TEXT: "{original_sentence}"\nCHANGE MADE: Applied requested fix'
 
 # Global instance for easy use
 ai_engine = EnhancedAISuggestionEngine()
