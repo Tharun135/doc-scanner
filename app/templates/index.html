@@ -84,13 +84,23 @@
         .sentence {
             transition: background-color 0.3s ease;
             cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 2px 0;
+            display: inline-block;
+            line-height: 1.6;
         }
 
         .sentence.highlight {
             background-color: var(--highlight-color);
             color: black;
-            padding: 2px 4px;
-            border-radius: 3px;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+        }
+
+        .sentence.has-feedback {
+            border-left: 3px solid #ffc107;
+            background-color: rgba(255, 193, 7, 0.1);
         }
 
         .feedback-item {
@@ -98,12 +108,87 @@
             color: #333 !important;              /* Dark text for contrast */
             border-left: 5px solid #ffc107;      /* Emphasize with a yellow border */
             font-weight: 500;
-            font-size: 1rem;
-            margin-bottom: 12px;
-            padding: 12px 16px;
-            border-radius: 5px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-            transition: background 0.2s;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-item:hover {
+            background: #fff3cd !important;
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .feedback-item.highlighted {
+            background: #e7f3ff !important;
+            border-left-color: #007bff !important;
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .original-content {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .sentence-container {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .sentence-list {
+            line-height: 1.8;
+        }
+
+        .sentence-highlight {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin: 1px 0;
+            position: relative;
+            display: inline;
+            line-height: 1.6;
+        }
+
+        .sentence-highlight.highlight {
+            background-color: #ffeb3b;
+            color: #333;
+            font-weight: 500;
+            border: 1px solid #fdd835;
+        }
+
+        .sentence-highlight.has-feedback {
+            background-color: rgba(255, 193, 7, 0.2);
+            border-bottom: 2px solid #ff9800;
+        }
+
+        .sentence-highlight.has-feedback:hover {
+            background-color: rgba(255, 193, 7, 0.3);
+            border-bottom-color: #f57c00;
+        }
+
+        .sentence-highlight.sentence-not-found {
+            background-color: #ffcdd2;
+            border: 1px solid #f44336;
+            padding: 3px 6px;
+            font-size: 0.85em;
+            color: #d32f2f;
+            font-weight: 500;
+            border-radius: 4px;
+        }
+
+        .sentence-highlight.sentence-not-found:hover {
+            background-color: #ef9a9a;
         }
 
         .document-section table {
@@ -161,6 +246,105 @@
     text-align: center;
     color: #FFD700;
 }
+
+/* AI Enhancement Indicators */
+.ai-enhancement-badge {
+    background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+.confidence-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 0.25rem;
+}
+
+.confidence-high { background-color: #00b894; }
+.confidence-medium { background-color: #fdcb6e; }
+.confidence-low { background-color: #e17055; }
+
+.suggestion-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.feedback-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.feedback-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.feedback-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.feedback-btn.active {
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
+}        .document-type-selector {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #333;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .document-type-selector option {
+            background: #fff;
+            color: #333;
+            padding: 0.5rem;
+        }
+
+.writing-goals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.goal-tag {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.goal-tag.selected {
+    background: var(--secondary-color);
+}
+
+.performance-indicator {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    z-index: 1000;
+}
     </style>
 </head>
 <body>
@@ -190,6 +374,31 @@
                     <h5><i class="fas fa-upload"></i> Upload Document</h5>
                 </div>
                 <div class="card-body">
+                    <!-- Document Type Selector -->
+                    <div class="mb-3">
+                        <label for="documentType" class="form-label">Document Type:</label>
+                        <select id="documentType" class="document-type-selector w-100">
+                            <option value="general">General</option>
+                            <option value="technical">Technical Documentation</option>
+                            <option value="academic">Academic Writing</option>
+                            <option value="business">Business Communication</option>
+                            <option value="marketing">Marketing Content</option>
+                            <option value="creative">Creative Writing</option>
+                        </select>
+                    </div>
+
+                    <!-- Writing Goals -->
+                    <div class="mb-3">
+                        <label class="form-label">Writing Goals:</label>
+                        <div class="writing-goals">
+                            <span class="goal-tag selected" data-goal="clarity">Clarity</span>
+                            <span class="goal-tag selected" data-goal="conciseness">Conciseness</span>
+                            <span class="goal-tag" data-goal="engagement">Engagement</span>
+                            <span class="goal-tag" data-goal="professionalism">Professional</span>
+                            <span class="goal-tag" data-goal="accessibility">Accessible</span>
+                        </div>
+                    </div>
+
                     <form id="uploadForm" enctype="multipart/form-data">
                         <div id="dropzone" class="dropzone mb-3">
                             <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
@@ -199,8 +408,32 @@
                         </div>
                         <button class="btn btn-primary w-100" type="submit">
                             <i class="fas fa-upload"></i> Upload & Analyze
+                            <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
                     </form>
+                </div>
+            </div>
+
+            <!-- AI Performance -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-brain"></i> AI Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div id="aiPerformance">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Response Quality:</span>
+                            <span id="qualityScore">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Response Time:</span>
+                            <span id="responseTime">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Method Used:</span>
+                            <span id="aiMethod">-</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -387,67 +620,526 @@ dropzone.addEventListener('drop', (e) => {
     });
 }
 
-        // Content rendering
-        function renderContent(content, sentences) {
-    const docContainer = document.getElementById('documentContent');
-    const feedbackContainer = document.getElementById('feedbackContent');
+        // Enhanced AI functionality
+        let currentSuggestionId = null;
+        let selectedWritingGoals = ['clarity', 'conciseness'];
+        
+        // Goal tag selection
+        document.querySelectorAll('.goal-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                const goal = tag.dataset.goal;
+                tag.classList.toggle('selected');
+                
+                if (tag.classList.contains('selected')) {
+                    if (!selectedWritingGoals.includes(goal)) {
+                        selectedWritingGoals.push(goal);
+                    }
+                } else {
+                    selectedWritingGoals = selectedWritingGoals.filter(g => g !== goal);
+                }
+            });
+        });
 
-    // Convert all Markdown (including tables) to HTML if any table markdown is detected
-    let htmlContent = content;
-    if (/\|.*\|/.test(content)) {
-        htmlContent = marked.parse(content);
-    }
-
-    docContainer.innerHTML = '<h4>Document Content</h4>' + htmlContent;
-    feedbackContainer.innerHTML = '<h4>Feedback</h4>';
-
-    // Highlight sentences by wrapping them in a span
-    let html = docContainer.innerHTML;
-    sentences.forEach((sentence, index) => {
-        const escaped = sentence.sentence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        html = html.replace(
-            new RegExp(escaped),
-            `<span class="sentence" data-index="${index}">${sentence.sentence}</span>`
-        );
-    });
-    docContainer.innerHTML = html;
-
-    // Feedback rendering
-    sentences.forEach((sentence, index) => {
-        if (sentence.feedback.length) {
-            sentence.feedback.forEach(fb => {
-                const fbDiv = document.createElement('div');
-                fbDiv.className = 'alert alert-warning feedback-item d-flex justify-content-between align-items-center';
-                fbDiv.innerHTML = `
-                    <span>${fb}</span>
-                    <button class="btn btn-sm btn-outline-primary ai-suggest-btn" data-feedback="${encodeURIComponent(fb)}" data-index="${index}" title="Get AI Suggestion">
-                        <i class="fas fa-lightbulb"></i>
-                    </button>
-                `;
-                fbDiv.dataset.index = index;
-                feedbackContainer.appendChild(fbDiv);
+        // Sentence highlighting and navigation functions
+        function highlightSentence(sentenceIndex) {
+            // Remove any existing highlights
+            unhighlightAllSentences();
+            
+            // Highlight the target sentence in the content
+            const contentSentence = document.getElementById(`content-sentence-${sentenceIndex}`);
+            if (contentSentence) {
+                contentSentence.classList.add('highlight');
+                
+                // Auto-scroll to center the sentence in the Document Content section
+                const documentSection = document.querySelector('.document-section');
+                if (documentSection) {
+                    const sentenceRect = contentSentence.getBoundingClientRect();
+                    const sectionRect = documentSection.getBoundingClientRect();
+                    
+                    // Calculate the scroll position to center the sentence
+                    const sectionCenter = sectionRect.height / 2;
+                    const sentenceRelativeTop = sentenceRect.top - sectionRect.top;
+                    const scrollTarget = documentSection.scrollTop + sentenceRelativeTop - sectionCenter;
+                    
+                    // Smooth scroll to the target position
+                    documentSection.scrollTo({
+                        top: scrollTarget,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+            
+            // Also highlight in interactive section if it exists
+            const interactiveSentence = document.getElementById(`sentence-${sentenceIndex}`);
+            if (interactiveSentence) {
+                interactiveSentence.classList.add('highlight');
+            }
+        }
+        
+        function unhighlightAllSentences() {
+            // Remove highlights from content sentences
+            document.querySelectorAll('.sentence-highlight.highlight').forEach(sentence => {
+                sentence.classList.remove('highlight');
+            });
+            
+            // Remove highlights from interactive sentences
+            document.querySelectorAll('.sentence.highlight').forEach(sentence => {
+                sentence.classList.remove('highlight');
             });
         }
-    });
-
-    // Add hover event listeners for feedback highlighting
-    document.querySelectorAll('.feedback-item').forEach(item => {
-    item.addEventListener('mouseenter', function() {
-        const idx = this.dataset.index;
-        const sentenceSpan = document.querySelector(`.sentence[data-index="${idx}"]`);
-        if (sentenceSpan) {
-            sentenceSpan.classList.add('highlight');
-            sentenceSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        function highlightFeedbackForSentence(sentenceIndex) {
+            // Remove any existing feedback highlights
+            document.querySelectorAll('.feedback-item.highlighted').forEach(item => {
+                item.classList.remove('highlighted');
+            });
+            
+            // Highlight corresponding feedback items
+            document.querySelectorAll(`.feedback-item[data-sentence-index="${sentenceIndex}"]`).forEach(item => {
+                item.classList.add('highlighted');
+            });
         }
-    });
-    item.addEventListener('mouseleave', function() {
-        const idx = this.dataset.index;
-        const sentenceSpan = document.querySelector(`.sentence[data-index="${idx}"]`);
-        if (sentenceSpan) sentenceSpan.classList.remove('highlight');
-    });
-});
-}
+        
+        function scrollToSentence(sentenceIndex) {
+            // Try content sentence first, then interactive sentence
+            let sentenceElement = document.getElementById(`content-sentence-${sentenceIndex}`);
+            if (!sentenceElement) {
+                sentenceElement = document.getElementById(`sentence-${sentenceIndex}`);
+            }
+            
+            if (sentenceElement) {
+                sentenceElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+                
+                // Temporarily highlight the sentence
+                highlightSentence(sentenceIndex);
+                setTimeout(() => {
+                    unhighlightAllSentences();
+                }, 2000);
+            }
+        }
 
+        // Add click handlers to content sentences after they're created
+        function addContentSentenceHandlers() {
+            document.querySelectorAll('.sentence-highlight').forEach((sentence, index) => {
+                sentence.addEventListener('click', () => {
+                    const sentenceIndex = parseInt(sentence.getAttribute('data-sentence-index'));
+                    highlightFeedbackForSentence(sentenceIndex);
+                });
+            });
+        }
+
+        // Function to add sentence highlighting to HTML content
+        function addSentenceHighlighting(htmlContent, sentences) {
+            let processedContent = htmlContent;
+            
+            console.log('Processing sentences for highlighting:', sentences.length);
+            console.log('Original HTML content:', htmlContent);
+            
+            // First, try to get plain text equivalent of HTML for better matching
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            const plainTextContent = tempDiv.textContent || tempDiv.innerText || '';
+            console.log('Plain text content:', plainTextContent);
+            
+            sentences.forEach((sentenceData, index) => {
+                const sentence = sentenceData.sentence.trim();
+                if (sentence) {
+                    console.log(`Processing sentence ${index}:`, sentence);
+                    
+                    let found = false;
+                    const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
+                    const feedbackClass = hasFeedback ? ' has-feedback' : '';
+                    
+                    // Approach 1: Direct HTML match (works for simple cases)
+                    if (processedContent.includes(sentence)) {
+                        const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                        processedContent = processedContent.replace(sentence, replacement);
+                        found = true;
+                        console.log(`✓ Direct HTML match for sentence ${index}`);
+                    }
+                    
+                    // Approach 2: Try to find sentence in plain text and map back to HTML
+                    if (!found && plainTextContent.includes(sentence)) {
+                        // Find all words in the sentence
+                        const words = sentence.split(/\s+/).filter(word => word.length > 2);
+                        
+                        if (words.length > 0) {
+                            // Create a regex that finds the sentence allowing for HTML tags between words
+                            const wordPattern = words.map(word => 
+                                word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                            ).join('(?:[^>]*>.*?<[^>]*)*\\s*');
+                            
+                            const regex = new RegExp(`(${wordPattern})`, 'gi');
+                            
+                            const match = processedContent.match(regex);
+                            if (match) {
+                                const matchedText = match[0];
+                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
+                                processedContent = processedContent.replace(matchedText, replacement);
+                                found = true;
+                                console.log(`✓ Word-based match for sentence ${index}`);
+                            }
+                        }
+                    }
+                    
+                    // Approach 3: Fuzzy text-only match (last resort)
+                    if (!found) {
+                        // Try to find just the key parts of the sentence
+                        const significantWords = sentence.split(/\s+/).filter(word => 
+                            word.length > 3 && !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'was', 'one', 'our', 'out', 'day', 'get', 'use', 'man', 'new', 'now', 'old', 'see', 'him', 'two', 'how', 'its', 'who', 'oil', 'sit', 'set'].includes(word.toLowerCase())
+                        );
+                        
+                        if (significantWords.length >= 2) {
+                            let bestMatch = null;
+                            let bestMatchLength = 0;
+                            
+                            // Look for the longest substring that contains significant words
+                            const tempDiv2 = document.createElement('div');
+                            tempDiv2.innerHTML = processedContent;
+                            const textContent = tempDiv2.textContent;
+                            
+                            significantWords.forEach(word => {
+                                const wordRegex = new RegExp(`[^.!?]*${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.!?]*[.!?]`, 'gi');
+                                const matches = textContent.match(wordRegex);
+                                if (matches) {
+                                    matches.forEach(match => {
+                                        if (match.length > bestMatchLength) {
+                                            bestMatch = match.trim();
+                                            bestMatchLength = match.length;
+                                        }
+                                    });
+                                }
+                            });
+                            
+                            if (bestMatch && processedContent.includes(bestMatch)) {
+                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${bestMatch}</span>`;
+                                processedContent = processedContent.replace(bestMatch, replacement);
+                                found = true;
+                                console.log(`✓ Fuzzy match for sentence ${index}: "${bestMatch}"`);
+                            }
+                        }
+                    }
+                    
+                    if (!found) {
+                        console.warn(`✗ Could not find sentence ${index} in content:`, sentence);
+                        
+                        // As absolute last resort, just add a marker
+                        const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${sentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
+                        
+                        // Try to insert the marker near related content
+                        const firstWords = sentence.split(' ').slice(0, 3).join(' ');
+                        if (processedContent.includes(firstWords)) {
+                            processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
+                            console.log(`Added fallback marker for sentence ${index}`);
+                        }
+                    }
+                }
+            });
+            
+            console.log('Final processed content length:', processedContent.length);
+            return processedContent;
+        }
+
+        // Enhanced feedback rendering with AI suggestions and hover highlighting
+        async function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
+            const feedbackContainer = document.getElementById('feedbackContent');
+            
+            console.log('renderFeedbackWithAI called with:', feedback, sentence, sentenceIndex);
+            
+            for (const item of feedback) {
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = 'feedback-item p-3 mb-2 border-start';
+                feedbackDiv.setAttribute('data-sentence-index', sentenceIndex);
+                feedbackDiv.setAttribute('data-order', sentenceIndex); // For sorting
+                
+                // Add hover functionality to highlight corresponding sentence
+                feedbackDiv.addEventListener('mouseenter', () => {
+                    highlightSentence(sentenceIndex);
+                });
+                
+                feedbackDiv.addEventListener('mouseleave', () => {
+                    unhighlightAllSentences();
+                });
+                
+                // Add click functionality to scroll to sentence
+                feedbackDiv.addEventListener('click', () => {
+                    scrollToSentence(sentenceIndex);
+                });
+                
+                console.log('Processing feedback item:', item);
+                
+                // Get AI suggestion
+                const aiSuggestion = await getAISuggestion(item.message, sentence);
+                console.log('AI suggestion received:', aiSuggestion);
+                
+                feedbackDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="mb-2">
+                                <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                                <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
+                            </div>
+                            <strong>Issue:</strong> ${item.message}
+                            ${aiSuggestion ? `
+                                <div class="suggestion-card mt-2 p-2">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-robot"></i>
+                                        <span class="ms-2">AI Suggestion</span>
+                                        <span class="confidence-indicator confidence-${aiSuggestion.confidence}"></span>
+                                        <span class="ai-enhancement-badge">${aiSuggestion.method}</span>
+                                    </div>
+                                    <div class="suggestion-text">${aiSuggestion.suggestion}</div>
+                                    <div class="feedback-buttons">
+                                        <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'helpful')">
+                                            <i class="fas fa-thumbs-up"></i> Helpful
+                                        </button>
+                                        <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'not-helpful')">
+                                            <i class="fas fa-thumbs-down"></i> Not Helpful
+                                        </button>
+                                        <button class="feedback-btn" onclick="implementSuggestion('${aiSuggestion.suggestion_id}')">
+                                            <i class="fas fa-check"></i> Implemented
+                                        </button>
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="mt-2 p-2 bg-warning text-dark rounded">
+                                    <small><i class="fas fa-exclamation-triangle"></i> AI suggestion not available</small>
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+                
+                // Insert in the correct order
+                const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));
+                let inserted = false;
+                
+                for (let existingItem of existingItems) {
+                    const existingOrder = parseInt(existingItem.getAttribute('data-order'));
+                    if (sentenceIndex < existingOrder) {
+                        feedbackContainer.insertBefore(feedbackDiv, existingItem);
+                        inserted = true;
+                        break;
+                    }
+                }
+                
+                if (!inserted) {
+                    feedbackContainer.appendChild(feedbackDiv);
+                }
+            }
+        }
+
+        async function getAISuggestion(feedback, sentence) {
+            try {
+                const documentType = document.getElementById('documentType').value;
+                
+                console.log('Calling AI suggestion with:', {
+                    feedback: feedback,
+                    sentence: sentence,
+                    document_type: documentType,
+                    writing_goals: selectedWritingGoals
+                });
+                
+                const response = await fetch('/ai_suggestion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        feedback: feedback,
+                        sentence: sentence,
+                        document_type: documentType,
+                        writing_goals: selectedWritingGoals
+                    })
+                });
+
+                console.log('AI suggestion response status:', response.status);
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('AI suggestion result:', result);
+                    return result;
+                } else {
+                    console.error('AI suggestion failed with status:', response.status);
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                }
+            } catch (error) {
+                console.error('AI suggestion error:', error);
+            }
+            return null;
+        }
+
+        function updateAIPerformance(suggestion) {
+            const confidenceMap = {
+                'high': '★★★',
+                'medium': '★★☆',
+                'low': '★☆☆'
+            };
+            
+            document.getElementById('qualityScore').textContent = confidenceMap[suggestion.confidence] || '-';
+            document.getElementById('aiMethod').textContent = suggestion.method || '-';
+            
+            // Show performance indicator
+            const indicator = document.createElement('div');
+            indicator.className = 'performance-indicator';
+            indicator.textContent = `AI Response: ${suggestion.confidence} confidence`;
+            document.body.appendChild(indicator);
+            
+            setTimeout(() => {
+                indicator.remove();
+            }, 3000);
+        }
+
+        async function rateSuggestion(suggestionId, rating) {
+            try {
+                const response = await fetch('/suggestion_feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        suggestion_id: suggestionId,
+                        was_helpful: rating === 'helpful'
+                    })
+                });
+
+                if (response.ok) {
+                    // Visual feedback
+                    event.target.classList.add('active');
+                    event.target.innerHTML = rating === 'helpful' ? 
+                        '<i class="fas fa-check"></i> Thanks!' : 
+                        '<i class="fas fa-check"></i> Noted';
+                }
+            } catch (error) {
+                console.error('Feedback error:', error);
+            }
+        }
+
+        async function implementSuggestion(suggestionId) {
+            try {
+                const response = await fetch('/suggestion_feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        suggestion_id: suggestionId,
+                        was_implemented: true
+                    })
+                });
+
+                if (response.ok) {
+                    event.target.classList.add('active');
+                    event.target.innerHTML = '<i class="fas fa-check"></i> Implemented';
+                }
+            } catch (error) {
+                console.error('Implementation feedback error:', error);
+            }
+        }
+
+        // Enhanced content rendering with sentence highlighting
+        function renderContent(content, sentences) {
+            const documentContent = document.getElementById('documentContent');
+            const feedbackContent = document.getElementById('feedbackContent');
+            
+            // Clear previous content
+            documentContent.innerHTML = '<h4>Document Content</h4>';
+            feedbackContent.innerHTML = '<h4>AI-Enhanced Feedback</h4>';
+            
+            console.log('Processing sentences:', sentences.length);
+            console.log('Sentences data:', sentences);
+            
+            // Create enhanced HTML content with highlighted sentences
+            const originalContentDiv = document.createElement('div');
+            originalContentDiv.className = 'original-content mt-3';
+            
+            // Process the HTML content to add sentence highlighting
+            const enhancedContent = addSentenceHighlighting(content, sentences);
+            originalContentDiv.innerHTML = enhancedContent;
+            
+            // Store sentences for reference
+            window.currentSentences = sentences;
+            
+            // Add the enhanced content to document
+            documentContent.appendChild(originalContentDiv);
+            
+            // Add click handlers to the newly created sentence spans
+            setTimeout(() => {
+                addContentSentenceHandlers();
+            }, 100);
+            
+            // Process sentences with AI enhancement - in document order
+            let feedbackCount = 0;
+            const feedbackPromises = [];
+            
+            // Collect all feedback rendering promises to maintain order
+            sentences.forEach((sentenceData, index) => {
+                console.log(`Sentence ${index}:`, sentenceData);
+                if (sentenceData.feedback && sentenceData.feedback.length > 0) {
+                    feedbackCount++;
+                    console.log(`Rendering feedback for sentence ${index}:`, sentenceData.feedback);
+                    // Store the promise with the index to maintain order
+                    feedbackPromises.push({
+                        index: index,
+                        promise: renderFeedbackWithAI(sentenceData.feedback, sentenceData.sentence, index)
+                    });
+                }
+            });
+            
+            // Wait for all feedback to be rendered in order
+            if (feedbackPromises.length > 0) {
+                // Process feedback in sequential order
+                feedbackPromises.sort((a, b) => a.index - b.index);
+                
+                // Execute promises sequentially to maintain order
+                feedbackPromises.reduce((prevPromise, current) => {
+                    return prevPromise.then(() => current.promise);
+                }, Promise.resolve());
+            }
+            
+            // If no feedback found, show a message
+            if (feedbackCount === 0) {
+                const noIssuesDiv = document.createElement('div');
+                noIssuesDiv.className = 'alert alert-success mt-3';
+                noIssuesDiv.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <div>
+                            <strong>Great work!</strong> No issues detected in your document.
+                            <br><small>The AI analysis found your writing to be clear and well-structured.</small>
+                        </div>
+                    </div>
+                `;
+                feedbackContent.appendChild(noIssuesDiv);
+                
+                // Show document quality summary
+                const qualitySummary = document.createElement('div');
+                qualitySummary.className = 'card mt-3';
+                qualitySummary.style.background = 'rgba(255, 255, 255, 0.1)';
+                qualitySummary.innerHTML = `
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-line"></i> Document Quality Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <small>Total Sentences:</small>
+                                <div class="h5">${sentences.length}</div>
+                            </div>
+                            <div class="col-6">
+                                <small>Quality Score:</small>
+                                <div class="h5">✅ Excellent</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feedbackContent.appendChild(qualitySummary);
+            }
+        }
         // Clean feedback text
         function cleanFeedback(feedback) {
             const tempDiv = document.createElement('div');
