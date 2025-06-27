@@ -11,6 +11,9 @@ import importlib
 import spacy
 import textstat
 import ollama
+import time
+import uuid
+from dataclasses import asdict
 
 main = Blueprint('main', __name__)
 
@@ -156,7 +159,27 @@ def analyze_sentence(sentence, rules):
     for rule_function in rules:
         rule_feedback = rule_function(sentence)
         if rule_feedback:
-            feedback.extend(rule_feedback)
+            # Convert string feedback to expected object format
+            for item in rule_feedback:
+                if isinstance(item, str):
+                    # Convert string to expected object format
+                    feedback.append({
+                        "text": sentence,
+                        "start": 0,
+                        "end": len(sentence),
+                        "message": item
+                    })
+                elif isinstance(item, dict) and all(key in item for key in ["text", "start", "end", "message"]):
+                    # Already in correct format
+                    feedback.append(item)
+                else:
+                    # Handle other formats by converting to string
+                    feedback.append({
+                        "text": sentence,
+                        "start": 0,
+                        "end": len(sentence),
+                        "message": str(item)
+                    })
 
     return feedback, readability_scores, quality_score
 def calculate_quality_index(total_sentences, total_errors):
@@ -199,11 +222,28 @@ def upload_file():
                 sentences.append(sent)
 
         sentence_data = []
-        for sent in sentences:
+        for index, sent in enumerate(sentences):
             feedback, readability_scores, quality_score = analyze_sentence(sent.text, rules)
+            
+            # Add sentence index to each feedback item for UI linking
+            enhanced_feedback = []
+            for item in feedback:
+                if isinstance(item, dict):
+                    item['sentence_index'] = index
+                    enhanced_feedback.append(item)
+                else:
+                    enhanced_feedback.append({
+                        "text": sent.text,
+                        "start": 0,
+                        "end": len(sent.text),
+                        "message": str(item),
+                        "sentence_index": index
+                    })
+            
             sentence_data.append({
                 "sentence": sent.text,
-                "feedback": feedback,
+                "sentence_index": index,
+                "feedback": enhanced_feedback,
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
                 "start": sent.start_char,
@@ -263,32 +303,76 @@ def get_feedbacks():
 
 @main.route('/ai_suggestion', methods=['POST'])
 def ai_suggestion():
+    from .ai_improvement import get_enhanced_ai_suggestion
+    from .performance_monitor import track_suggestion, learning_system
+    import uuid
+    
     data = request.get_json()
     feedback_text = data.get('feedback')
+    sentence_context = data.get('sentence', '')
+    document_type = data.get('document_type', 'general')
+    writing_goals = data.get('writing_goals', ['clarity', 'conciseness'])
+    
     if not feedback_text:
         return jsonify({"error": "No feedback provided"}), 400
 
+    suggestion_id = str(uuid.uuid4())
+    start_time = time.time()
+
     try:
-        # Check if Ollama is available
-        response = ollama.chat(model='mistral-7b-instruct', messages=[
-            {
-                'role': 'user',
-                'content': f"""You are an expert writing assistant. Analyze the following feedback and provide a clear, actionable suggestion to improve the text.
-
-Feedback: {feedback_text}
-
-Please provide a specific, actionable suggestion to improve the writing:"""
-            },
-        ])
+        # First try learned suggestions from user feedback
+        learned_suggestion = learning_system.get_learned_suggestion(feedback_text, sentence_context)
         
-        suggestion = response['message']['content'].strip()
-        return jsonify({"suggestion": suggestion})
+        if learned_suggestion:
+            response_time = time.time() - start_time
+            track_suggestion(suggestion_id, feedback_text, sentence_context, 
+                           document_type, "learned_pattern", response_time)
+            
+            return jsonify({
+                "suggestion": learned_suggestion,
+                "confidence": "high",
+                "method": "learned_pattern",
+                "suggestion_id": suggestion_id,
+                "note": "Generated using learned patterns from user feedback"
+            })
+        
+        # Use enhanced AI suggestion system
+        result = get_enhanced_ai_suggestion(
+            feedback_text=feedback_text,
+            sentence_context=sentence_context,
+            document_type=document_type,
+            writing_goals=writing_goals
+        )
+        
+        response_time = time.time() - start_time
+        track_suggestion(suggestion_id, feedback_text, sentence_context, 
+                        document_type, result["method"], response_time)
+        
+        return jsonify({
+            "suggestion": result["suggestion"],
+            "confidence": result["confidence"],
+            "method": result["method"],
+            "suggestion_id": suggestion_id,
+            "context_used": result.get("context_used", {}),
+            "note": f"Generated using {result['method']} approach"
+        })
         
     except Exception as e:
-        logger.error(f"Ollama error: {str(e)}")
-        # Enhanced fallback suggestions with more intelligence
+        logger.error(f"AI suggestion error: {str(e)}")
+        response_time = time.time() - start_time
+        
+        # Final fallback
         suggestion = generate_smart_suggestion(feedback_text)
-        return jsonify({"suggestion": suggestion, "note": "Using enhanced rule-based suggestions (Ollama not available)"})
+        track_suggestion(suggestion_id, feedback_text, sentence_context, 
+                        document_type, "basic_fallback", response_time)
+        
+        return jsonify({
+            "suggestion": suggestion, 
+            "confidence": "low",
+            "method": "basic_fallback",
+            "suggestion_id": suggestion_id,
+            "note": "Using basic fallback suggestions"
+        })
 
 def generate_smart_suggestion(feedback_text):
     """Generate intelligent suggestions based on feedback content"""
@@ -328,3 +412,82 @@ def generate_smart_suggestion(feedback_text):
     else:
         # General suggestion based on common writing issues
         return "Consider breaking long sentences into shorter ones, using active voice, and adding specific examples to support your points."
+
+@main.route('/suggestion_feedback', methods=['POST'])
+def suggestion_feedback():
+    """Record user feedback on AI suggestions."""
+    from .performance_monitor import record_user_feedback
+    
+    data = request.get_json()
+    suggestion_id = data.get('suggestion_id')
+    rating = data.get('rating')
+    feedback = data.get('feedback')
+    was_helpful = data.get('was_helpful')
+    was_implemented = data.get('was_implemented')
+    
+    if not suggestion_id:
+        return jsonify({"error": "No suggestion ID provided"}), 400
+    
+    try:
+        record_user_feedback(
+            suggestion_id=suggestion_id,
+            rating=rating,
+            feedback=feedback,
+            was_helpful=was_helpful,
+            was_implemented=was_implemented
+        )
+        
+        return jsonify({"message": "Feedback recorded successfully"})
+        
+    except Exception as e:
+        logger.error(f"Error recording feedback: {str(e)}")
+        return jsonify({"error": "Failed to record feedback"}), 500
+
+@main.route('/performance_dashboard', methods=['GET'])
+def performance_dashboard():
+    """Get performance dashboard data."""
+    from .performance_monitor import get_performance_dashboard
+    
+    try:
+        dashboard_data = get_performance_dashboard()
+        return jsonify(dashboard_data)
+        
+    except Exception as e:
+        logger.error(f"Error getting dashboard data: {str(e)}")
+        return jsonify({"error": "Failed to get dashboard data"}), 500
+
+@main.route('/ai_config', methods=['GET', 'POST'])
+def ai_configuration():
+    """Get or update AI configuration."""
+    from .ai_config import config_manager
+    
+    if request.method == 'GET':
+        try:
+            return jsonify({
+                "available_models": config_manager.get_available_models(),
+                "suggestion_config": asdict(config_manager.get_suggestion_config()),
+                "feature_flags": config_manager.FEATURE_FLAGS
+            })
+        except Exception as e:
+            logger.error(f"Error getting AI config: {str(e)}")
+            return jsonify({"error": "Failed to get configuration"}), 500
+    
+    elif request.method == 'POST':
+        try:
+            data = request.get_json()
+            
+            # Update suggestion configuration
+            if 'suggestion_config' in data:
+                config_manager.update_suggestion_config(**data['suggestion_config'])
+            
+            # Update feature flags
+            if 'feature_flags' in data:
+                for flag, value in data['feature_flags'].items():
+                    if flag in config_manager.FEATURE_FLAGS:
+                        config_manager.FEATURE_FLAGS[flag] = value
+            
+            return jsonify({"message": "Configuration updated successfully"})
+            
+        except Exception as e:
+            logger.error(f"Error updating AI config: {str(e)}")
+            return jsonify({"error": "Failed to update configuration"}), 500
