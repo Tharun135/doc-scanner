@@ -22,6 +22,6 @@ def check(content):
             # Clean the sentence text to remove any remaining HTML tags or entities
             clean_sentence = BeautifulSoup(sent.text.strip(), "html.parser").get_text()
             clean_sentence = html.unescape(clean_sentence)
-            suggestions.append(f"Consider revising passive voice: '{clean_sentence}'")
+            suggestions.append(f"Issue: Passive voice detected\nOriginal sentence: {clean_sentence}\nAI suggestion: Consider revising to active voice for clearer, more direct communication.")
     
     return suggestions if suggestions else []
