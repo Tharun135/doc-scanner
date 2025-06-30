@@ -16,22 +16,23 @@ from app.rules.terminology_b_terms import check as check_terminology_b_terms
 from app.rules.style_formatting_b_terms import check as check_style_formatting_b_terms
 from app.rules.technical_terms import check as check_technical_terms
 from app.rules.grammar_word_choice_b_terms import check as check_grammar_word_choice_b_terms
-from app.rules.c.c_languages_terms import check as check_c_languages_terms
-from app.rules.c.cable_terms import check as check_cable_terms
-from app.rules.c.cabling_terms import check as check_cabling_terms
-from app.rules.c.cache_terms import check as check_cache_terms
-from app.rules.c.calendar_terms import check as check_calendar_terms
-from app.rules.c.callback_terms import check as check_callback_terms
-from app.rules.c.callout_terms import check as check_callout_terms
-from app.rules.c.can_may_terms import check as check_can_may_terms
-from app.rules.c.cancel_terms import check as check_cancel_terms
-from app.rules.c.run_vs_carryout_terms import check as check_run_vs_carryout_terms
-from app.rules.c.css_terms import check as check_css_terms
-from app.rules.c.catalog_terms import check as check_catalog_terms
-from app.rules.word_choice.contractions_rule import check as check_contractions
-from app.rules.word_choice.concise_simple_words import check as check_concise_simple_words
+from app.rules.c_languages_terms import check as check_c_languages_terms
+from app.rules.cable_terms import check as check_cable_terms
+from app.rules.cabling_terms import check as check_cabling_terms
+from app.rules.cache_terms import check as check_cache_terms
+from app.rules.calendar_terms import check as check_calendar_terms
+from app.rules.callback_terms import check as check_callback_terms
+from app.rules.callout_terms import check as check_callout_terms
+from app.rules.can_may_terms import check as check_can_may_terms
+from app.rules.cancel_terms import check as check_cancel_terms
+from app.rules.run_vs_carryout_terms import check as check_run_vs_carryout_terms
+from app.rules.css_terms import check as check_css_terms
+from app.rules.catalog_terms import check as check_catalog_terms
+from app.rules.contractions_rule import check as check_contractions
+from app.rules.concise_simple_words import check as check_concise_simple_words
 from app.rules.passive_voice import check as check_passive_voice
 from app.rules.long_sentences import check as check_long_sentences
+from app.rules.simple_present_tense import check as check_simple_present_tense
 
 rule_functions = [
     check_accessibility_terms,
@@ -68,6 +69,7 @@ rule_functions = [
     check_concise_simple_words,
     check_passive_voice,
     check_long_sentences,
+    check_simple_present_tense,
 ]
 
 __all__ = ['rule_functions']

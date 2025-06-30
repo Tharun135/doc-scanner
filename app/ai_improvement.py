@@ -176,6 +176,34 @@ Now provide your suggestion for the current issue:"""
         feedback_lower = feedback_text.lower()
         context_lower = sentence_context.lower()
         
+        # Check if feedback already contains a specific rewrite suggestion
+        if "→ suggested:" in feedback_text.lower() or "suggested:" in feedback_text.lower():
+            # Extract the suggested rewrite from the feedback
+            suggested_pattern = r'suggested:\s*["\']([^"\']+)["\']'
+            match = re.search(suggested_pattern, feedback_text, re.IGNORECASE)
+            if match:
+                suggested_text = match.group(1)
+                return {
+                    "suggestion": f'CORRECTED TEXT: "{suggested_text}"\nCHANGE MADE: {feedback_text.split(".")[0]}',
+                    "confidence": "high",
+                    "method": "rule_based_rewrite",
+                    "pattern_matched": "specific_rewrite_provided"
+                }
+        
+        # Check for "Original: ... → Suggested: ..." pattern
+        rewrite_pattern = r'original:\s*["\']([^"\']+)["\']\s*→\s*suggested:\s*["\']([^"\']+)["\']'
+        match = re.search(rewrite_pattern, feedback_text, re.IGNORECASE)
+        if match:
+            original_text = match.group(1)
+            suggested_text = match.group(2)
+            change_description = feedback_text.split(".")[0] if "." in feedback_text else "Applied suggested rewrite"
+            return {
+                "suggestion": f'CORRECTED TEXT: "{suggested_text}"\nCHANGE MADE: {change_description}',
+                "confidence": "high", 
+                "method": "rule_based_rewrite",
+                "pattern_matched": "original_to_suggested"
+            }
+        
         # Advanced pattern matching with context awareness
         suggestions = {
             # Passive voice patterns
@@ -271,22 +299,92 @@ Now provide your suggestion for the current issue:"""
         return " ".join(suggestions) if suggestions else "Break this long sentence into shorter, more digestible parts."
     
     def _generate_general_improvement_suggestion(self, feedback: str, context: str) -> str:
-        """Generate a thoughtful general suggestion based on available information."""
-        suggestions = [
-            "Consider these improvements:",
-            "• Use specific, concrete language instead of vague terms",
-            "• Ensure each sentence has one main idea",
-            "• Use active voice when possible",
-            "• Add examples or details to support your points"
-        ]
+        """Generate specific, actionable solutions based on the feedback and context."""
+        feedback_lower = feedback.lower()
         
-        if "technical" in feedback.lower() or "jargon" in feedback.lower():
-            suggestions.append("• Define technical terms for your audience")
+        # Check for specific issues and provide targeted solutions
+        if "can" in feedback_lower and context:
+            # Handle modal verb "can" specifically
+            if "you can" in context.lower():
+                rewritten = re.sub(r'\byou can\s+(\w+)', r'\1', context, flags=re.IGNORECASE)
+                if rewritten and rewritten[0].islower():
+                    rewritten = rewritten[0].upper() + rewritten[1:]
+                return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted "you can" instruction to direct imperative form'
+            elif " can " in context.lower():
+                # Find subject + can + verb pattern
+                pattern = r'(\w+)\s+can\s+(\w+)'
+                match = re.search(pattern, context, re.IGNORECASE)
+                if match:
+                    subject = match.group(1)
+                    verb = match.group(2)
+                    if subject.lower() not in ['i', 'you', 'we', 'they'] and not subject.lower().endswith('s'):
+                        verb_form = verb + "s" if not verb.endswith('s') else verb
+                    else:
+                        verb_form = verb
+                    rewritten = re.sub(pattern, f'{subject} {verb_form}', context, flags=re.IGNORECASE)
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted "can" to simple present tense'
         
-        if "formal" in feedback.lower():
-            suggestions.append("• Adjust formality level to match your audience and purpose")
+        # Handle passive voice
+        if "passive" in feedback_lower and context:
+            # Try to convert passive to active
+            passive_patterns = [
+                (r'(\w+)\s+is\s+(\w+ed|en)\s+by\s+(\w+)', r'\3 \2s \1'),
+                (r'(\w+)\s+was\s+(\w+ed|en)\s+by\s+(\w+)', r'\3 \2ed \1'),
+                (r'(\w+)\s+are\s+(\w+ed|en)\s+by\s+(\w+)', r'\3 \2 \1')
+            ]
+            
+            for pattern, replacement in passive_patterns:
+                if re.search(pattern, context, re.IGNORECASE):
+                    rewritten = re.sub(pattern, replacement, context, flags=re.IGNORECASE)
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted passive voice to active voice'
         
-        return "\n".join(suggestions)
+        # Handle long sentences
+        if "long" in feedback_lower or "complex" in feedback_lower and context:
+            if len(context.split()) > 25:
+                # Try to break at logical points
+                if ' and ' in context and context.count(' and ') == 1:
+                    parts = context.split(' and ', 1)
+                    if len(parts) == 2:
+                        rewritten = f"{parts[0].strip()}. {parts[1].strip()}"
+                        return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Broke long sentence into two shorter sentences'
+                elif ', which ' in context.lower():
+                    rewritten = re.sub(r',\s*which\s+', '. This ', context, flags=re.IGNORECASE)
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted relative clause to separate sentence'
+        
+        # Handle word choice issues
+        if "vague" in feedback_lower or "unclear" in feedback_lower:
+            vague_replacements = {
+                "thing": "item/component/element",
+                "stuff": "materials/items/content", 
+                "good": "effective/reliable/high-quality",
+                "bad": "ineffective/unreliable/poor-quality",
+                "big": "large/significant/substantial",
+                "small": "minor/compact/limited"
+            }
+            
+            for vague, specific in vague_replacements.items():
+                if vague in context.lower():
+                    return f'SUGGESTION: Replace "{vague}" with more specific terms like: {specific}\nCONTEXT: "{context}"'
+        
+        # Handle tense issues
+        if "tense" in feedback_lower and context:
+            # Try to convert to simple present
+            if "will " in context.lower():
+                rewritten = re.sub(r'\bwill\s+(\w+)', r'\1', context, flags=re.IGNORECASE)
+                return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted future tense to simple present'
+        
+        # Default: provide specific guidance based on what we can detect
+        if context:
+            word_count = len(context.split())
+            if word_count > 25:
+                return f'SUGGESTION: Break this {word_count}-word sentence into 2-3 shorter sentences for better readability.\nORIGINAL: "{context}"'
+            elif any(word in context.lower() for word in ['can', 'could', 'would', 'should']):
+                return f'SUGGESTION: Replace modal verbs with direct action language for clearer instructions.\nORIGINAL: "{context}"'
+            else:
+                return f'SUGGESTION: Rewrite for clarity and directness.\nORIGINAL: "{context}"'
+        
+        # Final fallback if no context available
+        return f'SUGGESTION: {feedback.replace("Consider ", "").replace("consider ", "")} - Please provide the specific text for a detailed rewrite.'
     
     def _post_process_ai_response(self, ai_response: str, original_sentence: str, issue: str) -> str:
         """
