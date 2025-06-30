@@ -1,9 +1,0 @@
-The user supporteds structs by providing all single elements.
-
-The user provideds arrays additionally as "array object".
-
-Unlike the Tag Table Export in TIA Portal, the export using the WinCC Tag Converter can can include multiple CPUs.
-
-The system createds new files automatically. Users can can access the database and and modify records.
-
-The application updateds settings and and configureds the environment properly.
