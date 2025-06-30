@@ -23,7 +23,14 @@ logging.basicConfig(level=logging.DEBUG)  # Or logging.INFO for production
 logger = logging.getLogger(__name__)
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+    SPACY_AVAILABLE = True
+    logger.info("spaCy model loaded successfully")
+except Exception as e:
+    logger.warning(f"spaCy model not available: {e}")
+    nlp = None
+    SPACY_AVAILABLE = False
 
 ############################
 # PARSING HELPERS
@@ -229,10 +236,25 @@ def upload_file():
         lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
         sentences = []
         for line in lines:
-            # Use spaCy to further split lines with multiple sentences
-            doc = nlp(line)
-            for sent in doc.sents:
-                sentences.append(sent)
+            if SPACY_AVAILABLE and nlp:
+                # Use spaCy to further split lines with multiple sentences
+                doc = nlp(line)
+                for sent in doc.sents:
+                    sentences.append(sent)
+            else:
+                # Fallback: simple sentence splitting when spaCy is not available
+                import re
+                # Split by sentence-ending punctuation
+                simple_sentences = re.split(r'[.!?]+\s+', line)
+                for sent_text in simple_sentences:
+                    if sent_text.strip():
+                        # Create a simple sentence object
+                        class SimpleSentence:
+                            def __init__(self, text):
+                                self.text = text.strip()
+                                self.start_char = 0
+                                self.end_char = len(text)
+                        sentences.append(SimpleSentence(sent_text.strip()))
 
         sentence_data = []
         for index, sent in enumerate(sentences):
