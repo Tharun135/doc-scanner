@@ -261,23 +261,130 @@ Now provide your suggestion for the current issue:"""
         }
     
     def _generate_active_voice_suggestion(self, sentence: str) -> str:
-        """Generate specific active voice suggestions."""
+        """Generate specific active voice suggestions with actual rewrite."""
         if not sentence:
             return "Convert passive voice to active voice: identify who performs the action and make them the subject."
         
-        # Look for common passive patterns
-        passive_patterns = [
-            (r'was (\w+ed|en)\s+by', r'The subject should \1'),
-            (r'were (\w+ed|en)\s+by', r'The subjects should \1'),
-            (r'is (\w+ed|en)\s+by', r'The subject \1s'),
-            (r'are (\w+ed|en)\s+by', r'The subjects \1')
-        ]
+        # Try to actually convert the sentence to active voice
+        active_version = self._convert_passive_to_active(sentence)
+        if active_version and active_version != sentence:
+            return f'CORRECTED TEXT: "{active_version}"\nCHANGE MADE: Converted passive voice to active voice'
         
-        for pattern, suggestion in passive_patterns:
-            if re.search(pattern, sentence, re.IGNORECASE):
-                return f"Convert to active voice. Example structure: {suggestion}. Make the actor the subject of the sentence."
-        
+        # If automatic conversion fails, provide specific guidance
         return "Rewrite in active voice: move the action performer to the beginning and make them the subject."
+    
+    def _convert_passive_to_active(self, sentence: str) -> str:
+        """Attempt to convert passive voice to active voice."""
+        if not sentence:
+            return sentence
+            
+        original = sentence.strip()
+        
+        # Pattern 1: "X is/was/are/were [verb]ed by Y" -> "Y [verb]s X"
+        pattern1 = r'(.+?)\s+(is|was|are|were)\s+(\w+ed|en)\s+by\s+(.+?)(\.|$|,|\s+to\s+|\s+for\s+)'
+        match1 = re.search(pattern1, original, re.IGNORECASE)
+        if match1:
+            subject = match1.group(1).strip()
+            be_verb = match1.group(2)
+            past_participle = match1.group(3)
+            actor = match1.group(4).strip()
+            remainder = match1.group(5)
+            
+            # Convert past participle to active verb
+            active_verb = self._past_participle_to_active(past_participle, be_verb)
+            if active_verb:
+                # Handle the actor - remove articles if needed
+                clean_actor = re.sub(r'^(the|a|an)\s+', '', actor, flags=re.IGNORECASE)
+                return f"{clean_actor.capitalize()} {active_verb} {subject}{remainder}"
+        
+        # Pattern 2: "X is/was/are/were [verb]ed to [do something]" -> "[Someone] [verb]s X to [do something]"
+        pattern2 = r'(.+?)\s+(is|was|are|were)\s+(\w+ed|en)\s+(to\s+.+?)(\.|$)'
+        match2 = re.search(pattern2, original, re.IGNORECASE)
+        if match2:
+            subject = match2.group(1).strip()
+            be_verb = match2.group(2)
+            past_participle = match2.group(3)
+            purpose = match2.group(4)
+            remainder = match2.group(5)
+            
+            active_verb = self._past_participle_to_active(past_participle, be_verb)
+            if active_verb:
+                # For technical documents, often "the system" or "users" perform the action
+                if 'app' in subject.lower() or 'system' in subject.lower():
+                    actor = "The system"
+                elif 'command' in subject.lower() or 'message' in subject.lower():
+                    actor = "The system"
+                elif 'data' in subject.lower():
+                    actor = "The application"
+                else:
+                    actor = "The system"
+                return f"{actor} {active_verb} {subject} {purpose}{remainder}"
+        
+        # Pattern 3: Handle complex sentences with multiple clauses
+        # "A further Industrial Edge app called Flow Creator is used to send downlink commands"
+        pattern3 = r'(.+?)\s+(is|are|was|were)\s+used\s+to\s+(.+?)(\.|$)'
+        match3 = re.search(pattern3, original, re.IGNORECASE)
+        if match3:
+            subject = match3.group(1).strip()
+            be_verb = match3.group(2)
+            action = match3.group(3).strip()
+            remainder = match3.group(4)
+            
+            # Extract the actual tool/app name if present
+            if "called" in subject:
+                parts = subject.split("called")
+                if len(parts) >= 2:
+                    actor_name = parts[1].strip()
+                else:
+                    actor_name = subject
+            else:
+                actor_name = subject
+            
+            return f"{actor_name} {action}{remainder}"
+        
+        return original
+    
+    def _past_participle_to_active(self, past_participle: str, be_verb: str) -> str:
+        """Convert past participle to active verb form."""
+        pp = past_participle.lower()
+        
+        # Common irregular verb conversions
+        irregular_verbs = {
+            'used': 'uses',
+            'created': 'creates', 
+            'generated': 'generates',
+            'processed': 'processes',
+            'handled': 'handles',
+            'managed': 'manages',
+            'executed': 'executes',
+            'completed': 'completes',
+            'performed': 'performs',
+            'detected': 'detects',
+            'sent': 'sends',
+            'received': 'receives',
+            'transmitted': 'transmits',
+            'configured': 'configures',
+            'established': 'establishes',
+            'maintained': 'maintains'
+        }
+        
+        if pp in irregular_verbs:
+            return irregular_verbs[pp]
+        
+        # Regular verbs - remove 'ed' and add 's' for third person
+        if pp.endswith('ed'):
+            base = pp[:-2]
+            # Handle doubled consonants (e.g., 'planned' -> 'plan')
+            if len(base) >= 2 and base[-1] == base[-2] and base[-1] in 'bdfglmnprt':
+                base = base[:-1]
+            return f"{base}s"
+        
+        # For past participles ending in 'en'
+        if pp.endswith('en'):
+            base = pp[:-2]
+            return f"{base}es"
+        
+        return f"{pp}s"
     
     def _generate_sentence_shortening_suggestion(self, sentence: str) -> str:
         """Generate specific suggestions for shortening sentences."""
@@ -332,17 +439,10 @@ Now provide your suggestion for the current issue:"""
         
         # Handle passive voice
         if "passive" in feedback_lower and context:
-            # Try to convert passive to active
-            passive_patterns = [
-                (r'(\w+)\s+is\s+(\w+ed|en)\s+by\s+(\w+)', r'\3 \2s \1'),
-                (r'(\w+)\s+was\s+(\w+ed|en)\s+by\s+(\w+)', r'\3 \2ed \1'),
-                (r'(\w+)\s+are\s+(\w+ed|en)\s+by\s+(\w+)', r'\3 \2 \1')
-            ]
-            
-            for pattern, replacement in passive_patterns:
-                if re.search(pattern, context, re.IGNORECASE):
-                    rewritten = re.sub(pattern, replacement, context, flags=re.IGNORECASE)
-                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted passive voice to active voice'
+            # Use the improved passive voice conversion
+            active_version = self._convert_passive_to_active(context)
+            if active_version and active_version != context:
+                return f'CORRECTED TEXT: "{active_version}"\nCHANGE MADE: Converted passive voice to active voice'
         
         # Handle long sentences
         if "long" in feedback_lower or "complex" in feedback_lower and context:
