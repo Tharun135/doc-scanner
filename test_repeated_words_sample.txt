@@ -1,0 +1,9 @@
+Unlike the Tag Table Export in TIA Portal, the export using the WinCC Tag Converter can can include multiple CPUs.
+
+This file contains several repeated words to test the new rule.
+
+The system will automatically process the the data files when they are uploaded.
+
+This configuration is is required for proper operation of the network.
+
+Users can can access multiple features and and modify settings as needed.
