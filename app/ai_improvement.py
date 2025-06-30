@@ -190,19 +190,25 @@ Now provide your suggestion for the current issue:"""
                     "pattern_matched": "specific_rewrite_provided"
                 }
         
-        # Check for "Original: ... → Suggested: ..." pattern
-        rewrite_pattern = r'original:\s*["\']([^"\']+)["\']\s*→\s*suggested:\s*["\']([^"\']+)["\']'
-        match = re.search(rewrite_pattern, feedback_text, re.IGNORECASE)
-        if match:
-            original_text = match.group(1)
-            suggested_text = match.group(2)
-            change_description = feedback_text.split(".")[0] if "." in feedback_text else "Applied suggested rewrite"
-            return {
-                "suggestion": f'CORRECTED TEXT: "{suggested_text}"\nCHANGE MADE: {change_description}',
-                "confidence": "high", 
-                "method": "rule_based_rewrite",
-                "pattern_matched": "original_to_suggested"
-            }
+        # Check for "Original: ... → Suggested: ..." pattern (with or without quotes)
+        rewrite_patterns = [
+            r'original:\s*["\']([^"\']+)["\']\s*→\s*suggested:\s*["\']([^"\']+)["\']',  # With quotes
+            r'original:\s*"([^"]+)"\s*→\s*suggested:\s*"([^"]+)"',  # Double quotes specifically
+            r'original:\s*([^→]+)\s*→\s*suggested:\s*"([^"]+)"'     # Original without quotes, suggested with quotes
+        ]
+        
+        for pattern in rewrite_patterns:
+            match = re.search(pattern, feedback_text, re.IGNORECASE)
+            if match:
+                original_text = match.group(1).strip()
+                suggested_text = match.group(2).strip()
+                change_description = feedback_text.split(".")[0] if "." in feedback_text else "Applied suggested rewrite"
+                return {
+                    "suggestion": f'CORRECTED TEXT: "{suggested_text}"\nCHANGE MADE: {change_description}',
+                    "confidence": "high", 
+                    "method": "rule_based_rewrite",
+                    "pattern_matched": "original_to_suggested"
+                }
         
         # Advanced pattern matching with context awareness
         suggestions = {
@@ -365,6 +371,17 @@ Now provide your suggestion for the current issue:"""
             for vague, specific in vague_replacements.items():
                 if vague in context.lower():
                     return f'SUGGESTION: Replace "{vague}" with more specific terms like: {specific}\nCONTEXT: "{context}"'
+        
+        # Handle key capitalization issues
+        if "capitalize key names" in feedback_lower and context:
+            # Extract the key name that needs to be capitalized
+            key_pattern = r"capitalize key names:\s*['\"](\w+)['\"]"
+            key_match = re.search(key_pattern, feedback, re.IGNORECASE)
+            if key_match:
+                key_to_capitalize = key_match.group(1)
+                # Create corrected version with proper capitalization
+                corrected_text = re.sub(rf'\b{key_to_capitalize.lower()}\b', key_to_capitalize, context, flags=re.IGNORECASE)
+                return f'CORRECTED TEXT: "{corrected_text}"\nCHANGE MADE: Capitalized "{key_to_capitalize}" when referring to the key name'
         
         # Handle tense issues
         if "tense" in feedback_lower and context:

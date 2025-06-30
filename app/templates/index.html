@@ -1548,34 +1548,7 @@ dropzone.addEventListener('drop', (e) => {
 
         // AI Suggestion Modal logic
         document.body.addEventListener('click', async function(e) {
-            if (e.target.closest('.ai-suggest-btn')) {
-                const btn = e.target.closest('.ai-suggest-btn');
-                const feedback = decodeURIComponent(btn.dataset.feedback);
-
-                // Show modal and loading
-                document.getElementById('suggestionModal').style.display = 'flex';
-                document.getElementById('suggestionLoading').style.display = 'block';
-                document.getElementById('suggestionText').innerHTML = '';
-
-                // Fetch AI suggestion
-                try {
-                    const res = await fetch('/ai_suggestion', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ feedback })
-                    });
-                    const data = await res.json();
-                    document.getElementById('suggestionLoading').style.display = 'none';
-                    if (data.suggestion) {
-                        document.getElementById('suggestionText').innerText = data.suggestion;
-                    } else {
-                        document.getElementById('suggestionText').innerText = 'No suggestion available.';
-                    }
-                } catch (err) {
-                    document.getElementById('suggestionLoading').style.display = 'none';
-                    document.getElementById('suggestionText').innerText = 'Error fetching suggestion.';
-                }
-            }
+            // Removed deprecated ai-suggest-btn handler - now using ai-feedback-icon
             if (e.target.id === 'closeSuggestionModal') {
                 document.getElementById('suggestionModal').style.display = 'none';
             }
