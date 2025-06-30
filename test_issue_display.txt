@@ -1,7 +1,0 @@
-Test Document for Enhanced Passive Voice Rewriting
-
-The original program for the Rockwell PLC has been exported. The documentation was written by the team. The system was configured by the administrator.
-
-You can download the API's from our website. There are three steps to follow when setting up the system. It is important to save your work regularly.
-
-This sentence is deliberately very long and contains many unnecessary words that should definitely be broken down into smaller pieces for better readability and comprehension because it exceeds the recommended word limit.
