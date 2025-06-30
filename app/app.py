@@ -8,12 +8,14 @@ from docx import Document
 from bs4 import BeautifulSoup
 import logging
 import importlib
+import sys
 import spacy
 import textstat
-import ollama
 import time
-import uuid
 from dataclasses import asdict
+
+# Add the parent directory to the path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 main = Blueprint('main', __name__)
 
@@ -162,12 +164,23 @@ def analyze_sentence(sentence, rules):
             # Convert string feedback to expected object format
             for item in rule_feedback:
                 if isinstance(item, str):
+                    # Parse structured suggestions to extract just the issue for display
+                    message = item
+                    if 'Issue:' in item and 'Original sentence:' in item and 'AI suggestion:' in item:
+                        # Extract just the issue part for the main display
+                        lines = item.split('\n')
+                        for line in lines:
+                            if line.strip().startswith('Issue:'):
+                                message = line.replace('Issue:', '').strip()
+                                break
+                    
                     # Convert string to expected object format
                     feedback.append({
                         "text": sentence,
                         "start": 0,
                         "end": len(sentence),
-                        "message": item
+                        "message": message,
+                        "full_suggestion": item  # Keep the full structured suggestion for detailed view
                     })
                 elif isinstance(item, dict) and all(key in item for key in ["text", "start", "end", "message"]):
                     # Already in correct format
