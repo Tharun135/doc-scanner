@@ -56,7 +56,14 @@ def check(content):
         if any(admonition in matched_text.upper() for admonition in admonitions):
             continue
 
-        suggestions.append("Use double quotation marks for UI string references instead of single quotes.")
+        # Find the sentence containing the single quotes
+        sentences = [sent.text.strip() for sent in doc.sents]
+        containing_sentence = ""
+        for sentence in sentences:
+            if matched_text in sentence:
+                containing_sentence = sentence
+                break
+        suggestions.append(f"Issue: Single quotes used instead of double quotes\nOriginal sentence: {containing_sentence}\nAI suggestion: Use double quotation marks for UI string references instead of single quotes.")
     
     # Rule 4: Check apostrophe usage - avoid for plurals, allow for possession
     # Important: Apostrophes are acceptable when indicating possession (the "of" relationship)
@@ -106,7 +113,14 @@ def check(content):
     nested_parentheses_pattern = r'\([^\(\)]*\([^\(\)]*\)[^\(\)]*\)'
     matches = re.finditer(nested_parentheses_pattern, text_content)
     for match in matches:
-        suggestions.append("Avoid nesting parentheses; consider rephrasing.")
+        # Find the sentence containing the nested parentheses
+        sentences = [sent.text.strip() for sent in doc.sents]
+        containing_sentence = ""
+        for sentence in sentences:
+            if match.group() in sentence:
+                containing_sentence = sentence
+                break
+        suggestions.append(f"Issue: Nested parentheses detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Avoid nesting parentheses; consider rephrasing.")
     
     # Rule 6: Avoid using symbols in place of words
     symbol_substitutions = {
@@ -122,7 +136,14 @@ def check(content):
         pattern = rf'\b\w*{re.escape(symbol)}\w*\b'
         matches = re.finditer(pattern, text_content)
         for match in matches:
-            suggestions.append(f"Avoid using '{symbol}' in place of words; spell out the word '{word}'.")
+            # Find the sentence containing the symbol
+            sentences = [sent.text.strip() for sent in doc.sents]
+            containing_sentence = ""
+            for sentence in sentences:
+                if symbol in sentence:
+                    containing_sentence = sentence
+                    break
+            suggestions.append(f"Issue: Symbol '{symbol}' used in place of word\nOriginal sentence: {containing_sentence}\nAI suggestion: Spell out the word '{word}' instead of using '{symbol}'.")
 
     # Rule 7: Currency symbols placement
     currency_pattern = r'(\b\d+(\.\d{1,2})?\s*(\$|€|£|¥))'

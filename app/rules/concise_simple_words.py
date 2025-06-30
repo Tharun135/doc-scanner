@@ -44,24 +44,57 @@ def check(content):
         matches = re.finditer(pattern, text_content, flags=re.IGNORECASE)
         for match in matches:
             found_text = match.group()
+            # Find the sentence containing this phrase
+            containing_sentence = ""
+            for sent in doc.sents:
+                if found_text.lower() in sent.text.lower():
+                    containing_sentence = sent.text.strip()
+                    break
+            
             if replacement:
-                suggestions.append(f"Replace '{found_text}' with '{replacement}' for simplicity.")
+                suggestions.append(f"Issue: Verbose or formal phrase detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Replace '{found_text}' with '{replacement}' for simplicity.")
             else:
-                suggestions.append(f"Consider removing '{found_text}' as it may not add value.")
+                suggestions.append(f"Issue: Unnecessary modifier detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Consider removing '{found_text}' as it may not add value.")
 
     # 2. Detect unnecessary adverbs
     unnecessary_adverbs = r"\b(very|quite|easily|effectively|quickly)\b"
     matches = re.finditer(unnecessary_adverbs, text_content, flags=re.IGNORECASE)
     for match in matches:
         found_text = match.group()
-        suggestions.append(f"Consider removing the adverb '{found_text}' unless it is essential.")
+        # Find the sentence containing this adverb
+        containing_sentence = ""
+        for sent in doc.sents:
+            if found_text.lower() in sent.text.lower():
+                containing_sentence = sent.text.strip()
+                break
+        
+        suggestions.append(f"Issue: Unnecessary adverb detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Consider removing the adverb '{found_text}' unless it is essential for meaning.")
 
-    # 3. Flag weak or vague verbs
-    weak_verbs = r"\b(be|have)\b"
-    matches = re.finditer(weak_verbs, text_content, flags=re.IGNORECASE)
-    for match in matches:
-        found_text = match.group()
-        suggestions.append(f"Avoid the weak verb '{found_text}'. Replace it with a more specific action verb.")
+    # 3. Flag potentially weak verb constructions (more nuanced approach)
+    # Focus on specific weak patterns rather than all "be" and "have" verbs
+    weak_verb_patterns = [
+        (r"\bthere are\b", "list the items directly"),
+        (r"\bthere is\b", "state directly"),
+        (r"\bit is important to\b", "you should" or "must"),
+        (r"\bit is possible to\b", "you can"),
+        (r"\bit is necessary to\b", "you must"),
+        (r"\bhave the ability to\b", "can"),
+        (r"\bhave the option to\b", "can"),
+        (r"\bare able to\b", "can")
+    ]
+    
+    for pattern, suggestion in weak_verb_patterns:
+        matches = re.finditer(pattern, text_content, flags=re.IGNORECASE)
+        for match in matches:
+            found_text = match.group()
+            # Find the sentence containing this pattern
+            containing_sentence = ""
+            for sent in doc.sents:
+                if found_text.lower() in sent.text.lower():
+                    containing_sentence = sent.text.strip()
+                    break
+            
+            suggestions.append(f"Issue: Weak verb construction detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Consider replacing '{found_text}' with '{suggestion}' for more direct communication.")
 
     # 4. Highlight ambiguous words (e.g., 'file', 'mark', 'post', 'record', 'report')
 #    ambiguous_words = r"\b(file|post|mark|screen|record|report)\b"

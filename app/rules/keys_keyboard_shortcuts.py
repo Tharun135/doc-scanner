@@ -40,7 +40,6 @@ def check(content):
     # Rule 3: Use specific key names and capitalization
     key_names = {
         'escape': 'Esc',
-        'return': 'Enter',
         'delete': 'Delete',
         'backspace': 'Backspace',
         'tab': 'Tab',

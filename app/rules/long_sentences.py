@@ -34,7 +34,7 @@ def check(content):
         if word_count > 25:
             clean_sentence = BeautifulSoup(sent.text.strip(), "html.parser").get_text()
             clean_sentence = html.unescape(clean_sentence)
-            suggestions.append(f"Consider shortening long sentence: '{clean_sentence}'")
+            suggestions.append(f"Issue: Long sentence detected ({word_count} words)\nOriginal sentence: {clean_sentence}\nAI suggestion: Consider breaking this into shorter sentences (aim for under 25 words) for better readability.")
 
     # Rule 2: Use short words instead of long words
     # Convert <br/> tags to newlines
