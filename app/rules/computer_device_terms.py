@@ -72,12 +72,12 @@ def check(content):
         suggestions.append("Use 'laptop' instead of 'notebook' when referring to portable computers.")
 
     # Rule 12: Use 'memory' for RAM and 'storage' for disk space
-    memory_storage_matches = re.finditer(r'\b(memory|storage)\b', content, flags=re.IGNORECASE)
-    for match in memory_storage_matches:
-        word = match.group().lower()
-        if word == 'memory':
-            suggestions.append("Use 'storage' instead of 'memory' when referring to disk space.")
-        elif word == 'storage':
-            suggestions.append("Use 'memory' instead of 'storage' when referring to RAM.")
-    
-    return suggestions if suggestions else []
+#    memory_storage_matches = re.finditer(r'\b(memory|storage)\b', content, flags=re.IGNORECASE)
+#    for match in memory_storage_matches:
+#        word = match.group().lower()
+#        if word == 'memory':
+#            suggestions.append("Use 'storage' instead of 'memory' when referring to disk space.")
+#       elif word == 'storage':
+#            suggestions.append("Use 'memory' instead of 'storage' when referring to RAM.")
+#    
+#    return suggestions if suggestions else []
