@@ -60,21 +60,99 @@ def check(content):
                 suggestions.append(f"Use '{correct}' instead of '{match.group()}'. Ensure correct capitalization.")
     
     # Rule 4: Capitalize key names and avoid unnecessary words like 'button' or 'key'
+    # Only apply capitalization when words are used as nouns (key names), not as verbs
     key_terms = ['Ctrl', 'Shift', 'Esc', 'Enter', 'Tab', 'Spacebar', 'Delete', 'Backspace', 'Caps Lock', 'Num Lock', 'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12']
+    
+    # Create a mapping of key terms to their lowercase versions for verb checking
+    verb_forms = {
+        'Enter': 'enter',
+        'Delete': 'delete', 
+        'Shift': 'shift',
+        'Tab': 'tab',
+        'Esc': 'escape'  # 'esc' is not commonly used as a verb, but 'escape' is
+    }
+    
     for key in key_terms:
         pattern = rf'\b{key.lower()}\b'
         matches = re.finditer(pattern, content)
         for match in matches:
             if match.group() != key:
-                # Check if 'enter' is used as a verb
-                if key == 'Enter' and re.search(r'\benter\b', match.group(), flags=re.IGNORECASE):
-                    # Check if 'enter' is used as a verb
-                    if re.search(r'\benter\b\s+(the|a|an|your|some|any|my|their|his|her|its|our)\s+\w+', match.group(), flags=re.IGNORECASE):
-                        continue  # Skip suggesting capitalization if 'enter' is used as a verb
+                # Get the word and its context for POS analysis
+                word_start = match.start()
+                word_end = match.end()
+                
+                # Find the sentence containing this word using spaCy
+                word_found = False
+                for sentence in doc.sents:
+                    sentence_start = sentence.start_char
+                    sentence_end = sentence.end_char
+                    
+                    if sentence_start <= word_start < sentence_end:
+                        # Found the sentence containing our word
+                        word_found = True
+                        
+                        # Find the token corresponding to our matched word
+                        for token in sentence:
+                            if (token.idx <= word_start < token.idx + len(token.text) or 
+                                token.text.lower() == match.group().lower()):
+                                
+                                # Check if this token is used as a verb
+                                is_verb = token.pos_ == "VERB"
+                                
+                                # Additional context checks for specific words
+                                if key in verb_forms:
+                                    verb_form = verb_forms[key]
+                                    
+                                    # Special handling for 'enter' - check for verb patterns
+                                    if key == 'Enter' and token.text.lower() == 'enter':
+                                        # Check if followed by objects (enter the room, enter data, etc.)
+                                        next_tokens = [t for t in sentence[token.i+1:token.i+3]]
+                                        has_object = any(t.pos_ in ["DET", "NOUN", "PRON"] for t in next_tokens)
+                                        if is_verb or has_object:
+                                            word_found = True
+                                            break  # Skip capitalization - it's used as a verb
+                                    
+                                    # Special handling for 'delete' - check for verb patterns  
+                                    elif key == 'Delete' and token.text.lower() == 'delete':
+                                        # Check if it's used as a verb (delete the file, delete it, etc.)
+                                        next_tokens = [t for t in sentence[token.i+1:token.i+3]]
+                                        has_object = any(t.pos_ in ["DET", "NOUN", "PRON"] for t in next_tokens)
+                                        if is_verb or has_object:
+                                            word_found = True
+                                            break  # Skip capitalization - it's used as a verb
+                                    
+                                    # Special handling for 'shift' - check for verb patterns
+                                    elif key == 'Shift' and token.text.lower() == 'shift':
+                                        # Check if it's used as a verb (shift the focus, shift to, etc.)
+                                        if is_verb:
+                                            word_found = True
+                                            break  # Skip capitalization - it's used as a verb
+                                    
+                                    # Special handling for 'tab' - check for verb patterns
+                                    elif key == 'Tab' and token.text.lower() == 'tab':
+                                        # Check if it's used as a verb (tab through, tab to, etc.)
+                                        if is_verb:
+                                            word_found = True
+                                            break  # Skip capitalization - it's used as a verb
+                                
+                                # If we reach here, it's likely used as a noun (key name)
+                                suggestions.append(f"Capitalize key names: '{key}' (when referring to the key, not the action).")
+                                word_found = True
+                                break
+                        
+                        if word_found:
+                            break
+                
+                # If we couldn't analyze with spaCy, fall back to simple pattern matching
+                if not word_found:
+                    # Basic verb pattern detection for fallback
+                    if key == 'Enter' and re.search(r'\benter\s+(the|a|an|your|some|data|information|text)', content[match.start():match.end()+50], flags=re.IGNORECASE):
+                        continue  # Skip - likely used as verb
+                    elif key == 'Delete' and re.search(r'\bdelete\s+(the|a|an|this|that|files?|items?)', content[match.start():match.end()+50], flags=re.IGNORECASE):
+                        continue  # Skip - likely used as verb
                     else:
                         suggestions.append(f"Capitalize key names: '{key}'.")
-                else:
-                    suggestions.append(f"Capitalize key names: '{key}'.")
+        
         # Avoid unnecessary words like 'key' or 'button' after key names
         unnecessary_terms_pattern = rf'\b{key}\s+(key|button)\b'
         matches = re.finditer(unnecessary_terms_pattern, content, flags=re.IGNORECASE)
