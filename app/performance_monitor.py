@@ -295,6 +295,55 @@ class PerformanceMonitor:
             logger.error(f"Error generating improvement recommendations: {e}")
             return []
 
+    def get_recent_suggestions(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get recent suggestions for history display."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT 
+                    suggestion_id,
+                    feedback_text,
+                    sentence_context,
+                    document_type,
+                    suggestion_method,
+                    response_time,
+                    timestamp,
+                    user_rating,
+                    user_feedback,
+                    was_helpful,
+                    was_implemented
+                FROM suggestion_metrics 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            ''', (limit,))
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            suggestions = []
+            for row in rows:
+                suggestions.append({
+                    "suggestion_id": row[0],
+                    "feedback_text": row[1],
+                    "sentence_context": row[2],
+                    "document_type": row[3],
+                    "suggestion_method": row[4],
+                    "response_time": row[5],
+                    "timestamp": row[6],
+                    "user_rating": row[7],
+                    "user_feedback": row[8],
+                    "was_helpful": bool(row[9]) if row[9] is not None else None,
+                    "was_implemented": bool(row[10]) if row[10] is not None else None
+                })
+            
+            return suggestions
+            
+        except Exception as e:
+            logger.error(f"Error getting recent suggestions: {e}")
+            return []
+    
 class FeedbackLearningSystem:
     """System for learning from user feedback to improve suggestions."""
     
@@ -450,10 +499,13 @@ def get_performance_dashboard() -> Dict[str, Any]:
     """Get comprehensive performance dashboard data."""
     stats = monitor.get_performance_stats()
     recommendations = monitor.get_improvement_recommendations()
+    recent_suggestions = monitor.get_recent_suggestions()
     
     return {
+        "overall_stats": stats.get("overall", {}),
         "performance_stats": stats,
         "improvement_recommendations": recommendations,
+        "recent_suggestions": recent_suggestions,
         "learned_patterns_count": sum(len(patterns) for patterns in learning_system.learned_patterns.values()),
         "total_feedback_entries": len(monitor.recent_metrics)
     }

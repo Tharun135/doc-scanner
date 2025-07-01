@@ -1,0 +1,5 @@
+This is the first test document for batch processing. The document contains some repetitive repetitive words. It also has very long sentences that could be improved to make them more readable and easier for the audience to understand, especially in technical documentation where clarity is of utmost importance and where the reader might be looking for specific information quickly and efficiently without having to parse through overly complex sentence structures.
+
+The document shows passive voice usage. Mistakes were made by the team. The system was configured by the administrator.
+
+Some grammar issues like: I could of done better. The team are working hard.

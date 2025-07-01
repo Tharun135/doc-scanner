@@ -173,7 +173,7 @@ def analyze_sentence(sentence, rules):
                 if isinstance(item, str):
                     # Parse structured suggestions to extract just the issue for display
                     message = item
-                    if 'Issue:' in item and 'Original sentence:' in item and 'AI suggestion:' in item:
+                    if 'Issue:' in item and 'Original sentence:' in item and ('AI suggestion:' in item or 'AI Solution:' in item):
                         # Extract just the issue part for the main display
                         lines = item.split('\n')
                         for line in lines:
@@ -526,3 +526,122 @@ def ai_configuration():
         except Exception as e:
             logger.error(f"Error updating AI config: {str(e)}")
             return jsonify({"error": "Failed to update configuration"}), 500
+
+@main.route('/upload_batch', methods=['POST'])
+def upload_batch():
+    """Handle batch file upload (zip or multiple files)."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file provided"}), 400
+        
+        file = request.files['file']
+        batch_mode = request.form.get('batch_mode', 'false').lower() == 'true'
+        
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        logger.info(f"Processing batch upload: {file.filename}, batch_mode: {batch_mode}")
+        
+        results = []
+        
+        if file.filename.lower().endswith('.zip'):
+            # Handle zip file
+            import zipfile
+            import tempfile
+            import os
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_path = os.path.join(temp_dir, file.filename)
+                file.save(zip_path)
+                
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    # Extract all files
+                    zip_ref.extractall(temp_dir)
+                    
+                    # Process each extracted file
+                    for root, dirs, files in os.walk(temp_dir):
+                        for filename in files:
+                            if filename == file.filename:  # Skip the zip file itself
+                                continue
+                                
+                            file_path = os.path.join(root, filename)
+                            
+                            # Check if it's a supported file type
+                            if not any(filename.lower().endswith(ext) for ext in ['.pdf', '.md', '.adoc', '.docx', '.txt']):
+                                logger.warning(f"Skipping unsupported file: {filename}")
+                                continue
+                            
+                            try:
+                                # Read and process the file
+                                with open(file_path, 'rb') as f:
+                                    # Create a file-like object for processing
+                                    from werkzeug.datastructures import FileStorage
+                                    file_obj = FileStorage(
+                                        stream=f,
+                                        filename=filename,
+                                        content_type='application/octet-stream'
+                                    )
+                                    
+                                    # Process the file using existing logic
+                                    content = parse_file(file_obj)
+                                    if not content:
+                                        results.append({
+                                            "filename": filename,
+                                            "success": False,
+                                            "error": "Could not parse file content"
+                                        })
+                                        continue
+                                    
+                                    # Analyze the content
+                                    sentences = analyze_text(content)
+                                    report = {}
+                                    
+                                    results.append({
+                                        "filename": filename,
+                                        "success": True,
+                                        "content": content,
+                                        "sentences": sentences,
+                                        "report": report,
+                                        "summary": {
+                                            "totalSentences": len(sentences),
+                                            "totalIssues": sum(len(s.get('feedback', [])) for s in sentences),
+                                            "qualityScore": calculate_quality_score(sentences)
+                                        }
+                                    })
+                                    
+                            except Exception as e:
+                                logger.error(f"Error processing file {filename}: {str(e)}")
+                                results.append({
+                                    "filename": filename,
+                                    "success": False,
+                                    "error": str(e)
+                                })
+        else:
+            return jsonify({"error": "Batch mode requires a zip file"}), 400
+        
+        return jsonify({
+            "success": True,
+            "results": results,
+            "total_files": len(results),
+            "successful_files": len([r for r in results if r["success"]])
+        })
+        
+    except Exception as e:
+        logger.error(f"Batch upload error: {str(e)}")
+        return jsonify({"error": f"Batch upload failed: {str(e)}"}), 500
+
+def calculate_quality_score(sentences):
+    """Calculate a quality score based on the number of issues found."""
+    if not sentences:
+        return 0
+    
+    total_issues = sum(len(s.get('feedback', [])) for s in sentences)
+    total_sentences = len(sentences)
+    
+    if total_sentences == 0:
+        return 0
+    
+    # Quality score: 100% - (issues per sentence * 100)
+    # Cap at 0% minimum
+    score = max(0, 100 - (total_issues / total_sentences * 100))
+    return round(score)
