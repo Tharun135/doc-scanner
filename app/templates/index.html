@@ -1046,6 +1046,38 @@
             }
 
             showBatchResults();
+            
+            // Automatically display the first successful file's content
+            const firstSuccessfulResult = batchResults.find(result => result.success);
+            if (firstSuccessfulResult) {
+                renderChart(firstSuccessfulResult.report || {}, firstSuccessfulResult.sentences || []);
+                renderContent(firstSuccessfulResult.content || '', firstSuccessfulResult.sentences || []);
+                
+                // Add indicator showing which file is currently displayed
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'alert alert-info';
+                fileInfo.innerHTML = `
+                    <i class="fas fa-info-circle me-2"></i>
+                    Currently viewing: <strong>${firstSuccessfulResult.filename}</strong> 
+                    <small class="text-muted">(Click on other files in the batch results to view them)</small>
+                `;
+                
+                const documentContent = document.getElementById('documentContent');
+                const existingInfo = documentContent.querySelector('.alert.alert-info');
+                if (existingInfo) existingInfo.remove();
+                documentContent.insertBefore(fileInfo, documentContent.firstChild.nextSibling);
+                
+                // Highlight the first result as active
+                setTimeout(() => {
+                    const firstResultIndex = batchResults.findIndex(result => result.success);
+                    if (firstResultIndex >= 0) {
+                        const resultItems = document.querySelectorAll('.result-item');
+                        if (resultItems[firstResultIndex]) {
+                            resultItems[firstResultIndex].classList.add('active');
+                        }
+                    }
+                }, 100);
+            }
         }
 
         async function processBatchZip(zipFile) {
