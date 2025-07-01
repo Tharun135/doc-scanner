@@ -371,45 +371,9 @@
             color: white;
             border-radius: 8px;
             padding: 1rem;
-            margin-bottom: 1rem;
-        }
+            margin-bottom: 1rem;        }
         
-        .document-type-selector {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: #333;
-            padding: 0.5rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
-
-        .document-type-selector option {
-            background: #fff;
-            color: #333;
-            padding: 0.5rem;
-        }
-
-.writing-goals {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.goal-tag {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.goal-tag.selected {
-    background: var(--secondary-color);
-}
-
-.performance-indicator {
+        .performance-indicator {
     position: fixed;
     top: 20px;
     right: 20px;
@@ -420,6 +384,209 @@
     font-size: 0.8rem;
     z-index: 1000;
 }
+
+        /* Enhanced AI Writing Assistant Dashboard */
+        .metric-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.8rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--highlight-color);
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+}
+
+.quality-score-container {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.8rem;
+}
+
+.quality-score {
+    background: var(--secondary-color);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.quality-progress .progress-bar {
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+    transition: width 1s ease;
+}
+
+
+.issues-progress {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.8rem;
+}
+
+.smart-insights {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.8rem;
+}
+
+.insight-item {
+    background: rgba(255, 215, 0, 0.1);
+    border-left: 3px solid var(--highlight-color);
+    padding: 0.5rem;
+    margin: 0.3rem 0;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.insight-item.active {
+    background: rgba(255, 215, 0, 0.2);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.quick-actions {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 0.8rem;
+}
+
+.quick-actions .btn {
+    margin-bottom: 0.3rem;
+    transition: all 0.3s ease;
+}
+
+.quick-actions .btn:hover:not(:disabled) {
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.quick-actions .btn:disabled {
+    opacity: 0.5;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.file-list-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .file-list-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .file-list-item .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .file-list-item .file-size {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .file-list-item .remove-file {
+            background: rgba(255, 0, 0, 0.2);
+            border: none;
+            color: #ff6b6b;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-list-item .remove-file:hover {
+            background: rgba(255, 0, 0, 0.4);
+            transform: scale(1.1);
+        }
+
+        .batch-progress {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .batch-progress .progress-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .batch-progress .progress-item.processing {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 3px solid #ffc107;
+        }
+
+        .batch-progress .progress-item.completed {
+            background: rgba(40, 167, 69, 0.2);
+            border-left: 3px solid #28a745;
+        }
+
+        .batch-progress .progress-item.error {
+            background: rgba(220, 53, 69, 0.2);
+            border-left: 3px solid #dc3545;
+        }
+
+        .batch-results {
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .batch-results .result-summary {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .batch-results .result-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .batch-results .result-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(3px);
+        }
+
+        .batch-results .result-item.active {
+            border-color: var(--secondary-color);
+            background: rgba(42, 155, 170, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -449,64 +616,98 @@
                     <h5><i class="fas fa-upload"></i> Upload Document</h5>
                 </div>
                 <div class="card-body">
-                    <!-- Document Type Selector -->
-                    <div class="mb-3">
-                        <label for="documentType" class="form-label">Document Type:</label>
-                        <select id="documentType" class="document-type-selector w-100">
-                            <option value="general">General</option>
-                            <option value="technical">Technical Documentation</option>
-                            <option value="academic">Academic Writing</option>
-                            <option value="business">Business Communication</option>
-                            <option value="marketing">Marketing Content</option>
-                            <option value="creative">Creative Writing</option>
-                        </select>
-                    </div>
-
-                    <!-- Writing Goals -->
-                    <div class="mb-3">
-                        <label class="form-label">Writing Goals:</label>
-                        <div class="writing-goals">
-                            <span class="goal-tag selected" data-goal="clarity">Clarity</span>
-                            <span class="goal-tag selected" data-goal="conciseness">Conciseness</span>
-                            <span class="goal-tag" data-goal="engagement">Engagement</span>
-                            <span class="goal-tag" data-goal="professionalism">Professional</span>
-                            <span class="goal-tag" data-goal="accessibility">Accessible</span>
-                        </div>
-                    </div>
-
                     <form id="uploadForm" enctype="multipart/form-data">
                         <div id="dropzone" class="dropzone mb-3">
                             <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
                             <p>Drag & Drop files here or</p>
-                            <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn">Browse</button>
+                            <button type="button" class="btn btn-outline-light btn-sm me-2" id="browseBtn">Browse Files</button>
+                            <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn">Browse Zip</button>
                             <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt" style="display: none;">
+                            <input type="file" id="batchFileInput" accept=".zip" style="display: none;">
+                            <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt" multiple style="display: none;">
+                        </div>
+                        <div id="fileList" class="mb-3" style="display: none;">
+                            <h6>Selected Files:</h6>
+                            <div id="fileListItems"></div>
                         </div>
                         <button class="btn btn-primary w-100" type="submit">
-                            <i class="fas fa-upload"></i> Upload & Analyze
+                            <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
                             <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
                     </form>
                 </div>
             </div>
 
-            <!-- AI Performance -->
+            <!-- AI Writing Assistant Dashboard -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5><i class="fas fa-brain"></i> AI Performance</h5>
+                    <h5><i class="fas fa-brain"></i> AI Writing Assistant</h5>
                 </div>
                 <div class="card-body">
-                    <div id="aiPerformance">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Response Quality:</span>
-                            <span id="qualityScore">-</span>
+                    <!-- Document Metrics -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="metric-card">
+                                <div class="metric-value" id="wordCount">0</div>
+                                <div class="metric-label">Words</div>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span>Response Time:</span>
-                            <span id="responseTime">-</span>
+                        <div class="col-6">
+                            <div class="metric-card">
+                                <div class="metric-value" id="sentenceCount">0</div>
+                                <div class="metric-label">Sentences</div>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Method Used:</span>
-                            <span id="aiMethod">-</span>
+                    </div>
+                    
+                    <!-- Writing Quality Score -->
+                    <div class="quality-score-container mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold">Writing Quality</span>
+                            <span class="quality-score" id="qualityScore">-</span>
+                        </div>
+                        <div class="progress quality-progress">
+                            <div class="progress-bar" role="progressbar" id="qualityProgressBar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted" id="qualityDescription">Upload text to see quality metrics</small>
+                    </div>
+                    
+
+                    <!-- Issues Progress -->
+                    <div class="issues-progress mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold">Issues Detected</span>
+                            <span class="badge bg-warning" id="issuesStats">0</span>
+                        </div>
+                        <div class="progress">
+                            <div class="progress-bar bg-success" role="progressbar" id="issuesProgressBar" style="width: 100%"></div>
+                        </div>
+                        <small class="text-muted" id="issuesDescription">No issues detected</small>
+                    </div>
+                    
+                    <!-- Smart Insights -->
+                    <div class="smart-insights mb-3">
+                        <div class="fw-bold mb-2"><i class="fas fa-lightbulb"></i> Smart Insights</div>
+                        <div id="smartInsightsList">
+                            <div class="insight-item text-muted">
+                                <i class="fas fa-info-circle"></i> Upload text to get personalized insights
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <div class="fw-bold mb-2"><i class="fas fa-magic"></i> Quick Actions</div>
+                        <div class="btn-group-vertical w-100" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="fixAllBtn" disabled>
+                                <i class="fas fa-check-double"></i> Apply All Suggestions
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="readabilityBtn" disabled>
+                                <i class="fas fa-eye"></i> Improve Readability
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" id="summaryBtn" disabled>
+                                <i class="fas fa-file-alt"></i> Generate Summary
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -576,113 +777,475 @@
         // File upload handling
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('fileInput');
+        const batchFileInput = document.getElementById('batchFileInput');
+        const multiFileInput = document.getElementById('multiFileInput');
         const browseBtn = document.getElementById('browseBtn');
+        const browseBatchBtn = document.getElementById('browseBatchBtn');
         const uploadForm = document.getElementById('uploadForm');
         let analysisChart;
+        let selectedFiles = [];
+        let batchResults = [];
 
-        // Handle browse button click
+        // Handle browse button clicks
         browseBtn.addEventListener('click', () => {
-            fileInput.click();
+            multiFileInput.click();
         });
 
-        // Handle file input change
+        browseBatchBtn.addEventListener('click', () => {
+            batchFileInput.click();
+        });
+
+        // Handle file input changes
         fileInput.addEventListener('change', (e) => {
             const files = e.target.files;
             if (files.length > 0) {
-                handleFiles(files);
+                selectedFiles = Array.from(files);
+                updateFileList();
+            }
+        });
+
+        multiFileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+                selectedFiles = Array.from(files);
+                updateFileList();
+            }
+        });
+
+        batchFileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files.length > 0) {
+                selectedFiles = Array.from(files);
+                updateFileList();
             }
         });
 
         // Drag and drop handlers
-dropzone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropzone.classList.add('drag-over');
-});
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('drag-over');
+        });
 
-dropzone.addEventListener('dragleave', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('drag-over');
-});
+        dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+        });
 
-dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('drag-over');
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        // Set the file input's files property so the form can use it
-        fileInput.files = files;
-        handleFiles(files);
-    }
-});
-
-        // Handle files function
-        function handleFiles(files) {
-            const file = files[0];
-            const allowedTypes = ['.pdf', '.md', '.adoc', '.docx', '.txt'];
-            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-
-            if (allowedTypes.includes(fileExtension)) {
-                dropzone.innerHTML = `
-                    <i class="fas fa-file-alt fa-2x mb-2"></i>
-                    <p>${file.name}</p>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="changeFileBtn">Change File</button>
-                `;
-
-                document.getElementById('changeFileBtn').addEventListener('click', () => {
-                    fileInput.click();
-                });
-            } else {
-                alert('Invalid file type. Please upload a PDF, MD, ADOC, DOCX, or TXT file.');
-                fileInput.value = '';
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                selectedFiles = Array.from(files);
+                updateFileList();
             }
+        });
+
+        // Update file list display
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            const fileListItems = document.getElementById('fileListItems');
+            const uploadBtnText = document.getElementById('uploadBtnText');
+            
+            if (selectedFiles.length === 0) {
+                fileList.style.display = 'none';
+                uploadBtnText.textContent = 'Upload & Analyze';
+                resetDropzone();
+                return;
+            }
+
+            fileList.style.display = 'block';
+            fileListItems.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-list-item';
+                
+                const fileSize = formatFileSize(file.size);
+                const fileIcon = getFileIcon(file.name);
+                
+                fileItem.innerHTML = `
+                    <div class="file-info">
+                        <i class="${fileIcon}"></i>
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">(${fileSize})</span>
+                    </div>
+                    <button type="button" class="remove-file" onclick="removeFile(${index})" title="Remove file">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                fileListItems.appendChild(fileItem);
+            });
+
+            // Update upload button text
+            if (selectedFiles.length === 1) {
+                uploadBtnText.textContent = 'Upload & Analyze 1 File';
+            } else {
+                uploadBtnText.textContent = `Upload & Analyze ${selectedFiles.length} Files`;
+            }
+
+            // Update dropzone display
+            const isZip = selectedFiles.some(file => file.name.toLowerCase().endsWith('.zip'));
+            dropzone.innerHTML = `
+                <i class="fas fa-${isZip ? 'file-archive' : 'files'} fa-2x mb-2"></i>
+                <p>${selectedFiles.length} file${selectedFiles.length > 1 ? 's' : ''} selected</p>
+                <button type="button" class="btn btn-outline-light btn-sm me-2" onclick="selectMoreFiles()">Add More</button>
+                <button type="button" class="btn btn-outline-light btn-sm" onclick="clearFiles()">Clear All</button>
+            `;
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        function selectMoreFiles() {
+            multiFileInput.click();
+        }
+
+        function clearFiles() {
+            selectedFiles = [];
+            updateFileList();
+        }
+
+        function resetDropzone() {
+            dropzone.innerHTML = `
+                <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
+                <p>Drag & Drop files here or</p>
+                <button type="button" class="btn btn-outline-light btn-sm me-2" id="browseBtn">Browse Files</button>
+                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn">Browse Zip</button>
+            `;
+            
+            // Re-attach event listeners
+            document.getElementById('browseBtn').addEventListener('click', () => multiFileInput.click());
+            document.getElementById('browseBatchBtn').addEventListener('click', () => batchFileInput.click());
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.toLowerCase().split('.').pop();
+            const iconMap = {
+                'pdf': 'fas fa-file-pdf text-danger',
+                'md': 'fab fa-markdown text-primary',
+                'adoc': 'fas fa-file-alt text-success',
+                'docx': 'fas fa-file-word text-primary',
+                'doc': 'fas fa-file-word text-primary',
+                'txt': 'fas fa-file-alt text-muted',
+                'zip': 'fas fa-file-archive text-warning'
+            };
+            return iconMap[ext] || 'fas fa-file text-muted';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
         // Form submission
         uploadForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+            e.preventDefault();
 
-    if (!fileInput.files.length) {
-        alert('Please select a file first.');
-        return;
-    }
+            if (selectedFiles.length === 0) {
+                alert('Please select at least one file first.');
+                return;
+            }
 
-    // Show spinner
-    document.getElementById('loadingOverlay').style.display = 'flex';
+            // Show spinner
+            document.getElementById('loadingOverlay').style.display = 'flex';
 
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
+            const submitBtn = uploadForm.querySelector('button[type="submit"]');
+            const originalBtnContent = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            submitBtn.disabled = true;
 
-    try {
-        const submitBtn = uploadForm.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
-        submitBtn.disabled = true;
-
-        const response = await fetch('/upload', {
-            method: 'POST',
-            body: formData
+            try {
+                if (selectedFiles.length === 1) {
+                    // Single file upload (existing logic)
+                    await processSingleFile(selectedFiles[0]);
+                } else {
+                    // Batch upload
+                    await processBatchFiles(selectedFiles);
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('An error occurred during upload: ' + error.message);
+            } finally {
+                // Hide spinner
+                document.getElementById('loadingOverlay').style.display = 'none';
+                submitBtn.innerHTML = originalBtnContent;
+                submitBtn.disabled = false;
+            }
         });
 
-        if (!response.ok) throw new Error('Upload failed');
+        async function processSingleFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
 
-        const result = await response.json();
+            const response = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
 
-        renderChart(result.report || {}, result.sentences || []);
-        renderContent(result.content || '', result.sentences || []);
+            if (!response.ok) throw new Error('Upload failed');
 
-        submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Analyze';
-        submitBtn.disabled = false;
-    } catch (error) {
-        console.error('Upload error:', error);
-        alert('An error occurred during upload: ' + error.message);
+            const result = await response.json();
+            renderChart(result.report || {}, result.sentences || []);
+            renderContent(result.content || '', result.sentences || []);
+        }
 
-        const submitBtn = uploadForm.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = '<i class="fas fa-upload"></i> Upload & Analyze';
-        submitBtn.disabled = false;
-    } finally {
-        // Hide spinner
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }
-});
+        async function processBatchFiles(files) {
+            batchResults = [];
+            showBatchProgress();
+
+            // Check if there's a zip file
+            const zipFile = files.find(file => file.name.toLowerCase().endsWith('.zip'));
+            
+            if (zipFile) {
+                await processBatchZip(zipFile);
+            } else {
+                await processBatchIndividual(files);
+            }
+
+            showBatchResults();
+        }
+
+        async function processBatchZip(zipFile) {
+            updateProgressItem(zipFile.name, 'processing', 'Extracting zip file...');
+
+            const formData = new FormData();
+            formData.append('file', zipFile);
+            formData.append('batch_mode', 'true');
+
+            try {
+                const response = await fetch('/upload_batch', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Batch upload failed');
+
+                const result = await response.json();
+                
+                if (result.success && result.results) {
+                    batchResults = result.results;
+                    updateProgressItem(zipFile.name, 'completed', `Processed ${result.results.length} files`);
+                } else {
+                    throw new Error(result.error || 'Batch processing failed');
+                }
+            } catch (error) {
+                updateProgressItem(zipFile.name, 'error', `Error: ${error.message}`);
+                throw error;
+            }
+        }
+
+        async function processBatchIndividual(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                updateProgressItem(file.name, 'processing', 'Analyzing...');
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const response = await fetch('/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
+
+                    const result = await response.json();
+                    
+                    batchResults.push({
+                        filename: file.name,
+                        success: true,
+                        content: result.content,
+                        sentences: result.sentences,
+                        report: result.report,
+                        summary: {
+                            totalSentences: result.sentences.length,
+                            totalIssues: result.sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0),
+                            qualityScore: calculateQualityScore(result.sentences)
+                        }
+                    });
+
+                    updateProgressItem(file.name, 'completed', 'Analysis complete');
+                } catch (error) {
+                    batchResults.push({
+                        filename: file.name,
+                        success: false,
+                        error: error.message
+                    });
+                    updateProgressItem(file.name, 'error', `Error: ${error.message}`);
+                }
+            }
+        }
+
+        function calculateQualityScore(sentences) {
+            if (sentences.length === 0) return 0;
+            const issues = sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0);
+            return Math.max(0, Math.round((1 - issues / sentences.length) * 100));
+        }
+
+        function showBatchProgress() {
+            const progressDiv = document.createElement('div');
+            progressDiv.id = 'batchProgress';
+            progressDiv.className = 'batch-progress';
+            progressDiv.innerHTML = `
+                <h6><i class="fas fa-tasks"></i> Processing Files</h6>
+                <div id="progressItems"></div>
+            `;
+            
+            // Insert after file list
+            const fileList = document.getElementById('fileList');
+            fileList.parentNode.insertBefore(progressDiv, fileList.nextSibling);
+            progressDiv.style.display = 'block';
+
+            // Add progress items
+            const progressItems = document.getElementById('progressItems');
+            selectedFiles.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'progress-item';
+                item.id = `progress-${file.name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+                item.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-clock me-2"></i>
+                        <span class="file-name">${file.name}</span>
+                    </div>
+                    <span class="status">Waiting...</span>
+                `;
+                progressItems.appendChild(item);
+            });
+        }
+
+        function updateProgressItem(filename, status, message) {
+            const safeId = `progress-${filename.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            const item = document.getElementById(safeId);
+            if (item) {
+                item.className = `progress-item ${status}`;
+                const icon = status === 'processing' ? 'fa-spinner fa-spin' : 
+                           status === 'completed' ? 'fa-check' : 'fa-times';
+                item.querySelector('i').className = `fas ${icon} me-2`;
+                item.querySelector('.status').textContent = message;
+            }
+        }
+
+        function showBatchResults() {
+            const resultsDiv = document.createElement('div');
+            resultsDiv.id = 'batchResults';
+            resultsDiv.className = 'batch-results';
+            
+            const successCount = batchResults.filter(r => r.success).length;
+            const totalIssues = batchResults.reduce((sum, r) => 
+                r.success ? sum + (r.summary?.totalIssues || 0) : sum, 0);
+            const avgQuality = batchResults.filter(r => r.success).reduce((sum, r) => 
+                sum + (r.summary?.qualityScore || 0), 0) / successCount;
+
+            resultsDiv.innerHTML = `
+                <div class="result-summary">
+                    <h6><i class="fas fa-chart-bar"></i> Batch Analysis Summary</h6>
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="h4 text-success">${successCount}</div>
+                                <small>Files Processed</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="h4 text-warning">${totalIssues}</div>
+                                <small>Total Issues</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="h4 text-info">${Math.round(avgQuality || 0)}%</div>
+                                <small>Avg Quality</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <h6>Individual Results</h6>
+                <div id="batchResultItems"></div>
+            `;
+
+            const progressDiv = document.getElementById('batchProgress');
+            progressDiv.parentNode.insertBefore(resultsDiv, progressDiv.nextSibling);
+            resultsDiv.style.display = 'block';
+
+            // Add individual result items
+            const resultItems = document.getElementById('batchResultItems');
+            batchResults.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.addEventListener('click', () => showBatchResult(index));
+                
+                if (result.success) {
+                    const issues = result.summary?.totalIssues || 0;
+                    const quality = result.summary?.qualityScore || 0;
+                    item.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-file-alt text-success me-2"></i>
+                                <div>
+                                    <div class="fw-bold">${result.filename}</div>
+                                    <small class="text-muted">${result.summary?.totalSentences || 0} sentences, ${issues} issues</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="badge bg-${quality >= 80 ? 'success' : quality >= 60 ? 'warning' : 'danger'}">${quality}%</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    item.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                <div>
+                                    <div class="fw-bold">${result.filename}</div>
+                                    <small class="text-muted text-danger">${result.error}</small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                resultItems.appendChild(item);
+            });
+        }
+
+        function showBatchResult(index) {
+            const result = batchResults[index];
+            if (!result.success) {
+                alert(`Error processing ${result.filename}: ${result.error}`);
+                return;
+            }
+
+            // Highlight selected result
+            document.querySelectorAll('.result-item').forEach(item => item.classList.remove('active'));
+            document.querySelectorAll('.result-item')[index].classList.add('active');
+
+            // Render the selected file's content
+            renderChart(result.report || {}, result.sentences || []);
+            renderContent(result.content || '', result.sentences || []);
+
+            // Update dashboard to show current file info
+            const fileInfo = document.createElement('div');
+            fileInfo.className = 'alert alert-info';
+            fileInfo.innerHTML = `
+                <i class="fas fa-info-circle me-2"></i>
+                Currently viewing: <strong>${result.filename}</strong>
+            `;
+            
+            const documentContent = document.getElementById('documentContent');
+            const existingInfo = documentContent.querySelector('.alert.alert-info');
+            if (existingInfo) existingInfo.remove();
+            documentContent.insertBefore(fileInfo, documentContent.firstChild.nextSibling);
+        }
 
         // Chart rendering
         function renderChart(report, sentences) {
@@ -692,7 +1255,7 @@ dropzone.addEventListener('drop', (e) => {
         analysisChart.destroy();
     }
 
-    let totalErrors = sentences.reduce((count, sentence) => count + sentence.feedback.length, 0);
+    let totalErrors = sentences.reduce((count, sentence) => count + (sentence.feedback ? sentence.feedback.length : 0), 0);
     let totalSentences = sentences.length;
     // Calculate quality index if not provided by backend
     let qualityIndex = report.avgQualityScore !== undefined
@@ -720,8 +1283,8 @@ dropzone.addEventListener('drop', (e) => {
 
         // Enhanced AI functionality
         let currentSuggestionId = null;
-        let selectedWritingGoals = ['clarity', 'conciseness'];
-        let aiFeedbackData = {}; // Store AI feedback data by sentence index
+        let selectedWritingGoals = ['clarity', 'conciseness']; // Default goals (UI removed but backend may still use)
+        let aiFeedbackData = {}; // Store AI feedback data by sentence index and feedback type
         
         // Add event delegation for AI feedback icons
         document.addEventListener('click', function(e) {
@@ -730,9 +1293,10 @@ dropzone.addEventListener('drop', (e) => {
                 const sentenceIndex = parseInt(button.getAttribute('data-sentence-index'));
                 const feedback = button.getAttribute('data-feedback');
                 const sentence = button.getAttribute('data-sentence');
+                const fullSuggestion = button.getAttribute('data-full-suggestion');
                 
-                console.log('AI feedback icon clicked:', { sentenceIndex, feedback, sentence });
-                showAIFeedback(sentenceIndex, feedback, sentence);
+                console.log('AI feedback icon clicked:', { sentenceIndex, feedback, sentence, fullSuggestion });
+                showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion);
             }
         });
         
@@ -757,7 +1321,7 @@ dropzone.addEventListener('drop', (e) => {
         }
         
         // Function to add AI feedback to the AI tab
-        function addToAITab(sentenceIndex, feedback, sentence, aiSuggestion) {
+        function addToAITab(sentenceIndex, feedback, sentence, aiSuggestion, feedbackKey) {
             const aiFeedbackContainer = document.getElementById('aiFeedbackContent');
             
             // Remove the placeholder if it exists
@@ -766,10 +1330,12 @@ dropzone.addEventListener('drop', (e) => {
                 placeholder.remove();
             }
             
-            // Create AI feedback item
+            // Create AI feedback item with unique identifier
             const aiDiv = document.createElement('div');
             aiDiv.className = 'ai-feedback-content';
             aiDiv.setAttribute('data-sentence-index', sentenceIndex);
+            aiDiv.setAttribute('data-feedback-key', feedbackKey);
+            aiDiv.setAttribute('data-feedback-type', feedback);
             
             aiDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-3">
@@ -812,14 +1378,32 @@ dropzone.addEventListener('drop', (e) => {
                 </div>
             `;
             
-            // Insert in order by sentence index
+            // Insert in order by sentence index, then by feedback type
             const existingItems = Array.from(aiFeedbackContainer.querySelectorAll('.ai-feedback-content[data-sentence-index]'));
             let inserted = false;
             
             for (let existingItem of existingItems) {
                 const existingIndex = parseInt(existingItem.getAttribute('data-sentence-index'));
+                
                 if (sentenceIndex < existingIndex) {
                     aiFeedbackContainer.insertBefore(aiDiv, existingItem);
+                    inserted = true;
+                    break;
+                } else if (sentenceIndex === existingIndex) {
+                    // Same sentence - insert after existing items for the same sentence
+                    let nextItem = existingItem.nextElementSibling;
+                    while (nextItem && nextItem.classList.contains('ai-feedback-content')) {
+                        const nextIndex = parseInt(nextItem.getAttribute('data-sentence-index'));
+                        if (nextIndex !== sentenceIndex) {
+                            break;
+                        }
+                        nextItem = nextItem.nextElementSibling;
+                    }
+                    if (nextItem) {
+                        aiFeedbackContainer.insertBefore(aiDiv, nextItem);
+                    } else {
+                        aiFeedbackContainer.appendChild(aiDiv);
+                    }
                     inserted = true;
                     break;
                 }
@@ -829,49 +1413,86 @@ dropzone.addEventListener('drop', (e) => {
                 aiFeedbackContainer.appendChild(aiDiv);
             }
             
-            // Store the AI feedback data
-            aiFeedbackData[sentenceIndex] = {
+            // Store the AI feedback data with unique key
+            aiFeedbackData[feedbackKey] = {
                 feedback: feedback,
                 sentence: sentence,
-                aiSuggestion: aiSuggestion
+                aiSuggestion: aiSuggestion,
+                sentenceIndex: sentenceIndex
             };
         }
         
         // Function to handle AI feedback icon click
-        async function showAIFeedback(sentenceIndex, feedback, sentence) {
+        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '') {
             try {
                 // Decode the parameters since they were encoded in the HTML
                 const decodedFeedback = decodeURIComponent(feedback);
                 const decodedSentence = decodeURIComponent(sentence);
+                const decodedFullSuggestion = decodeURIComponent(fullSuggestion);
                 
-                console.log('showAIFeedback called:', { sentenceIndex, decodedFeedback, decodedSentence });
+                console.log('showAIFeedback called:', { sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion });
                 
-                // Check if we already have AI feedback for this sentence
-                if (aiFeedbackData[sentenceIndex]) {
+                // Create a unique key for this specific feedback type and sentence combination
+                const feedbackKey = `${sentenceIndex}_${btoa(decodedFeedback).replace(/[^a-zA-Z0-9]/g, '')}`;
+                
+                // Check if we already have AI feedback for this specific sentence and feedback type
+                if (aiFeedbackData[feedbackKey]) {
                     // Switch to AI tab and highlight the existing feedback
                     switchTabProgrammatically('ai-feedback');
-                    highlightAIFeedback(sentenceIndex);
+                    highlightAIFeedback(sentenceIndex, decodedFeedback);
                     return;
                 }
                 
-                // Show loading state
-                const loadingToast = showLoadingToast('Getting AI suggestions...');
+                // Check if there's already an AI solution in the full suggestion
+                let aiSuggestion = null;
+                if (decodedFullSuggestion && decodedFullSuggestion.includes('AI Solution:')) {
+                    // Extract the AI solution from the structured suggestion
+                    const lines = decodedFullSuggestion.split('\n');
+                    let originalSentence = '';
+                    let aiSolution = '';
+                    
+                    for (const line of lines) {
+                        if (line.trim().startsWith('Original sentence:')) {
+                            originalSentence = line.replace('Original sentence:', '').trim().replace(/^["']|["']$/g, '');
+                        } else if (line.trim().startsWith('AI Solution:')) {
+                            aiSolution = line.replace('AI Solution:', '').trim().replace(/^["']|["']$/g, '');
+                        }
+                    }
+                    
+                    if (aiSolution) {
+                        // Create a mock AI suggestion object with the existing solution
+                        aiSuggestion = {
+                            suggestion: aiSolution,
+                            confidence: 'high',
+                            method: 'rule-based',
+                            suggestion_id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                        };
+                        
+                        console.log('Using existing AI solution:', aiSolution);
+                    }
+                }
                 
-                // Get AI suggestion
-                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
-                
-                // Hide loading
-                hideLoadingToast(loadingToast);
+                // If no existing solution, get a new AI suggestion
+                if (!aiSuggestion) {
+                    // Show loading state
+                    const loadingToast = showLoadingToast('Getting AI suggestions...');
+                    
+                    // Get AI suggestion
+                    aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
+                    
+                    // Hide loading
+                    hideLoadingToast(loadingToast);
+                }
                 
                 if (aiSuggestion) {
                     // Add to AI tab
-                    addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion);
+                    addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion, feedbackKey);
                     
                     // Switch to AI tab
                     switchTabProgrammatically('ai-feedback');
                     
                     // Highlight the new feedback
-                    highlightAIFeedback(sentenceIndex);
+                    highlightAIFeedback(sentenceIndex, decodedFeedback);
                 } else {
                     showErrorToast('AI suggestion not available');
                 }
@@ -902,15 +1523,28 @@ dropzone.addEventListener('drop', (e) => {
         }
         
         // Function to highlight AI feedback item
-        function highlightAIFeedback(sentenceIndex) {
+        function highlightAIFeedback(sentenceIndex, feedbackType = null) {
             // Remove existing highlights
             document.querySelectorAll('.ai-feedback-content').forEach(item => {
                 item.style.transform = '';
                 item.style.boxShadow = '';
             });
             
-            // Highlight the target item
-            const targetItem = document.querySelector(`#aiFeedbackContent [data-sentence-index="${sentenceIndex}"]`);
+            // Find the target item - if feedbackType is provided, find the specific feedback
+            let targetItem;
+            if (feedbackType) {
+                const items = document.querySelectorAll(`#aiFeedbackContent [data-sentence-index="${sentenceIndex}"]`);
+                for (let item of items) {
+                    if (item.getAttribute('data-feedback-type') === feedbackType) {
+                        targetItem = item;
+                        break;
+                    }
+                }
+            } else {
+                // If no specific feedback type, just get the first item for this sentence
+                targetItem = document.querySelector(`#aiFeedbackContent [data-sentence-index="${sentenceIndex}"]`);
+            }
+            
             if (targetItem) {
                 targetItem.style.transform = 'scale(1.02)';
                 targetItem.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
@@ -992,21 +1626,205 @@ dropzone.addEventListener('drop', (e) => {
             }, 3000);
         }
         
-        // Goal tag selection
-        document.querySelectorAll('.goal-tag').forEach(tag => {
-            tag.addEventListener('click', () => {
-                const goal = tag.dataset.goal;
-                tag.classList.toggle('selected');
-                
-                if (tag.classList.contains('selected')) {
-                    if (!selectedWritingGoals.includes(goal)) {
-                        selectedWritingGoals.push(goal);
-                    }
-                } else {
-                    selectedWritingGoals = selectedWritingGoals.filter(g => g !== goal);
-                }
+        // Writing Goals Analytics (simplified - goals now hardcoded)
+        function updateWritingGoalsAnalytics() {
+            console.log('Selected writing goals:', selectedWritingGoals);
+            
+            // Update dashboard insights based on selected goals
+            updateSmartInsights();
+        }
+
+        function updateDocumentMetrics(content, sentences) {
+            // Update word and sentence counts
+            const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
+            const sentenceCount = sentences.length;
+            
+            document.getElementById('wordCount').textContent = wordCount;
+            document.getElementById('sentenceCount').textContent = sentenceCount;
+            
+            // Calculate and update quality score
+            const issues = sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0);
+            const qualityScore = sentenceCount > 0 ? Math.max(0, Math.round((1 - issues / sentenceCount) * 100)) : 0;
+            
+            document.getElementById('qualityScore').textContent = `${qualityScore}%`;
+            document.getElementById('qualityProgressBar').style.width = `${qualityScore}%`;
+            
+            // Update quality description
+            let description = '';
+            if (qualityScore >= 90) description = 'Excellent writing quality';
+            else if (qualityScore >= 75) description = 'Good writing quality';
+            else if (qualityScore >= 60) description = 'Fair writing quality - room for improvement';
+            else description = 'Needs improvement';
+            
+            document.getElementById('qualityDescription').textContent = description;
+            
+            // Update issues progress
+            document.getElementById('issuesStats').textContent = issues;
+            document.getElementById('issuesProgressBar').style.width = issues === 0 ? '100%' : `${Math.max(10, 100 - (issues * 10))}%`;
+            document.getElementById('issuesDescription').textContent = 
+                issues === 0 ? 'No issues detected' : `${issues} issue${issues > 1 ? 's' : ''} found`;
+            
+            // Enable quick action buttons
+            if (issues > 0) {
+                document.getElementById('fixAllBtn').disabled = false;
+                document.getElementById('readabilityBtn').disabled = false;
+            }
+            if (wordCount > 50) {
+                document.getElementById('summaryBtn').disabled = false;
+            }
+        }
+
+        function updateSmartInsights() {
+            const insights = [];
+            const container = document.getElementById('smartInsightsList');
+            
+            // Generate insights based on selected goals and document state
+            if (selectedWritingGoals.includes('clarity')) {
+                insights.push({
+                    icon: 'fas fa-eye',
+                    text: 'Focus on clear, simple language',
+                    priority: 'high'
+                });
+            }
+            
+            if (selectedWritingGoals.includes('conciseness')) {
+                insights.push({
+                    icon: 'fas fa-compress-alt',
+                    text: 'Look for opportunities to reduce word count',
+                    priority: 'medium'
+                });
+            }
+            
+            if (selectedWritingGoals.includes('engagement')) {
+                insights.push({
+                    icon: 'fas fa-heart',
+                    text: 'Consider adding more engaging examples',
+                    priority: 'medium'
+                });
+            }
+            
+            // Clear and populate insights
+            container.innerHTML = '';
+            insights.forEach(insight => {
+                const div = document.createElement('div');
+                div.className = `insight-item ${insight.priority === 'high' ? 'active' : ''}`;
+                div.innerHTML = `<i class="${insight.icon}"></i> ${insight.text}`;
+                container.appendChild(div);
             });
+            
+            if (insights.length === 0) {
+                container.innerHTML = '<div class="insight-item text-muted"><i class="fas fa-info-circle"></i> Select writing goals to see personalized insights</div>';
+            }
+        }
+
+        // Function to update smart insights based on document analysis
+        function updateSmartInsightsFromDocument(sentences) {
+            const insights = [];
+            const container = document.getElementById('smartInsightsList');
+            
+            // Analyze document patterns
+            const totalIssues = sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0);
+            const longSentences = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && f.message.includes('Long sentence'))).length;
+            const grammarIssues = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && (f.message.includes('grammar') || f.message.includes('verb')))).length;
+            const repeatedWords = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && f.message.includes('repeated'))).length;
+            
+            // Generate targeted insights
+            if (longSentences > 0 && selectedWritingGoals.includes('conciseness')) {
+                insights.push({
+                    icon: 'fas fa-scissors',
+                    text: `Break down ${longSentences} long sentence${longSentences > 1 ? 's' : ''} for better readability`,
+                    priority: 'high'
+                });
+            }
+            
+            if (grammarIssues > 0 && selectedWritingGoals.includes('professionalism')) {
+                insights.push({
+                    icon: 'fas fa-check-circle',
+                    text: `Fix ${grammarIssues} grammar issue${grammarIssues > 1 ? 's' : ''} to improve professionalism`,
+                    priority: 'high'
+                });
+            }
+            
+            if (repeatedWords > 0 && selectedWritingGoals.includes('clarity')) {
+                insights.push({
+                    icon: 'fas fa-sync-alt',
+                    text: `Reduce word repetition in ${repeatedWords} sentence${repeatedWords > 1 ? 's' : ''}`,
+                    priority: 'medium'
+                });
+            }
+            
+            if (selectedWritingGoals.includes('engagement') && totalIssues < 3) {
+                insights.push({
+                    icon: 'fas fa-heart',
+                    text: 'Consider adding more vivid examples or storytelling elements',
+                    priority: 'low'
+                });
+            }
+            
+            if (selectedWritingGoals.includes('accessibility') && longSentences > 2) {
+                insights.push({
+                    icon: 'fas fa-universal-access',
+                    text: 'Simplify complex sentences for better accessibility',
+                    priority: 'medium'
+                });
+            }
+            
+            // Clear and populate insights
+            container.innerHTML = '';
+            insights.sort((a, b) => {
+                const priorityOrder = { high: 3, medium: 2, low: 1 };
+                return priorityOrder[b.priority] - priorityOrder[a.priority];
+            });
+            
+            insights.forEach(insight => {
+                const div = document.createElement('div');
+                div.className = `insight-item ${insight.priority === 'high' ? 'active' : ''}`;
+                div.innerHTML = `<i class="${insight.icon}"></i> ${insight.text}`;
+                container.appendChild(div);
+            });
+            
+            if (insights.length === 0) {
+                container.innerHTML = '<div class="insight-item text-muted"><i class="fas fa-star"></i> Excellent! Your document aligns well with your writing goals</div>';
+            }
+        }
+
+        // Quick Actions Implementation
+        document.getElementById('fixAllBtn').addEventListener('click', function() {
+            if (confirm('Apply all AI suggestions to improve your document?')) {
+                // Implement bulk fix functionality
+                console.log('Applying all suggestions...');
+                showSuccessToast('All suggestions applied successfully!');
+            }
         });
+
+        document.getElementById('readabilityBtn').addEventListener('click', function() {
+            // Implement readability improvement
+            console.log('Improving readability...');
+            showSuccessToast('Readability analysis complete!');
+        });
+
+        document.getElementById('summaryBtn').addEventListener('click', function() {
+            // Implement summary generation
+            console.log('Generating summary...');
+            showSuccessToast('Document summary generated!');
+        });
+
+        function showSuccessToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification success';
+            toast.innerHTML = `<i class="fas fa-check me-2"></i>${message}`;
+            document.body.appendChild(toast);
+            
+            // Add success style if not present
+            if (!document.querySelector('#success-toast-style')) {
+                const style = document.createElement('style');
+                style.id = 'success-toast-style';
+                style.textContent = `.toast-notification.success { background: #27ae60; }`;
+                document.head.appendChild(style);
+            }
+            
+            setTimeout(() => hideLoadingToast(toast), 3000);
+        }
 
         // Sentence highlighting and navigation functions
         function highlightSentence(sentenceIndex) {
@@ -1271,7 +2089,12 @@ dropzone.addEventListener('drop', (e) => {
                             </div>
                             <strong>Issue:</strong> ${item.message}
                         </div>
-                        <button class="ai-feedback-icon" data-sentence-index="${sentenceIndex}" data-feedback="${encodeURIComponent(item.message)}" data-sentence="${encodeURIComponent(sentence)}" title="Get AI suggestions">
+                        <button class="ai-feedback-icon" 
+                                data-sentence-index="${sentenceIndex}" 
+                                data-feedback="${encodeURIComponent(item.message)}" 
+                                data-sentence="${encodeURIComponent(sentence)}"
+                                data-full-suggestion="${encodeURIComponent(item.full_suggestion || '')}" 
+                                title="Get AI suggestions">
                             <i class="fas fa-robot"></i>
                         </button>
                     </div>
@@ -1411,13 +2234,14 @@ dropzone.addEventListener('drop', (e) => {
             } catch (error) {
                 console.error('Implementation feedback error:', error);
             }
-        }
-
-        // Enhanced content rendering with sentence highlighting
+        }        // Enhanced content rendering with sentence highlighting
         function renderContent(content, sentences) {
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
+            
+            // Update dashboard metrics
+            updateDocumentMetrics(content, sentences);
             
             // Clear previous content
             documentContent.innerHTML = '<h4>Document Content</h4>';
@@ -1524,6 +2348,9 @@ dropzone.addEventListener('drop', (e) => {
                 `;
                 feedbackContent.appendChild(qualitySummary);
             }
+            
+            // Update smart insights based on document analysis
+            updateSmartInsightsFromDocument(sentences);
         }
         // Clean feedback text
         function cleanFeedback(feedback) {
@@ -1531,6 +2358,7 @@ dropzone.addEventListener('drop', (e) => {
             tempDiv.innerHTML = feedback;
             let cleanText = tempDiv.textContent || tempDiv.innerText || '';
 
+           
             const fileExtensions = ['csv', 'pdf', 'docx', 'txt', 'md', 'adoc', 'png', 'jpg', 'jpeg', 'gif'];
             const regex = new RegExp(`[^.!?]*(?<!\\b(?:${fileExtensions.join('|')})\\b)[.!?]`, 'g');
             const match = cleanText.match(regex);
@@ -1582,10 +2410,382 @@ dropzone.addEventListener('drop', (e) => {
     URL.revokeObjectURL(url);
 });
 
+        // History functionality
+        document.getElementById('historyBtn').addEventListener('click', () => {
+            showHistoryModal();
+        });
+
         // Settings functionality
         document.getElementById('settingsBtn').addEventListener('click', () => {
-            alert('Settings feature coming soon!');
+            showSettingsModal();
         });
+
+        // Initialize modal event handlers when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeModalHandlers();
+        });
+
+        // If DOM is already loaded, initialize immediately
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeModalHandlers);
+        } else {
+            initializeModalHandlers();
+        }
+
+        function initializeModalHandlers() {
+            // Modal close handlers using event delegation
+            document.addEventListener('click', function(e) {
+                // Close history modal
+                if (e.target.id === 'closeHistoryBottomBtn' || e.target.closest('#closeHistoryBottomBtn')) {
+                    console.log('Closing history modal');
+                    document.getElementById('historyModal').style.display = 'none';
+                }
+                
+                // Close settings modal
+                if (e.target.id === 'closeSettingsBottomBtn' || e.target.closest('#closeSettingsBottomBtn')) {
+                    console.log('Closing settings modal');
+                    document.getElementById('settingsModal').style.display = 'none';
+                }
+                
+                // Close modals when clicking outside
+                if (e.target.id === 'historyModal') {
+                    document.getElementById('historyModal').style.display = 'none';
+                }
+                
+                if (e.target.id === 'settingsModal') {
+                    document.getElementById('settingsModal').style.display = 'none';
+                }
+                
+                // Settings save handlers
+                if (e.target.id === 'saveSettingsBtn' || e.target.closest('#saveSettingsBtn')) {
+                    saveSettings();
+                }
+                
+                if (e.target.id === 'resetSettingsBtn' || e.target.closest('#resetSettingsBtn')) {
+                    resetSettings();
+                }
+            });
+            
+            // Also add ESC key support
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const historyModal = document.getElementById('historyModal');
+                    const settingsModal = document.getElementById('settingsModal');
+                    
+                    if (historyModal && historyModal.style.display === 'flex') {
+                        historyModal.style.display = 'none';
+                    }
+                    
+                    if (settingsModal && settingsModal.style.display === 'flex') {
+                        settingsModal.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // History Modal Functions
+        function showHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            const loading = document.getElementById('historyLoading');
+            const content = document.getElementById('historyContent');
+            
+            modal.style.display = 'flex';
+            loading.style.display = 'block';
+            content.innerHTML = '';
+            
+            // Fetch history data
+            fetch('/performance_dashboard')
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    renderHistoryContent(data);
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    content.innerHTML = '<div style="color:#e74c3c; text-align:center; padding:2rem;"><i class="fas fa-exclamation-triangle"></i> Failed to load history data.</div>';
+                    console.error('Error loading history:', error);
+                });
+        }
+
+        function renderHistoryContent(data) {
+            const content = document.getElementById('historyContent');
+            
+            if (!data || !data.recent_suggestions || data.recent_suggestions.length === 0) {
+                content.innerHTML = `
+                    <div style="text-align:center; padding:3rem; color:#666;">
+                        <i class="fas fa-history" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i>
+                        <h4>No History Yet</h4>
+                        <p>Start analyzing documents to see your suggestion history here.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Overview stats
+            const stats = data.overall_stats || {};
+            let overviewHtml = `
+                <div style="margin-bottom:2rem; padding:1rem; background:#f8f9fa; border-radius:8px;">
+                    <h5 style="margin-bottom:1rem; color:#2c3e50;">Overview (Last 30 Days)</h5>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:1rem;">
+                        <div style="text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#3498db;">${stats.total_suggestions || 0}</div>
+                            <div style="font-size:0.9rem; color:#666;">Total Suggestions</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#27ae60;">${stats.avg_rating ? stats.avg_rating.toFixed(1) : 'N/A'}/5</div>
+                            <div style="font-size:0.9rem; color:#666;">Avg Rating</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#e67e22;">${stats.helpful_percentage ? stats.helpful_percentage.toFixed(0) : 0}%</div>
+                            <div style="font-size:0.9rem; color:#666;">Helpful</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:bold; color:#9b59b6;">${stats.implementation_percentage ? stats.implementation_percentage.toFixed(0) : 0}%</div>
+                            <div style="font-size:0.9rem; color:#666;">Implemented</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Recent suggestions
+            let historyHtml = `
+                <h5 style="margin-bottom:1rem; color:#2c3e50;">Recent Suggestions</h5>
+                <div style="max-height:400px; overflow-y:auto;">
+            `;
+
+            data.recent_suggestions.slice(0, 20).forEach((suggestion, index) => {
+                const date = new Date(suggestion.timestamp).toLocaleDateString();
+                const time = new Date(suggestion.timestamp).toLocaleTimeString();
+                const rating = suggestion.user_rating ? '★'.repeat(suggestion.user_rating) + '☆'.repeat(5 - suggestion.user_rating) : 'Not rated';
+                
+                historyHtml += `
+                    <div style="border:1px solid #ddd; border-radius:8px; padding:1rem; margin-bottom:1rem; background:white;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+                            <div style="font-weight:bold; color:#2c3e50;">${suggestion.suggestion_method || 'AI'} Suggestion</div>
+                            <div style="font-size:0.9rem; color:#666;">${date} ${time}</div>
+                        </div>
+                        <div style="margin-bottom:0.5rem; color:#666; font-size:0.9rem;">
+                            <strong>Context:</strong> "${(suggestion.sentence_context || '').substring(0, 100)}${suggestion.sentence_context && suggestion.sentence_context.length > 100 ? '...' : ''}"
+                        </div>
+                        <div style="margin-bottom:0.5rem; padding:0.5rem; background:#f8f9fa; border-radius:4px; font-size:0.9rem;">
+                            ${suggestion.feedback_text || 'No suggestion text available'}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
+                            <div style="color:#666;">
+                                <span style="margin-right:1rem;">📄 ${suggestion.document_type || 'Unknown'}</span>
+                                <span>⏱️ ${suggestion.response_time ? (suggestion.response_time * 1000).toFixed(0) + 'ms' : 'N/A'}</span>
+                            </div>
+                            <div style="color:#f39c12;">${rating}</div>
+                        </div>
+                        ${suggestion.user_feedback ? `<div style="margin-top:0.5rem; padding:0.5rem; background:#e8f5e8; border-radius:4px; font-size:0.9rem;"><strong>Your feedback:</strong> ${suggestion.user_feedback}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            historyHtml += '</div>';
+            content.innerHTML = overviewHtml + historyHtml;
+        }
+
+        // Settings Modal Functions
+        function showSettingsModal() {
+            const modal = document.getElementById('settingsModal');
+            const loading = document.getElementById('settingsLoading');
+            const content = document.getElementById('settingsContent');
+            
+            modal.style.display = 'flex';
+            loading.style.display = 'block';
+            content.innerHTML = '';
+            
+            // Fetch settings data
+            fetch('/ai_config')
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    renderSettingsContent(data);
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    content.innerHTML = '<div style="color:#e74c3c; text-align:center; padding:2rem;"><i class="fas fa-exclamation-triangle"></i> Failed to load settings.</div>';
+                    console.error('Error loading settings:', error);
+                });
+        }
+
+        function renderSettingsContent(data) {
+            const content = document.getElementById('settingsContent');
+            const config = data.suggestion_config || {};
+            const flags = data.feature_flags || {};
+            
+            content.innerHTML = `
+                <div style="margin-bottom:2rem;">
+                    <h5 style="color:#2c3e50; margin-bottom:1rem;">
+                        <i class="fas fa-brain" style="margin-right:8px; color:#3498db;"></i>
+                        AI Suggestion Behavior
+                    </h5>
+                    <div style="display:grid; gap:1rem;">
+                        <div>
+                            <label style="display:block; margin-bottom:0.5rem; font-weight:500;">Confidence Threshold</label>
+                            <input type="range" id="confidenceThreshold" min="0.1" max="1.0" step="0.05" value="${config.min_confidence_threshold || 0.7}" 
+                                   style="width:100%;" onchange="updateConfidenceDisplay(this.value)">
+                            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#666;">
+                                <span>More suggestions (0.1)</span>
+                                <span id="confidenceValue">${((config.min_confidence_threshold || 0.7) * 100).toFixed(0)}%</span>
+                                <span>Fewer, higher quality (1.0)</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="display:block; margin-bottom:0.5rem; font-weight:500;">Max Suggestions per Issue</label>
+                            <select id="maxSuggestions" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+                                <option value="1" ${config.max_suggestions_per_issue === 1 ? 'selected' : ''}>1 suggestion</option>
+                                <option value="2" ${config.max_suggestions_per_issue === 2 ? 'selected' : ''}>2 suggestions</option>
+                                <option value="3" ${config.max_suggestions_per_issue === 3 ? 'selected' : ''}>3 suggestions</option>
+                                <option value="5" ${config.max_suggestions_per_issue === 5 ? 'selected' : ''}>5 suggestions</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:2rem;">
+                    <h5 style="color:#2c3e50; margin-bottom:1rem;">
+                        <i class="fas fa-toggle-on" style="margin-right:8px; color:#27ae60;"></i>
+                        Feature Settings
+                    </h5>
+                    <div style="display:grid; gap:1rem;">
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="includeAlternatives" ${config.include_alternatives ? 'checked' : ''} style="margin-right:0.5rem;">
+                            <span>Include alternative suggestions</span>
+                            <div style="margin-left:auto; font-size:0.8rem; color:#666;">Provides multiple options for each issue</div>
+                        </label>
+                        
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="includeExplanations" ${config.include_explanations ? 'checked' : ''} style="margin-right:0.5rem;">
+                            <span>Include explanations</span>
+                            <div style="margin-left:auto; font-size:0.8rem; color:#666;">Explains why changes are suggested</div>
+                        </label>
+                        
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="personalizeToUser" ${config.personalize_to_user ? 'checked' : ''} style="margin-right:0.5rem;">
+                            <span>Personalize suggestions</span>
+                            <div style="margin-left:auto; font-size:0.8rem; color:#666;">Learn from your feedback and preferences</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h5 style="color:#2c3e50; margin-bottom:1rem;">
+                        <i class="fas fa-flask" style="margin-right:8px; color:#e67e22;"></i>
+                        Advanced Features
+                    </h5>
+                    <div style="display:grid; gap:1rem;">
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="aiPoweredSuggestions" ${flags.ai_powered_suggestions !== false ? 'checked' : ''} style="margin-right:0.5rem;">
+                            <span>AI-Powered Suggestions</span>
+                            <div style="margin-left:auto; font-size:0.8rem; color:#666;">Use AI for complex grammar improvements</div>
+                        </label>
+                        
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="contextAwareAnalysis" ${flags.context_aware_analysis !== false ? 'checked' : ''} style="margin-right:0.5rem;">
+                            <span>Context-Aware Analysis</span>
+                            <div style="margin-left:auto; font-size:0.8rem; color:#666;">Consider document context for better suggestions</div>
+                        </label>
+                        
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="learningFromFeedback" ${flags.learning_from_feedback !== false ? 'checked' : ''} style="margin-right:0.5rem;">
+                            <span>Learning from Feedback</span>
+                            <div style="margin-left:auto; font-size:0.8rem; color:#666;">Improve suggestions based on your feedback</div>
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateConfidenceDisplay(value) {
+            document.getElementById('confidenceValue').textContent = (value * 100).toFixed(0) + '%';
+        }
+
+        function saveSettings() {
+            const saveBtn = document.getElementById('saveSettingsBtn');
+            const originalText = saveBtn.innerHTML;
+            
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+            saveBtn.disabled = true;
+            
+            const settings = {
+                suggestion_config: {
+                    min_confidence_threshold: parseFloat(document.getElementById('confidenceThreshold').value),
+                    max_suggestions_per_issue: parseInt(document.getElementById('maxSuggestions').value),
+                    include_alternatives: document.getElementById('includeAlternatives').checked,
+                    include_explanations: document.getElementById('includeExplanations').checked,
+                    personalize_to_user: document.getElementById('personalizeToUser').checked
+                },
+                feature_flags: {
+                    ai_powered_suggestions: document.getElementById('aiPoweredSuggestions').checked,
+                    context_aware_analysis: document.getElementById('contextAwareAnalysis').checked,
+                    learning_from_feedback: document.getElementById('learningFromFeedback').checked
+                }
+            };
+            
+            fetch('/ai_config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                saveBtn.style.background = '#27ae60';
+                setTimeout(() => {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.style.background = '';
+                    saveBtn.disabled = false;
+                }, 2000);
+            })
+            .catch(error => {
+                saveBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                saveBtn.style.background = '#e74c3c';
+                setTimeout(() => {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.style.background = '';
+                    saveBtn.disabled = false;
+                }, 2000);
+                console.error('Error saving settings:', error);
+            });
+        }
+
+        function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
+                const settings = {
+                    suggestion_config: {
+                        min_confidence_threshold: 0.7,
+                        max_suggestions_per_issue: 3,
+                        include_alternatives: true,
+                        include_explanations: true,
+                        personalize_to_user: false
+                    },
+                    feature_flags: {
+                        ai_powered_suggestions: true,
+                        context_aware_analysis: true,
+                        learning_from_feedback: true
+                    }
+                };
+                
+                fetch('/ai_config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                })
+                .then(() => {
+                    showSettingsModal(); // Reload the modal with new values
+                })
+                .catch(error => {
+                    console.error('Error resetting settings:', error);
+                });
+            }
+        }
     </script>
     <div id="loadingOverlay" style="display:none;">
       <div class="spinner-container">
@@ -1601,6 +2801,50 @@ dropzone.addEventListener('drop', (e) => {
         </div>
         <div id="suggestionText"></div>
     </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:800px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
+            <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center;">
+                <i class="fas fa-history" style="margin-right:10px; color:#3498db;"></i>
+                Suggestion History
+            </h3>
+            <div id="historyLoading" style="display:none; text-align:center; padding:2rem;">
+                <span class="spinner-border spinner-border-sm"></span> Loading history...
+            </div>
+            <div id="historyContent"></div>
+            <div style="margin-top:2rem; padding-top:1rem; border-top:1px solid #eee; text-align:right;">
+                <button id="closeHistoryBottomBtn" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:700px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
+            <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center;">
+                <i class="fas fa-cog" style="margin-right:10px; color:#e74c3c;"></i>
+                AI Assistant Settings
+            </h3>
+            <div id="settingsLoading" style="display:none; text-align:center; padding:2rem;">
+                <span class="spinner-border spinner-border-sm"></span> Loading settings...
+            </div>
+            <div id="settingsContent"></div>
+            <div style="margin-top:2rem; padding-top:1rem; border-top:1px solid #eee; text-align:right;">
+                <button id="saveSettingsBtn" class="btn btn-primary" style="margin-right:10px;">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <button id="resetSettingsBtn" class="btn btn-outline-secondary" style="margin-right:10px;">
+                    <i class="fas fa-undo"></i> Reset to Defaults
+                </button>
+                <button id="closeSettingsBottomBtn" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 </html>

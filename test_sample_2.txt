@@ -1,0 +1,1 @@
+This is another test document with different issues. This document will be used to test passive voice detection. The results were analyzed by the team. Several improvements can be made to enhance the document quality. The system should identify these passive voice constructions.

@@ -55,10 +55,12 @@ def check(content):
         suggestions.append("Use 'administrator' instead of '{match.group()}' in content.")
 
 
+    '''
     # Rule: Use 'app' vs. 'application' correctly
     # Find occurrences of 'app' and 'application'
     app_pattern = r'\bapp\b'
     application_pattern = r'\bapplication\b'
+
 
     # Process 'app' occurrences
     app_matches = re.finditer(app_pattern, content, flags=re.IGNORECASE)
@@ -89,6 +91,7 @@ def check(content):
 #            line_number = get_line_number(content, match.start())
             suggestions.append("Consider using 'app' instead of 'application' for simple or mobile software."
             )
+    '''
 
 
     # Rule: Use 'auto' as a prefix; avoid standalone use
