@@ -24,9 +24,42 @@ class EnhancedAISuggestionEngine:
     context awareness, and domain-specific knowledge.
     """
     
-    def __init__(self, model_name: str = "mistral-7b-instruct"):
-        self.model_name = model_name
+    def __init__(self, model_name: str = None):
+        self.model_name = self._get_available_model(model_name)
         self.style_guide_context = self._load_style_guide_context()
+        
+    def _get_available_model(self, preferred_model: str = None) -> str:
+        """Get the first available Ollama model, preferring instruction-tuned models."""
+        try:
+            models = ollama.list()
+            if not models or not models.models:
+                logger.warning("No Ollama models available")
+                return None
+                
+            available_models = [model.model for model in models.models]
+            logger.info(f"Available Ollama models: {available_models}")
+            
+            # If a specific model is requested and available, use it
+            if preferred_model and preferred_model in available_models:
+                logger.info(f"Using requested model: {preferred_model}")
+                return preferred_model
+            
+            # Prefer instruction-tuned models for this task
+            preferred_models = ['mistral-7b-instruct', 'llama3.1', 'llama2', 'mistral']
+            for preferred in preferred_models:
+                for available in available_models:
+                    if preferred in available.lower():
+                        logger.info(f"Using preferred model: {available}")
+                        return available
+            
+            # Use first available as fallback
+            fallback_model = available_models[0]
+            logger.info(f"Using fallback model: {fallback_model}")
+            return fallback_model
+            
+        except Exception as e:
+            logger.error(f"Error getting available models: {e}")
+            return None
         
     def _load_style_guide_context(self) -> str:
         """Load relevant style guide information for context."""
@@ -107,6 +140,11 @@ Now provide your suggestion for the current issue:"""
             Dict containing suggestion, confidence, and metadata
         """
         try:
+            # Check if we have a valid model
+            if not self.model_name:
+                logger.warning("No Ollama model available, falling back to rule-based suggestions")
+                return self.generate_smart_fallback_suggestion(feedback_text, sentence_context)
+            
             # Convert string to enum
             doc_type_enum = get_document_type_from_string(document_type)
             feedback_type_enum = classify_feedback_type(feedback_text)
@@ -119,7 +157,8 @@ Now provide your suggestion for the current issue:"""
                 document_type=doc_type_enum,
                 writing_goals=writing_goals
             )
-            
+
+            logger.info(f"Using Ollama model: {self.model_name}")
             response = ollama.chat(
                 model=self.model_name,
                 messages=[
@@ -158,7 +197,8 @@ Now provide your suggestion for the current issue:"""
                     "writing_goals": writing_goals,
                     "feedback_classification": feedback_type_enum.value,
                     "has_sentence_context": bool(sentence_context),
-                    "prompt_template": "advanced"
+                    "prompt_template": "advanced",
+                    "model_used": self.model_name
                 }
             }
             

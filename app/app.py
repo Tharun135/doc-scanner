@@ -645,3 +645,10 @@ def calculate_quality_score(sentences):
     # Cap at 0% minimum
     score = max(0, 100 - (total_issues / total_sentences * 100))
     return round(score)
+
+@main.route('/debug-ai')
+def debug_ai():
+    """Serve the AI debugging page"""
+    debug_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'debug_ai_frontend.html')
+    with open(debug_file_path, 'r', encoding='utf-8') as f:
+        return f.read()

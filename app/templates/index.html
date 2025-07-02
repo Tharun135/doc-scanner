@@ -1363,7 +1363,21 @@
                 const sentence = button.getAttribute('data-sentence');
                 const fullSuggestion = button.getAttribute('data-full-suggestion');
                 
-                console.log('AI feedback icon clicked:', { sentenceIndex, feedback, sentence, fullSuggestion });
+                console.log('=== AI ICON CLICKED ===');
+                console.log('Button element:', button);
+                console.log('Raw attributes:', {
+                    sentenceIndex: sentenceIndex,
+                    feedback: feedback,
+                    sentence: sentence,
+                    fullSuggestion: fullSuggestion
+                });
+                console.log('Data attributes from DOM:', {
+                    'data-sentence-index': button.getAttribute('data-sentence-index'),
+                    'data-feedback': button.getAttribute('data-feedback'),
+                    'data-sentence': button.getAttribute('data-sentence'),
+                    'data-full-suggestion': button.getAttribute('data-full-suggestion')
+                });
+                
                 showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion);
             }
         });
@@ -1414,7 +1428,7 @@
                 </div>
                 
                 <div class="mb-3">
-                    <div class="text-light mb-2"><strong>Issue:</strong></div>
+                    <div class="text-light mb-2"><strong>Writing Problem:</strong></div>
                     <div class="bg-dark bg-opacity-25 p-2 rounded">${feedback}</div>
                 </div>
                 
@@ -1493,66 +1507,60 @@
         // Function to handle AI feedback icon click
         async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '') {
             try {
+                console.log('=== SHOW AI FEEDBACK DEBUG ===');
+                console.log('Raw parameters:', {
+                    sentenceIndex: sentenceIndex,
+                    feedback: feedback,
+                    sentence: sentence,
+                    fullSuggestion: fullSuggestion,
+                    feedbackType: typeof feedback,
+                    sentenceType: typeof sentence
+                });
+                
                 // Decode the parameters since they were encoded in the HTML
                 const decodedFeedback = decodeURIComponent(feedback);
                 const decodedSentence = decodeURIComponent(sentence);
                 const decodedFullSuggestion = decodeURIComponent(fullSuggestion);
                 
-                console.log('showAIFeedback called:', { sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion });
+                console.log('Decoded parameters:', {
+                    decodedFeedback: decodedFeedback,
+                    decodedSentence: decodedSentence,
+                    decodedFullSuggestion: decodedFullSuggestion
+                });
                 
                 // Create a unique key for this specific feedback type and sentence combination
                 const feedbackKey = `${sentenceIndex}_${btoa(decodedFeedback).replace(/[^a-zA-Z0-9]/g, '')}`;
+                console.log('Generated feedback key:', feedbackKey);
                 
                 // Check if we already have AI feedback for this specific sentence and feedback type
                 if (aiFeedbackData[feedbackKey]) {
+                    console.log('Found existing AI feedback, switching to tab');
                     // Switch to AI tab and highlight the existing feedback
                     switchTabProgrammatically('ai-feedback');
                     highlightAIFeedback(sentenceIndex, decodedFeedback);
                     return;
                 }
                 
-                // Check if there's already an AI solution in the full suggestion
-                let aiSuggestion = null;
-                if (decodedFullSuggestion && decodedFullSuggestion.includes('AI Solution:')) {
-                    // Extract the AI solution from the structured suggestion
-                    const lines = decodedFullSuggestion.split('\n');
-                    let originalSentence = '';
-                    let aiSolution = '';
-                    
-                    for (const line of lines) {
-                        if (line.trim().startsWith('Original sentence:')) {
-                            originalSentence = line.replace('Original sentence:', '').trim().replace(/^["']|["']$/g, '');
-                        } else if (line.trim().startsWith('AI Solution:')) {
-                            aiSolution = line.replace('AI Solution:', '').trim().replace(/^["']|["']$/g, '');
-                        }
-                    }
-                    
-                    if (aiSolution) {
-                        // Create a mock AI suggestion object with the existing solution
-                        aiSuggestion = {
-                            suggestion: aiSolution,
-                            confidence: 'high',
-                            method: 'rule-based',
-                            suggestion_id: `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                        };
-                        
-                        console.log('Using existing AI solution:', aiSolution);
-                    }
-                }
+                // Always get a fresh AI suggestion when the AI icon is clicked
+                // Show loading state
+                console.log('Getting fresh AI suggestion...');
+                const loadingToast = showLoadingToast('Getting AI suggestions...');
                 
-                // If no existing solution, get a new AI suggestion
-                if (!aiSuggestion) {
-                    // Show loading state
-                    const loadingToast = showLoadingToast('Getting AI suggestions...');
-                    
-                    // Get AI suggestion
-                    aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
-                    
-                    // Hide loading
-                    hideLoadingToast(loadingToast);
-                }
+                // Get AI suggestion
+                console.log('About to call getAISuggestion with:', {
+                    feedback: decodedFeedback,
+                    sentence: decodedSentence
+                });
                 
-                if (aiSuggestion) {
+                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
+                console.log('getAISuggestion returned:', aiSuggestion);
+                
+                // Hide loading
+                hideLoadingToast(loadingToast);
+                
+                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion) {
+                    console.log('✅ AI suggestion success, adding to tab');
+                    console.log('AI suggestion object:', aiSuggestion);
                     // Add to AI tab
                     addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion, feedbackKey);
                     
@@ -1562,12 +1570,22 @@
                     // Highlight the new feedback
                     highlightAIFeedback(sentenceIndex, decodedFeedback);
                 } else {
-                    showErrorToast('AI suggestion not available');
+                    console.error('❌ AI suggestion failed - invalid response:', {
+                        aiSuggestion: aiSuggestion,
+                        type: typeof aiSuggestion,
+                        hasProperty: aiSuggestion && aiSuggestion.hasOwnProperty('suggestion'),
+                        suggestionValue: aiSuggestion ? aiSuggestion.suggestion : 'N/A',
+                        feedback: decodedFeedback,
+                        sentence: decodedSentence,
+                        feedbackKey: feedbackKey
+                    });
+                    showErrorToast('AI suggestion not available. Check console for details - invalid response structure.');
                 }
                 
             } catch (error) {
-                console.error('Error getting AI feedback:', error);
-                showErrorToast('Error getting AI suggestion');
+                console.error('❌ Error in showAIFeedback:', error);
+                console.error('Error stack:', error.stack);
+                showErrorToast('Error getting AI suggestion: ' + error.message);
             }
         }
         
@@ -2189,49 +2207,108 @@
 
         async function getAISuggestion(feedback, sentence) {
             try {
-                const documentType = document.getElementById('documentType').value;
+                // Safe document type retrieval - fallback to 'technical' if element doesn't exist
+                let documentType = 'technical';
+                const documentTypeElement = document.getElementById('documentType');
+                if (documentTypeElement && documentTypeElement.value) {
+                    documentType = documentTypeElement.value;
+                }
                 
-                console.log('getAISuggestion called with:', {
+                console.log('=== AI SUGGESTION DEBUG ===');
+                console.log('Document type used:', documentType);
+                console.log('Raw inputs:', {
                     feedback: feedback,
                     sentence: sentence,
-                    document_type: documentType,
-                    writing_goals: selectedWritingGoals
+                    feedbackType: typeof feedback,
+                    sentenceType: typeof sentence,
+                    feedbackLength: feedback?.length,
+                    sentenceLength: sentence?.length
                 });
                 
-                // Validate required parameters
-                if (!feedback || !sentence) {
-                    console.error('Missing required parameters:', { feedback, sentence });
+                // Clean and validate required parameters
+                const cleanFeedback = feedback ? feedback.trim() : '';
+                const cleanSentence = sentence ? sentence.trim() : '';
+                
+                console.log('Cleaned inputs:', {
+                    cleanFeedback: cleanFeedback,
+                    cleanSentence: cleanSentence,
+                    cleanFeedbackLength: cleanFeedback.length,
+                    cleanSentenceLength: cleanSentence.length
+                });
+                
+                if (!cleanFeedback || !cleanSentence) {
+                    console.error('❌ VALIDATION FAILED - Missing required parameters:', { 
+                        feedback: cleanFeedback, 
+                        sentence: cleanSentence,
+                        feedbackEmpty: !cleanFeedback,
+                        sentenceEmpty: !cleanSentence
+                    });
                     return null;
                 }
+                
+                // Extract just the core issue description from feedback if it contains structured data
+                let coreIssue = cleanFeedback;
+                if (cleanFeedback.includes('Issue:')) {
+                    const issueMatch = cleanFeedback.match(/Issue:\s*([^\n]+)/);
+                    if (issueMatch) {
+                        coreIssue = issueMatch[1].trim();
+                        console.log('Extracted core issue:', coreIssue);
+                    }
+                }
+                
+                const requestData = {
+                    feedback: coreIssue,
+                    sentence: cleanSentence,
+                    document_type: documentType,
+                    writing_goals: selectedWritingGoals || ['clarity', 'conciseness']
+                };
+                
+                console.log('Request payload:', requestData);
                 
                 const response = await fetch('/ai_suggestion', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        feedback: feedback,
-                        sentence: sentence,
-                        document_type: documentType,
-                        writing_goals: selectedWritingGoals
-                    })
+                    body: JSON.stringify(requestData)
                 });
 
-                console.log('AI suggestion response status:', response.status);
-                console.log('AI suggestion response headers:', response.headers);
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
                 
                 if (response.ok) {
                     const result = await response.json();
-                    console.log('AI suggestion result:', result);
-                    return result;
+                    console.log('✅ AI suggestion HTTP success - analyzing response...');
+                    console.log('Response type:', typeof result);
+                    console.log('Response keys:', Object.keys(result || {}));
+                    console.log('Full response object:', result);
+                    console.log('Suggestion property exists:', 'suggestion' in result);
+                    console.log('Suggestion property value:', result.suggestion);
+                    console.log('Suggestion property type:', typeof result.suggestion);
+                    console.log('Suggestion property length:', result.suggestion?.length);
+                    console.log('Suggestion is truthy:', !!result.suggestion);
+                    
+                    // Extra validation to ensure we have a valid result
+                    if (result && typeof result === 'object' && result.suggestion) {
+                        console.log('✅ Valid AI suggestion object confirmed - validation passed');
+                        return result;
+                    } else {
+                        console.error('❌ Invalid AI suggestion response structure - validation failed:');
+                        console.error('  - result exists:', !!result);
+                        console.error('  - result is object:', typeof result === 'object');
+                        console.error('  - suggestion exists:', !!result.suggestion);
+                        console.error('  - suggestion value:', result.suggestion);
+                        return null;
+                    }
                 } else {
-                    console.error('AI suggestion failed with status:', response.status);
+                    console.error('❌ AI suggestion HTTP error:', response.status);
                     const errorText = await response.text();
-                    console.error('Error response:', errorText);
+                    console.error('Error response body:', errorText);
                     return null;
                 }
             } catch (error) {
-                console.error('AI suggestion error:', error);
+                console.error('❌ AI suggestion exception:', error);
+                console.error('Error stack:', error.stack);
                 return null;
             }
         }
