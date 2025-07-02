@@ -22,28 +22,28 @@ def check(content):
     # Rule 1: Missing hyphens in compound adjectives
     compound_adjective_issues = find_compound_adjective_issues(text_content)
     for issue in compound_adjective_issues:
-        suggestion = f"Issue: Missing hyphens in compound adjectives\nOriginal sentence: {issue['context']}\nAI suggestion: Use hyphens to connect compound adjectives that modify a noun (e.g., 'vendor-specific' and 'device-specific')"
+        suggestion = f"Missing hyphens in compound adjectives: '{issue['phrase']}' should be hyphenated"
         suggestions.append(suggestion)
 
     # Rule 2: Subject-verb disagreement 
     subject_verb_issues = find_subject_verb_disagreement(text_content)
     for issue in subject_verb_issues:
-        suggestion = f"Issue: Subject-verb disagreement\nOriginal sentence: {issue['context']}\nAI suggestion: The subject '{issue['subject']}' requires the verb '{issue['correct_verb']}' instead of '{issue['incorrect_verb']}'"
+        suggestion = f"Subject-verb disagreement: '{issue['subject']}' requires '{issue['correct_verb']}' instead of '{issue['incorrect_verb']}'"
         suggestions.append(suggestion)
 
     # Rule 3: Unclear pronoun reference
-    pronoun_issues = find_unclear_pronoun_reference(text_content)
-    for issue in pronoun_issues:
-        suggestion = f"Issue: Unclear pronoun reference\nOriginal sentence: {issue['context']}\nAI suggestion: The pronoun '{issue['pronoun']}' has an unclear antecedent. Specify what it refers to."
-        suggestions.append(suggestion)
+#    pronoun_issues = find_unclear_pronoun_reference(text_content)
+#    for issue in pronoun_issues:
+#        suggestion = f"Issue: Unclear pronoun reference\nOriginal sentence: {issue['context']}\nAI suggestion: The pronoun '{issue['pronoun']}' has an unclear antecedent. Specify what it refers to."
+#        suggestions.append(suggestion)
 
     # Rule 4: Misplaced modifiers
-    modifier_issues = find_misplaced_modifiers(text_content)
-    for issue in modifier_issues:
-        suggestion = f"Issue: Misplaced modifier\nOriginal sentence: {issue['context']}\nAI suggestion: The modifier '{issue['modifier']}' should be placed closer to the word it modifies"
-        suggestions.append(suggestion)
+#    modifier_issues = find_misplaced_modifiers(text_content)
+#    for issue in modifier_issues:
+#        suggestion = f"Issue: Misplaced modifier\nOriginal sentence: {issue['context']}\nAI suggestion: The modifier '{issue['modifier']}' should be placed closer to the word it modifies"
+#        suggestions.append(suggestion)
 
-    return suggestions
+#    return suggestions
 
 def find_compound_adjective_issues(text):
     """Find missing hyphens in compound adjectives."""
@@ -75,6 +75,7 @@ def find_compound_adjective_issues(text):
             issues.append({
                 'type': 'compound_adjective',
                 'context': context,
+                'phrase': match.group(0),
                 'start': start_pos,
                 'end': end_pos
             })

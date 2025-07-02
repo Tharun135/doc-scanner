@@ -6,8 +6,16 @@ import json
 import requests
 import os
 import logging
-import ollama
 from typing import Optional
+
+# Enable Ollama functionality
+OLLAMA_AVAILABLE = True
+try:
+    import ollama
+except ImportError:
+    # Ollama not available, will use offline methods only
+    OLLAMA_AVAILABLE = False
+    ollama = None
 
 logger = logging.getLogger(__name__)
 
@@ -58,14 +66,12 @@ def check(content):
         
         # Check both spaCy and pattern-based detection
         if spacy_passive or is_passive_voice_pattern(clean_sentence):
-            # Use LLM to generate active voice rewrite
-            active_rewrite = generate_active_voice_with_llm(clean_sentence)
-            
-            if active_rewrite and active_rewrite != clean_sentence:
-                suggestions.append(active_rewrite)
+            # Identify specific passive construction for clear issue description
+            passive_phrase = identify_passive_construction(clean_sentence)
+            if passive_phrase:
+                suggestions.append(f"Passive voice detected: '{passive_phrase}' - convert to active voice for clearer, more direct communication.")
             else:
-                # Fallback to generic advice if LLM fails
-                suggestions.append("Consider revising to active voice for clearer, more direct communication.")
+                suggestions.append("Passive voice detected - convert to active voice for clearer, more direct communication.")
     
     return suggestions if suggestions else []
 
@@ -118,15 +124,20 @@ def convert_with_llm_api(passive_sentence: str) -> Optional[str]:
     """
     Use Ollama (or other LLM) to convert passive voice to active voice.
     """
+    # Skip if Ollama is not available
+    if not OLLAMA_AVAILABLE or not ollama:
+        logger.debug("Ollama not available, skipping LLM conversion")
+        return None
+        
     try:
         # Check if Ollama is available
         models = ollama.list()
-        if not models or not models.get('models'):
-            logger.info("No Ollama models available, skipping LLM conversion")
+        if not models or not models.models:
+            logger.debug("No Ollama models available, skipping LLM conversion")
             return None
         
         # Use the first available model, preferring instruction-tuned models
-        available_models = [model['name'] for model in models['models']]
+        available_models = [model.model for model in models.models]
         model_name = None
         
         # Prefer instruction-tuned models for this task
@@ -442,3 +453,33 @@ def conjugate_verb_for_actor(verb, actor):
     else:
         # First/second person or plural (you, we, they) - use base form
         return verb
+
+def identify_passive_construction(sentence):
+    """Identify the specific passive voice construction in a sentence for clearer feedback."""
+    # Common passive voice patterns with their identifying phrases
+    passive_patterns = [
+        (r'\bis\s+(\w+ed|being\s+\w+ed)\b', 'is'),
+        (r'\bare\s+(\w+ed|being\s+\w+ed)\b', 'are'), 
+        (r'\bwas\s+(\w+ed|being\s+\w+ed)\b', 'was'),
+        (r'\bwere\s+(\w+ed|being\s+\w+ed)\b', 'were'),
+        (r'\bhas\s+been\s+(\w+ed)\b', 'has been'),
+        (r'\bhave\s+been\s+(\w+ed)\b', 'have been'),
+        (r'\bbeing\s+(\w+ed)\b', 'being'),
+        (r'\bto\s+be\s+(\w+ed)\b', 'to be'),
+        (r'\bwill\s+be\s+(\w+ed)\b', 'will be'),
+        (r'\bcan\s+be\s+(\w+ed)\b', 'can be'),
+        (r'\bmay\s+be\s+(\w+ed)\b', 'may be'),
+        (r'\bmust\s+be\s+(\w+ed)\b', 'must be'),
+        (r'\bshould\s+be\s+(\w+ed)\b', 'should be'),
+        (r'\bwould\s+be\s+(\w+ed)\b', 'would be'),
+        (r'\bcould\s+be\s+(\w+ed)\b', 'could be'),
+    ]
+    
+    for pattern, construction_type in passive_patterns:
+        match = re.search(pattern, sentence, re.IGNORECASE)
+        if match:
+            # Return the specific passive construction found
+            full_match = match.group(0)
+            return full_match
+    
+    return None

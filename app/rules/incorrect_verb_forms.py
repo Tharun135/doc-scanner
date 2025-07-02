@@ -27,8 +27,8 @@ def check(content):
         correct_word = match['correct_word']
         context = match['context']
         
-        # Create suggestion in the expected string format
-        suggestion = f"Issue: Incorrect verb form detected\nOriginal sentence: {context}\nAI suggestion: Change '{incorrect_word}' to '{correct_word}'"
+        # Create clear issue description
+        suggestion = f"Incorrect verb form: '{incorrect_word}' should be '{correct_word}'"
         suggestions.append(suggestion)
 
     return suggestions

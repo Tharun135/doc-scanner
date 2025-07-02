@@ -27,8 +27,8 @@ def check(content):
         full_match = match['full_match']
         context = match['context']
         
-        # Create suggestion in the expected string format similar to other rules
-        suggestion = f"Issue: Repeated word detected\nOriginal sentence: {context}\nAI suggestion: Remove the duplicate '{word}' for clarity"
+        # Create clear issue description without providing the solution
+        suggestion = f"Repeated word detected: '{word}' appears consecutively"
         suggestions.append(suggestion)
 
     return suggestions

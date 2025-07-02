@@ -40,14 +40,14 @@ CORRECTED TEXT: "[the exact sentence with the specific fix applied]"
 CHANGE MADE: [brief description of what was changed]
 
 RULES:
-1. Make ONLY the specific change mentioned in the issue
-2. Do NOT add extra improvements
-3. Do NOT provide general writing advice
-4. Do NOT explain why the change is important
+1. CORRECTED TEXT should be the complete, fixed sentence
+2. CHANGE MADE should describe the specific improvement made (e.g., "Changed passive voice to active", "Removed redundant word", "Fixed subject-verb agreement")
+3. Do NOT restate the problem or explain why it's important
+4. Do NOT provide general writing advice
 5. Use the EXACT format shown above
 
 Example:
-ISSUE: "Capitalize 'enter' key name"
+ISSUE: "Passive voice detected"
 ORIGINAL: "Press the enter key to continue"
 CORRECTED TEXT: "Press the Enter key to continue"
 CHANGE MADE: Capitalized "enter" to "Enter"
@@ -271,10 +271,12 @@ CHANGE MADE: Removed filler words "basically" and "sort of"""
         )
         
         user_prompt = f"""
-ISSUE TO FIX: {issue_description}
+WRITING PROBLEM TO FIX: {issue_description}
 ORIGINAL TEXT: "{sentence_context}"
 
-TASK: Fix ONLY the issue specified above. Make no other changes.
+TASK: Fix ONLY the writing problem specified above. Make no other changes.
+
+The "WRITING PROBLEM" describes what's wrong with the text (e.g., "passive voice detected", "redundant words", "unclear pronoun reference"). Your job is to fix that specific problem.
 
 MANDATORY OUTPUT FORMAT (use exactly this):
 CORRECTED TEXT: "[exact sentence with only the specified fix]"
@@ -283,7 +285,7 @@ CHANGE MADE: [what was changed]
 {few_shot_examples}
 
 CRITICAL REMINDER:
-- Fix ONLY the issue mentioned
+- Fix ONLY the writing problem mentioned
 - Use EXACTLY the format shown above
 - Do not add explanations or extra advice
 - Be precise and surgical
