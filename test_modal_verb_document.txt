@@ -1,0 +1,7 @@
+Test Document with Modal Verbs
+
+Users can access their data through the dashboard. You can configure the settings from the main menu. 
+
+The system can process multiple requests simultaneously. Administrators can manage user permissions.
+
+You can download the report by clicking the export button.

@@ -2236,14 +2236,19 @@
                     cleanSentenceLength: cleanSentence.length
                 });
                 
-                if (!cleanFeedback || !cleanSentence) {
-                    console.error('❌ VALIDATION FAILED - Missing required parameters:', { 
+                if (!cleanFeedback) {
+                    console.error('❌ VALIDATION FAILED - Missing required feedback parameter:', { 
                         feedback: cleanFeedback, 
                         sentence: cleanSentence,
                         feedbackEmpty: !cleanFeedback,
                         sentenceEmpty: !cleanSentence
                     });
                     return null;
+                }
+                
+                // Sentence is optional - AI can provide suggestions even without specific sentence context
+                if (!cleanSentence) {
+                    console.log('ℹ️ No sentence context provided - AI will use general examples');
                 }
                 
                 // Extract just the core issue description from feedback if it contains structured data
