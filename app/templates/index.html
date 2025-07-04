@@ -788,13 +788,17 @@
         let selectedFiles = [];
         let batchResults = [];
 
-        // Handle browse button clicks
-        browseBtn.addEventListener('click', () => {
-            multiFileInput.click();
-        });
-
-        browseBatchBtn.addEventListener('click', () => {
-            batchFileInput.click();
+        // Handle browse button clicks using event delegation
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'browseBtn') {
+                e.preventDefault();
+                console.log('Browse button clicked, triggering file input');
+                multiFileInput.click();
+            } else if (e.target.id === 'browseBatchBtn') {
+                e.preventDefault();
+                console.log('Browse batch button clicked, triggering batch file input');
+                batchFileInput.click();
+            }
         });
 
         // Handle file input changes
@@ -953,9 +957,7 @@
                 </div>
             `;
             
-            // Re-attach event listeners
-            document.getElementById('browseBtn').addEventListener('click', () => multiFileInput.click());
-            document.getElementById('browseBatchBtn').addEventListener('click', () => batchFileInput.click());
+            // No need to re-attach event listeners since we're using event delegation
         }
 
         function getFileIcon(filename) {
@@ -2042,17 +2044,17 @@
                             // Create a regex that finds the sentence allowing for HTML tags between words
                             const wordPattern = words.map(word => 
                                 word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                            ).join('(?:[^>]*>.*?<[^>]*)*\\s*');
+                            ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
                             
-                            const regex = new RegExp(`(${wordPattern})`, 'gi');
-                            
+                            const regex = new RegExp(wordPattern, 'i');
                             const match = processedContent.match(regex);
+                            
                             if (match) {
                                 const matchedText = match[0];
                                 const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
                                 processedContent = processedContent.replace(matchedText, replacement);
                                 found = true;
-                                console.log(`✓ Word-based match for sentence ${index}`);
+                                console.log(`✓ HTML pattern match for sentence ${index}`);
                             }
                         }
                     }

@@ -72,8 +72,8 @@ def check(content):
             if "permission" in sentence.lower() or "allowed" in sentence.lower() or "authorize" in sentence.lower():
                 suggestions.append(f"Issue: Use of 'can' for permission context\nOriginal sentence: {sentence}\nAI suggestion: When expressing permission, consider using 'allowed to' or 'able to' instead of 'can'.")
                 processed_sentences.add(sentence_key)
-    
-    # Rule 2: Check for proper use of "may" and suggest replacing it with "might"
+
+    # Rule 2: Check all "may" usage and provide context-aware suggestions
     may_pattern = r'\bmay\b'
     processed_may_sentences = set()
     matches = re.finditer(may_pattern, content, flags=re.IGNORECASE)
@@ -89,7 +89,39 @@ def check(content):
         if target_sentence:
             sentence_key = f"may_{target_sentence}"
             if sentence_key not in processed_may_sentences:
-                suggestions.append(f"Issue: Use of 'may' which can imply permission\nOriginal sentence: {target_sentence}\nAI suggestion: Consider using 'might' to express possibility instead of 'may'.")
+                # Check if it's permission context
+                permission_indicators = [
+                    r'\bmay\s+(access|enter|use|modify|delete|create|edit|view|download|upload)',
+                    r'(you|users?|they)\s+may\s+',
+                    r'\bmay\s+(be\s+)?(allowed|permitted|authorized)',
+                    r'(permission|authorize|grant|allow).*\bmay\b',
+                    r'\bmay\s+(only|not)\s+'
+                ]
+                
+                is_permission_context = any(re.search(pattern, target_sentence, re.IGNORECASE) 
+                                          for pattern in permission_indicators)
+                
+                # Check if it's possibility context
+                possibility_patterns = [
+                    r'(may\s+take|may\s+require|may\s+cause|may\s+result|may\s+occur)',
+                    r'(may\s+be\s+(necessary|required|needed|different|slow|fast))',
+                    r'(process|loading|operation|function).*may\s+',
+                    r'may\s+(vary|differ|change|fluctuate)',
+                    r'(it|this|that|process|loading|operation).*may\s+'
+                ]
+                
+                is_possibility_context = any(re.search(pattern, target_sentence, re.IGNORECASE) 
+                                           for pattern in possibility_patterns)
+                
+                # Always flag "may" usage, but provide different messages based on context
+                if is_permission_context and not is_possibility_context:
+                    suggestions.append(f"Issue: Use of 'may' for permission context\nOriginal sentence: {target_sentence}\nAI suggestion: Consider using 'can' or 'are allowed to' for permissions")
+                elif is_possibility_context:
+                    suggestions.append(f"Issue: Modal verb usage - 'may' for possibility\nOriginal sentence: {target_sentence}\nAI suggestion: Review if 'may' is the best choice for expressing possibility")
+                else:
+                    # General "may" usage - let AI decide
+                    suggestions.append(f"Issue: Modal verb 'may' usage\nOriginal sentence: {target_sentence}\nAI suggestion: Review modal verb usage - determine if expressing permission or possibility")
+                
                 processed_may_sentences.add(sentence_key)
 
     # Rule 3: Ensure "could" is used only for the past and not as a substitute for "can"
@@ -101,7 +133,7 @@ def check(content):
         match_pos = match.start()
         target_sentence = None
         for sent in doc.sents:
-            if sent.start_char <= match_pos <= sent.end_char:
+            if sent.start_char <= match_pos <= match.end_char:
                 target_sentence = sent.text.strip()
                 break
         
