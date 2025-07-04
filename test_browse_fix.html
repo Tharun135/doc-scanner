@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Browse Function</title>
+</head>
+<body>
+    <h1>Test Browse Function</h1>
+    
+    <div id="dropzone">
+        <button type="button" id="browseBtn">Browse Files</button>
+        <button type="button" id="browseBatchBtn">Browse Zip</button>
+    </div>
+    
+    <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt" multiple style="display: none;">
+    <input type="file" id="batchFileInput" accept=".zip" style="display: none;">
+    
+    <div id="output"></div>
+    
+    <script>
+        const multiFileInput = document.getElementById('multiFileInput');
+        const batchFileInput = document.getElementById('batchFileInput');
+        const output = document.getElementById('output');
+        
+        // Handle browse button clicks using event delegation
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'browseBtn') {
+                e.preventDefault();
+                console.log('Browse button clicked, triggering file input');
+                output.innerHTML += '<p>Browse Files clicked - opening file dialog</p>';
+                multiFileInput.click();
+            } else if (e.target.id === 'browseBatchBtn') {
+                e.preventDefault();
+                console.log('Browse batch button clicked, triggering batch file input');
+                output.innerHTML += '<p>Browse Zip clicked - opening file dialog</p>';
+                batchFileInput.click();
+            }
+        });
+        
+        multiFileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            output.innerHTML += `<p>Files selected: ${files.length}</p>`;
+            for (let i = 0; i < files.length; i++) {
+                output.innerHTML += `<p>- ${files[i].name}</p>`;
+            }
+        });
+        
+        batchFileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            output.innerHTML += `<p>Batch files selected: ${files.length}</p>`;
+            for (let i = 0; i < files.length; i++) {
+                output.innerHTML += `<p>- ${files[i].name}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
