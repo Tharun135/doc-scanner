@@ -140,6 +140,13 @@ Now provide your suggestion for the current issue:"""
             Dict containing suggestion, confidence, and metadata
         """
         try:
+            # Check for modal verb cases that need special handling
+            feedback_lower = feedback_text.lower()
+            if ("may" in feedback_lower and "possibility" in feedback_lower) or \
+               ("may" in feedback_lower and "permission" in feedback_lower):
+                logger.info("Using custom modal verb logic instead of Ollama AI")
+                return self.generate_smart_fallback_suggestion(feedback_text, sentence_context)
+            
             # Check if we have a valid model
             if not self.model_name:
                 logger.warning("No Ollama model available, falling back to rule-based suggestions")
@@ -456,7 +463,22 @@ Now provide your suggestion for the current issue:"""
         feedback_lower = feedback.lower()
         
         # Check for specific issues and provide targeted solutions
-        if "can" in feedback_lower and context:
+        if "may" in feedback_lower and "possibility" in feedback_lower and context:
+            # Handle "may" for possibility - remove "may" without replacement
+            rewritten = re.sub(r'\bmay\s+', '', context, flags=re.IGNORECASE)
+            # Clean up any double spaces
+            rewritten = re.sub(r'\s+', ' ', rewritten).strip()
+            # Capitalize first letter if needed
+            if rewritten and rewritten[0].islower():
+                rewritten = rewritten[0].upper() + rewritten[1:]
+            return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Removed "may" to make statement more direct'
+        
+        elif "may" in feedback_lower and "permission" in feedback_lower and context:
+            # Handle "may" for permission - change to "can"
+            rewritten = re.sub(r'\bmay\b', 'can', context, flags=re.IGNORECASE)
+            return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Replaced "may" with "can" for permission context'
+        
+        elif "can" in feedback_lower and context:
             # Handle modal verb "can" specifically
             if "you can" in context.lower():
                 rewritten = re.sub(r'\byou can\s+(\w+)', r'\1', context, flags=re.IGNORECASE)
