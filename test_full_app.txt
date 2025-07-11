@@ -1,0 +1,20 @@
+Test Document for Full Application
+
+This document contains several issues to test our fixes:
+
+1. Modal verb issues:
+   - Permission: You may enter the building after 9 AM.
+   - Possibility: The weather may change tomorrow.
+   - Permission: Students may use the library on weekends.
+   - Possibility: This approach may work better.
+
+2. Special character issues:
+   - Use the ampersand symbol (&) to connect ideas.
+   - Research & development is important.
+   - Sales & marketing teams work together.
+
+3. Other grammar issues:
+   - This is a very very long sentence that goes on and on without proper structure.
+   - The document was written by the team.
+
+This should test all our fixes comprehensively.

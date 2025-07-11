@@ -28,7 +28,7 @@ def check(content):
     matches = re.finditer(afterwards_pattern, content, flags=re.IGNORECASE)
     for match in matches:
 #        line_number = get_line_number(content, match.start())
-        suggestions.append("Use 'afterward' instead of '{match.group()}'.")
+        suggestions.append(f"Use 'afterward' instead of '{match.group()}'.")
 
 
     # Rule: Avoid 'and/or'; be specific
@@ -44,6 +44,6 @@ def check(content):
     matches = re.finditer(as_well_as_pattern, content, flags=re.IGNORECASE)
     for match in matches:
 #        line_number = get_line_number(content, match.start())
-        suggestions.append("Use 'and' instead of '{match.group()}'.")
+        suggestions.append(f"Use 'and' instead of '{match.group()}'.")
 
     return suggestions if suggestions else []

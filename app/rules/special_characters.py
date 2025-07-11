@@ -28,7 +28,12 @@ def check(content):
             if '&' in sentence:
                 containing_sentence = sentence
                 break
-        suggestions.append(f"Issue: Use of '&' symbol instead of 'and'\nOriginal sentence: {containing_sentence}\nAI suggestion: Use 'and' instead of '&' unless it's part of a formal name.")
+        suggestions.append({
+            "text": "&",
+            "start": match.start(),
+            "end": match.end(),
+            "message": f"Use of '&' symbol instead of 'and'. Use 'and' instead of '&' unless it's part of a formal name. Sentence: {containing_sentence}"
+        })
     
     # Rule 2: Proper use of ellipsis
     ellipsis_pattern = r'\.{3,}'
@@ -41,7 +46,12 @@ def check(content):
             if match.group() in sentence:
                 containing_sentence = sentence
                 break
-        suggestions.append(f"Issue: Incorrect ellipsis format\nOriginal sentence: {containing_sentence}\nAI suggestion: Use an ellipsis (…) character instead of '{match.group()}'.")
+        suggestions.append({
+            "text": match.group(),
+            "start": match.start(),
+            "end": match.end(),
+            "message": f"Incorrect ellipsis format. Use an ellipsis (…) character instead of '{match.group()}'. Sentence: {containing_sentence}"
+        })
     
     # Rule 3: Correct use of quotation marks
     # Ensure double quotation marks are used for UI string references
@@ -63,7 +73,12 @@ def check(content):
             if matched_text in sentence:
                 containing_sentence = sentence
                 break
-        suggestions.append(f"Issue: Single quotes used instead of double quotes\nOriginal sentence: {containing_sentence}\nAI suggestion: Use double quotation marks for UI string references instead of single quotes.")
+        suggestions.append({
+            "text": matched_text,
+            "start": match.start(),
+            "end": match.end(),
+            "message": f"Single quotes used instead of double quotes. Use double quotation marks for UI string references instead of single quotes. Sentence: {containing_sentence}"
+        })
     
     # Rule 4: Check apostrophe usage - avoid for plurals, allow for possession
     # Important: Apostrophes are acceptable when indicating possession (the "of" relationship)
@@ -107,7 +122,12 @@ def check(content):
                     if is_likely_plural_misuse:
                         base_word = base_word_token.text
                         sentence = sent.text.strip()
-                        suggestions.append(f"Issue: Incorrect apostrophe usage for plural form\nOriginal sentence: {sentence}\nAI suggestion: Use '{base_word}s' instead of '{full_word}' for multiple items. Use apostrophes only for possession (e.g., 'Tharun's laptop' = 'laptop of Tharun').")
+                        suggestions.append({
+                            "text": full_word,
+                            "start": token.idx,
+                            "end": token.idx + len(full_word),
+                            "message": f"Incorrect apostrophe usage for plural form. Use '{base_word}s' instead of '{full_word}' for multiple items. Use apostrophes only for possession (e.g., 'Tharun's laptop' = 'laptop of Tharun'). Sentence: {sentence}"
+                        })
 
     # Rule 5: Avoid nesting parentheses
     nested_parentheses_pattern = r'\([^\(\)]*\([^\(\)]*\)[^\(\)]*\)'
@@ -120,7 +140,12 @@ def check(content):
             if match.group() in sentence:
                 containing_sentence = sentence
                 break
-        suggestions.append(f"Issue: Nested parentheses detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Avoid nesting parentheses; consider rephrasing.")
+        suggestions.append({
+            "text": match.group(),
+            "start": match.start(),
+            "end": match.end(),
+            "message": f"Nested parentheses detected. Avoid nesting parentheses; consider rephrasing. Sentence: {containing_sentence}"
+        })
     
     # Rule 6: Avoid using symbols in place of words
     symbol_substitutions = {
@@ -143,18 +168,33 @@ def check(content):
                 if symbol in sentence:
                     containing_sentence = sentence
                     break
-            suggestions.append(f"Issue: Symbol '{symbol}' used in place of word\nOriginal sentence: {containing_sentence}\nAI suggestion: Spell out the word '{word}' instead of using '{symbol}'.")
+            suggestions.append({
+                "text": symbol,
+                "start": match.start(),
+                "end": match.end(),
+                "message": f"Symbol '{symbol}' used in place of word. Spell out the word '{word}' instead of using '{symbol}'. Sentence: {containing_sentence}"
+            })
 
     # Rule 7: Currency symbols placement
     currency_pattern = r'(\b\d+(\.\d{1,2})?\s*(\$|€|£|¥))'
     matches = re.finditer(currency_pattern, text_content)
     for match in matches:
-        suggestions.append(f"Place the currency symbol before the amount, e.g., '{match.group(1)}' should be formatted as '{match.group(1)}'.")
+        suggestions.append({
+            "text": match.group(1),
+            "start": match.start(),
+            "end": match.end(),
+            "message": f"Place the currency symbol before the amount, e.g., '{match.group(1)}' should be formatted as '{match.group(1)}'"
+        })
     
     # Rule 8: Identify and evaluate tables separately
     table_pattern = r'^\|.*\|\s*\n(\|[-:]+\|)+'
     matches = re.finditer(table_pattern, text_content, re.MULTILINE)
     for match in matches:
-        suggestions.append("Table detected. Evaluate it separately.")
+        suggestions.append({
+            "text": match.group(),
+            "start": match.start(),
+            "end": match.end(),
+            "message": "Table detected. Evaluate it separately."
+        })
 
     return suggestions if suggestions else []

@@ -33,11 +33,11 @@ def check(content):
                 rewritten = re.sub(r'\byou can\s+(\w+)', r'\1', sentence, flags=re.IGNORECASE)
                 if rewritten and rewritten[0].islower():
                     rewritten = rewritten[0].upper() + rewritten[1:]
-                suggestions.append(f"Issue: Use of modal verb 'can' - should describe direct action\nOriginal sentence: {sentence}\nAI suggestion: {rewritten}")
+                suggestions.append(f"Issue: Use of modal verb 'can' - should describe direct action")
                 processed_sentences.add(sentence_key)
             elif "can be" in sentence.lower():
                 rewritten = re.sub(r'\bcan be\b', 'is', sentence, flags=re.IGNORECASE)
-                suggestions.append(f"Issue: Use of modal verb 'can be' - should describe direct state\nOriginal sentence: {sentence}\nAI suggestion: {rewritten}")
+                suggestions.append(f"Issue: Use of modal verb 'can be' - should describe direct state")
                 processed_sentences.add(sentence_key)
             else:
                 # Handle other patterns of "can"
@@ -51,7 +51,7 @@ def check(content):
                     else:
                         verb_form = verb
                     rewritten = re.sub(pattern, f'{subject} {verb_form}', sentence, flags=re.IGNORECASE)
-                    suggestions.append(f"Issue: Use of modal verb 'can' - should describe direct action\nOriginal sentence: {sentence}\nAI suggestion: {rewritten}")
+                    suggestions.append(f"Issue: Use of modal verb 'can' - should describe direct action")
                     processed_sentences.add(sentence_key)
     
     # Rule 1b: Check for "can" being used to express permission (additional specific case)
@@ -70,7 +70,12 @@ def check(content):
             
             # Flag permission-related usage of "can" with additional context
             if "permission" in sentence.lower() or "allowed" in sentence.lower() or "authorize" in sentence.lower():
-                suggestions.append(f"Issue: Use of 'can' for permission context\nOriginal sentence: {sentence}\nAI suggestion: When expressing permission, consider using 'allowed to' or 'able to' instead of 'can'.")
+                suggestions.append({
+                    "text": token.text,
+                    "start": token.idx,
+                    "end": token.idx + len(token.text),
+                    "message": f"Use of 'can' for permission context. Consider using 'allowed to' or 'able to' instead. Sentence: {sentence}"
+                })
                 processed_sentences.add(sentence_key)
 
     # Rule 2: Check all "may" usage and provide context-aware suggestions
@@ -115,12 +120,27 @@ def check(content):
                 
                 # Always flag "may" usage, but provide different messages based on context
                 if is_permission_context and not is_possibility_context:
-                    suggestions.append(f"Issue: Use of 'may' for permission context\nOriginal sentence: {target_sentence}\nAI suggestion: Replace 'may' with 'can' or 'are allowed to' for permissions")
+                    suggestions.append({
+                        "text": match.group(),
+                        "start": match.start(),
+                        "end": match.end(),
+                        "message": f"Use of 'may' for permission context. Replace 'may' with 'can' or 'are allowed to' for permissions. Sentence: {target_sentence}"
+                    })
                 elif is_possibility_context:
-                    suggestions.append(f"Issue: Modal verb usage - 'may' for possibility\nOriginal sentence: {target_sentence}\nAI suggestion: Keep 'may' - it correctly expresses possibility/uncertainty")
+                    suggestions.append({
+                        "text": match.group(),
+                        "start": match.start(),
+                        "end": match.end(),
+                        "message": f"Modal verb 'may' for possibility. Keep 'may' - it correctly expresses possibility/uncertainty. Sentence: {target_sentence}"
+                    })
                 else:
                     # General "may" usage - let AI decide
-                    suggestions.append(f"Issue: Modal verb 'may' usage\nOriginal sentence: {target_sentence}\nAI suggestion: Determine context: keep 'may' for possibility, use 'can' for permission")
+                    suggestions.append({
+                        "text": match.group(),
+                        "start": match.start(),
+                        "end": match.end(),
+                        "message": f"Modal verb 'may' usage. Determine context: keep 'may' for possibility, use 'can' for permission. Sentence: {target_sentence}"
+                    })
                 
                 processed_may_sentences.add(sentence_key)
 
@@ -145,7 +165,12 @@ def check(content):
                 end = min(len(content), match.end() + context_window)
                 context = content[start:end]
                 if "past" not in context.lower():
-                    suggestions.append(f"Issue: Use of 'could' for non-past context\nOriginal sentence: {target_sentence}\nAI suggestion: Ensure 'could' is only used to describe the past. Use 'can' for present actions.")
+                    suggestions.append({
+                        "text": match.group(),
+                        "start": match.start(),
+                        "end": match.end(),
+                        "message": f"Use of 'could' for non-past context. Ensure 'could' is only used to describe the past. Use 'can' for present actions. Sentence: {target_sentence}"
+                    })
                 processed_could_sentences.add(sentence_key)
 
     # Rule 4: Detect overuse of "can" and suggest rewording
@@ -158,6 +183,11 @@ def check(content):
             if can_in_sentence > 0:
                 sample_sentence = sent.text.strip()
                 break
-        suggestions.append(f"Issue: Overuse of modal verb 'can' ({can_count} instances)\nOriginal sentence: {sample_sentence}\nAI suggestion: Consider rephrasing to avoid overusing 'can'.")
+        suggestions.append({
+            "text": "can",
+            "start": 0,
+            "end": 3,
+            "message": f"Overuse of modal verb 'can' ({can_count} instances). Consider rephrasing to avoid overusing 'can'. Example sentence: {sample_sentence}"
+        })
 
     return suggestions if suggestions else []
