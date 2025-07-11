@@ -147,6 +147,11 @@ Now provide your suggestion for the current issue:"""
                 logger.info("Using custom modal verb logic instead of Ollama AI")
                 return self.generate_smart_fallback_suggestion(feedback_text, sentence_context)
             
+            # Check for backup/back up cases that need special context analysis
+            if ("back up" in feedback_lower or "backup" in feedback_lower) and sentence_context:
+                logger.info("Using custom backup/back up logic instead of Ollama AI")
+                return self.generate_smart_fallback_suggestion(feedback_text, sentence_context)
+            
             # Check if we have a valid model
             if not self.model_name:
                 logger.warning("No Ollama model available, falling back to rule-based suggestions")
@@ -478,26 +483,104 @@ Now provide your suggestion for the current issue:"""
             rewritten = re.sub(r'\bmay\b', 'can', context, flags=re.IGNORECASE)
             return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Replaced "may" with "can" for permission context'
         
+        elif ("back up" in feedback_lower or "backup" in feedback_lower) and context:
+            # Handle backup/back up terminology with proper context analysis
+            context_lower = context.lower()
+            
+            # Check if "backup" is used correctly as a noun/adjective
+            noun_patterns = [
+                r'\bbackup\s+(files?|data|documents?|system|solution|strategy|process|operation)\b',
+                r'\b(create|make|have|support|provide|include)\s+backup\b',
+                r'\b(the|a|an|this|that|these|those)\s+backup\b',
+                r'\bbackup\s+(and|or)\b'
+            ]
+            
+            # Check if "backup" is correctly used as noun/adjective
+            is_correct_noun_usage = any(re.search(pattern, context_lower) for pattern in noun_patterns)
+            
+            if is_correct_noun_usage:
+                # This is correct usage - backup as noun/adjective
+                return f'CORRECTED TEXT: "{context}"\nCHANGE MADE: No change needed - "backup" is correctly used as a noun/adjective here'
+            
+            # Check if it should be converted to verb form
+            verb_patterns = [
+                r'\b(to|should|must|can|will|need to)\s+backup\b',
+                r'\bbackup\s+(your|the|all|these|those)\s+(files?|data|documents?)\b',
+                r'\b(please|remember to|don\'t forget to)\s+backup\b'
+            ]
+            
+            should_be_verb = any(re.search(pattern, context_lower) for pattern in verb_patterns)
+            
+            if should_be_verb:
+                # Convert to verb form
+                rewritten = re.sub(r'\bbackup\b', 'back up', context, flags=re.IGNORECASE)
+                return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Changed "backup" to "back up" when used as a verb'
+            
+            # If unclear, provide guidance
+            return f'CORRECTED TEXT: "{context}"\nCHANGE MADE: Context unclear - use "backup" as noun/adjective ("backup files") or "back up" as verb ("back up your files")'
+        
         elif "can" in feedback_lower and context:
-            # Handle modal verb "can" specifically
-            if "you can" in context.lower():
+            # Handle modal verb "can" specifically with improved logic
+            context_lower = context.lower()
+            
+            # Handle "you can" instructions - convert to imperative
+            if "you can" in context_lower:
+                # Pattern: "You can [verb] [rest of sentence]" -> "[Verb] [rest of sentence]"
                 rewritten = re.sub(r'\byou can\s+(\w+)', r'\1', context, flags=re.IGNORECASE)
                 if rewritten and rewritten[0].islower():
                     rewritten = rewritten[0].upper() + rewritten[1:]
                 return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted "you can" instruction to direct imperative form'
-            elif " can " in context.lower():
-                # Find subject + can + verb pattern
-                pattern = r'(\w+)\s+can\s+(\w+)'
-                match = re.search(pattern, context, re.IGNORECASE)
-                if match:
-                    subject = match.group(1)
-                    verb = match.group(2)
-                    if subject.lower() not in ['i', 'you', 'we', 'they'] and not subject.lower().endswith('s'):
-                        verb_form = verb + "s" if not verb.endswith('s') else verb
-                    else:
+            
+            # Handle other subjects with "can"
+            elif " can " in context_lower:
+                # Look for various patterns and handle them appropriately
+                
+                # Pattern: "Users can access..." -> "Users access..."
+                users_pattern = r'\b(users?|administrators?|developers?|operators?)\s+can\s+(\w+)'
+                users_match = re.search(users_pattern, context, re.IGNORECASE)
+                if users_match:
+                    subject = users_match.group(1)
+                    verb = users_match.group(2)
+                    rewritten = re.sub(users_pattern, f'{subject} {verb}', context, flags=re.IGNORECASE)
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted modal verb "can" to simple present tense'
+                
+                # Pattern: "The system can process..." -> "The system processes..."
+                system_pattern = r'\b(the\s+(?:system|application|software|platform|tool|connector))\s+can\s+(\w+)'
+                system_match = re.search(system_pattern, context, re.IGNORECASE)
+                if system_match:
+                    subject = system_match.group(1)
+                    verb = system_match.group(2)
+                    # Add 's' for third person singular with proper verb conjugation
+                    verb_form = self._conjugate_third_person_singular(verb)
+                    rewritten = re.sub(system_pattern, f'{subject} {verb_form}', context, flags=re.IGNORECASE)
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted modal verb "can" to simple present tense'
+                
+                # Pattern for instructional contexts: "You can migrate..." -> "Migrate..." OR "You have two ways to migrate..."
+                migration_pattern = r'\byou can\s+(\w+)\s+(.+?)\s+in\s+(two|multiple|several)\s+ways?:'
+                migration_match = re.search(migration_pattern, context, re.IGNORECASE)
+                if migration_match:
+                    verb = migration_match.group(1)
+                    object_part = migration_match.group(2)
+                    count = migration_match.group(3)
+                    rewritten = f"You have {count} ways to {verb} {object_part}:"
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Rephrased to avoid modal verb "can" while maintaining clarity'
+                
+                # General fallback pattern
+                general_pattern = r'(\w+)\s+can\s+(\w+)'
+                general_match = re.search(general_pattern, context, re.IGNORECASE)
+                if general_match:
+                    subject = general_match.group(1)
+                    verb = general_match.group(2)
+                    
+                    # Check if subject needs verb conjugation
+                    if subject.lower() in ['i', 'you', 'we', 'they']:
                         verb_form = verb
-                    rewritten = re.sub(pattern, f'{subject} {verb_form}', context, flags=re.IGNORECASE)
-                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted "can" to simple present tense'
+                    else:
+                        # Third person singular
+                        verb_form = self._conjugate_third_person_singular(verb)
+                    
+                    rewritten = re.sub(general_pattern, f'{subject} {verb_form}', context, flags=re.IGNORECASE)
+                    return f'CORRECTED TEXT: "{rewritten}"\nCHANGE MADE: Converted modal verb "can" to appropriate verb form'
         
         # Handle passive voice
         if "passive" in feedback_lower and context:
@@ -619,6 +702,31 @@ Now provide your suggestion for the current issue:"""
             logger.warning(f"Post-processing failed: {str(e)}")
             # Return a minimal format if everything fails
             return f'CORRECTED TEXT: "{original_sentence}"\nCHANGE MADE: Applied requested fix'
+
+    def _conjugate_third_person_singular(self, verb: str) -> str:
+        """Properly conjugate a verb for third person singular (he/she/it)."""
+        verb_lower = verb.lower()
+        
+        # Handle irregular verbs
+        irregular_verbs = {
+            'have': 'has',
+            'be': 'is', 
+            'do': 'does',
+            'go': 'goes'
+        }
+        
+        if verb_lower in irregular_verbs:
+            return irregular_verbs[verb_lower]
+        
+        # Apply standard conjugation rules
+        if verb_lower.endswith('s') or verb_lower.endswith('ss') or verb_lower.endswith('sh') or verb_lower.endswith('ch') or verb_lower.endswith('x') or verb_lower.endswith('z'):
+            return verb + 'es'
+        elif verb_lower.endswith('y') and len(verb) > 1 and verb[-2] not in 'aeiou':
+            return verb[:-1] + 'ies'
+        elif verb_lower.endswith('o') and len(verb) > 1 and verb[-2] not in 'aeiou':
+            return verb + 'es'
+        else:
+            return verb + 's'
 
 # Global instance for easy use
 ai_engine = EnhancedAISuggestionEngine()
