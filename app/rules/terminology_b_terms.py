@@ -16,11 +16,17 @@ def check(content):
     # Define doc using nlp
     doc = nlp(text_content)
     # Rule: Use 'back up' as a verb and 'backup' as a noun or adjective
-    # Pattern to find 'backup' used as a verb
-    backup_verb_pattern = r'\bbackup\b\s*(files|data|documents|your)\b'
+    # Pattern to find 'backup' used as a verb (only when preceded by verb indicators)
+    backup_verb_pattern = r'\b(to|should|must|can|will|need to|please|remember to|don\'t forget to)\s+backup\b'
     matches = re.finditer(backup_verb_pattern, content, flags=re.IGNORECASE)
     for match in matches:
     #    line_number = get_line_number(content, match.start())
+        suggestions.append("Use 'back up' as a verb: 'back up your files' instead of 'backup your files'.")
+    
+    # Additional pattern for imperative verb usage: "backup your files" at start of sentence
+    backup_imperative_pattern = r'(?:^|\.\s*)backup\s+(your|the|all)\s+.*?\b(files?|data|documents?)\b'
+    matches = re.finditer(backup_imperative_pattern, content, flags=re.IGNORECASE | re.MULTILINE)
+    for match in matches:
         suggestions.append("Use 'back up' as a verb: 'back up your files' instead of 'backup your files'.")
 
     # Rule: Use 'blocklist' instead of 'blacklist'

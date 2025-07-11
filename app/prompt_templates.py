@@ -217,7 +217,7 @@ CHANGE MADE: [brief description of what changed]"""
         return feedback_prompts.get(feedback_type, feedback_prompts[FeedbackType.CLARITY])
     
     @staticmethod
-    def get_few_shot_examples(feedback_type: FeedbackType, document_type: DocumentType) -> str:
+    def get_few_shot_examples(feedback_type: FeedbackType, document_type: DocumentType, issue_description: str = "") -> str:
         """Get relevant few-shot examples for better AI performance."""
         
         examples = {
@@ -248,6 +248,58 @@ CORRECTED TEXT: "We need to implement this solution"
 CHANGE MADE: Removed filler words "basically" and "sort of"""
         }
         
+        # Add modal verb examples for any feedback type that mentions "modal verb"
+        if "modal verb" in issue_description.lower() and "can" in issue_description.lower():
+            modal_examples = """
+MODAL VERB EXAMPLES:
+ISSUE: "Use of modal verb 'can' - should describe direct action"
+ORIGINAL: "You can configure the settings from the main menu"
+CORRECTED TEXT: "Configure the settings from the main menu"
+CHANGE MADE: Converted "you can" instruction to direct imperative form
+
+ISSUE: "Use of modal verb 'can' - should describe direct action"  
+ORIGINAL: "Users can access their data through the dashboard"
+CORRECTED TEXT: "Users access their data through the dashboard"
+CHANGE MADE: Converted modal verb "can" to simple present tense
+
+ISSUE: "Use of modal verb 'can' - should describe direct action"
+ORIGINAL: "The system can process multiple requests simultaneously"
+CORRECTED TEXT: "The system processes multiple requests simultaneously"  
+CHANGE MADE: Converted modal verb "can" to simple present tense
+
+CRITICAL: For "You can [verb]..." sentences, remove "you can" and start with the imperative verb.
+CRITICAL: For third-person subjects like "system/users", conjugate the verb properly (add 's' for singular)."""
+            
+            key = (feedback_type, document_type)
+            base_examples = examples.get(key, "")
+            return f"\n{modal_examples}\n{base_examples}\n"
+        
+        # Add backup/back up examples for terminology feedback
+        if "back up" in issue_description.lower() or "backup" in issue_description.lower():
+            backup_examples = """
+BACKUP/BACK UP EXAMPLES:
+ISSUE: "Use 'back up' as a verb: 'back up your files' instead of 'backup your files'"
+ORIGINAL: "Remember to backup your data regularly"
+CORRECTED TEXT: "Remember to back up your data regularly"
+CHANGE MADE: Changed "backup" to "back up" when used as a verb
+
+ISSUE: "Use 'back up' as a verb: 'back up your files' instead of 'backup your files'"
+ORIGINAL: "Both options support backup files from the system"
+CORRECTED TEXT: "Both options support backup files from the system"
+CHANGE MADE: No change needed - "backup" is correctly used as a noun/adjective here
+
+ISSUE: "Use 'back up' as a verb: 'back up your files' instead of 'backup your files'"
+ORIGINAL: "You should backup all important documents"
+CORRECTED TEXT: "You should back up all important documents"
+CHANGE MADE: Changed "backup" to "back up" when used as a verb
+
+CRITICAL: "backup" = noun/adjective (backup files, backup system, a backup)
+CRITICAL: "back up" = verb (back up your files, to back up data)"""
+            
+            key = (feedback_type, document_type)
+            base_examples = examples.get(key, "")
+            return f"\n{backup_examples}\n{base_examples}\n"
+        
         key = (feedback_type, document_type)
         if key in examples:
             return f"\nHERE ARE EXAMPLES OF GOOD IMPROVEMENTS:\n{examples[key]}\n"
@@ -265,7 +317,7 @@ CHANGE MADE: Removed filler words "basically" and "sort of"""
         goals_text = ", ".join(writing_goals)
         
         system_prompt = AdvancedPromptTemplates.get_system_prompt(document_type)
-        few_shot_examples = AdvancedPromptTemplates.get_few_shot_examples(feedback_type, document_type)
+        few_shot_examples = AdvancedPromptTemplates.get_few_shot_examples(feedback_type, document_type, issue_description)
         feedback_prompt = AdvancedPromptTemplates.get_feedback_prompt(
             feedback_type, issue_description, sentence_context, document_type
         )
