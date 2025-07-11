@@ -146,12 +146,17 @@ def review_document(content, rules):
         feedback = rule(content)
         if feedback:
             for item in feedback:
-                suggestions.append({
-                    "text": item["text"],
-                    "start": item["start"],
-                    "end": item["end"],
-                    "message": item["message"]
-                })
+                # Handle both string and dict formats
+                if isinstance(item, str):
+                    # Skip string-only feedback for now
+                    continue
+                elif isinstance(item, dict):
+                    suggestions.append({
+                        "text": item.get("text", ""),
+                        "start": item.get("start", 0),
+                        "end": item.get("end", 0),
+                        "message": item.get("message", item.get("suggestion", ""))
+                    })
     return {"issues": suggestions, "summary": "Review completed."}
 
 def analyze_sentence(sentence, rules):

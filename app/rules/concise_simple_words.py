@@ -52,9 +52,9 @@ def check(content):
                     break
             
             if replacement:
-                suggestions.append(f"Issue: Verbose or formal phrase detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Replace '{found_text}' with '{replacement}' for simplicity.")
+                suggestions.append(f"Issue: Verbose or formal phrase detected - replace '{found_text}' with '{replacement}' for simplicity")
             else:
-                suggestions.append(f"Issue: Unnecessary modifier detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Consider removing '{found_text}' as it may not add value.")
+                suggestions.append(f"Issue: Unnecessary modifier detected - consider removing '{found_text}' as it may not add value")
 
     # 2. Detect unnecessary adverbs
     unnecessary_adverbs = r"\b(very|quite|easily|effectively|quickly)\b"
@@ -68,7 +68,7 @@ def check(content):
                 containing_sentence = sent.text.strip()
                 break
         
-        suggestions.append(f"Issue: Unnecessary adverb detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Consider removing the adverb '{found_text}' unless it is essential for meaning.")
+        suggestions.append(f"Issue: Unnecessary adverb detected - consider removing the adverb '{found_text}' unless it is essential for meaning")
 
     # 3. Flag potentially weak verb constructions (more nuanced approach)
     # Focus on specific weak patterns rather than all "be" and "have" verbs
@@ -94,7 +94,7 @@ def check(content):
                     containing_sentence = sent.text.strip()
                     break
             
-            suggestions.append(f"Issue: Weak verb construction detected\nOriginal sentence: {containing_sentence}\nAI suggestion: Consider replacing '{found_text}' with '{suggestion}' for more direct communication.")
+            suggestions.append(f"Issue: Weak verb construction detected - consider replacing '{found_text}' with '{suggestion}' for more direct communication")
 
     # 4. Highlight ambiguous words (e.g., 'file', 'mark', 'post', 'record', 'report')
 #    ambiguous_words = r"\b(file|post|mark|screen|record|report)\b"

@@ -239,7 +239,7 @@ def check(content):
             clean_sentence = BeautifulSoup(sent.text.strip(), "html.parser").get_text()
             clean_sentence = html.unescape(clean_sentence)
             
-            suggestions.append(f"Issue: Long sentence detected ({word_count} words). Consider breaking this into shorter sentences for better readability.\nOriginal sentence: \"{clean_sentence}\"")
+            suggestions.append(f"Issue: Long sentence detected ({word_count} words). Consider breaking this into shorter sentences for better readability.")
 
     # Rule 2: Use short words instead of long words
     # Convert <br/> tags to newlines
