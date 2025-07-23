@@ -318,12 +318,11 @@ class SecureCookieSessionInterface(SessionInterface):
         if not app.secret_key:
             return None
 
-        keys: list[str | bytes] = []
+        keys: list[str | bytes] = [app.secret_key]
 
         if fallbacks := app.config["SECRET_KEY_FALLBACKS"]:
             keys.extend(fallbacks)
 
-        keys.append(app.secret_key)  # itsdangerous expects current key at top
         return URLSafeTimedSerializer(
             keys,  # type: ignore[arg-type]
             salt=self.salt,
