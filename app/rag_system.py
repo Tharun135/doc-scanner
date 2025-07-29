@@ -183,18 +183,20 @@ class GeminiRAGSystem:
             return
             
         try:
-            # Natural, conversational prompt template for AI writing assistance
+            # Concise, options-focused prompt template
             prompt_template = """
-You are an intelligent AI writing assistant with deep expertise in language, style, and communication. Help improve the following text naturally and conversationally.
+You are a writing assistant. For this writing issue, provide 2-3 brief, practical alternatives.
 
-Relevant writing knowledge:
-{context}
+Context: {context}
+Issue: {question}
 
-The text that needs improvement: {question}
+Format your response EXACTLY like this:
+OPTION 1: [One clear rewrite/fix]
+OPTION 2: [Alternative rewrite/fix] 
+OPTION 3: [Third alternative if applicable]
+WHY: [One sentence explaining the improvement]
 
-Please respond as a helpful AI assistant would. Analyze the text, suggest specific improvements, and explain your reasoning in a natural, conversational way. Focus on being practical and actionable while maintaining a friendly, professional tone.
-
-Don't use rigid formatting - just give helpful, intelligent advice like you're having a conversation with a writer who wants to improve their work."""
+Keep each option under 15 words. Be direct and actionable."""
 
             prompt = PromptTemplate(
                 template=prompt_template,
@@ -238,9 +240,6 @@ Don't use rigid formatting - just give helpful, intelligent advice like you're h
             if not suggestion:
                 return None
             
-            # Get direct Gemini answer for the specific issue
-            gemini_answer = self._get_direct_gemini_answer(feedback_text, sentence_context)
-            
             # Extract relevant sources
             sources = []
             for doc in source_docs[:2]:  # Top 2 sources
@@ -252,7 +251,6 @@ Don't use rigid formatting - just give helpful, intelligent advice like you're h
             
             return {
                 "suggestion": suggestion,
-                "gemini_answer": gemini_answer,
                 "confidence": "high",
                 "method": "gemini_rag",
                 "sources": sources,
@@ -266,31 +264,6 @@ Don't use rigid formatting - just give helpful, intelligent advice like you're h
         except Exception as e:
             logger.error(f"Error getting RAG suggestion: {e}")
             return None
-    
-    def _get_direct_gemini_answer(self, feedback_text: str, sentence_context: str = "") -> str:
-        """Get a direct, natural AI answer from Gemini for the writing issue."""
-        if not self.llm:
-            return "Gemini not available - please set GOOGLE_API_KEY in .env file"
-            
-        try:
-            # Natural, conversational prompt for pure AI responses
-            prompt = f"""As an expert writing coach, I need your help improving this text: "{sentence_context}"
-
-The issue is: {feedback_text}
-
-Please respond naturally as an AI writing assistant would. Give me specific suggestions to make this text better, including:
-- What exactly should be changed
-- How to rewrite it 
-- Why the improvement makes the writing stronger
-
-Be conversational and helpful, not formulaic."""
-            
-            response = self.llm.invoke(prompt)
-            return response.strip() if response else "I'd be happy to help improve that text, but I'm having trouble generating a response right now."
-            
-        except Exception as e:
-            logger.error(f"Error getting direct Gemini answer: {e}")
-            return f"I encountered an issue while analyzing your text: {str(e)}"
     
     def _format_rag_query(self, feedback_text: str, sentence_context: str, document_type: str) -> str:
         """Format the query for optimal retrieval."""

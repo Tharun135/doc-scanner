@@ -336,39 +336,6 @@
             border-color: var(--secondary-color);
         }
         
-        /* Gemini Answer Styles */
-        .gemini-answer {
-            background: linear-gradient(135deg, rgba(52, 152, 219, 0.3), rgba(155, 89, 182, 0.3)) !important;
-            border: 2px solid rgba(52, 152, 219, 0.6) !important;
-            color: #ffffff !important;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            border-radius: 8px !important;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .gemini-answer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #3498db, #9b59b6, #3498db);
-            animation: gemini-glow 2s ease-in-out infinite;
-        }
-        
-        @keyframes gemini-glow {
-            0%, 100% { opacity: 0.7; }
-            50% { opacity: 1; }
-        }
-        
-        .gemini-answer .text-content {
-            padding-top: 8px;
-        }
-        
         /* Tab System Styles */
         .tab-container {
             background: rgba(255, 255, 255, 0.1);
@@ -1516,15 +1483,6 @@
                         ${formatAISuggestion(aiSuggestion.suggestion)}
                     </div>
                 </div>
-                
-                ${aiSuggestion.gemini_answer ? `
-                <div class="mb-3">
-                    <div class="text-light mb-2"><strong>📘 Gemini Answer:</strong></div>
-                    <div class="gemini-answer bg-primary bg-opacity-20 text-light p-3 rounded border border-primary">
-                        ${formatAISuggestion(aiSuggestion.gemini_answer)}
-                    </div>
-                </div>
-                ` : ''}
                 
                 ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
                 <div class="mb-3">
