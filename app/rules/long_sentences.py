@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import html
 from spacy.language import Language
 from spacy.tokens import Span
-import ollama
 import logging
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
@@ -25,15 +24,19 @@ nlp.add_pipe("custom_sentencizer", before="parser")
 
 def break_long_sentence_with_ai(sentence: str, word_count: int) -> str:
     """
-    Use AI to break a long sentence into shorter, more readable sentences.
+    AI-based sentence breaking is now handled by the main AI system.
+    This function is deprecated.
     
     Args:
         sentence: The original long sentence
         word_count: Number of words in the sentence
     
     Returns:
-        The improved, broken-down version of the sentence
+        None (AI processing moved to main system)
     """
+    # AI sentence breaking is now handled by the enhanced AI system
+    logger.debug("AI sentence breaking now handled by main AI system")
+    return None
     try:
         # Create a focused prompt for sentence breaking
         prompt = f"""You are a writing expert. Break this long sentence ({word_count} words) into 2-3 shorter, clearer sentences while preserving the exact meaning and all information. Each sentence must be grammatically complete and correct.
