@@ -14,7 +14,7 @@ try:
     import google.generativeai as genai
     from langchain_google_genai import GoogleGenerativeAI, GoogleGenerativeAIEmbeddings
     from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from langchain.vectorstores import Chroma
+    from langchain_community.vectorstores import Chroma
     from langchain.schema import Document
     from langchain.chains import RetrievalQA
     from langchain.prompts import PromptTemplate
@@ -24,9 +24,13 @@ except ImportError as e:
     logging.warning(f"LangChain/Gemini dependencies not available: {e}")
     LANGCHAIN_AVAILABLE = False
 
-from dotenv import load_dotenv
+# Load environment variables from .env file (optional)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    logging.warning("python-dotenv not available - environment variables must be set manually")
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 class GeminiRAGSystem:
@@ -63,7 +67,7 @@ class GeminiRAGSystem:
             
             # Initialize LangChain components
             self.llm = GoogleGenerativeAI(
-                model="gemini-pro",
+                model="gemini-1.5-flash",
                 google_api_key=api_key,
                 temperature=0.1,
                 max_output_tokens=500
@@ -179,27 +183,18 @@ class GeminiRAGSystem:
             return
             
         try:
-            # Custom prompt template for writing suggestions
+            # Natural, conversational prompt template for AI writing assistance
             prompt_template = """
-You are an expert writing assistant. Use the provided context to give specific, actionable writing suggestions.
+You are an intelligent AI writing assistant with deep expertise in language, style, and communication. Help improve the following text naturally and conversationally.
 
-Context from writing guidelines and document:
+Relevant writing knowledge:
 {context}
 
-Writing Issue: {question}
+The text that needs improvement: {question}
 
-Provide a clear, specific suggestion that:
-1. Addresses the exact writing issue mentioned
-2. Uses relevant guidelines from the context
-3. Considers the document's style and purpose
-4. Gives concrete examples when helpful
+Please respond as a helpful AI assistant would. Analyze the text, suggest specific improvements, and explain your reasoning in a natural, conversational way. Focus on being practical and actionable while maintaining a friendly, professional tone.
 
-Focus on being practical and actionable. Format as:
-SUGGESTION: [Clear, specific advice]
-EXAMPLE: [If applicable, show before/after example]
-REASON: [Brief explanation using guidelines]
-
-Suggestion:"""
+Don't use rigid formatting - just give helpful, intelligent advice like you're having a conversation with a writer who wants to improve their work."""
 
             prompt = PromptTemplate(
                 template=prompt_template,
@@ -243,6 +238,9 @@ Suggestion:"""
             if not suggestion:
                 return None
             
+            # Get direct Gemini answer for the specific issue
+            gemini_answer = self._get_direct_gemini_answer(feedback_text, sentence_context)
+            
             # Extract relevant sources
             sources = []
             for doc in source_docs[:2]:  # Top 2 sources
@@ -254,6 +252,7 @@ Suggestion:"""
             
             return {
                 "suggestion": suggestion,
+                "gemini_answer": gemini_answer,
                 "confidence": "high",
                 "method": "gemini_rag",
                 "sources": sources,
@@ -267,6 +266,31 @@ Suggestion:"""
         except Exception as e:
             logger.error(f"Error getting RAG suggestion: {e}")
             return None
+    
+    def _get_direct_gemini_answer(self, feedback_text: str, sentence_context: str = "") -> str:
+        """Get a direct, natural AI answer from Gemini for the writing issue."""
+        if not self.llm:
+            return "Gemini not available - please set GOOGLE_API_KEY in .env file"
+            
+        try:
+            # Natural, conversational prompt for pure AI responses
+            prompt = f"""As an expert writing coach, I need your help improving this text: "{sentence_context}"
+
+The issue is: {feedback_text}
+
+Please respond naturally as an AI writing assistant would. Give me specific suggestions to make this text better, including:
+- What exactly should be changed
+- How to rewrite it 
+- Why the improvement makes the writing stronger
+
+Be conversational and helpful, not formulaic."""
+            
+            response = self.llm.invoke(prompt)
+            return response.strip() if response else "I'd be happy to help improve that text, but I'm having trouble generating a response right now."
+            
+        except Exception as e:
+            logger.error(f"Error getting direct Gemini answer: {e}")
+            return f"I encountered an issue while analyzing your text: {str(e)}"
     
     def _format_rag_query(self, feedback_text: str, sentence_context: str, document_type: str) -> str:
         """Format the query for optimal retrieval."""

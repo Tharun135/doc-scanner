@@ -1,15 +1,6 @@
 import re
-import spacy
 from bs4 import BeautifulSoup
 import html
-
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-try:
-    nlp = spacy.load("en_core_web_sm")
-    SPACY_AVAILABLE = True
-except OSError:
-    nlp = None
-    SPACY_AVAILABLE = False
 
 def check(content):
     suggestions = []

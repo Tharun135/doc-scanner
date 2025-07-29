@@ -3,8 +3,20 @@ import spacy
 from bs4 import BeautifulSoup
 import html
 
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+# Global variable to hold the spaCy model
+nlp = None
+
+def get_nlp():
+    """Load spaCy model with error handling"""
+    global nlp
+    if nlp is None:
+        try:
+            nlp = spacy.load("en_core_web_sm")
+        except Exception as e:
+            print(f"Warning: Could not load spaCy model: {e}")
+            print("Some advanced features may not work. Install with: python -m spacy download en_core_web_sm")
+            nlp = False  # Mark as failed to avoid retrying
+    return nlp if nlp is not False else None
 
 def check(content):
     suggestions = []
@@ -13,8 +25,12 @@ def check(content):
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
 
-    # Define doc using nlp
-    doc = nlp(text_content)
+    # Get spaCy model with error handling
+    nlp_model = get_nlp()
+    if nlp_model:
+        doc = nlp_model(text_content)
+    else:
+        doc = None  # Fallback if spaCy is not available
     # Rule 1: Use 'sign in' instead of 'log in' or 'log on'
     login_patterns = [r'\blog\s?in\b', r'\blog\s?on\b']
     for pattern in login_patterns:
