@@ -183,20 +183,28 @@ class GeminiRAGSystem:
             return
             
         try:
-            # Concise, options-focused prompt template
+            # Technical writing focused prompt template
             prompt_template = """
-You are a writing assistant. For this writing issue, provide 2-3 brief, practical alternatives.
+You are a technical writing assistant. Analyze the provided sentence and rewrite it completely to fix the identified issue.
 
 Context: {context}
 Issue: {question}
 
-Format your response EXACTLY like this:
-OPTION 1: [One clear rewrite/fix]
-OPTION 2: [Alternative rewrite/fix] 
-OPTION 3: [Third alternative if applicable]
-WHY: [One sentence explaining the improvement]
+Rules:
+- IMPORTANT: Rewrite the ENTIRE sentence, not just the problematic part
+- Avoid "we", "us", "our" - use objective language
+- Use active voice when possible
+- Be direct and user-focused
+- Suitable for technical documentation
+- Maintain the original meaning while fixing the issue
 
-Keep each option under 15 words. Be direct and actionable."""
+Format:
+OPTION 1: [Complete sentence rewrite]
+OPTION 2: [Alternative complete sentence rewrite] 
+OPTION 3: [Third complete sentence rewrite if needed]
+WHY: [Brief technical explanation of the fix]
+
+Each option should be a complete, grammatically correct sentence."""
 
             prompt = PromptTemplate(
                 template=prompt_template,
@@ -312,8 +320,15 @@ Keep each option under 15 words. Be direct and actionable."""
 
         PASSIVE VOICE CORRECTION:
         - Change "The report was written by John" to "John wrote the report"
-        - Change "Mistakes were made" to "We made mistakes"
+        - Change "Mistakes were made" to "The system detected errors"
         - Change "The decision will be made" to "Management will decide"
+
+        TECHNICAL WRITING PRINCIPLES:
+        - Avoid first-person pronouns (we, us, our, I)
+        - Avoid second-person when possible (use specific nouns instead of "you")
+        - Use objective, neutral language
+        - Focus on actions and procedures, not subjective opinions
+        - Write from the user's perspective without using "you" excessively
 
         MODAL VERBS:
         - Use "can" for ability and permission in most contexts
@@ -332,6 +347,18 @@ Keep each option under 15 words. Be direct and actionable."""
         - Use numbered lists for procedures
         - Include specific examples and code snippets
         - Maintain consistent formatting for code elements
+        - Avoid first-person pronouns (we, us, our, I)
+        - Use imperative voice for instructions ("Click Save" not "You should click Save")
+        - Focus on user actions and system responses
+        - Use objective, factual language
+
+        USER MANUALS AND DOCUMENTATION:
+        - Write clear, step-by-step instructions
+        - Use consistent terminology throughout
+        - Avoid subjective language and opinions
+        - Focus on what the user needs to do
+        - Use active voice for clarity
+        - Provide specific examples and screenshots when helpful
 
         BUSINESS DOCUMENTS:
         - Use clear headings and bullet points
