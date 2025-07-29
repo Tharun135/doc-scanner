@@ -218,14 +218,14 @@ async function getSuggestion() {
                 'View Details',
                 'Dismiss'
             ], {
-                placeHolder: suggestion.data.suggestion
+                placeHolder: suggestion.suggestion
             });
             
             if (action === 'Apply Suggestion') {
                 // Try to apply the suggestion automatically
-                await applySuggestion(activeEditor, selection, suggestion.data);
+                await applySuggestion(activeEditor, selection, suggestion);
             } else if (action === 'View Details') {
-                showSuggestionDetails(suggestion.data);
+                showSuggestionDetails(suggestion);
             }
         } else {
             vscode.window.showErrorMessage(`Could not generate suggestion: ${suggestion.error}`);

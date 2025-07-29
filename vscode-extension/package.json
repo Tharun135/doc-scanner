@@ -1,9 +1,9 @@
 {
-  "name": "document-review-agent",
-  "displayName": "Document Review Agent",
+  "name": "doc-scanner",
+  "displayName": "Doc-Scanner AI",
   "description": "AI-powered document review and writing assistance",
   "version": "1.0.0",
-  "publisher": "your-publisher-name",
+  "publisher": "Tharun",
   "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.74.0"
@@ -36,32 +36,32 @@
         "category": "Document Review"
       },
       {
-        "command": "document-review-agent.analyzeSelection",
+        "command": "doc-scanner.analyzeSelection",
         "title": "Analyze Selection",
         "category": "Document Review"
       },
       {
-        "command": "document-review-agent.getSuggestion",
+        "command": "doc-scanner.getSuggestion",
         "title": "Get AI Suggestion",
         "category": "Document Review"
       },
       {
-        "command": "document-review-agent.batchAnalyze",
+        "command": "doc-scanner.batchAnalyze",
         "title": "Batch Analyze Workspace",
         "category": "Document Review"
       },
       {
-        "command": "document-review-agent.showDashboard",
+        "command": "doc-scanner.showDashboard",
         "title": "Show Dashboard",
         "category": "Document Review"
       },
       {
-        "command": "document-review-agent.startAgent",
+        "command": "doc-scanner.startAgent",
         "title": "Start Agent",
         "category": "Document Review"
       },
       {
-        "command": "document-review-agent.stopAgent",
+        "command": "doc-scanner.stopAgent",
         "title": "Stop Agent",
         "category": "Document Review"
       }
@@ -69,26 +69,26 @@
     "menus": {
       "editor/context": [
         {
-          "command": "document-review-agent.analyzeSelection",
+          "command": "doc-scanner.analyzeSelection",
           "when": "editorHasSelection",
           "group": "document-review"
         },
         {
-          "command": "document-review-agent.getSuggestion",
+          "command": "doc-scanner.getSuggestion",
           "when": "editorHasSelection",
           "group": "document-review"
         }
       ],
       "explorer/context": [
         {
-          "command": "document-review-agent.analyze",
+          "command": "doc-scanner.analyze",
           "when": "resourceExtname == .md || resourceExtname == .txt || resourceExtname == .html || resourceExtname == .adoc",
           "group": "document-review"
         }
       ],
       "commandPalette": [
         {
-          "command": "document-review-agent.analyze",
+          "command": "doc-scanner.analyze",
           "when": "editorLangId == markdown || editorLangId == plaintext || editorLangId == html"
         }
       ]
@@ -97,46 +97,46 @@
       "explorer": [
         {
           "id": "documentReviewResults",
-          "name": "Document Review Results",
-          "when": "document-review-agent:hasResults"
+          "name": "Doc-Scanner",
+          "when": "doc-scanner:hasResults"
         }
       ]
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "document-review-agent",
-          "title": "Document Review Agent",
+          "id": "Doc-Scanner",
+          "title": "Doc-Scanner AI",
           "icon": "$(pencil)"
         }
       ]
     },
     "views": {
-      "document-review-agent": [
+      "doc-scanner": [
         {
           "id": "agentStatus",
           "name": "Agent Status",
-          "when": "document-review-agent:activated"
+          "when": "doc-scanner:activated"
         },
         {
           "id": "documentResults",
           "name": "Analysis Results",
-          "when": "document-review-agent:hasResults"
+          "when": "doc-scanner:hasResults"
         },
         {
           "id": "suggestions",
           "name": "AI Suggestions",
-          "when": "document-review-agent:hasSuggestions"
+          "when": "doc-scanner:hasSuggestions"
         }
       ]
     },
     "configuration": {
-      "title": "Document Review Agent",
+      "title": "Doc-Scanner AI",
       "properties": {
-        "documentReviewAgent.agentUrl": {
+        "doc-scanner.agentUrl": {
           "type": "string",
           "default": "http://localhost:5000",
-          "description": "URL of the Document Review Agent Flask server"
+          "description": "URL of the doc-scanner Flask server"
         },
         "documentReviewAgent.mcpUrl": {
           "type": "string",
@@ -180,8 +180,8 @@
     },
     "problemMatchers": [
       {
-        "name": "document-review",
-        "owner": "document-review-agent",
+        "name": "doc-scanner",
+        "owner": "Tharun",
         "fileLocation": "absolute",
         "pattern": {
           "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error|info):\\s+(.*)$",
@@ -217,5 +217,11 @@
   "dependencies": {
     "axios": "^1.6.0",
     "ws": "^8.14.0"
+  },
+  "readme": "README.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tharun135/doc-scanner.git"
   }
 }
+
