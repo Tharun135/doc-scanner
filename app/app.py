@@ -221,6 +221,8 @@ def index():
 
 @main.route('/upload', methods=['POST'])
 def upload_file():
+    global current_document_content  # Access global variable
+    
     if 'file' not in request.files:
         return jsonify({"error": "No file part"}), 400
 
@@ -236,6 +238,9 @@ def upload_file():
         # Use BeautifulSoup to extract plain text from HTML
         soup = BeautifulSoup(html_content, "html.parser")
         plain_text = soup.get_text(separator="\n")
+        
+        # Store the document content for RAG context
+        current_document_content = plain_text
 
         # Split on newlines and punctuation for better sentence segmentation
         lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
@@ -325,6 +330,7 @@ def generate_report(sentences):
     return {"avgQualityScore": 75}
 
 feedback_list = []
+current_document_content = ""  # Store current document for RAG context
 
 @main.route('/feedback', methods=['POST'])
 def submit_feedback():
@@ -343,6 +349,8 @@ def get_feedbacks():
 
 @main.route('/ai_suggestion', methods=['POST'])
 def ai_suggestion():
+    global current_document_content  # Access global variable
+    
     from .ai_improvement import get_enhanced_ai_suggestion
     from .performance_monitor import track_suggestion, learning_system
     import uuid
@@ -381,13 +389,14 @@ def ai_suggestion():
                 "note": "Generated using learned patterns from user feedback"
             })
         
-        # Use enhanced AI suggestion system
-        logger.info("Getting enhanced AI suggestion...")
+        # Use enhanced AI suggestion system with RAG
+        logger.info("Getting enhanced AI suggestion with RAG context...")
         result = get_enhanced_ai_suggestion(
             feedback_text=feedback_text,
             sentence_context=sentence_context,
             document_type=document_type,
-            writing_goals=writing_goals
+            writing_goals=writing_goals,
+            document_content=current_document_content  # Pass document content for RAG
         )
         
         # Validate result structure

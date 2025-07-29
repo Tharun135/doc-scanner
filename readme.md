@@ -1,11 +1,12 @@
 # Doc-Scanner
 
-**A sophisticated style guide checker that leverages AI to provide intelligent feedback and suggestions for document improvements. This tool analyzes documents for style guide compliance and generates actionable AI-powered recommendations.**
+**A sophisticated style guide checker that leverages AI to provide intelligent feedback and suggestions for document improvements. This tool analyzes documents for style guide compliance and generates actionable AI-powered recommendations with optional RAG (Retrieval-Augmented Generation) enhancement.**
 
 ## 🎯 Key Features
 
 * **Automated style guide compliance checking** - Real-time validation against customizable style rules
 * **AI-powered feedback generation** - Intelligent suggestions for improving document quality
+* **🧠 RAG-Enhanced Suggestions** - Context-aware recommendations using document content and writing guidelines
 * **Real-time document analysis** - Instant feedback as you type or upload content
 * **Customizable style rules** - Modular rule-based system for easy addition of new guidelines
 * **Detailed suggestion reports** - Comprehensive analysis with line-by-line recommendations
@@ -21,6 +22,7 @@
 * **Natural Language Processing** - Advanced text analysis capabilities
 * **spaCy** - Industrial-strength NLP library
 * **AI/ML for text analysis** - Intelligent pattern recognition and suggestion generation
+* **🆕 LangChain + Gemini RAG** - Context-aware AI suggestions with retrieval augmentation
 
 ## 🔍 Use Cases
 
@@ -33,6 +35,7 @@
 ## 📋 Table of Contents
 
 * [Installation](#-getting-started)
+* [RAG Integration](#-rag-integration)
 * [Usage](#-usage)
 * [Examples](#-examples)
 * [Project Structure](#-project-structure)
@@ -86,6 +89,57 @@
    pip install -r requirements.txt
    python -m spacy download en_core_web_sm
    ```
+
+## 🧠 RAG Integration
+
+### Enhanced AI Suggestions with Gemini + LangChain
+
+The application now supports **Retrieval-Augmented Generation (RAG)** for context-aware AI suggestions that consider your document content and writing guidelines.
+
+#### Quick RAG Setup
+
+1. **Install RAG Dependencies**
+
+   ```bash
+   python setup_rag.py
+   ```
+
+2. **Get API Keys**
+
+   - **Google Gemini**: Get your API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+   - **OpenAI** (optional): Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+3. **Configure Environment**
+
+   Create a `.env` file in the project root:
+
+   ```env
+   GOOGLE_API_KEY=your_google_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
+
+4. **Test RAG Integration**
+
+   ```bash
+   python demo_rag.py
+   ```
+
+#### RAG Features
+
+- **🧠 Context-Aware Suggestions**: AI considers your document content
+- **📚 Knowledge Base**: Pre-loaded writing guidelines and best practices
+- **🎯 Source Attribution**: Shows which guidelines influenced suggestions
+- **⚡ Enhanced Accuracy**: Combines traditional AI with retrieval
+
+#### What You'll See
+
+When RAG is active, AI suggestions include:
+- 🧠 RAG Enhanced badge
+- 📚 Knowledge Sources section
+- Context-specific examples and guidance
+- Higher accuracy and relevance
+
+For detailed setup and customization, see the [RAG Integration Guide](RAG_INTEGRATION_GUIDE.md).
 
 ## 📖 Usage
 
