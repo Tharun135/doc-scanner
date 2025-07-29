@@ -30,53 +30,46 @@ def install_requirements():
         print(f"❌ Failed to install requirements: {e}")
         return False
 
-def check_ollama_installation():
-    """Check if Ollama is installed and running."""
-    print("\n🤖 Checking Ollama installation...")
+def check_openai_setup():
+    """Check if OpenAI API key is configured."""
+    print("\n🤖 Checking OpenAI API setup...")
+    
+    api_key = os.getenv('OPENAI_API_KEY')
+    if not api_key:
+        print("❌ OpenAI API key not found in environment variables")
+        print("\nTo set up OpenAI API:")
+        print("1. Get your API key from https://platform.openai.com/api-keys")
+        print("2. Set environment variable: OPENAI_API_KEY=your_api_key_here")
+        print("3. On Windows: setx OPENAI_API_KEY \"your_api_key_here\"")
+        print("4. On Linux/Mac: export OPENAI_API_KEY=\"your_api_key_here\"")
+        return False, []
+    
     try:
-        response = requests.get("http://localhost:11434/api/tags", timeout=5)
-        if response.status_code == 200:
-            models = response.json().get("models", [])
-            print(f"✅ Ollama is running with {len(models)} models")
-            return True, models
-    except:
-        pass
-    
-    print("❌ Ollama not found or not running")
-    print("To install Ollama:")
-    print("1. Visit https://ollama.ai")
-    print("2. Download and install Ollama")
-    print("3. Run: ollama pull mistral-7b-instruct")
-    return False, []
-
-def download_recommended_models():
-    """Download recommended AI models for better suggestions."""
-    print("\n⬇️ Downloading recommended AI models...")
-    
-    recommended_models = [
-        "mistral-7b-instruct",  # Main model for general suggestions
-        "llama3.1",            # Alternative model
-        "codellama"            # For technical documentation
-    ]
-    
-    for model in recommended_models:
-        print(f"Downloading {model}...")
-        try:
-            result = subprocess.run(
-                ["ollama", "pull", model], 
-                capture_output=True, 
-                text=True, 
-                timeout=300
-            )
-            if result.returncode == 0:
-                print(f"✅ {model} downloaded successfully")
-            else:
-                print(f"❌ Failed to download {model}: {result.stderr}")
-        except subprocess.TimeoutExpired:
-            print(f"⏰ Download timeout for {model} - you can continue manually")
-        except FileNotFoundError:
-            print("❌ Ollama command not found. Please install Ollama first.")
-            break
+        import openai
+        client = openai.OpenAI(api_key=api_key)
+        
+        # Test the API key by listing models
+        models = client.models.list()
+        available_models = [model.id for model in models.data if 'gpt' in model.id.lower()]
+        
+        print(f"✅ OpenAI API connected successfully")
+        print(f"📋 Available GPT models: {len(available_models)}")
+        
+        # Show recommended models
+        recommended = [m for m in available_models if m in ['gpt-4o-mini', 'gpt-3.5-turbo', 'gpt-4o']]
+        if recommended:
+            print(f"🎯 Recommended models available: {recommended}")
+        
+        return True, available_models
+        
+    except ImportError:
+        print("❌ OpenAI Python library not installed")
+        print("Run: pip install openai")
+        return False, []
+    except Exception as e:
+        print(f"❌ OpenAI API connection failed: {e}")
+        print("Please check your API key and internet connection")
+        return False, []
 
 def setup_database():
     """Initialize the performance monitoring database."""
@@ -96,10 +89,11 @@ def create_config_file():
     
     config = {
         "ai_settings": {
-            "default_model": "mistral-7b-instruct",
-            "temperature": 0.2,
-            "max_tokens": 400,
-            "enable_learning": True
+            "default_model": "gpt-4o-mini",
+            "temperature": 0.1,
+            "max_tokens": 150,
+            "enable_learning": True,
+            "api_provider": "openai"
         },
         "performance": {
             "track_metrics": True,
@@ -109,7 +103,7 @@ def create_config_file():
         "features": {
             "advanced_prompts": True,
             "context_awareness": True,
-            "multi_model_fallback": True
+            "smart_fallback": True
         }
     }
     
@@ -179,10 +173,10 @@ def print_usage_instructions():
 3. Upload documents or paste text for analysis
 
 🔧 ENHANCED FEATURES:
-- Advanced AI prompts for better suggestions
+- OpenAI ChatGPT integration for superior AI suggestions
 - Context-aware feedback based on document type
 - Performance monitoring and learning from user feedback
-- Multiple fallback systems for reliability
+- Smart fallback systems for reliability
 
 📊 MONITORING:
 - Visit /performance_dashboard for AI performance metrics
@@ -198,21 +192,28 @@ Specify document types for better suggestions:
 - creative: For creative writing
 
 💡 TIPS FOR BETTER SUGGESTIONS:
-1. Provide context with your text
-2. Specify document type when possible
-3. Give feedback on suggestions to train the system
-4. Use specific feedback descriptions for better AI responses
+1. Set up your OpenAI API key for best results
+2. Provide context with your text
+3. Specify document type when possible
+4. Give feedback on suggestions to train the system
+5. Use specific feedback descriptions for better AI responses
 
 🆘 TROUBLESHOOTING:
-- If Ollama fails, the system uses smart fallback suggestions
+- If OpenAI API fails, the system uses smart fallback suggestions
 - Check logs in the console for error details
+- Ensure your OPENAI_API_KEY environment variable is set
 - Performance metrics help identify improvement areas
+
+🔑 API COSTS:
+- GPT-4o-mini: ~$0.15 per 1M tokens (very affordable)
+- GPT-3.5-turbo: ~$0.50 per 1M tokens
+- Usage is typically very low for document suggestions
 """)
 
 def main():
     """Main setup function."""
-    print("🚀 Doc-Scanner AI Enhancement Setup")
-    print("=" * 50)
+    print("🚀 Doc-Scanner AI Enhancement Setup (OpenAI ChatGPT)")
+    print("=" * 60)
     
     # Check prerequisites
     if not check_python_version():
@@ -222,14 +223,12 @@ def main():
     if not install_requirements():
         return False
     
-    # Check Ollama
-    ollama_available, models = check_ollama_installation()
+    # Check OpenAI API setup
+    openai_available, models = check_openai_setup()
     
-    if ollama_available:
-        if len(models) == 0:
-            download_recommended_models()
-    else:
-        print("⚠️ Continuing without Ollama - fallback suggestions will be used")
+    if not openai_available:
+        print("⚠️ Continuing without OpenAI - fallback suggestions will be used")
+        print("⚠️ For best AI suggestions, please set up your OpenAI API key")
     
     # Setup database
     setup_database()

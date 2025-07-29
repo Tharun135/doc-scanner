@@ -1,13 +1,15 @@
 """
 Enhanced AI suggestion system for better writing recommendations.
-This module provides improved prompt engineering and context-aware suggestions.
+This module provides improved prompt engineering and context-aware suggestions using OpenAI's ChatGPT.
 """
 
 import json
 import re
-import ollama
+import openai
 import logging
+import os
 from typing import Dict, List, Optional, Any
+from dotenv import load_dotenv
 from .prompt_templates import (
     AdvancedPromptTemplates, 
     classify_feedback_type, 
@@ -16,46 +18,65 @@ from .prompt_templates import (
     FeedbackType
 )
 
+# Load environment variables from .env file
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 class EnhancedAISuggestionEngine:
     """
     Enhanced AI suggestion engine with better prompt engineering,
-    context awareness, and domain-specific knowledge.
+    context awareness, and domain-specific knowledge using OpenAI ChatGPT.
     """
     
     def __init__(self, model_name: str = None):
-        self.model_name = self._get_available_model(model_name)
+        self.client = self._initialize_openai_client()
+        self.model_name = model_name or "gpt-3.5-turbo"
         self.style_guide_context = self._load_style_guide_context()
         
-    def _get_available_model(self, preferred_model: str = None) -> str:
-        """Get the first available Ollama model, preferring instruction-tuned models."""
+    def _initialize_openai_client(self):
+        """Initialize OpenAI client with API key."""
         try:
-            models = ollama.list()
-            if not models or not models.models:
-                logger.warning("No Ollama models available")
+            # Get API key from environment variable (should be loaded by dotenv)
+            api_key = os.getenv('OPENAI_API_KEY')
+            if not api_key:
+                logger.warning("No OpenAI API key found in environment variable OPENAI_API_KEY")
+                logger.info("To set up OpenAI: 1) Get API key from https://platform.openai.com/api-keys 2) Set OPENAI_API_KEY environment variable")
                 return None
                 
-            available_models = [model.model for model in models.models]
-            logger.info(f"Available Ollama models: {available_models}")
+            # Create client
+            client = openai.OpenAI(api_key=api_key)
+            logger.info(f"OpenAI client initialized successfully with key: {api_key[:8]}...")
+            return client
             
-            # If a specific model is requested and available, use it
-            if preferred_model and preferred_model in available_models:
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI client: {e}")
+            return None
+        
+    def _get_available_model(self, preferred_model: str = None) -> str:
+        """Get the preferred OpenAI model."""
+        try:
+            if not self.client:
+                logger.warning("No OpenAI client available")
+                return None
+                
+            # If a specific model is requested, use it
+            if preferred_model:
                 logger.info(f"Using requested model: {preferred_model}")
                 return preferred_model
             
-            # Prefer instruction-tuned models for this task
-            preferred_models = ['mistral-7b-instruct', 'llama3.1', 'llama2', 'mistral']
-            for preferred in preferred_models:
-                for available in available_models:
-                    if preferred in available.lower():
-                        logger.info(f"Using preferred model: {available}")
-                        return available
+            # Default to GPT-3.5-turbo for cost effectiveness
+            # Can be upgraded to GPT-4 for better quality
+            available_models = [
+                "gpt-4o-mini",      # Most cost-effective GPT-4 class model
+                "gpt-3.5-turbo",    # Reliable and fast
+                "gpt-4o",           # Best quality but more expensive
+            ]
             
-            # Use first available as fallback
-            fallback_model = available_models[0]
-            logger.info(f"Using fallback model: {fallback_model}")
-            return fallback_model
+            # Use the first available model
+            model_name = available_models[0]
+            logger.info(f"Using OpenAI model: {model_name}")
+            return model_name
             
         except Exception as e:
             logger.error(f"Error getting available models: {e}")
@@ -170,8 +191,13 @@ Now provide your suggestion for the current issue:"""
                 writing_goals=writing_goals
             )
 
-            logger.info(f"Using Ollama model: {self.model_name}")
-            response = ollama.chat(
+            # Check if we have a valid OpenAI client
+            if not self.client:
+                logger.warning("No OpenAI client available, falling back to rule-based suggestions")
+                return self.generate_smart_fallback_suggestion(feedback_text, sentence_context)
+
+            logger.info(f"Using OpenAI model: {self.model_name}")
+            response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
                     {
@@ -183,18 +209,25 @@ Now provide your suggestion for the current issue:"""
                         'content': prompt_data["user"]
                     }
                 ],
-                options={
-                    'temperature': 0.01,  # Extremely low for maximum consistency
-                    'top_p': 0.3,        # Even lower to focus on most likely tokens
-                    'max_tokens': 150,   # Shorter limit to force concise responses
-                    'repeat_penalty': 1.3,  # Higher to prevent repetition
-                    'top_k': 10,        # Very low to focus responses extremely
-                    'seed': 42,         # For consistency
-                    'stop': ['\n\n', 'ADDITIONAL', 'ALSO', 'FURTHERMORE', 'MOREOVER', 'EXPLANATION:', 'ANALYSIS:', 'NOTE:', 'REMEMBER:', 'CONSIDER:', 'However,', 'Additionally,', 'In conclusion']  # Stop generating if AI tries to add extra info
-                }
+                temperature=0.1,        # Low for consistency
+                max_tokens=150,         # Shorter limit for concise responses
+                top_p=0.3,             # Focus on most likely tokens
+                frequency_penalty=0.3,  # Reduce repetition
+                presence_penalty=0.1,   # Encourage diverse vocabulary
+                stop=['\n\n', 'ADDITIONAL', 'ALSO', 'FURTHERMORE', 'MOREOVER', 'EXPLANATION:', 'ANALYSIS:', 'NOTE:', 'REMEMBER:', 'CONSIDER:', 'However,', 'Additionally,', 'In conclusion']
             )
             
-            suggestion = response['message']['content'].strip()
+            # Validate response structure
+            if not response or not response.choices or len(response.choices) == 0:
+                raise ValueError("Invalid OpenAI response structure - no choices")
+                
+            if not response.choices[0].message or not response.choices[0].message.content:
+                raise ValueError("Invalid OpenAI response structure - no content")
+            
+            suggestion = response.choices[0].message.content.strip()
+            
+            if not suggestion:
+                raise ValueError("Empty suggestion from OpenAI")
             
             # Post-process to ensure exact format
             suggestion = self._post_process_ai_response(suggestion, sentence_context, feedback_text)
@@ -202,7 +235,7 @@ Now provide your suggestion for the current issue:"""
             return {
                 "suggestion": suggestion,
                 "confidence": "high",
-                "method": "advanced_ai_prompt",
+                "method": "openai_chatgpt",
                 "feedback_type": feedback_type_enum.value,
                 "context_used": {
                     "document_type": document_type,
@@ -210,12 +243,13 @@ Now provide your suggestion for the current issue:"""
                     "feedback_classification": feedback_type_enum.value,
                     "has_sentence_context": bool(sentence_context),
                     "prompt_template": "advanced",
-                    "model_used": self.model_name
+                    "model_used": self.model_name,
+                    "api_provider": "openai"
                 }
             }
             
         except Exception as e:
-            logger.error(f"Advanced AI suggestion failed: {str(e)}")
+            logger.error(f"OpenAI ChatGPT suggestion failed: {str(e)}")
             # Fall back to improved rule-based suggestions
             return self.generate_smart_fallback_suggestion(feedback_text, sentence_context)
     

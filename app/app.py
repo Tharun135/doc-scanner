@@ -346,6 +346,7 @@ def ai_suggestion():
     from .ai_improvement import get_enhanced_ai_suggestion
     from .performance_monitor import track_suggestion, learning_system
     import uuid
+    import time
     
     data = request.get_json()
     feedback_text = data.get('feedback')
@@ -353,7 +354,10 @@ def ai_suggestion():
     document_type = data.get('document_type', 'general')
     writing_goals = data.get('writing_goals', ['clarity', 'conciseness'])
     
+    logger.info(f"AI suggestion request: feedback='{feedback_text[:50]}...', sentence='{sentence_context[:50]}...'")
+    
     if not feedback_text:
+        logger.error("No feedback provided in AI suggestion request")
         return jsonify({"error": "No feedback provided"}), 400
 
     suggestion_id = str(uuid.uuid4())
@@ -368,6 +372,7 @@ def ai_suggestion():
             track_suggestion(suggestion_id, feedback_text, sentence_context, 
                            document_type, "learned_pattern", response_time)
             
+            logger.info(f"Using learned pattern suggestion for: {feedback_text[:30]}...")
             return jsonify({
                 "suggestion": learned_suggestion,
                 "confidence": "high",
@@ -377,6 +382,7 @@ def ai_suggestion():
             })
         
         # Use enhanced AI suggestion system
+        logger.info("Getting enhanced AI suggestion...")
         result = get_enhanced_ai_suggestion(
             feedback_text=feedback_text,
             sentence_context=sentence_context,
@@ -384,17 +390,28 @@ def ai_suggestion():
             writing_goals=writing_goals
         )
         
+        # Validate result structure
+        if not result or not isinstance(result, dict):
+            raise ValueError(f"Invalid result structure: {type(result)}")
+            
+        if 'suggestion' not in result:
+            raise ValueError(f"Missing 'suggestion' in result: {list(result.keys())}")
+            
+        if not result['suggestion']:
+            raise ValueError("Empty suggestion returned")
+        
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                        document_type, result["method"], response_time)
+                        document_type, result.get("method", "unknown"), response_time)
         
+        logger.info(f"AI suggestion successful using method: {result.get('method', 'unknown')}")
         return jsonify({
             "suggestion": result["suggestion"],
-            "confidence": result["confidence"],
-            "method": result["method"],
+            "confidence": result.get("confidence", "medium"),
+            "method": result.get("method", "unknown"),
             "suggestion_id": suggestion_id,
             "context_used": result.get("context_used", {}),
-            "note": f"Generated using {result['method']} approach"
+            "note": f"Generated using {result.get('method', 'unknown')} approach"
         })
         
     except Exception as e:

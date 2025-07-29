@@ -8,14 +8,15 @@ import os
 import logging
 from typing import Optional
 
-# Enable Ollama functionality
-OLLAMA_AVAILABLE = True
+# AI functionality now uses OpenAI instead of Ollama
+AI_AVAILABLE = True
 try:
-    import ollama
+    import openai
+    import os
 except ImportError:
-    # Ollama not available, will use offline methods only
-    OLLAMA_AVAILABLE = False
-    ollama = None
+    # OpenAI not available, will use offline methods only
+    AI_AVAILABLE = False
+    openai = None
 
 logger = logging.getLogger(__name__)
 
@@ -122,78 +123,13 @@ def generate_active_voice_with_llm(passive_sentence):
 
 def convert_with_llm_api(passive_sentence: str) -> Optional[str]:
     """
-    Use Ollama (or other LLM) to convert passive voice to active voice.
+    Convert passive voice to active voice using AI (now handled by main AI system).
+    This function is deprecated - passive voice conversion is now handled
+    by the enhanced AI system in ai_improvement.py
     """
-    # Skip if Ollama is not available
-    if not OLLAMA_AVAILABLE or not ollama:
-        logger.debug("Ollama not available, skipping LLM conversion")
-        return None
-        
-    try:
-        # Check if Ollama is available
-        models = ollama.list()
-        if not models or not models.models:
-            logger.debug("No Ollama models available, skipping LLM conversion")
-            return None
-        
-        # Use the first available model, preferring instruction-tuned models
-        available_models = [model.model for model in models.models]
-        model_name = None
-        
-        # Prefer instruction-tuned models for this task
-        preferred_models = ['mistral-7b-instruct', 'llama3.1', 'llama2', 'mistral']
-        for preferred in preferred_models:
-            for available in available_models:
-                if preferred in available.lower():
-                    model_name = available
-                    break
-            if model_name:
-                break
-        
-        if not model_name:
-            model_name = available_models[0]  # Use first available as fallback
-        
-        prompt = f"""Rewrite this sentence in active voice. Be direct and clear. Return ONLY the rewritten sentence with no labels, explanations, or formatting.
-
-Sentence to rewrite: {passive_sentence}
-
-Rewritten sentence:"""
-
-        response = ollama.generate(
-            model=model_name,
-            prompt=prompt,
-            options={
-                'temperature': 0.2,
-                'top_p': 0.9,
-                'num_predict': 100,
-                'stop': ['\n\n', 'Original:', 'Instructions:']
-            }
-        )
-        
-        if response and 'response' in response:
-            rewritten = response['response'].strip()
-            
-            # Clean up the response more aggressively
-            rewritten = rewritten.strip('"\'')
-            
-            # Remove any labels or formatting that might have snuck in
-            rewritten = re.sub(r'^(SUGGESTION:|ORIGINAL:|Active voice version:|Rewritten sentence:)\s*', '', rewritten, flags=re.IGNORECASE)
-            rewritten = re.sub(r'\n(SUGGESTION:|ORIGINAL:).*$', '', rewritten, flags=re.MULTILINE | re.IGNORECASE)
-            
-            # Clean up any remaining formatting
-            rewritten = rewritten.split('\n')[0].strip()  # Take only first line
-            
-            # Validate that it's actually different and improved
-            if (rewritten != passive_sentence and 
-                len(rewritten) > 5 and 
-                not rewritten.lower().startswith(('convert', 'rewrite', 'change', 'suggestion', 'original'))):
-                return rewritten
-        
-        return None
-        
-    except Exception as e:
-        logger.error(f"Error using Ollama for passive voice conversion: {e}")
-        return None
+    # Skip AI conversion here - it's now handled by the main AI system
+    logger.debug("Passive voice AI conversion now handled by main AI system")
+    return None
 
 def convert_with_offline_logic(passive_sentence):
     """
