@@ -1,5 +1,4 @@
 import axios from 'axios';
-import * as WebSocket from 'ws';
 import * as vscode from 'vscode';
 
 export interface AnalysisResult {
@@ -281,22 +280,22 @@ export class DocumentReviewAgent {
             try {
                 this.mcpSocket = new WebSocket(this.mcpUrl);
                 
-                this.mcpSocket.on('open', () => {
+                this.mcpSocket.addEventListener('open', () => {
                     console.log('Connected to MCP server');
                     resolve();
                 });
 
-                this.mcpSocket.on('error', (error) => {
+                this.mcpSocket.addEventListener('error', (error) => {
                     console.warn('MCP connection failed:', error);
                     // Don't reject - MCP is optional
                     resolve();
                 });
 
-                this.mcpSocket.on('close', () => {
+                this.mcpSocket.addEventListener('close', () => {
                     console.log('MCP connection closed');
                 });
 
-                this.mcpSocket.on('message', (data) => {
+                this.mcpSocket.addEventListener('message', (data) => {
                     try {
                         const message = JSON.parse(data.toString());
                         this.handleMCPMessage(message);
@@ -352,7 +351,7 @@ export class DocumentReviewAgent {
                     const response = JSON.parse(data.toString());
                     if (response.id === id) {
                         clearTimeout(timeout);
-                        this.mcpSocket?.off('message', handleResponse);
+                        this.mcpSocket?.removeEventListener('message', handleResponse);
                         
                         if (response.error) {
                             reject(new Error(response.error.message));
@@ -365,8 +364,9 @@ export class DocumentReviewAgent {
                 }
             };
 
-            this.mcpSocket.on('message', handleResponse);
+            this.mcpSocket.addEventListener('message', handleResponse);
             this.mcpSocket.send(JSON.stringify(message));
+            this.mcpSocket = new WebSocket(this.mcpUrl);
         });
     }
 
