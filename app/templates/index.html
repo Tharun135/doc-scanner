@@ -257,6 +257,43 @@
     margin-left: 0.5rem;
 }
 
+.rag-badge {
+    background: linear-gradient(45deg, #00b894, #00cec9);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.7); }
+    70% { box-shadow: 0 0 0 8px rgba(0, 184, 148, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
+}
+
+.sources-container {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.source-item {
+    border-left: 3px solid #00b894;
+    transition: all 0.3s ease;
+}
+
+.source-item:hover {
+    border-left-color: #00cec9;
+    background: rgba(0, 184, 148, 0.1) !important;
+}
+
+.source-content {
+    font-size: 0.9rem;
+    font-style: italic;
+    margin-top: 0.25rem;
+}
+
 .confidence-indicator {
     display: inline-block;
     width: 8px;
@@ -1427,6 +1464,7 @@
                     <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
                     <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
                     <span class="ai-enhancement-badge ms-2">${aiSuggestion.method}</span>
+                    ${aiSuggestion.method && aiSuggestion.method.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
                 </div>
                 
                 <div class="mb-3">
@@ -1445,6 +1483,20 @@
                         ${formatAISuggestion(aiSuggestion.suggestion)}
                     </div>
                 </div>
+                
+                ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
+                <div class="mb-3">
+                    <div class="text-light mb-2"><strong>📚 Knowledge Sources:</strong></div>
+                    <div class="sources-container">
+                        ${aiSuggestion.sources.map(source => `
+                            <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2">
+                                <small class="text-muted">${source.type === 'guideline' ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
+                                <div class="source-content">${source.content}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
                 
                 <div class="feedback-buttons">
                     <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'helpful')">
