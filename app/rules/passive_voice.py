@@ -8,15 +8,12 @@ import os
 import logging
 from typing import Optional
 
-# AI functionality now uses OpenAI instead of Ollama
-AI_AVAILABLE = True
+# Import RAG system with fallback
 try:
-    import openai
-    import os
+    from .rag_rule_helper import check_with_rag, detect_passive_voice_issues
+    RAG_HELPER_AVAILABLE = True
 except ImportError:
-    # OpenAI not available, will use offline methods only
-    AI_AVAILABLE = False
-    openai = None
+    RAG_HELPER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +27,37 @@ except OSError:
     SPACY_AVAILABLE = False
 
 def check(content):
+    """
+    Check for passive voice issues using RAG with smart fallback.
+    Primary: RAG-enhanced suggestions
+    Fallback: Rule-based passive voice detection
+    """
+    
+    # Use RAG-enhanced checking if available
+    if RAG_HELPER_AVAILABLE:
+        logger.info("Using RAG-enhanced passive voice checking")
+        
+        rule_patterns = {
+            'detect_function': detect_passive_voice_issues
+        }
+        
+        fallback_suggestions = [
+            "Convert passive voice to active voice for clearer, more direct communication. Example: Change 'The report was written by John' to 'John wrote the report'."
+        ]
+        
+        return check_with_rag(
+            content=content,
+            rule_patterns=rule_patterns,
+            rule_name="passive_voice",
+            fallback_suggestions=fallback_suggestions
+        )
+    
+    # Legacy fallback when RAG helper is not available
+    logger.warning("RAG helper not available, using legacy passive voice detection")
+    return check_legacy_passive_voice(content)
+
+def check_legacy_passive_voice(content):
+    """Legacy passive voice detection for fallback when RAG is not available."""
     suggestions = []
 
     # Strip HTML tags from content
@@ -51,7 +79,7 @@ def check(content):
         sentence_endings = re.split(r'[.!?]+', text_content)
         sentences = [s.strip() for s in sentence_endings if s.strip()]
     
-    # Rule: Detect passive voice and provide LLM-generated active voice rewrites
+    # Rule: Detect passive voice and provide basic suggestions
     for sent in sentences:
         if SPACY_AVAILABLE and hasattr(sent, 'text'):
             sent_text = sent.text.strip()

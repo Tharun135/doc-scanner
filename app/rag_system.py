@@ -87,6 +87,9 @@ class GeminiRAGSystem:
             self.is_initialized = True
             logger.info("Gemini RAG system initialized successfully")
             
+            # Try to load rule knowledge base automatically
+            self.load_rule_knowledge_base()
+            
         except Exception as e:
             logger.error(f"Failed to initialize Gemini RAG system: {e}")
             self.is_initialized = False
@@ -136,6 +139,59 @@ class GeminiRAGSystem:
             logger.error(f"Error adding writing guidelines: {e}")
             return False
     
+    def load_rule_knowledge_base(self, knowledge_base_path: str = None):
+        """Load the rule knowledge base from ChromaDB."""
+        if not self.is_initialized:
+            return False
+            
+        try:
+            # Default path to rule knowledge base in project root
+            if not knowledge_base_path:
+                # Get the project root (parent of app directory)
+                app_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(app_dir)
+                knowledge_base_path = os.path.join(project_root, "rule_knowledge_base")
+            
+            if knowledge_base_path and os.path.exists(knowledge_base_path):
+                # Load existing ChromaDB with rule knowledge
+                self.rule_vectorstore = Chroma(
+                    persist_directory=knowledge_base_path,
+                    embedding_function=self.embeddings
+                )
+                logger.info(f"Rule knowledge base loaded from {knowledge_base_path}")
+                return True
+            else:
+                logger.warning(f"Rule knowledge base not found at {knowledge_base_path} - using document context only")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error loading rule knowledge base: {e}")
+            return False
+
+    def search_rule_knowledge(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+        """Search the rule knowledge base for relevant rules."""
+        if not hasattr(self, 'rule_vectorstore') or not self.rule_vectorstore:
+            return []
+            
+        try:
+            results = self.rule_vectorstore.similarity_search_with_score(query, k=k)
+            
+            formatted_results = []
+            for doc, score in results:
+                formatted_results.append({
+                    "rule_name": doc.metadata.get("rule_name", "Unknown"),
+                    "description": doc.page_content,
+                    "tags": doc.metadata.get("tags", ""),
+                    "score": score,
+                    "metadata": doc.metadata
+                })
+            
+            return formatted_results
+            
+        except Exception as e:
+            logger.error(f"Error searching rule knowledge base: {e}")
+            return []
+
     def add_document_context(self, document_content: str, document_type: str = "general"):
         """Add current document context to the knowledge base."""
         if not self.is_initialized:
@@ -236,8 +292,15 @@ Each option should be a complete, grammatically correct sentence."""
             return None
             
         try:
+            # Search rule knowledge base first for relevant rules
+            rule_context = []
+            if hasattr(self, 'rule_vectorstore') and self.rule_vectorstore:
+                rule_results = self.search_rule_knowledge(feedback_text, k=2)
+                for rule in rule_results:
+                    rule_context.append(f"Rule: {rule['rule_name']} - {rule['description'][:200]}")
+            
             # Format the query for better retrieval
-            query = self._format_rag_query(feedback_text, sentence_context, document_type)
+            query = self._format_rag_query(feedback_text, sentence_context, document_type, rule_context)
             
             # Get response from RAG chain
             result = self.retrieval_qa({"query": query})
@@ -257,15 +320,24 @@ Each option should be a complete, grammatically correct sentence."""
                     "source": doc.metadata.get("source", "unknown")
                 })
             
+            # Add rule knowledge sources if used
+            if rule_context:
+                sources.extend([{
+                    "content": rule['description'][:100] + "...",
+                    "type": "rule_knowledge",
+                    "source": rule['rule_name']
+                } for rule in rule_results[:2]])
+            
             return {
                 "suggestion": suggestion,
                 "confidence": "high",
-                "method": "gemini_rag",
+                "method": "gemini_rag_with_rules",
                 "sources": sources,
                 "context_used": {
                     "retrieval_docs": len(source_docs),
+                    "rule_knowledge_used": len(rule_context),
                     "document_type": document_type,
-                    "query_type": "rag_enhanced"
+                    "query_type": "rag_enhanced_with_rules"
                 }
             }
             
@@ -273,7 +345,7 @@ Each option should be a complete, grammatically correct sentence."""
             logger.error(f"Error getting RAG suggestion: {e}")
             return None
     
-    def _format_rag_query(self, feedback_text: str, sentence_context: str, document_type: str) -> str:
+    def _format_rag_query(self, feedback_text: str, sentence_context: str, document_type: str, rule_context: List[str] = None) -> str:
         """Format the query for optimal retrieval."""
         query_parts = []
         
@@ -283,6 +355,10 @@ Each option should be a complete, grammatically correct sentence."""
         # Add context if available
         if sentence_context:
             query_parts.append(f"Sentence: '{sentence_context}'")
+        
+        # Add rule context if available
+        if rule_context:
+            query_parts.append(f"Relevant rules: {' | '.join(rule_context)}")
         
         # Add document type context
         query_parts.append(f"Document type: {document_type}")

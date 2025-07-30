@@ -3,10 +3,45 @@ import spacy
 from bs4 import BeautifulSoup
 import html
 
+# Import RAG system with fallback
+try:
+    from .rag_rule_helper import check_with_rag, detect_modal_verb_issues
+    RAG_HELPER_AVAILABLE = True
+except ImportError:
+    RAG_HELPER_AVAILABLE = False
+
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
 nlp = spacy.load("en_core_web_sm")
 
 def check(content):
+    """
+    Check for modal verb issues (can/may/could) using RAG with smart fallback.
+    Primary: RAG-enhanced suggestions
+    Fallback: Rule-based modal verb detection
+    """
+    
+    # Use RAG-enhanced checking if available
+    if RAG_HELPER_AVAILABLE:
+        rule_patterns = {
+            'detect_function': detect_modal_verb_issues
+        }
+        
+        fallback_suggestions = [
+            "Modal verb usage: Use 'can' for ability and permission, 'may' for possibility and formal permission, 'could' for past actions or polite requests."
+        ]
+        
+        return check_with_rag(
+            content=content,
+            rule_patterns=rule_patterns,
+            rule_name="modal_verbs_can_may",
+            fallback_suggestions=fallback_suggestions
+        )
+    
+    # Legacy fallback when RAG helper is not available
+    return check_legacy_modal_verbs(content)
+
+def check_legacy_modal_verbs(content):
+    """Legacy modal verb checking for fallback when RAG is not available."""
     suggestions = []
     processed_sentences = set()  # Track processed sentences to avoid duplicates
 
