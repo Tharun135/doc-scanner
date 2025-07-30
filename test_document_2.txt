@@ -1,8 +1,0 @@
-This is the second document in our batch test. This document also has several several repeated words throughout the text. 
-
-Long sentences can be problematic as they may confuse readers and make the content harder to understand, especially when dealing with complex technical concepts that require careful explanation and step-by-step guidance for users who may not be familiar with the subject matter.
-
-The following issues should be identified:
-- Poor word choice issues like "utilize" instead of "use"
-- Passive constructions were implemented
-- Grammar problems: There's multiple reasons why this don't work
