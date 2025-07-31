@@ -312,29 +312,6 @@
     color: white;
     margin-bottom: 1rem;
 }
-
-.feedback-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-}
-
-.feedback-btn {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.feedback-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-}        .feedback-btn.active {
-            background: var(--secondary-color);
-            border-color: var(--secondary-color);
-        }
         
         /* Tab System Styles */
         .tab-container {
@@ -493,26 +470,6 @@
 .insight-item.active {
     background: rgba(255, 215, 0, 0.2);
     animation: pulse 2s ease-in-out infinite;
-}
-
-.quick-actions {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 0.8rem;
-}
-
-.quick-actions .btn {
-    margin-bottom: 0.3rem;
-    transition: all 0.3s ease;
-}
-
-.quick-actions .btn:hover:not(:disabled) {
-    transform: translateX(3px);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-.quick-actions .btn:disabled {
-    opacity: 0.5;
 }
 
 @keyframes pulse {
@@ -731,22 +688,6 @@
                             <div class="insight-item text-muted">
                                 <i class="fas fa-info-circle"></i> Upload text to get personalized insights
                             </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Quick Actions -->
-                    <div class="quick-actions">
-                        <div class="fw-bold mb-2"><i class="fas fa-magic"></i> Quick Actions</div>
-                        <div class="btn-group-vertical w-100" role="group">
-                            <button type="button" class="btn btn-outline-primary btn-sm" id="fixAllBtn" disabled>
-                                <i class="fas fa-check-double"></i> Apply All Suggestions
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" id="readabilityBtn" disabled>
-                                <i class="fas fa-eye"></i> Improve Readability
-                            </button>
-                            <button type="button" class="btn btn-outline-info btn-sm" id="summaryBtn" disabled>
-                                <i class="fas fa-file-alt"></i> Generate Summary
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -1497,21 +1438,6 @@
                     </div>
                 </div>
                 ` : ''}
-                
-                <div class="feedback-buttons">
-                    <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'helpful')">
-                        <i class="fas fa-thumbs-up"></i> Helpful
-                    </button>
-                    <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'not-helpful')">
-                        <i class="fas fa-thumbs-down"></i> Not Helpful
-                    </button>
-                    <button class="feedback-btn" onclick="implementSuggestion('${aiSuggestion.suggestion_id}')">
-                        <i class="fas fa-check"></i> Implemented
-                    </button>
-                    <button class="feedback-btn" onclick="scrollToSentence(${sentenceIndex})">
-                        <i class="fas fa-search"></i> View Text
-                    </button>
-                </div>
             `;
             
             // Insert in order by sentence index, then by feedback type
@@ -1804,15 +1730,6 @@
             document.getElementById('issuesProgressBar').style.width = issues === 0 ? '100%' : `${Math.max(10, 100 - (issues * 10))}%`;
             document.getElementById('issuesDescription').textContent = 
                 issues === 0 ? 'No issues detected' : `${issues} issue${issues > 1 ? 's' : ''} found`;
-            
-            // Enable quick action buttons
-            if (issues > 0) {
-                document.getElementById('fixAllBtn').disabled = false;
-                document.getElementById('readabilityBtn').disabled = false;
-            }
-            if (wordCount > 50) {
-                document.getElementById('summaryBtn').disabled = false;
-            }
         }
 
         function updateSmartInsights() {
@@ -1937,27 +1854,6 @@
                 }
             }
         }
-
-        // Quick Actions Implementation
-        document.getElementById('fixAllBtn').addEventListener('click', function() {
-            if (confirm('Apply all AI suggestions to improve your document?')) {
-                // Implement bulk fix functionality
-                console.log('Applying all suggestions...');
-                showSuccessToast('All suggestions applied successfully!');
-            }
-        });
-
-        document.getElementById('readabilityBtn').addEventListener('click', function() {
-            // Implement readability improvement
-            console.log('Improving readability...');
-            showSuccessToast('Readability analysis complete!');
-        });
-
-        document.getElementById('summaryBtn').addEventListener('click', function() {
-            // Implement summary generation
-            console.log('Generating summary...');
-            showSuccessToast('Document summary generated!');
-        });
 
         function showSuccessToast(message) {
             const toast = document.createElement('div');
@@ -2403,52 +2299,7 @@
             }, 3000);
         }
 
-        async function rateSuggestion(suggestionId, rating) {
-            try {
-                const response = await fetch('/suggestion_feedback', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        suggestion_id: suggestionId,
-                        was_helpful: rating === 'helpful'
-                    })
-                });
-
-                if (response.ok) {
-                    // Visual feedback
-                    event.target.classList.add('active');
-                    event.target.innerHTML = rating === 'helpful' ? 
-                        '<i class="fas fa-check"></i> Thanks!' : 
-                        '<i class="fas fa-check"></i> Noted';
-                }
-            } catch (error) {
-                console.error('Feedback error:', error);
-            }
-        }
-
-        async function implementSuggestion(suggestionId) {
-            try {
-                const response = await fetch('/suggestion_feedback', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        suggestion_id: suggestionId,
-                        was_implemented: true
-                    })
-                });
-
-                if (response.ok) {
-                    event.target.classList.add('active');
-                    event.target.innerHTML = '<i class="fas fa-check"></i> Implemented';
-                }
-            } catch (error) {
-                console.error('Implementation feedback error:', error);
-            }
-        }        // Enhanced content rendering with sentence highlighting
+        // Enhanced content rendering with sentence highlighting
         function renderContent(content, sentences) {
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
@@ -2748,14 +2599,6 @@
                         <div style="text-align:center;">
                             <div style="font-size:1.5rem; font-weight:bold; color:#27ae60;">${stats.avg_rating ? stats.avg_rating.toFixed(1) : 'N/A'}/5</div>
                             <div style="font-size:0.9rem; color:#666;">Avg Rating</div>
-                        </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:1.5rem; font-weight:bold; color:#e67e22;">${stats.helpful_percentage ? stats.helpful_percentage.toFixed(0) : 0}%</div>
-                            <div style="font-size:0.9rem; color:#666;">Helpful</div>
-                        </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:1.5rem; font-weight:bold; color:#9b59b6;">${stats.implementation_percentage ? stats.implementation_percentage.toFixed(0) : 0}%</div>
-                            <div style="font-size:0.9rem; color:#666;">Implemented</div>
                         </div>
                     </div>
                 </div>

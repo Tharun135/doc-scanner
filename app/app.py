@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 main = Blueprint('main', __name__)
 
-logging.basicConfig(level=logging.DEBUG)  # Or logging.INFO for production
+logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug messages
 logger = logging.getLogger(__name__)
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)

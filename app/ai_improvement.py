@@ -33,7 +33,7 @@ try:
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
-    logging.warning("RAG system not available - falling back to rule-based suggestions only")
+    logging.debug("RAG system not available - falling back to rule-based suggestions only")
 
 logger = logging.getLogger(__name__)
 

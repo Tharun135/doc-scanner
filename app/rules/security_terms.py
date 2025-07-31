@@ -10,7 +10,7 @@ try:
 except ImportError:
     RAG_HELPER_AVAILABLE = False
     import logging
-    logging.warning(f"RAG helper not available for {__name__}")
+    logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
 # Global variable to hold the spaCy model
 nlp = None

@@ -14,7 +14,7 @@ try:
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
-    logging.warning("RAG system not available - using fallback only")
+    logging.debug("RAG system not available - using fallback only")
 
 logger = logging.getLogger(__name__)
 
