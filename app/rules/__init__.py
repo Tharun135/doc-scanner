@@ -36,6 +36,7 @@ from app.rules.simple_present_tense import check as check_simple_present_tense
 from app.rules.repeated_words import check as check_repeated_words
 from app.rules.incorrect_verb_forms import check as check_incorrect_verb_forms
 from app.rules.grammar_issues import check as check_grammar_issues
+from app.rules.rewriting_suggestions import check as check_rewriting_suggestions
 
 
 rule_functions = [
@@ -77,6 +78,7 @@ rule_functions = [
     check_repeated_words,
     check_incorrect_verb_forms,
     check_grammar_issues,
+    check_rewriting_suggestions,
 ]
 
 __all__ = ['rule_functions']
