@@ -45,7 +45,7 @@ def check(content):
         r'\bscrolls?\b': 'Scroll',
         r'\bexpands?\b': 'Expand',
         r'\bloads?\b': 'Load',
-        r'\bnavigates?\b': 'Navigate to',
+        r'\bnavigates?(?!\s+to)\b': 'Navigate to',  # Only match "navigate(s)" not followed by "to"
         r'\bdrags?\b': 'Drag',
         r'\bdrops?\b': 'Drop',
         r'\bhighlights?\b': 'Highlight',
@@ -72,6 +72,14 @@ def check(content):
                         if pattern == r'\btypes?\b':
                             if not _is_types_verb_usage(sent, found_verb):
                                 continue  # Skip if "types" is used as a noun
+                        
+                        # Special handling for "navigate" - skip if already followed by "to"
+                        if pattern == r'\bnavigates?(?!\s+to)\b':
+                            # Double-check that "to" doesn't immediately follow in the sentence
+                            match_end = sent_verb_match.end()
+                            remaining_text = sent.text[match_end:].lstrip()
+                            if remaining_text.lower().startswith('to'):
+                                continue  # Skip if "to" follows the matched verb
                         
                         # Only suggest if the found verb is different from the replacement
                         if found_verb.lower() != replacement.lower():
