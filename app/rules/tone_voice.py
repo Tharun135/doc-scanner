@@ -127,12 +127,7 @@ def check_professional_tone(text_content):
             word = match.group()
             suggestions.append(f"Consider more professional language: '{word}' may be too casual or subjective for technical documentation.")
     
-    # Check for excessive exclamation marks
-    exclamation_count = text_content.count('!')
-    sentence_count = len(re.findall(r'[.!?]+', text_content))
-    
-    if sentence_count > 0 and exclamation_count / sentence_count > 0.1:
-        suggestions.append(f"Excessive exclamation marks ({exclamation_count}) may appear unprofessional. Use sparingly in technical documentation.")
+    # Exclamation mark rule removed - was causing false positives with NOTE/WARNING templates
     
     return suggestions
 

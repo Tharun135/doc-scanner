@@ -11,7 +11,7 @@ from typing import Optional
 # Import RAG system with fallback
 try:
     from .rag_rule_helper import check_with_rag, detect_passive_voice_issues
-    RAG_HELPER_AVAILABLE = True
+    RAG_HELPER_AVAILABLE = False  # Temporarily disabled for performance
 except ImportError:
     RAG_HELPER_AVAILABLE = False
 

@@ -8,21 +8,46 @@ from typing import Dict, List, Optional, Any, Union
 from bs4 import BeautifulSoup
 import html
 
+# EMERGENCY TOGGLE: Set to False to disable RAG for performance
+RAG_ENABLED = False  # Changed from True to False for performance
+
 # Import RAG system
 try:
     from ..rag_system import get_rag_suggestion
-    RAG_AVAILABLE = True
+    RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
 except ImportError:
     RAG_AVAILABLE = False
     logging.debug("RAG system not available - using fallback only")
 
 logger = logging.getLogger(__name__)
 
-def check_with_rag(content: str, rule_patterns: Dict[str, Any], 
+def check_with_rag(content: str, rule_name: str = "unknown", 
+                   description: str = "", rule_patterns=None, **kwargs) -> List[str]:
+    """
+    Simple RAG checker for basic rules like spelling checker.
+    
+    Args:
+        content: The text content to check
+        rule_name: Name of the rule for logging/debugging
+        description: Description of what the rule checks for
+        rule_patterns: Optional rule patterns (ignored when RAG disabled)
+        **kwargs: Additional arguments (ignored)
+    
+    Returns:
+        List of suggestion strings
+    """
+    # Early return if RAG is disabled for performance
+    if not RAG_ENABLED:
+        return []
+    
+    # This was causing the slowdown - just return empty for now
+    return []
+
+def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any], 
                    rule_name: str = "unknown", 
                    fallback_suggestions: List[str] = None) -> List[Dict[str, Any]]:
     """
-    Universal RAG-enabled rule checker with smart fallback.
+    Advanced RAG-enabled rule checker with smart fallback.
     
     Args:
         content: The text content to check
@@ -33,6 +58,10 @@ def check_with_rag(content: str, rule_patterns: Dict[str, Any],
     Returns:
         List of suggestion dictionaries with RAG enhancements
     """
+    # Early return if RAG is disabled for performance
+    if not RAG_ENABLED:
+        return []
+    
     suggestions = []
     
     # Strip HTML tags from content

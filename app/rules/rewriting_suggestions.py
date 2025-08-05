@@ -86,15 +86,6 @@ def check(content):
             "message": "This content appears to contain sequential instructions. Consider formatting as numbered manual steps."
         })
     
-    # Rule 3: Check for missing step formatting in procedural text
-    if _is_instruction_text(text_content) and not _has_step_formatting(text_content):
-        suggestions.append({
-            "text": text_content[:100] + "..." if len(text_content) > 100 else text_content,
-            "start": 0,
-            "end": len(text_content),
-            "message": "This appears to be instructional content. Consider organizing as clear, numbered steps."
-        })
-    
     return suggestions
 
 def _is_procedural_context(sentences):
@@ -119,36 +110,6 @@ def _has_sequential_indicators(text):
     
     text_lower = text.lower()
     return sum(1 for word in sequential_words if word in text_lower) >= 2
-
-def _is_instruction_text(text):
-    """Check if text appears to be instructional."""
-    instruction_indicators = [
-        'click', 'select', 'open', 'navigate', 'enter', 'choose', 'press',
-        'go to', 'access', 'configure', 'set up', 'install', 'download'
-    ]
-    
-    text_lower = text.lower()
-    return sum(1 for indicator in instruction_indicators if indicator in text_lower) >= 2
-
-def _has_step_formatting(text):
-    """Check if text already has step formatting."""
-    # Look for numbered lists or bullet points
-    step_patterns = [
-        r'^\s*\d+\.',  # 1. 2. 3.
-        r'^\s*[•\-\*]',  # • - *
-        r'Step \d+',  # Step 1, Step 2
-        r'\d+\)',  # 1) 2) 3)
-    ]
-    
-    lines = text.split('\n')
-    formatted_lines = 0
-    
-    for line in lines:
-        if any(re.search(pattern, line, re.MULTILINE) for pattern in step_patterns):
-            formatted_lines += 1
-    
-    # If more than 1/3 of lines are formatted, consider it already formatted
-    return formatted_lines > len(lines) / 3
 
 def convert_to_manual_steps(text):
     """Legacy function for converting text to manual steps format."""

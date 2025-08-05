@@ -75,7 +75,7 @@
         }
 
         .document-section, .feedback-section {
-            overflow-y: auto;
+            overflow: auto;  /* Enable both horizontal and vertical scrolling */
             padding: 1rem;
             border-radius: 5px;
             background: rgba(0, 0, 0, 0.2);
@@ -1615,7 +1615,7 @@
             if (targetItem) {
                 targetItem.style.transform = 'scale(1.02)';
                 targetItem.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
-                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
                 
                 // Remove highlight after a few seconds
                 setTimeout(() => {
@@ -1888,14 +1888,28 @@
                     const sentenceRect = contentSentence.getBoundingClientRect();
                     const sectionRect = documentSection.getBoundingClientRect();
                     
-                    // Calculate the scroll position to center the sentence
-                    const sectionCenter = sectionRect.height / 2;
+                    // Calculate vertical scroll position to center the sentence
+                    const sectionCenterY = sectionRect.height / 2;
                     const sentenceRelativeTop = sentenceRect.top - sectionRect.top;
-                    const scrollTarget = documentSection.scrollTop + sentenceRelativeTop - sectionCenter;
+                    const verticalScrollTarget = documentSection.scrollTop + sentenceRelativeTop - sectionCenterY;
                     
-                    // Smooth scroll to the target position
+                    // Calculate horizontal scroll position to center the sentence
+                    const sectionCenterX = sectionRect.width / 2;
+                    const sentenceRelativeLeft = sentenceRect.left - sectionRect.left;
+                    const horizontalScrollTarget = documentSection.scrollLeft + sentenceRelativeLeft + (sentenceRect.width / 2) - sectionCenterX;
+                    
+                    // Check if sentence is outside visible area horizontally
+                    const isHorizontallyVisible = sentenceRect.left >= sectionRect.left && 
+                                                 sentenceRect.right <= sectionRect.right;
+                    
+                    // Check if sentence is outside visible area vertically
+                    const isVerticallyVisible = sentenceRect.top >= sectionRect.top && 
+                                               sentenceRect.bottom <= sectionRect.bottom;
+                    
+                    // Smooth scroll to the target position (both horizontal and vertical)
                     documentSection.scrollTo({
-                        top: scrollTarget,
+                        top: !isVerticallyVisible ? verticalScrollTarget : documentSection.scrollTop,
+                        left: !isHorizontallyVisible ? Math.max(0, horizontalScrollTarget) : documentSection.scrollLeft,
                         behavior: 'smooth'
                     });
                 }
@@ -1940,9 +1954,11 @@
             }
             
             if (sentenceElement) {
+                // Use scrollIntoView with both vertical and horizontal centering
                 sentenceElement.scrollIntoView({ 
                     behavior: 'smooth', 
-                    block: 'center' 
+                    block: 'center',
+                    inline: 'center'  // This handles horizontal scrolling
                 });
                 
                 // Temporarily highlight the sentence

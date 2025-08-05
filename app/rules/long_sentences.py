@@ -9,7 +9,7 @@ import logging
 # Import RAG system with fallback
 try:
     from .rag_rule_helper import check_with_rag, detect_long_sentence_issues
-    RAG_HELPER_AVAILABLE = True
+    RAG_HELPER_AVAILABLE = False  # Temporarily disabled for performance
 except ImportError:
     RAG_HELPER_AVAILABLE = False
 
@@ -36,8 +36,11 @@ def check(content):
     Fallback: Rule-based long sentence detection with basic splitting suggestions
     """
     
+    # Temporarily disable RAG for performance - use legacy approach
+    RAG_AVAILABLE_FOR_THIS_RULE = False  # Set to True to re-enable RAG
+    
     # Use RAG-enhanced checking if available
-    if RAG_HELPER_AVAILABLE:
+    if RAG_HELPER_AVAILABLE and RAG_AVAILABLE_FOR_THIS_RULE:
         logger.info("Using RAG-enhanced long sentence checking")
         
         rule_patterns = {

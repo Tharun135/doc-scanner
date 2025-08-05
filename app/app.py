@@ -134,16 +134,20 @@ def load_rules():
     rules_folder = os.path.join(os.path.dirname(__file__), 'rules')
     for filename in os.listdir(rules_folder):
         if filename.endswith('.py') and filename != '__init__.py':
-            rule_path = os.path.join(rules_folder, filename)
-            spec = importlib.util.spec_from_file_location(filename[:-3], rule_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-
-            if hasattr(module, "check"):
-                rules.append(module.check)
-                logger.info(f"Loaded rule: {filename} (Function: {module.check.__name__})")
-            else:
-                logger.warning(f"Warning: {filename} does not have a `check` function")
+            module_name = filename[:-3]  # Remove .py extension
+            try:
+                # Import the module using the proper package path
+                module = importlib.import_module(f'app.rules.{module_name}')
+                
+                if hasattr(module, "check"):
+                    rules.append(module.check)
+                    logger.info(f"Loaded rule: {filename} (Function: {module.check.__name__})")
+                else:
+                    logger.warning(f"Warning: {filename} does not have a `check` function")
+            except ImportError as e:
+                logger.error(f"Failed to import rule {filename}: {e}")
+            except Exception as e:
+                logger.error(f"Error loading rule {filename}: {e}")
 
     logger.info(f"Total rules loaded: {len(rules)}")
     return rules
