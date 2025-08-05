@@ -1,9 +1,80 @@
 # Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 *.log
 temp_upload_doc.doc
 *.pyc
 
 # Environment variables
 .env
+
+# Build and distribution directories
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Executable files
+*.exe
+*.app
+*.pkg
+*.deb
+*.rpm
+
+# Virtual environments
+.venv/
+.conda/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Large data files
+*.db
+*.sqlite3
+*.sqlite
+rule_knowledge_base/
+suggestion_metrics.db
+
+# Documentation builds
+docs/_build/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Testing
+.pytest_cache/
+.tox/
