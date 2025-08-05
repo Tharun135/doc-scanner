@@ -67,6 +67,12 @@ def check(content):
                     sent_verb_match = re.search(pattern, sent.text, re.IGNORECASE)
                     if sent_verb_match:
                         found_verb = sent_verb_match.group()
+                        
+                        # Special handling for "types" - check if it's used as a verb or noun
+                        if pattern == r'\btypes?\b':
+                            if not _is_types_verb_usage(sent, found_verb):
+                                continue  # Skip if "types" is used as a noun
+                        
                         # Only suggest if the found verb is different from the replacement
                         if found_verb.lower() != replacement.lower():
                             suggestions.append({
@@ -98,8 +104,23 @@ def _is_procedural_context(sentences):
         'link', 'icon', 'toolbar', 'sidebar', 'header', 'footer'
     ]
     
+    # Additional indicators for user actions
+    action_indicators = [
+        'user', 'operator', 'technician', 'person', 'you', 'they',
+        'click', 'select', 'open', 'close', 'press', 'enter', 'type', 'types',
+        'scroll', 'drag', 'drop', 'choose', 'navigate'
+    ]
+    
     combined_text = ' '.join(sentences).lower()
-    return any(indicator in combined_text for indicator in procedural_indicators)
+    
+    # Check for procedural indicators
+    has_procedural = any(indicator in combined_text for indicator in procedural_indicators)
+    
+    # Check for action indicators (user performing actions)
+    has_actions = any(indicator in combined_text for indicator in action_indicators)
+    
+    # If it has either type of indicator, consider it procedural
+    return has_procedural or has_actions
 
 def _has_sequential_indicators(text):
     """Check for words that indicate sequential steps."""
@@ -110,6 +131,65 @@ def _has_sequential_indicators(text):
     
     text_lower = text.lower()
     return sum(1 for word in sequential_words if word in text_lower) >= 2
+
+def _is_types_verb_usage(sentence, found_verb):
+    """Check if 'types' is being used as a verb (for input action) rather than a noun."""
+    # Parse the sentence to get tokens
+    doc = nlp(sentence.text)
+    
+    for token in doc:
+        if token.text.lower() == found_verb.lower():
+            # First check for clear noun usage patterns that should be excluded
+            # If it's followed by "of", it's definitely a noun (types of X)
+            next_token = token.nbor(1) if token.i + 1 < len(doc) else None
+            if next_token and next_token.text.lower() == "of":
+                return False  # This is "types of X", not a typing action
+            
+            # Check for adjective + types patterns (different types, various types, etc.)
+            prev_token = token.nbor(-1) if token.i > 0 else None
+            if prev_token and prev_token.text.lower() in ['different', 'various', 'several', 'multiple', 'many', 'two', 'three', 'all']:
+                return False  # This is describing categories/kinds
+            
+            # If "types" is at the beginning and followed by "of", it's a noun
+            if token.i == 0 and next_token and next_token.text.lower() == "of":
+                return False
+            
+            # Now check for verb usage patterns
+            sentence_text = sentence.text.lower()
+            
+            # Strong indicators of typing action - if any of these are present, it's likely a verb
+            typing_indicators = [
+                'password', 'username', 'text', 'data', 'value', 'name', 'field', 'box',
+                'form', 'dialog', 'input', 'characters', 'letters', 'numbers', 'code',
+                'information', 'details', 'into', 'in the', 'into the', 'keyboard',
+                'key', 'enter', 'character'
+            ]
+            
+            # Strong indicators of an actor performing the action
+            actor_indicators = ['user', 'operator', 'technician', 'person', 'you', 'they', 'he', 'she']
+            
+            # Check for typing context
+            has_typing_context = any(indicator in sentence_text for indicator in typing_indicators)
+            has_actor = any(actor in sentence_text for actor in actor_indicators)
+            
+            # If we have both an actor and typing context, it's definitely a verb
+            if has_actor and has_typing_context:
+                return True
+            
+            # If we have strong typing context, even without explicit actor, it's likely a verb
+            if has_typing_context:
+                return True
+            
+            # If there's an actor and the word after "types" is not "of" or auxiliary verbs, it's likely a verb
+            if has_actor:
+                if next_token and next_token.text.lower() not in ['of', 'are', 'is', 'can', 'will', 'were', 'was']:
+                    return True
+            
+            # Check if the POS tag suggests it's a verb
+            if token.pos_ == "VERB":
+                return True
+    
+    return False  # Default to not a verb usage if we can't determine
 
 def convert_to_manual_steps(text):
     """Legacy function for converting text to manual steps format."""
