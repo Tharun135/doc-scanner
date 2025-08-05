@@ -78,8 +78,8 @@ def check(content):
 
     # 3. Expanded weak verb constructions
     weak_verb_patterns = [
-        (r"\bthere are\s+\w+", "list the items directly"),
-        (r"\bthere is\s+a\s+\w+", "state directly"),  
+        (r"\bthere are\s+(?!no\s|not\s)\w+", "list the items directly"),  # Exclude negative constructions
+        (r"\bthere is\s+a\s+(?!not\s)\w+", "state directly"),  # Exclude negative constructions  
         (r"\bit is important to\b", "'must' or 'should'"),
         (r"\bit is possible to\b", "'can' or 'may'"),
         (r"\bit is necessary to\b", "'must' or 'need to'"),
