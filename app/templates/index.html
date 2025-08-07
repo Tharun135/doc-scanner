@@ -1539,7 +1539,7 @@
                 // Hide loading
                 hideLoadingToast(loadingToast);
                 
-                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion) {
+                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion && aiSuggestion.suggestion.trim()) {
                     console.log('✅ AI suggestion success, adding to tab');
                     console.log('AI suggestion object:', aiSuggestion);
                     // Add to AI tab
@@ -1554,8 +1554,13 @@
                     console.error('❌ AI suggestion failed - invalid response:', {
                         aiSuggestion: aiSuggestion,
                         type: typeof aiSuggestion,
+                        isObject: aiSuggestion && typeof aiSuggestion === 'object',
                         hasProperty: aiSuggestion && aiSuggestion.hasOwnProperty('suggestion'),
                         suggestionValue: aiSuggestion ? aiSuggestion.suggestion : 'N/A',
+                        suggestionType: aiSuggestion && aiSuggestion.suggestion ? typeof aiSuggestion.suggestion : 'N/A',
+                        suggestionTrimmed: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.trim() : 'N/A',
+                        suggestionLength: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.length : 0,
+                        suggestionTrimmedLength: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.trim().length : 0,
                         feedback: decodedFeedback,
                         sentence: decodedSentence,
                         feedbackKey: feedbackKey

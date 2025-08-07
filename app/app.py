@@ -421,8 +421,8 @@ def ai_suggestion():
         if 'suggestion' not in result:
             raise ValueError(f"Missing 'suggestion' in result: {list(result.keys())}")
             
-        if not result['suggestion']:
-            raise ValueError("Empty suggestion returned")
+        if not result['suggestion'] or not str(result['suggestion']).strip():
+            raise ValueError("Empty or whitespace-only suggestion returned")
         
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context, 
