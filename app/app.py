@@ -397,7 +397,7 @@ def ai_suggestion():
             logger.info(f"Using learned pattern suggestion for: {feedback_text[:30]}...")
             return jsonify({
                 "suggestion": learned_suggestion,
-                "gemini_answer": "Using learned pattern from previous user feedback.",
+                "ai_answer": "Using learned pattern from previous user feedback.",
                 "confidence": "high",
                 "method": "learned_pattern",
                 "suggestion_id": suggestion_id,
@@ -431,7 +431,7 @@ def ai_suggestion():
         logger.info(f"AI suggestion successful using method: {result.get('method', 'unknown')}")
         return jsonify({
             "suggestion": result["suggestion"],
-            "gemini_answer": result.get("gemini_answer", ""),
+            "ai_answer": result.get("ai_answer", ""),
             "confidence": result.get("confidence", "medium"),
             "method": result.get("method", "unknown"),
             "suggestion_id": suggestion_id,
@@ -451,7 +451,7 @@ def ai_suggestion():
         
         return jsonify({
             "suggestion": suggestion, 
-            "gemini_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
+            "ai_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
             "confidence": "low",
             "method": "basic_fallback",
             "suggestion_id": suggestion_id,

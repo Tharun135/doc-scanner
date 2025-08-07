@@ -1,17 +1,20 @@
 """
-Google Gemini AI suggestion system for intelligent writing recommendations.
-This module provides context-aware suggestions using Google Gemini + LangChain RAG.
+LlamaIndex + ChromaDB + Ollama AI suggestion system for intelligent writing recommendations.
+This module provides context-aware suggestions using local Ollama models + LlamaIndex RAG.
 
 Features:
-- Real Google Gemini AI for intelligent responses
-- Context-aware writing analysis
+- Local Ollama AI for unlimited, free intelligent responses
+- LlamaIndex RAG with ChromaDB for context-aware analysis
+- Support for Mistral and Phi-3 models
+- No API quotas or costs
 - Natural language explanations
-- Minimal fallbacks when API unavailable
+- Fallbacks when local AI unavailable
 
 Setup:
-1. Get API key from: https://makersuite.google.com/app/apikey
-2. Add to .env file: GOOGLE_API_KEY=your_key_here
-3. Run test: python test_gemini_integration.py
+1. Install Ollama: https://ollama.ai/
+2. Pull models: ollama pull mistral OR ollama pull phi3
+3. Start Ollama service: ollama serve
+4. No API keys needed!
 """
 
 import json
@@ -27,33 +30,33 @@ try:
 except ImportError:
     logging.warning("python-dotenv not available - environment variables must be set manually")
 
-# Import RAG system (now the primary AI provider)
+# Import LlamaIndex AI system
 try:
-    from .rag_system import get_rag_suggestion
-    RAG_AVAILABLE = True
+    from .llamaindex_ai import get_ai_suggestion
+    LLAMAINDEX_AVAILABLE = True
 except ImportError:
-    RAG_AVAILABLE = False
-    logging.debug("RAG system not available - falling back to rule-based suggestions only")
+    LLAMAINDEX_AVAILABLE = False
+    logging.debug("LlamaIndex AI system not available - falling back to rule-based suggestions only")
 
 logger = logging.getLogger(__name__)
 
-class GeminiAISuggestionEngine:
+class LlamaIndexAISuggestionEngine:
     """
-    AI suggestion engine using Google Gemini + LangChain RAG primarily.
-    Minimal fallbacks only when Gemini is unavailable.
+    AI suggestion engine using local Ollama + LlamaIndex RAG.
+    Unlimited, free AI suggestions without API quotas.
     """
     
     def __init__(self):
-        self.rag_available = RAG_AVAILABLE
-        logger.info(f"Gemini AI Suggestion Engine initialized. RAG available: {self.rag_available}")
+        self.llamaindex_available = LLAMAINDEX_AVAILABLE
+        logger.info(f"LlamaIndex AI Suggestion Engine initialized. LlamaIndex available: {self.llamaindex_available}")
         
     def generate_contextual_suggestion(self, feedback_text: str, sentence_context: str = "",
                                      document_type: str = "general", 
                                      writing_goals: List[str] = None,
                                      document_content: str = "") -> Dict[str, Any]:
         """
-        Generate AI suggestion using Gemini + RAG primarily.
-        Minimal fallbacks only when Gemini is unavailable.
+        Generate AI suggestion using local Ollama + LlamaIndex RAG.
+        Unlimited, free AI suggestions without API quotas.
         
         Returns:
             Dict containing suggestion, confidence, and metadata
@@ -67,55 +70,58 @@ class GeminiAISuggestionEngine:
             document_content = ""
             
         try:
-            # Special case: For long sentences, use our enhanced rule-based splitting
-            # This ensures we get the user's preferred sentence structure
+            # Special case: For long sentences, use enhanced rule-based splitting
             if ("long sentence" in feedback_text.lower() or "sentence too long" in feedback_text.lower()) and sentence_context:
                 logger.info("Using enhanced rule-based splitting for long sentence")
-                return self.generate_minimal_fallback(feedback_text, sentence_context)
+                return self.generate_smart_fallback(feedback_text, sentence_context)
             
-            # Primary method: Use Gemini RAG for other types of suggestions
-            if self.rag_available:
-                logger.info("Using Gemini RAG for solution generation")
-                rag_result = get_rag_suggestion(
+            # Primary method: Use LlamaIndex AI for suggestions
+            if self.llamaindex_available:
+                logger.info("Using LlamaIndex AI for solution generation")
+                ai_result = get_ai_suggestion(
                     feedback_text=feedback_text,
                     sentence_context=sentence_context,
                     document_type=document_type,
                     document_content=document_content
                 )
                 
-                if rag_result:
-                    logger.info("Gemini RAG suggestion generated successfully")
+                if ai_result:
+                    logger.info("LlamaIndex AI suggestion generated successfully")
                     return {
-                        "suggestion": rag_result["suggestion"],
-                        "gemini_answer": rag_result.get("gemini_answer", ""),
-                        "confidence": rag_result.get("confidence", "high"),
-                        "method": "gemini_rag",
-                        "sources": rag_result.get("sources", []),
+                        "suggestion": ai_result["suggestion"],
+                        "ai_answer": ai_result.get("ai_answer", ""),
+                        "confidence": ai_result.get("confidence", "high"),
+                        "method": "llamaindex_ai",
+                        "model": ai_result.get("model", "ollama_local"),
+                        "sources": ai_result.get("sources", []),
                         "context_used": {
-                            **rag_result.get("context_used", {}),
+                            **ai_result.get("context_used", {}),
                             "document_type": document_type,
                             "writing_goals": writing_goals,
-                            "primary_ai": "gemini",
+                            "primary_ai": "ollama_local",
                             "issue_detection": "rule_based"
                         }
                     }
                 else:
-                    logger.warning("Gemini RAG returned no result, using minimal fallback")
+                    logger.warning("LlamaIndex AI returned no result, using smart fallback")
             else:
-                logger.warning("Gemini RAG not available, using minimal fallback")
+                logger.warning("LlamaIndex AI not available, using smart fallback")
             
-            # Minimal fallback: Basic response when Gemini is unavailable
-            return self.generate_minimal_fallback(feedback_text, sentence_context)
+            # Smart fallback: Enhanced rule-based response
+            return self.generate_smart_fallback(feedback_text, sentence_context)
+            
+            # Smart fallback: Enhanced rule-based response
+            return self.generate_smart_fallback(feedback_text, sentence_context)
             
         except Exception as e:
-            logger.error(f"Gemini suggestion failed: {str(e)}")
-            # Fall back to minimal response
-            return self.generate_minimal_fallback(feedback_text, sentence_context)
+            logger.error(f"LlamaIndex suggestion failed: {str(e)}")
+            # Fall back to smart response
+            return self.generate_smart_fallback(feedback_text, sentence_context)
     
-    def generate_minimal_fallback(self, feedback_text: str, 
+    def generate_smart_fallback(self, feedback_text: str, 
                                 sentence_context: str = "") -> Dict[str, Any]:
         """
-        Generate intelligent fallback when Gemini is unavailable.
+        Generate intelligent fallback when LlamaIndex AI is unavailable.
         Provides complete sentence rewrites using rule-based logic.
         """
         # Safety checks for None inputs
@@ -136,10 +142,10 @@ class GeminiAISuggestionEngine:
         
         return {
             "suggestion": suggestion,
-            "gemini_answer": f"Review the text and address: {feedback_text}",
+            "ai_answer": f"Review the text and address: {feedback_text}",
             "confidence": "medium",
             "method": "smart_fallback",
-            "note": "Using smart fallback - Gemini quota exceeded or unavailable"
+            "note": "Using smart fallback - Local AI unavailable or disabled"
         }
     
     def _generate_sentence_rewrite(self, feedback_text: str, sentence_context: str) -> str:
@@ -589,14 +595,14 @@ class GeminiAISuggestionEngine:
         ]
 
 # Global instance for easy use
-ai_engine = GeminiAISuggestionEngine()
+ai_engine = LlamaIndexAISuggestionEngine()
 
 def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
                              document_type: str = "general", 
                              writing_goals: List[str] = None,
                              document_content: str = "") -> Dict[str, Any]:
     """
-    Convenience function to get Gemini-enhanced AI suggestions.
+    Convenience function to get LlamaIndex-enhanced AI suggestions.
     
     Args:
         feedback_text: The feedback or issue identified by rules
