@@ -1,6 +1,7 @@
 """
 RAG (Retrieval-Augmented Generation) system using Gemini and LangChain
 for enhanced AI suggestions with document context.
+Now includes rate limiting and graceful fallbacks for quota management.
 """
 
 import os
@@ -468,16 +469,72 @@ Each option should be a complete, grammatically correct sentence."""
         return LANGCHAIN_AVAILABLE and self.is_initialized
 
 
+# Import rate limiter
+try:
+    import sys
+    import os
+    app_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app")
+    sys.path.append(app_dir)
+    from rate_limiter import with_rate_limit, get_quota_status
+    RATE_LIMITER_AVAILABLE = True
+    logger.info("Rate limiter imported successfully")
+except ImportError as e:
+    RATE_LIMITER_AVAILABLE = False
+    logger.warning(f"Rate limiter not available: {e}")
+
 # Global RAG system instance
 rag_system = GeminiRAGSystem()
 
+def rule_based_fallback(feedback_text: str, sentence_context: str = "", 
+                       document_type: str = "general", document_content: str = "") -> Dict[str, Any]:
+    """
+    Fallback function when API quota is exceeded.
+    Provides rule-based suggestions instead of AI-generated ones.
+    """
+    logger.info("Using rule-based fallback due to API quota limitations")
+    
+    # Basic rule-based suggestions
+    suggestions = []
+    
+    if "passive voice" in feedback_text.lower():
+        suggestions.append("Consider rewriting in active voice for clearer communication")
+        suggestions.append("Identify the actor and place them at the beginning of the sentence")
+    elif "long sentence" in feedback_text.lower():
+        suggestions.append("Break this sentence into shorter, more digestible parts")
+        suggestions.append("Consider using bullet points or numbered lists for complex information")
+    elif "unclear" in feedback_text.lower() or "ambiguous" in feedback_text.lower():
+        suggestions.append("Add specific details to clarify the meaning")
+        suggestions.append("Define technical terms or provide examples")
+    elif "wordy" in feedback_text.lower() or "verbose" in feedback_text.lower():
+        suggestions.append("Remove unnecessary words and phrases")
+        suggestions.append("Use more direct, concise language")
+    else:
+        suggestions.append("Review for clarity and conciseness")
+        suggestions.append("Ensure the sentence serves the document's purpose")
+    
+    return {
+        "suggestion": "\n".join([f"• {s}" for s in suggestions]),
+        "confidence": "medium",
+        "method": "rule_based_fallback",
+        "sources": [{
+            "content": "Built-in writing guidelines and rules",
+            "type": "rule_based",
+            "source": "internal_rules"
+        }],
+        "quota_status": get_quota_status() if RATE_LIMITER_AVAILABLE else None,
+        "note": "Using rule-based suggestions due to API limitations"
+    }
+
+@with_rate_limit(fallback_function=rule_based_fallback) if RATE_LIMITER_AVAILABLE else lambda func: func
 def get_rag_suggestion(feedback_text: str, sentence_context: str = "", 
                       document_type: str = "general", document_content: str = "") -> Optional[Dict[str, Any]]:
     """
     Get RAG-enhanced suggestion. This is the main function to call from other modules.
+    Now includes rate limiting and graceful fallbacks.
     """
     if not rag_system.is_available():
-        return None
+        logger.warning("RAG system not available, using fallback")
+        return rule_based_fallback(feedback_text, sentence_context, document_type, document_content)
     
     # Add document context if provided
     if document_content:

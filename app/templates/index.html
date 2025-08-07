@@ -581,6 +581,51 @@
             border-color: var(--secondary-color);
             background: rgba(42, 155, 170, 0.2);
         }
+
+        /* Quota Status Styles */
+        .quota-status {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .quota-indicator {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+
+        .quota-indicator.quota-high {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .quota-indicator.quota-medium {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .quota-indicator.quota-low {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .quota-progress .progress-bar.quota-high {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .quota-progress .progress-bar.quota-medium {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+        }
+
+        .quota-progress .progress-bar.quota-low {
+            background: linear-gradient(45deg, #dc3545, #e74c3c);
+        }
     </style>
 </head>
 <body>
@@ -640,6 +685,18 @@
                     <h5><i class="fas fa-brain"></i> AI Writing Assistant</h5>
                 </div>
                 <div class="card-body">
+                    <!-- API Quota Status -->
+                    <div class="quota-status mb-3" style="display:none;" id="quotaStatus">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold"><i class="fas fa-battery-three-quarters"></i> API Quota</span>
+                            <span class="quota-indicator" id="quotaIndicator">50/50</span>
+                        </div>
+                        <div class="progress quota-progress" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar" id="quotaProgressBar" style="width: 100%"></div>
+                        </div>
+                        <small class="text-muted" id="quotaDescription">API requests available today</small>
+                    </div>
+                    
                     <!-- Document Metrics -->
                     <div class="row mb-3">
                         <div class="col-6">
@@ -2295,6 +2352,15 @@
                     console.log('Suggestion property length:', result.suggestion?.length);
                     console.log('Suggestion is truthy:', !!result.suggestion);
                     
+                    // Check for quota-related responses
+                    if (result && result.quota_status) {
+                        console.log('📊 Quota status in response:', result.quota_status);
+                        updateQuotaDisplay(result.quota_status);
+                    }
+                    
+                    // Refresh quota status after AI request
+                    setTimeout(loadQuotaStatus, 1000);
+                    
                     // Extra validation to ensure we have a valid result
                     if (result && typeof result === 'object' && result.suggestion) {
                         console.log('✅ Valid AI suggestion object confirmed - validation passed');
@@ -2527,9 +2593,81 @@
             showSettingsModal();
         });
 
+        // Quota Status Management
+        function loadQuotaStatus() {
+            fetch('/api_quota_status')
+                .then(response => response.json())
+                .then(data => {
+                    updateQuotaDisplay(data);
+                })
+                .catch(error => {
+                    console.warn('Could not load quota status:', error);
+                    // Hide quota status if not available
+                    document.getElementById('quotaStatus').style.display = 'none';
+                });
+        }
+
+        function updateQuotaDisplay(quotaData) {
+            const quotaStatus = document.getElementById('quotaStatus');
+            const quotaIndicator = document.getElementById('quotaIndicator');
+            const quotaProgressBar = document.getElementById('quotaProgressBar');
+            const quotaDescription = document.getElementById('quotaDescription');
+
+            if (!quotaData || quotaData.error) {
+                quotaStatus.style.display = 'none';
+                return;
+            }
+
+            // Show quota status
+            quotaStatus.style.display = 'block';
+
+            // Update indicator
+            const remaining = quotaData.remaining || 0;
+            const limit = quotaData.limit || 50;
+            const used = quotaData.used || 0;
+            
+            quotaIndicator.textContent = `${remaining}/${limit}`;
+            
+            // Calculate percentage
+            const percentage = (remaining / limit) * 100;
+            quotaProgressBar.style.width = `${percentage}%`;
+            
+            // Update styles based on remaining quota
+            quotaIndicator.className = 'quota-indicator';
+            quotaProgressBar.className = 'progress-bar';
+            
+            if (percentage > 60) {
+                quotaIndicator.classList.add('quota-high');
+                quotaProgressBar.classList.add('quota-high');
+                quotaDescription.textContent = 'API requests available today';
+            } else if (percentage > 20) {
+                quotaIndicator.classList.add('quota-medium');
+                quotaProgressBar.classList.add('quota-medium');
+                quotaDescription.textContent = 'Limited API requests remaining';
+            } else {
+                quotaIndicator.classList.add('quota-low');
+                quotaProgressBar.classList.add('quota-low');
+                if (remaining === 0) {
+                    quotaDescription.textContent = 'API quota exhausted - resets tomorrow';
+                } else {
+                    quotaDescription.textContent = 'Very few API requests remaining';
+                }
+            }
+
+            // Add next reset time if available
+            if (quotaData.next_reset) {
+                const resetTime = new Date(quotaData.next_reset);
+                const timeString = resetTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                quotaDescription.textContent += ` (resets at ${timeString})`;
+            }
+        }
+
         // Initialize modal event handlers when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             initializeModalHandlers();
+            loadQuotaStatus();
+            // Check quota status every 5 minutes
+            setInterval(loadQuotaStatus, 5 * 60 * 1000);
         });
 
         // If DOM is already loaded, initialize immediately

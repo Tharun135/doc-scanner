@@ -6,16 +6,48 @@ Detects misspelled words using multiple approaches and provides correction sugge
 import re
 from bs4 import BeautifulSoup
 import html
-from .spacy_utils import get_nlp_model, process_text
+
+# Try to import spacy_utils
+try:
+    from .spacy_utils import get_nlp_model, process_text
+except ImportError:
+    # If relative import fails, try absolute import
+    try:
+        from spacy_utils import get_nlp_model, process_text
+    except ImportError:
+        # Fallback: define dummy functions
+        def get_nlp_model():
+            return None
+        def process_text(text):
+            return None
+
+# Import custom terminology manager
+try:
+    import os
+    import sys
+    # Add parent directory to path to import simple_terminology
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
+    from app.simple_terminology import is_custom_whitelisted, get_custom_terms
+    CUSTOM_TERMINOLOGY_AVAILABLE = True
+except ImportError:
+    CUSTOM_TERMINOLOGY_AVAILABLE = False
+    import logging
+    logging.debug("Custom terminology manager not available - using default technical terms only")
 
 # Import RAG system with fallback
 try:
     from .rag_rule_helper import check_with_rag
     RAG_HELPER_AVAILABLE = True
 except ImportError:
-    RAG_HELPER_AVAILABLE = False
-    import logging
-    logging.debug(f"RAG helper not available for {__name__} - using basic rules")
+    try:
+        from rag_rule_helper import check_with_rag
+        RAG_HELPER_AVAILABLE = True
+    except ImportError:
+        RAG_HELPER_AVAILABLE = False
+        import logging
+        logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
 # Try to import spell checking libraries
 SPELL_CHECKERS_AVAILABLE = {
@@ -69,6 +101,12 @@ def check_spelling_pyspellchecker(text_content):
     technical_terms = get_technical_whitelist()
     spell.word_frequency.load_words(technical_terms)
     
+    # Add custom terminology if available
+    if CUSTOM_TERMINOLOGY_AVAILABLE:
+        custom_terms = get_custom_terms()
+        if custom_terms:
+            spell.word_frequency.load_words(custom_terms)
+    
     # Extract words from text
     words = extract_words_for_spelling(text_content)
     
@@ -78,6 +116,10 @@ def check_spelling_pyspellchecker(text_content):
     for word in misspelled:
         # Skip if it's likely a proper noun, acronym, or technical term
         if should_skip_word_for_spelling(word):
+            continue
+        
+        # Skip if it's in custom terminology whitelist
+        if CUSTOM_TERMINOLOGY_AVAILABLE and is_custom_whitelisted(word):
             continue
             
         # Get correction candidates
@@ -198,6 +240,11 @@ def check_common_misspellings(text_content):
     
     for word in words:
         word_lower = word.lower()
+        
+        # Skip if it's in custom terminology whitelist
+        if CUSTOM_TERMINOLOGY_AVAILABLE and is_custom_whitelisted(word):
+            continue
+            
         if word_lower in common_misspellings:
             correct_spelling = common_misspellings[word_lower]
             # Preserve original case
@@ -254,6 +301,10 @@ def should_skip_word_for_spelling(word):
     
     # Skip words that are likely technical terms
     if is_likely_technical_term(word):
+        return True
+    
+    # Skip if it's in custom terminology whitelist
+    if CUSTOM_TERMINOLOGY_AVAILABLE and is_custom_whitelisted(word):
         return True
     
     return False

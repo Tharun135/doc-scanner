@@ -576,6 +576,38 @@ def ai_configuration():
             logger.error(f"Error updating AI config: {str(e)}")
             return jsonify({"error": "Failed to update configuration"}), 500
 
+@main.route('/api_quota_status', methods=['GET'])
+def api_quota_status():
+    """Get current API quota status."""
+    try:
+        from .rate_limiter import get_quota_status
+        status = get_quota_status()
+        return jsonify(status)
+    except ImportError:
+        return jsonify({
+            "error": "Rate limiter not available",
+            "used": 0,
+            "limit": 50,
+            "remaining": 50,
+            "can_make_request": True
+        })
+    except Exception as e:
+        logger.error(f"Error getting quota status: {str(e)}")
+        return jsonify({"error": "Failed to get quota status"}), 500
+
+@main.route('/reset_quota', methods=['POST'])
+def reset_api_quota():
+    """Manually reset API quota (admin function)."""
+    try:
+        from .rate_limiter import reset_quota
+        reset_quota()
+        return jsonify({"message": "Quota reset successfully"})
+    except ImportError:
+        return jsonify({"error": "Rate limiter not available"}), 400
+    except Exception as e:
+        logger.error(f"Error resetting quota: {str(e)}")
+        return jsonify({"error": "Failed to reset quota"}), 500
+
 @main.route('/upload_batch', methods=['POST'])
 def upload_batch():
     """Handle batch file upload (zip or multiple files)."""
