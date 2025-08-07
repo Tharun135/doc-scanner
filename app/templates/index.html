@@ -1979,6 +1979,13 @@
             });
         }
 
+        // Helper function to escape HTML special characters
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         // Function to add sentence highlighting to HTML content
         function addSentenceHighlighting(htmlContent, sentences) {
             let processedContent = htmlContent;
@@ -2011,24 +2018,38 @@
                     
                     // Approach 2: Try to find sentence in plain text and map back to HTML
                     if (!found && plainTextContent.includes(sentence)) {
-                        // Find all words in the sentence
-                        const words = sentence.split(/\s+/).filter(word => word.length > 2);
-                        
-                        if (words.length > 0) {
-                            // Create a regex that finds the sentence allowing for HTML tags between words
-                            const wordPattern = words.map(word => 
-                                word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-                            ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
-                            
-                            const regex = new RegExp(wordPattern, 'i');
-                            const match = processedContent.match(regex);
-                            
-                            if (match) {
-                                const matchedText = match[0];
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
-                                processedContent = processedContent.replace(matchedText, replacement);
+                        // Special handling for sentences with angle brackets (URLs, etc.)
+                        if (sentence.includes('<') && sentence.includes('>')) {
+                            // For sentences with angle brackets, try direct text match first
+                            if (processedContent.includes(sentence)) {
+                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                                processedContent = processedContent.replace(sentence, replacement);
                                 found = true;
-                                console.log(`✓ HTML pattern match for sentence ${index}`);
+                                console.log(`✓ Direct text match for sentence with angle brackets ${index}`);
+                            }
+                        }
+                        
+                        // Standard word-based pattern matching
+                        if (!found) {
+                            // Find all words in the sentence
+                            const words = sentence.split(/\s+/).filter(word => word.length > 2);
+                            
+                            if (words.length > 0) {
+                                // Create a regex that finds the sentence allowing for HTML tags between words
+                                const wordPattern = words.map(word => 
+                                    word.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
+                                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
+                                
+                                const regex = new RegExp(wordPattern, 'i');
+                                const match = processedContent.match(regex);
+                                
+                                if (match) {
+                                    const matchedText = match[0];
+                                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
+                                    processedContent = processedContent.replace(matchedText, replacement);
+                                    found = true;
+                                    console.log(`✓ HTML pattern match for sentence ${index}`);
+                                }
                             }
                         }
                     }

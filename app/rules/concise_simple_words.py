@@ -74,6 +74,12 @@ def check(content):
         # Skip if the modifier is essential (e.g., "only one", "just started")
         if modifier.lower() in ['only', 'just'] and word.lower() in ['one', 'two', 'started', 'finished', 'completed']:
             continue
+        # Skip "effectively with" as it's often appropriate in technical contexts
+        if modifier.lower() == 'effectively' and word.lower() == 'with':
+            continue
+        # Skip other context-appropriate combinations
+        if modifier.lower() == 'simply' and word.lower() in ['by', 'using', 'with']:
+            continue
         suggestions.append(f"Consider removing unnecessary modifier: '{modifier} {word}' → '{word}' or use a stronger word.")
 
     # 3. Expanded weak verb constructions

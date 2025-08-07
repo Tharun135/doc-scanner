@@ -7,19 +7,69 @@ import logging
 from typing import Dict, List, Optional, Any, Union
 from bs4 import BeautifulSoup
 import html
+import re
 
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
-RAG_ENABLED = False  # Changed from True to False for performance
+RAG_ENABLED = True  # Enabled for RAG functionality
 
 # Import RAG system
 try:
-    from ..rag_system import get_rag_suggestion
+    import sys
+    import os
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
+    from rag_system import get_rag_suggestion
     RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
 except ImportError:
     RAG_AVAILABLE = False
     logging.debug("RAG system not available - using fallback only")
 
 logger = logging.getLogger(__name__)
+
+def format_rag_suggestion(raw_suggestion: str, rule_name: str = "unknown") -> str:
+    """
+    Format RAG suggestion to be user-friendly and crisp.
+    Converts "OPTION 1: ..., OPTION 2: ..., WHY: ..." to clean suggestion.
+    """
+    if not raw_suggestion:
+        return ""
+    
+    try:
+        # Extract the first option as the primary suggestion
+        option_match = re.search(r'OPTION\s+1:\s*([^\n]+)', raw_suggestion, re.IGNORECASE)
+        if option_match:
+            primary_suggestion = option_match.group(1).strip()
+            
+            # Create a crisp, clear message based on the rule type
+            if rule_name == "passive_voice":
+                return f"Convert to active voice: '{primary_suggestion}'"
+            elif rule_name == "long_sentences":
+                return f"Consider breaking into shorter sentences: '{primary_suggestion}'"
+            elif rule_name == "modal_verbs":
+                return f"Use more precise language: '{primary_suggestion}'"
+            else:
+                return f"Consider rewriting as: '{primary_suggestion}'"
+        
+        # If no OPTION format found, extract the first sentence
+        sentences = raw_suggestion.split('\n')
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence and not sentence.startswith(('OPTION', 'WHY:')):
+                if rule_name == "passive_voice":
+                    return f"Convert to active voice: '{sentence}'"
+                else:
+                    return f"Consider rewriting as: '{sentence}'"
+        
+        # Fallback: return first non-empty line
+        for line in sentences:
+            line = line.strip()
+            if line:
+                return line
+                
+    except Exception as e:
+        logger.error(f"Error formatting RAG suggestion: {e}")
+    
+    # Final fallback
+    return "Consider revising this sentence for clarity."
 
 def check_with_rag(content: str, rule_name: str = "unknown", 
                    description: str = "", rule_patterns=None, **kwargs) -> List[str]:
@@ -101,7 +151,10 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
                 )
                 
                 if rag_result and rag_result.get("suggestion"):
-                    rag_suggestion = rag_result["suggestion"]
+                    raw_rag_suggestion = rag_result["suggestion"]
+                    # Format the RAG suggestion to be user-friendly
+                    formatted_suggestion = format_rag_suggestion(raw_rag_suggestion, rule_name)
+                    rag_suggestion = formatted_suggestion
                     logger.info(f"RAG suggestion generated for {rule_name}")
                 else:
                     logger.debug(f"RAG returned no suggestion for {rule_name}")
@@ -169,7 +222,8 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
             spacy_passive = False
         
         # Pattern-based passive voice detection
-        passive_patterns = [
+        # Regular past participles (ending in -ed)
+        regular_passive_patterns = [
             r'\bis\s+\w+ed\b',  # "is needed", "is required"
             r'\bare\s+\w+ed\b',  # "are needed", "are required"
             r'\bwas\s+\w+ed\b', # "was created", "was developed"
@@ -180,12 +234,40 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
             r'\bto\s+be\s+\w+ed\b', # "to be processed"
         ]
         
-        pattern_passive = any(re.search(pattern, sent_text, re.IGNORECASE) for pattern in passive_patterns)
+        # Irregular past participles (common ones)
+        irregular_participles = [
+            'written', 'taken', 'given', 'shown', 'known', 'thrown', 'drawn', 'driven',
+            'flown', 'grown', 'blown', 'broken', 'chosen', 'frozen', 'spoken', 'stolen',
+            'woken', 'forgotten', 'hidden', 'ridden', 'risen', 'fallen', 'eaten', 'beaten',
+            'seen', 'done', 'gone', 'come', 'become', 'overcome', 'run', 'begun', 'sung',
+            'rung', 'swung', 'hung', 'spun', 'won', 'built', 'bent', 'sent', 'spent',
+            'lent', 'meant', 'kept', 'left', 'felt', 'dealt', 'dreamt', 'learnt', 'burnt',
+            'thought', 'brought', 'caught', 'taught', 'fought', 'bought', 'sought', 'sold',
+            'told', 'held', 'found', 'bound', 'wound', 'lost', 'cost', 'cut', 'put', 'set',
+            'hit', 'let', 'bet', 'shut', 'hurt', 'split', 'quit', 'spread'
+        ]
+        
+        # Create patterns for irregular participles
+        irregular_passive_patterns = []
+        for participle in irregular_participles:
+            irregular_passive_patterns.extend([
+                fr'\bis\s+{participle}\b',  # "is written"
+                fr'\bare\s+{participle}\b',  # "are written"  
+                fr'\bwas\s+{participle}\b', # "was written"
+                fr'\bwere\s+{participle}\b', # "were written"
+                fr'\bhas\s+been\s+{participle}\b', # "has been written"
+                fr'\bhave\s+been\s+{participle}\b', # "have been written"
+                fr'\bbeing\s+{participle}\b', # "being written"
+                fr'\bto\s+be\s+{participle}\b', # "to be written"
+            ])
+        
+        all_passive_patterns = regular_passive_patterns + irregular_passive_patterns
+        pattern_passive = any(re.search(pattern, sent_text, re.IGNORECASE) for pattern in all_passive_patterns)
         
         if spacy_passive or pattern_passive:
             # Find passive phrase for specific feedback
             passive_phrase = ""
-            for pattern in passive_patterns:
+            for pattern in all_passive_patterns:
                 match = re.search(pattern, sent_text, re.IGNORECASE)
                 if match:
                     passive_phrase = match.group()

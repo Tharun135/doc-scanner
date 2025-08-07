@@ -10,8 +10,8 @@ from typing import Optional
 
 # Import RAG system with fallback
 try:
-    from .rag_rule_helper import check_with_rag, detect_passive_voice_issues
-    RAG_HELPER_AVAILABLE = False  # Temporarily disabled for performance
+    from .rag_rule_helper import check_with_rag_advanced, detect_passive_voice_issues
+    RAG_HELPER_AVAILABLE = True  # RAG enabled
 except ImportError:
     RAG_HELPER_AVAILABLE = False
 
@@ -45,7 +45,7 @@ def check(content):
             "Convert passive voice to active voice for clearer, more direct communication. Example: Change 'The report was written by John' to 'John wrote the report'."
         ]
         
-        return check_with_rag(
+        return check_with_rag_advanced(
             content=content,
             rule_patterns=rule_patterns,
             rule_name="passive_voice",

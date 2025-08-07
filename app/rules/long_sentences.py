@@ -8,7 +8,10 @@ import logging
 
 # Import RAG system with fallback
 try:
-    from .rag_rule_helper import check_with_rag, detect_long_sentence_issues
+    from .rag_rule_helper import check_with_rag_advanced, detect_long_sentence_issues
+    RAG_HELPER_AVAILABLE = True  # RAG enabled
+except ImportError:
+    RAG_HELPER_AVAILABLE = False
     RAG_HELPER_AVAILABLE = False  # Temporarily disabled for performance
 except ImportError:
     RAG_HELPER_AVAILABLE = False
@@ -51,7 +54,7 @@ def check(content):
             "Break this long sentence into shorter ones for better readability. Aim for 15-20 words per sentence."
         ]
         
-        return check_with_rag(
+        return check_with_rag_advanced(
             content=content,
             rule_patterns=rule_patterns,
             rule_name="long_sentences",

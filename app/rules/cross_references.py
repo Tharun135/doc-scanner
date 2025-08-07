@@ -84,11 +84,24 @@ def check_link_formatting(content, soup):
     
     if not links:
         # Check for URLs in plain text that should be links
-        url_pattern = r'https?://[^\s<>"\']+|www\.[^\s<>"\']+|[^\s<>"\']+\.[a-z]{2,}(?:/[^\s<>"\']*)?'
-        urls_in_text = re.findall(url_pattern, soup.get_text(), flags=re.IGNORECASE)
+        # More specific pattern to avoid false positives like "space.to" or "error.message"
+        url_pattern = r'''
+            (?:https?://[^\s<>"']+)|                    # http/https URLs
+            (?:www\.[a-zA-Z0-9-]+\.[a-zA-Z]{2,}[^\s<>"']*)|  # www.domain.ext
+            (?:\b[a-zA-Z0-9-]+\.(?:com|org|net|edu|gov|mil|int|co|uk|ca|de|fr|jp|au|us|info|biz|io|tech|dev|app)\b[^\s<>"']*)  # common TLDs only
+        '''
+        urls_in_text = re.findall(url_pattern, soup.get_text(), flags=re.IGNORECASE | re.VERBOSE)
         
         if urls_in_text:
-            suggestions.append(f"Found {len(urls_in_text)} potential URLs in plain text. Consider making them clickable links.")
+            # Filter out false positives by checking if they look like real domains
+            real_urls = []
+            for url in urls_in_text:
+                url = url.strip()
+                if url and not any(word in url.lower() for word in ['error', 'message', 'space', 'file', 'upload', 'storage', 'appear']):
+                    real_urls.append(url)
+            
+            if real_urls:
+                suggestions.append(f"Found {len(real_urls)} potential URLs in plain text. Consider making them clickable links.")
         
         return suggestions
     
