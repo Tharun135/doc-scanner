@@ -15,8 +15,16 @@ agent_bp = Blueprint('agent', __name__, url_prefix='/api/agent')
 
 logger = logging.getLogger(__name__)
 
-# Load rules once when blueprint is imported
-rules = load_rules()
+# Lazy load rules when needed
+_rules_cache = None
+
+def get_rules():
+    """Lazy loading of rules - only load when actually needed."""
+    global _rules_cache
+    if _rules_cache is None:
+        logger.info("Loading rules (lazy loading)")
+        _rules_cache = load_rules()
+    return _rules_cache
 
 @agent_bp.route('/status', methods=['GET'])
 def agent_status():
@@ -24,7 +32,7 @@ def agent_status():
     return jsonify({
         "status": "running", 
         "message": "Document Review Agent is operational",
-        "rules_loaded": len(rules),
+        "rules_loaded": len(get_rules()),
         "version": "1.0.0"
     })
 
@@ -53,7 +61,7 @@ def analyze_document():
         for line_index, line in enumerate(lines):
             if line.strip():
                 # Analyze each line
-                feedback, readability_scores, quality_score = analyze_sentence(line, rules)
+                feedback, readability_scores, quality_score = analyze_sentence(line, get_rules())
                 
                 for issue in feedback:
                     if isinstance(issue, dict):
@@ -104,6 +112,6 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "rules_loaded": len(rules),
+        "rules_loaded": len(get_rules()),
         "endpoints": ["/status", "/analyze", "/suggest", "/health"]
     })

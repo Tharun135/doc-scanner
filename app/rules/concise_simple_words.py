@@ -1,5 +1,5 @@
 import re
-import spacy
+from .spacy_utils import get_nlp_model
 from bs4 import BeautifulSoup
 import html
 
@@ -13,7 +13,7 @@ except ImportError:
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+nlp = get_nlp_model()
 
 def check(content):
     suggestions = []
@@ -82,9 +82,10 @@ def check(content):
             continue
         suggestions.append(f"Consider removing unnecessary modifier: '{modifier} {word}' → '{word}' or use a stronger word.")
 
-    # 3. Expanded weak verb constructions
+    # 3. Expanded weak verb constructions with context awareness
     weak_verb_patterns = [
-        (r"\bthere are\s+(?!no\s|not\s)\w+", "list the items directly"),  # Exclude negative constructions
+        # Only flag "there are" when it's truly weak, not when introducing lists
+        (r"\bthere are\s+(?!no\s|not\s|zero\s|two\s|three\s|four\s|five\s|six\s|seven\s|eight\s|nine\s|ten\s|several\s|multiple\s|many\s|few\s|\d+\s)\w+", "list the items directly"),  # Exclude numbered/quantified lists
         (r"\bthere is\s+a\s+(?!not\s)\w+", "state directly"),  # Exclude negative constructions  
         (r"\bit is important to\b", "'must' or 'should'"),
         (r"\bit is possible to\b", "'can' or 'may'"),
@@ -106,6 +107,25 @@ def check(content):
         matches = re.finditer(pattern, text_content, flags=re.IGNORECASE)
         for match in matches:
             found_text = match.group()
+            
+            # Additional context check for "there are" constructions
+            if found_text.lower().startswith("there are"):
+                # Get the context around the match to check for list introduction patterns
+                start_pos = match.start()
+                end_pos = match.end()
+                context_after = text_content[end_pos:end_pos+50].lower()
+                
+                # Don't flag if it's followed by list introduction patterns
+                if any(indicator in context_after for indicator in [
+                    ":", "ways to", "methods to", "options", "steps", "approaches",
+                    "techniques", "strategies", "features", "benefits", "reasons"
+                ]):
+                    continue
+                    
+                # Don't flag if it contains specific quantifiers or numbers
+                if re.search(r"\b(two|three|four|five|six|seven|eight|nine|ten|several|multiple|many|\d+)\b", found_text, re.IGNORECASE):
+                    continue
+            
             suggestions.append(f"Weak verb construction: Replace '{found_text}' with {suggestion} for directness.")
 
     # 4. Nominalizations (turning verbs into nouns)

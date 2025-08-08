@@ -1,7 +1,13 @@
 import re
-import spacy
 from bs4 import BeautifulSoup
 import html
+
+# Use shared spaCy utilities instead of loading model separately
+try:
+    from .spacy_utils import get_nlp_model
+    SPACY_AVAILABLE = True
+except ImportError:
+    SPACY_AVAILABLE = False
 
 # Import RAG system with fallback
 try:
@@ -12,9 +18,6 @@ except ImportError:
     import logging
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
-
 def check(content):
     suggestions = []
 
@@ -22,8 +25,9 @@ def check(content):
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
 
-    # Define doc using nlp
-    doc = nlp(text_content)
+    # Note: Removed unused spaCy processing for better performance
+    # If spaCy processing is needed in future, use: nlp = get_nlp_model()
+    
     # Rule: Avoid using 'above' to refer to preceding content
     above_pattern = r'\babove\b'
     matches = re.finditer(above_pattern, content, flags=re.IGNORECASE)

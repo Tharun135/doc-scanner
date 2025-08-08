@@ -1,5 +1,5 @@
 import re
-import spacy
+from .spacy_utils import get_nlp_model
 from bs4 import BeautifulSoup
 import html
 
@@ -20,7 +20,7 @@ def get_nlp():
     global nlp
     if nlp is None:
         try:
-            nlp = spacy.load("en_core_web_sm")
+            nlp = get_nlp_model()
         except Exception as e:
             print(f"Warning: Could not load spaCy model: {e}")
             print("Some advanced features may not work. Install with: python -m spacy download en_core_web_sm")

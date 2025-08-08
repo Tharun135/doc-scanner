@@ -1,0 +1,6 @@
+{
+  "daily_requests": 3,
+  "last_reset": "2025-08-08T12:03:35.913489",
+  "quota_errors": 0,
+  "circuit_breaker_until": null
+}

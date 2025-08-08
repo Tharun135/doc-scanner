@@ -1,5 +1,5 @@
 import re
-import spacy
+from .spacy_utils import get_nlp_model
 from bs4 import BeautifulSoup
 import html
 
@@ -11,7 +11,7 @@ except ImportError:
     RAG_HELPER_AVAILABLE = False
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+nlp = get_nlp_model()
 
 def check(content):
     """

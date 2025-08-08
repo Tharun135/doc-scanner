@@ -1,19 +1,40 @@
 import re
-import spacy
 from bs4 import BeautifulSoup
 import html
 
-# Import RAG system with fallback
+# Use shared spaCy utilities instead of loading model separately
 try:
-    from .rag_rule_helper import check_with_rag
-    RAG_HELPER_AVAILABLE = True
+    from .spacy_utils import get_nlp_model
+    SPACY_AVAILABLE = True
 except ImportError:
-    RAG_HELPER_AVAILABLE = False
-    import logging
-    logging.debug(f"RAG helper not available for {__name__} - using basic rules")
+    SPACY_AVAILABLE = False
 
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+# Import RAG system with fallback - LAZY LOADING for fast startup
+RAG_HELPER_AVAILABLE = False  # Will be set to True if needed and available
+
+def _get_rag_helper():
+    """Lazy load RAG helper only when actually needed."""
+    global RAG_HELPER_AVAILABLE
+    if not RAG_HELPER_AVAILABLE:
+        try:
+            from .smart_rag_manager import get_smart_rag_suggestion
+            RAG_HELPER_AVAILABLE = True
+            return get_smart_rag_suggestion
+        except ImportError:
+            import logging
+            logging.debug(f"RAG helper not available for {__name__} - using basic rules")
+            RAG_HELPER_AVAILABLE = False
+            return None
+    
+    # If RAG is available, import again to get the function
+    if RAG_HELPER_AVAILABLE:
+        try:
+            from .smart_rag_manager import get_smart_rag_suggestion
+            return get_smart_rag_suggestion
+        except ImportError:
+            return None
+    else:
+        return None
 
 def check(content):
     suggestions = []
@@ -22,8 +43,8 @@ def check(content):
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
 
-    # Define doc using nlp
-    doc = nlp(text_content)
+    # Note: Removed unused spaCy processing that was slowing down analysis
+    # If spaCy processing is needed in future, use: nlp = get_nlp_model()
     
     # Rule: Capitalize 'Bluetooth'
     bluetooth_pattern = r'\bbluetooth\b'
@@ -49,10 +70,10 @@ def check(content):
         r'\bapi\b': 'API',
         r'\burl\b': 'URL',
         r'\buri\b': 'URI',
-        r'\bhtml\b': 'HTML',
-        r'\bcss\b': 'CSS',
-        r'\bxml\b': 'XML',
-        r'\bjson\b': 'JSON',
+        r'(?<!\.)\bhtml\b': 'HTML',  # Don't match .html file extensions
+        r'(?<!\.)\bcss\b': 'CSS',   # Don't match .css file extensions
+        r'(?<!\.)\bxml\b': 'XML',   # Don't match .xml file extensions
+        r'(?<!\.)\bjson\b': 'JSON', # Don't match .json file extensions
         r'\bhttp\b': 'HTTP',
         r'\bhttps\b': 'HTTPS',
         r'\bsql\b': 'SQL',
@@ -127,6 +148,27 @@ def check(content):
         matches = re.finditer(pattern, content, flags=re.IGNORECASE)
         for match in matches:
             suggestions.append(f"Consider using standard abbreviation: '{match.group()}' → '{abbreviation}'")
+
+    # Enhanced RAG suggestions for technical terms (lazy loading for performance)
+    rag_helper = _get_rag_helper()
+    if rag_helper:
+        try:
+            # Only request RAG for technical content (avoid quota waste)
+            technical_indicators = ['API', 'JSON', 'XML', 'HTML', 'CSS', 'HTTP', 'URL', 'SQL']
+            has_technical_content = any(term in text_content for term in technical_indicators)
+            
+            if has_technical_content:
+                rag_suggestion, source = rag_helper(
+                    text_content, 
+                    "technical_terms",
+                    "Improve technical term capitalization and formatting"
+                )
+                
+                if rag_suggestion and source != "fallback":
+                    suggestions.append(f"💡 {rag_suggestion}")
+        except Exception as e:
+            # Silent fallback - don't disrupt basic rules
+            pass
 
     return suggestions if suggestions else []
 

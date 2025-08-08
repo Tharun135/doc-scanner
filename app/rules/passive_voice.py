@@ -1,5 +1,4 @@
 import re
-import spacy
 from bs4 import BeautifulSoup
 import html
 import json
@@ -8,23 +7,24 @@ import os
 import logging
 from typing import Optional
 
+# Use shared spaCy utilities instead of loading model separately
+try:
+    from .spacy_utils import get_nlp_model
+    SPACY_AVAILABLE = True
+except ImportError:
+    SPACY_AVAILABLE = False
+
 # Import RAG system with fallback
 try:
     from .rag_rule_helper import check_with_rag_advanced, detect_passive_voice_issues
-    RAG_HELPER_AVAILABLE = True  # RAG enabled
+    RAG_HELPER_AVAILABLE = True  # Re-enabled with performance optimization
 except ImportError:
     RAG_HELPER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-try:
-    nlp = spacy.load("en_core_web_sm")
-    SPACY_AVAILABLE = True
-except OSError:
-    logger.warning("spaCy English model not available. Using pattern-based detection only.")
-    nlp = None
-    SPACY_AVAILABLE = False
+# Note: Now using shared spaCy model instead of individual loading
+# This improves performance significantly
 
 def check(content):
     """
@@ -65,7 +65,8 @@ def check_legacy_passive_voice(content):
     text_content = soup.get_text()
 
     # If spaCy is available, use it for sentence parsing
-    if SPACY_AVAILABLE and nlp:
+    nlp = get_nlp_model() if SPACY_AVAILABLE else None
+    if nlp:
         try:
             doc = nlp(text_content)
             sentences = list(doc.sents)
@@ -171,7 +172,8 @@ def convert_with_offline_logic(passive_sentence):
             return enhanced_result
         
         # If spaCy is available, try the spaCy-based approach
-        if SPACY_AVAILABLE and nlp:
+        nlp = get_nlp_model() if SPACY_AVAILABLE else None
+        if nlp:
             doc = nlp(passive_sentence)
             
             # Look for passive constructions more broadly

@@ -9,10 +9,12 @@ from bs4 import BeautifulSoup
 import logging
 import importlib
 import sys
-import spacy
 import textstat
 import time
 from dataclasses import asdict
+
+# Import smart rule filtering for performance
+from .smart_rule_filter import analyze_sentence_smart, get_smart_performance_stats
 
 # Load environment variables from .env file
 try:
@@ -32,15 +34,26 @@ main = Blueprint('main', __name__)
 logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug messages
 logger = logging.getLogger(__name__)
 
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-try:
-    nlp = spacy.load("en_core_web_sm")
-    SPACY_AVAILABLE = True
-    logger.info("spaCy model loaded successfully")
-except Exception as e:
-    logger.warning(f"spaCy model not available: {e}")
-    nlp = None
-    SPACY_AVAILABLE = False
+# Load spaCy English model lazily when needed
+nlp = None
+SPACY_AVAILABLE = None
+
+def get_spacy_model():
+    """Lazy loading of spaCy model - only load when actually needed."""
+    global nlp, SPACY_AVAILABLE
+    
+    if SPACY_AVAILABLE is None:
+        try:
+            import spacy
+            nlp = spacy.load("en_core_web_sm")
+            SPACY_AVAILABLE = True
+            logger.info("spaCy model loaded successfully (lazy loading)")
+        except Exception as e:
+            logger.warning(f"spaCy model not available: {e}")
+            nlp = None
+            SPACY_AVAILABLE = False
+    
+    return nlp if SPACY_AVAILABLE else None
 
 ############################
 # PARSING HELPERS
@@ -152,7 +165,16 @@ def load_rules():
     logger.info(f"Total rules loaded: {len(rules)}")
     return rules
 
-rules = load_rules()
+# Lazy loading of rules
+_rules_cache = None
+
+def get_rules():
+    """Lazy loading of rules - only load when actually needed."""
+    global _rules_cache
+    if _rules_cache is None:
+        logger.info("Loading rules (lazy loading)")
+        _rules_cache = load_rules()
+    return _rules_cache
 
 def review_document(content, rules):
     suggestions = []
@@ -174,53 +196,24 @@ def review_document(content, rules):
     return {"issues": suggestions, "summary": "Review completed."}
 
 def analyze_sentence(sentence, rules):
-    feedback = []
-    readability_scores = {
-        "flesch_reading_ease": textstat.flesch_reading_ease(sentence),
-        "gunning_fog": textstat.gunning_fog(sentence),
-        "smog_index": textstat.smog_index(sentence),
-        "automated_readability_index": textstat.automated_readability_index(sentence)
-    }
-    quality_score = 55.0  # Placeholder for actual quality score calculation
+    """
+    Smart sentence analysis with rule filtering for better performance.
+    Uses intelligent rule selection instead of running all 46 rules on every sentence.
+    """
+    # Convert rules list to dict for smart filtering
+    rules_dict = {}
+    for i, rule_function in enumerate(rules):
+        # Try to get rule name from function
+        rule_name = getattr(rule_function, '__name__', f'rule_{i}')
+        if hasattr(rule_function, '__module__'):
+            module_name = rule_function.__module__
+            if 'rules.' in module_name:
+                rule_name = module_name.split('rules.')[-1]
+        rules_dict[rule_name] = rule_function
+    
+    # Use smart filtering for performance
+    return analyze_sentence_smart(sentence, rules_dict)
 
-    # Apply each rule function to the sentence
-    for rule_function in rules:
-        rule_feedback = rule_function(sentence)
-        if rule_feedback:
-            # Convert string feedback to expected object format
-            for item in rule_feedback:
-                if isinstance(item, str):
-                    # Parse structured suggestions to extract just the issue for display
-                    message = item
-                    if 'Issue:' in item and 'Original sentence:' in item and ('AI suggestion:' in item or 'AI Solution:' in item):
-                        # Extract just the issue part for the main display
-                        lines = item.split('\n')
-                        for line in lines:
-                            if line.strip().startswith('Issue:'):
-                                message = line.replace('Issue:', '').strip()
-                                break
-                    
-                    # Convert string to expected object format
-                    feedback.append({
-                        "text": sentence,
-                        "start": 0,
-                        "end": len(sentence),
-                        "message": message,
-                        "full_suggestion": item  # Keep the full structured suggestion for detailed view
-                    })
-                elif isinstance(item, dict) and all(key in item for key in ["text", "start", "end", "message"]):
-                    # Already in correct format
-                    feedback.append(item)
-                else:
-                    # Handle other formats by converting to string
-                    feedback.append({
-                        "text": sentence,
-                        "start": 0,
-                        "end": len(sentence),
-                        "message": str(item)
-                    })
-
-    return feedback, readability_scores, quality_score
 def calculate_quality_index(total_sentences, total_errors):
     if total_sentences == 0:
         return 0
@@ -260,9 +253,10 @@ def upload_file():
         lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
         sentences = []
         for line in lines:
-            if SPACY_AVAILABLE and nlp:
+            spacy_nlp = get_spacy_model()
+            if spacy_nlp:
                 # Use spaCy to further split lines with multiple sentences
-                doc = nlp(line)
+                doc = spacy_nlp(line)
                 for sent in doc.sents:
                     sentences.append(sent)
             else:
@@ -282,7 +276,7 @@ def upload_file():
 
         sentence_data = []
         for index, sent in enumerate(sentences):
-            feedback, readability_scores, quality_score = analyze_sentence(sent.text, rules)
+            feedback, readability_scores, quality_score = analyze_sentence(sent.text, get_rules())
             
             # Add sentence index to each feedback item for UI linking
             enhanced_feedback = []

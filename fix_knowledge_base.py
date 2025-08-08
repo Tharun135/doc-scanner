@@ -202,6 +202,77 @@ def add_basic_knowledge_direct(collection):
                 "description": "Grammar and style improvements",
                 "source": "built_in"
             }
+        },
+        {
+            "content": """
+            Contextual Writing Rules: When "There are" Is Correct vs. Weak
+            
+            CORRECT USAGE - List Introductions (DO NOT SUGGEST CHANGES):
+            - "There are three ways to configure the PROFINET IO Connector:"
+            - "There are two methods available for data export:"
+            - "There are several options for deployment:"
+            - "There are four key features in this release:"
+            
+            WEAK USAGE - Vague Existential Statements (SHOULD BE IMPROVED):
+            - "There are issues with the system" → "The system has performance issues"
+            - "There are problems" → "The following problems occurred:"
+            - "There are benefits" → "This approach provides the following benefits:"
+            - "There are some concerns" → "Users have raised three concerns:"
+            
+            KEY DISTINCTION:
+            - GOOD: "There are [specific number] [clear items]" followed by a colon and list
+            - WEAK: "There are [vague terms]" without enumeration or specificity
+            
+            RULE: Never flag "there are [number] [noun]" constructions when they introduce lists or provide specific enumeration.
+            """,
+            "metadata": {
+                "type": "contextual_rules",
+                "category": "writing_guidance",
+                "description": "Contextual rules for there are constructions",
+                "source": "built_in"
+            }
+        },
+        {
+            "content": """
+            Reference Improvement Guide: Fixing "Above" and "Below" References
+            
+            PROBLEM: Vague spatial references like "above" and "below" are unclear in digital documents.
+            
+            COMMON ISSUES AND FIXES:
+            
+            1. "mentioned above" → BETTER OPTIONS:
+               - "mentioned in Section 2.1"
+               - "discussed earlier" 
+               - "described in the previous configuration"
+               - "in the second configuration method"
+            
+            2. "described above" → BETTER OPTIONS:
+               - "outlined in the procedure"
+               - "detailed in Step 3"
+               - "explained in the installation section"
+            
+            3. "shown above" → BETTER OPTIONS:
+               - "shown in Figure 2"
+               - "illustrated in the diagram"
+               - "displayed in the screenshot"
+            
+            4. "above configuration" → BETTER OPTIONS:
+               - "this configuration"
+               - "the preceding configuration"
+               - "the second configuration"
+            
+            EXAMPLE TRANSFORMATION:
+            WEAK: "Common Configurator creates a JSON configuration file that is identical to the second configuration mentioned above."
+            STRONG: "Common Configurator creates a JSON configuration file that is identical to the second configuration method."
+            
+            RULE: Always replace spatial references with specific, descriptive references that help readers navigate the document.
+            """,
+            "metadata": {
+                "type": "reference_guide",
+                "category": "technical_writing",
+                "description": "Guide for improving document references",
+                "source": "built_in"
+            }
         }
     ]
     

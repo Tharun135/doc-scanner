@@ -1,7 +1,8 @@
 import re
-import spacy
+from .spacy_utils import get_nlp_model
 from bs4 import BeautifulSoup
 import html
+import spacy
 from spacy.language import Language
 from spacy.tokens import Span
 import logging
@@ -17,7 +18,7 @@ except ImportError:
     RAG_HELPER_AVAILABLE = False
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+nlp = get_nlp_model()
 
 logger = logging.getLogger(__name__)
 

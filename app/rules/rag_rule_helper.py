@@ -12,16 +12,26 @@ import re
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
 RAG_ENABLED = True  # Enabled for RAG functionality
 
-# Import RAG system
+# Local AI system is the primary source - NO MORE GOOGLE API!
 try:
-    import sys
-    import os
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
-    from rag_system import get_rag_suggestion
-    RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
+    from .smart_rag_manager import get_smart_rag_suggestion, get_rag_status
+    SMART_RAG_AVAILABLE = True
+    get_smart_rag_suggestion = get_smart_rag_suggestion  # Ensure it's properly bound
+    logging.info("Smart local AI manager loaded successfully")
+except ImportError as e:
+    SMART_RAG_AVAILABLE = False
+    get_smart_rag_suggestion = None  # Set to None if not available
+    logging.warning(f"Smart local AI manager not available: {e}")
+
+# Legacy optimizers (not needed but keep for compatibility)
+try:
+    from .rag_performance_optimizer import get_fast_rag_suggestion, get_cache_stats
+    FAST_RAG_AVAILABLE = True
 except ImportError:
-    RAG_AVAILABLE = False
-    logging.debug("RAG system not available - using fallback only")
+    FAST_RAG_AVAILABLE = False
+
+# REMOVED: Google API RAG system - no longer needed with local AI
+RAG_AVAILABLE = False  # Disable old Google API system
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +84,7 @@ def format_rag_suggestion(raw_suggestion: str, rule_name: str = "unknown") -> st
 def check_with_rag(content: str, rule_name: str = "unknown", 
                    description: str = "", rule_patterns=None, **kwargs) -> List[str]:
     """
-    Simple RAG checker for basic rules like spelling checker.
+    Simple RAG checker for basic rules with performance optimization.
     
     Args:
         content: The text content to check
@@ -90,8 +100,33 @@ def check_with_rag(content: str, rule_name: str = "unknown",
     if not RAG_ENABLED:
         return []
     
-    # This was causing the slowdown - just return empty for now
-    return []
+    suggestions = []
+    
+    try:
+        # Use fast RAG if available, fallback to standard RAG
+        if FAST_RAG_AVAILABLE:
+            # Get fast cached suggestion with 3-second timeout
+            rag_suggestion = get_fast_rag_suggestion(
+                text=content,
+                rule_name=rule_name,
+                context=description,
+                timeout=3.0  # Quick timeout for responsiveness
+            )
+            
+            if rag_suggestion:
+                formatted_suggestion = format_rag_suggestion(rag_suggestion, rule_name)
+                if formatted_suggestion:
+                    suggestions.append(formatted_suggestion)
+                    logger.debug(f"Fast RAG suggestion provided for {rule_name}")
+            else:
+                logger.debug(f"Fast RAG returned no suggestion for {rule_name}")
+        else:
+            logger.debug(f"No local AI system available for {rule_name}")
+            
+    except Exception as e:
+        logger.warning(f"Local AI error for {rule_name}: {e}")
+    
+    return suggestions
 
 def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any], 
                    rule_name: str = "unknown", 
@@ -136,33 +171,32 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
                 "context": text_content[:200]  # First 200 chars as context
             }
         
-        # Try RAG first
+        # Try local AI first
         rag_suggestion = None
-        if RAG_AVAILABLE:
+        if SMART_RAG_AVAILABLE and get_smart_rag_suggestion is not None:
             try:
                 feedback_text = issue.get("message", "")
                 sentence_context = issue.get("context", "")
                 
-                rag_result = get_rag_suggestion(
-                    feedback_text=feedback_text,
-                    sentence_context=sentence_context,
-                    document_type="technical",
-                    document_content=text_content[:1000]  # First 1000 chars for context
+                # Use local AI instead of Google API
+                local_ai_result, source = get_smart_rag_suggestion(
+                    text=sentence_context or feedback_text,
+                    rule_name=rule_name,
+                    context=feedback_text
                 )
                 
-                if rag_result and rag_result.get("suggestion"):
-                    raw_rag_suggestion = rag_result["suggestion"]
-                    # Format the RAG suggestion to be user-friendly
-                    formatted_suggestion = format_rag_suggestion(raw_rag_suggestion, rule_name)
+                if local_ai_result:
+                    # Format the local AI suggestion to be user-friendly
+                    formatted_suggestion = format_rag_suggestion(local_ai_result, rule_name)
                     rag_suggestion = formatted_suggestion
-                    logger.info(f"RAG suggestion generated for {rule_name}")
+                    logger.info(f"Local AI suggestion generated for {rule_name} from {source}")
                 else:
-                    logger.debug(f"RAG returned no suggestion for {rule_name}")
+                    logger.debug(f"Local AI returned no suggestion for {rule_name}")
                     
             except Exception as e:
-                logger.error(f"RAG error in {rule_name}: {e}")
+                logger.error(f"Local AI error in {rule_name}: {e}")
         
-        # Use RAG suggestion if available, otherwise use fallback
+        # Use local AI suggestion if available, otherwise use fallback
         if rag_suggestion:
             suggestions.append({
                 "text": issue.get("text", ""),
@@ -198,13 +232,13 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
     Returns list of detected issues with context.
     """
     import re
-    import spacy
+    from .spacy_utils import get_nlp_model
     
     issues = []
     
     # Load spaCy if available
     try:
-        nlp = spacy.load("en_core_web_sm")
+        nlp = get_nlp_model()
         doc = nlp(text_content)
         sentences = list(doc.sents)
     except:
@@ -291,13 +325,13 @@ def detect_long_sentence_issues(content: str, text_content: str) -> List[Dict[st
     Detect long sentences that may need splitting.
     """
     import re
-    import spacy
+    from .spacy_utils import get_nlp_model
     
     issues = []
     
     # Load spaCy if available
     try:
-        nlp = spacy.load("en_core_web_sm")
+        nlp = get_nlp_model()
         doc = nlp(text_content)
         sentences = list(doc.sents)
     except:
@@ -332,13 +366,13 @@ def detect_modal_verb_issues(content: str, text_content: str) -> List[Dict[str, 
     Detect modal verb issues (can/may/could usage).
     """
     import re
-    import spacy
+    from .spacy_utils import get_nlp_model
     
     issues = []
     
     # Load spaCy if available
     try:
-        nlp = spacy.load("en_core_web_sm")
+        nlp = get_nlp_model()
         doc = nlp(text_content)
         sentences = list(doc.sents)
     except:

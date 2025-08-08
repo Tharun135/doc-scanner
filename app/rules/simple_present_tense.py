@@ -1,5 +1,5 @@
 import re
-import spacy
+from .spacy_utils import get_nlp_model
 from bs4 import BeautifulSoup
 import html
 
@@ -13,7 +13,7 @@ except ImportError:
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+nlp = get_nlp_model()
 
 def check(content):
     suggestions = []
@@ -85,17 +85,30 @@ def _is_state_or_requirement_context(sentence, verb):
     requirement_indicators = [
         "requirement", "ensure", "verify", "check", "confirm", "must be",
         "should be", "needs to be", "has to be", "required", "necessary",
-        "prerequisite", "condition", "status", "state"
+        "prerequisite", "condition", "status", "state", "where", "that is",
+        "which is", "select", "find", "locate", "identify"
     ]
     
     # System/service/component contexts where continuous tense describes state
     system_contexts = [
         "service", "server", "system", "application", "connector", "component",
-        "module", "process", "daemon", "agent", "driver", "engine", "instance"
+        "module", "process", "daemon", "agent", "driver", "engine", "instance",
+        "device", "ied", "io", "ethernet"
+    ]
+    
+    # Time/frequency indicators that suggest repeated action (not state)
+    frequency_indicators = [
+        "every", "each", "daily", "weekly", "monthly", "yearly", "hourly",
+        "repeatedly", "continuously", "constantly", "regularly", "periodically",
+        "times per", "per hour", "per day", "per week", "per month"
     ]
     
     # Check if it's a state verb
     if verb_lower in state_verbs:
+        # If there are frequency indicators, it's likely a repeated action, not a state
+        if any(freq in sentence_lower for freq in frequency_indicators):
+            return False
+            
         # Check for requirement/state context
         if any(indicator in sentence_lower for indicator in requirement_indicators):
             return True
@@ -103,6 +116,17 @@ def _is_state_or_requirement_context(sentence, verb):
         # Check for system/service context
         if any(context in sentence_lower for context in system_contexts):
             return True
+        
+        # Check for relative clause patterns (where/that/which + is/are + verb-ing)
+        relative_patterns = [
+            r'\b(where|that|which)\s+.*\b(is|are)\s+' + verb_lower,
+            r'\bselect.*\b(where|that|which)\s+.*\b(is|are)\s+' + verb_lower,
+            r'\bfind.*\b(where|that|which)\s+.*\b(is|are)\s+' + verb_lower
+        ]
+        
+        for pattern in relative_patterns:
+            if re.search(pattern, sentence_lower):
+                return True
     
     # Check for specific patterns that indicate states/requirements
     state_patterns = [
@@ -110,7 +134,9 @@ def _is_state_or_requirement_context(sentence, verb):
         r'\brequire.*\bis\s+' + verb_lower,
         r'\bensure.*\bis\s+' + verb_lower,
         r'\bmust\s+be\s+' + verb_lower,
-        r'\bneeds?\s+to\s+be\s+' + verb_lower
+        r'\bneeds?\s+to\s+be\s+' + verb_lower,
+        r'\bwhere\s+.*\bis\s+' + verb_lower,
+        r'\bselect.*where.*\bis\s+' + verb_lower
     ]
     
     for pattern in state_patterns:

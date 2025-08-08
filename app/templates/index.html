@@ -2015,9 +2015,14 @@
                     
                     // Approach 1: Direct HTML match (works for simple cases)
                     if (processedContent.includes(sentence)) {
-                        const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                        processedContent = processedContent.replace(sentence, replacement);
-                        found = true;
+                        // Avoid replacing sentences that are already wrapped in spans
+                        if (!processedContent.includes(`data-sentence-index="${index}"`)) {
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                            processedContent = processedContent.replace(sentence, replacement);
+                            found = true;
+                        } else {
+                            found = true; // Already processed
+                        }
                         console.log(`✓ Direct HTML match for sentence ${index}`);
                     }
                     
@@ -2027,9 +2032,14 @@
                         if (sentence.includes('<') && sentence.includes('>')) {
                             // For sentences with angle brackets, try direct text match first
                             if (processedContent.includes(sentence)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                                processedContent = processedContent.replace(sentence, replacement);
-                                found = true;
+                                // Avoid replacing sentences that are already wrapped in spans
+                                if (!processedContent.includes(`data-sentence-index="${index}"`)) {
+                                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                                    processedContent = processedContent.replace(sentence, replacement);
+                                    found = true;
+                                } else {
+                                    found = true; // Already processed
+                                }
                                 console.log(`✓ Direct text match for sentence with angle brackets ${index}`);
                             }
                         }
@@ -2112,6 +2122,10 @@
                     }
                 }
             });
+            
+            // Clean up any malformed HTML that might have been created
+            processedContent = processedContent.replace(/ass="sentence-highlight"/g, 'class="sentence-highlight"');
+            processedContent = processedContent.replace(/([^<>\s])\s*class="sentence-highlight"/g, '$1" class="sentence-highlight"');
             
             console.log('Final processed content length:', processedContent.length);
             return processedContent;
