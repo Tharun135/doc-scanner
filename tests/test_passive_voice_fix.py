@@ -1,93 +1,65 @@
 #!/usr/bin/env python3
-"""
-Test the passive voice fix for the AI suggestion system.
-"""
+
 import sys
 import os
 
-# Add the app directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+# Add the current directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-try:
-    from ai_improvement import GeminiAISuggestionEngine
+from app.ai_improvement import LlamaIndexAISuggestionEngine
+
+def test_passive_voice_suggestions():
+    print("="*80)
+    print("TESTING PASSIVE VOICE AI SUGGESTIONS")
+    print("="*80)
     
-    def test_passive_voice_fix():
-        """Test the specific passive voice issue that was reported."""
-        
-        # Create the AI suggestion engine
-        ai_engine = GeminiAISuggestionEngine()
-        
-        # Test case from the user's report
-        feedback_text = "Convert to active voice: 'The Docker daemon does not generate logs when no applications are running.'"
-        sentence_context = "Docker logs are not generated when there are no active applications."
-        
-        print("🔍 Testing Passive Voice Fix")
-        print("=" * 50)
-        print(f"Feedback: {feedback_text}")
-        print(f"Original sentence: {sentence_context}")
+    ai_manager = LlamaIndexAISuggestionEngine()
+    
+    # Test the specific problematic sentence
+    test_sentence = "These values are derived during the XSLT Transformation step in Model Maker."
+    feedback = "Convert to active voice: 'These values get derived during the XSLT Transformation step in Model Maker.'"
+    
+    print(f"Original sentence: {test_sentence}")
+    print(f"Feedback: {feedback}")
+    print("-" * 50)
+    
+    try:
+        result = ai_manager.generate_contextual_suggestion(feedback, test_sentence)
+        print("AI Suggestion Result:")
+        print(f"Suggestion: {result.get('suggestion', 'No suggestion')}")
         print("-" * 50)
         
-        # Test the minimal fallback method (which is what's being used when RAG fails)
-        result = ai_engine.generate_minimal_fallback(feedback_text, sentence_context)
+        # Parse and analyze options
+        suggestion_text = result.get('suggestion', '')
+        lines = suggestion_text.split('\n')
+        options = [line for line in lines if line.startswith('OPTION')]
         
-        print("✅ AI Suggestion Result:")
-        print(f"Method: {result.get('method', 'unknown')}")
-        print(f"Confidence: {result.get('confidence', 'unknown')}")
-        print("Suggestion:")
-        print(result.get('suggestion', 'No suggestion provided'))
-        
-        # Check if the suggestion contains actual rewrites instead of the original sentence
-        suggestion = result.get('suggestion', '')
-        if "Docker logs are not generated when there are no active applications" in suggestion:
-            print("\n❌ ISSUE: The suggestion still contains the original sentence!")
-        else:
-            print("\n✅ SUCCESS: The suggestion provides actual rewrites!")
-        
-        # Test individual rewrite functions
-        print("\n🔧 Testing Individual Rewrite Functions:")
-        print("-" * 50)
-        
-        # Test _fix_passive_voice
-        fix1 = ai_engine._fix_passive_voice(sentence_context)
-        print(f"_fix_passive_voice: {fix1}")
-        
-        # Test _alternative_active_voice
-        fix2 = ai_engine._alternative_active_voice(sentence_context)
-        print(f"_alternative_active_voice: {fix2}")
-        
-        # Test _direct_action_voice
-        fix3 = ai_engine._direct_action_voice(sentence_context)
-        print(f"_direct_action_voice: {fix3}")
-        
-        # Check if any of the functions returned something different
-        if fix1 != sentence_context:
-            print(f"✅ _fix_passive_voice successfully converted the sentence")
-        else:
-            print(f"❌ _fix_passive_voice returned original sentence")
+        print("Analysis:")
+        for i, option in enumerate(options, 1):
+            print(f"  Option {i}: {option}")
             
-        if fix2 != sentence_context:
-            print(f"✅ _alternative_active_voice successfully converted the sentence")
-        else:
-            print(f"❌ _alternative_active_voice returned original sentence")
+            # Check for issues
+            if "get derived" in option.lower():
+                print(f"    ❌ Issue: Still uses 'get derived' (same as original)")
+            elif "are derived" in option.lower():
+                print(f"    ❌ Issue: Still passive voice")
+            elif option.count("are derived") > 1:
+                print(f"    ❌ Issue: Grammatical error/repetition")
+            elif "users can update" in option.lower():
+                print(f"    ❌ Issue: Uses 'Users' instead of 'You'")
+            else:
+                print(f"    ✅ Good: Active voice conversion")
+                
+        # Check for "User" vs "You" 
+        if "User" in suggestion_text and "You" not in suggestion_text:
+            print("  ❌ Issue: Uses 'User' instead of 'You'")
+        elif "You" in suggestion_text:
+            print("  ✅ Good: Uses 'You' instead of 'User'")
             
-        if fix3 != sentence_context:
-            print(f"✅ _direct_action_voice successfully converted the sentence")
-        else:
-            print(f"❌ _direct_action_voice returned original sentence")
-        
-        print("\n🎯 Expected vs Actual:")
-        print(f"Expected active voice: 'The Docker daemon does not generate logs when no applications are running.'")
-        print(f"Our conversion 1: '{fix1}'")
-        print(f"Our conversion 2: '{fix2}'")
-        print(f"Our conversion 3: '{fix3}'")
-        
-    if __name__ == "__main__":
-        test_passive_voice_fix()
-        
-except ImportError as e:
-    print(f"❌ Import Error: {e}")
-    print("Make sure you're running this from the doc-scanner directory")
-except Exception as e:
-    print(f"❌ Error: {e}")
-    import traceback
-    traceback.print_exc()
+    except Exception as e:
+        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    test_passive_voice_suggestions()
