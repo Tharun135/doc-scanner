@@ -32,11 +32,14 @@ except ImportError:
 
 # Import LlamaIndex AI system
 try:
-    from .llamaindex_ai import get_ai_suggestion
+    # Check if dependencies are available first
+    import llama_index
+    from .llamaindex_ai import LlamaIndexAISuggestionEngine as LlamaEngine, get_ai_suggestion
     LLAMAINDEX_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     LLAMAINDEX_AVAILABLE = False
-    logging.debug("LlamaIndex AI system not available - falling back to rule-based suggestions only")
+    logging.warning(f"LlamaIndex AI system not available: {e}")
+    LlamaEngine = None
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,17 @@ class LlamaIndexAISuggestionEngine:
     
     def __init__(self):
         self.llamaindex_available = LLAMAINDEX_AVAILABLE
+        self.llamaindex_engine = None
+        
+        if self.llamaindex_available and LlamaEngine:
+            try:
+                # Initialize the actual LlamaIndex AI engine with faster model
+                self.llamaindex_engine = LlamaEngine(model_name="tinyllama")
+                logger.info(f"LlamaIndex AI engine initialized successfully with tinyllama")
+            except Exception as e:
+                logger.warning(f"Failed to initialize LlamaIndex engine: {e}")
+                self.llamaindex_available = False
+        
         logger.info(f"LlamaIndex AI Suggestion Engine initialized. LlamaIndex available: {self.llamaindex_available}")
         
     def generate_contextual_suggestion(self, feedback_text: str, sentence_context: str = "",
@@ -76,12 +90,13 @@ class LlamaIndexAISuggestionEngine:
                 return self.generate_smart_fallback(feedback_text, sentence_context)
             
             # Primary method: Use LlamaIndex AI for suggestions
-            if self.llamaindex_available:
+            if self.llamaindex_available and self.llamaindex_engine:
                 logger.info("Using LlamaIndex AI for solution generation")
-                ai_result = get_ai_suggestion(
+                ai_result = self.llamaindex_engine.generate_contextual_suggestion(
                     feedback_text=feedback_text,
                     sentence_context=sentence_context,
                     document_type=document_type,
+                    writing_goals=writing_goals,
                     document_content=document_content
                 )
                 

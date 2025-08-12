@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Doc Scanner Workflow - Stylish Animated RAG</title>
+<style>
+/* Animate arrow lines */
+.mermaid svg .edgePaths path {
+  stroke-dasharray: 20 10 !important;
+  animation: dash 1.5s linear infinite !important;
+  stroke-width: 2px;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+/* Rounded node boxes with shadows */
+.mermaid svg rect {
+  rx: 10;
+  ry: 10;
+  filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.15));
+  stroke-width: 2px;
+}
+
+/* Default node color */
+.mermaid svg .node rect {
+  fill: #e3f2fd !important; /* soft blue */
+  stroke: #2196f3 !important; /* blue border */
+}
+
+/* RAG cluster style */
+.mermaid svg .cluster rect {
+  fill: #fff3cd !important; /* soft yellow */
+  stroke: #ff9800 !important; /* orange border */
+  stroke-width: 3px;
+  filter: drop-shadow(2px 2px 6px rgba(255,152,0,0.3));
+}
+
+/* RAG nodes inside */
+.mermaid svg .cluster .node rect {
+  fill: #fff8e1 !important;
+  stroke: #ffb74d !important;
+}
+
+/* Text styling */
+.mermaid svg text {
+  font-family: 'Segoe UI', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+
+<div class="mermaid" id="docscanner-flow">
+flowchart TD
+    A["📄 Upload Document"] --> B["🛠 Text Extraction<br/>(PDF, MD, DOCX, HTML, ZIP)"]
+    B --> C["🧹 Text Parsing & Cleaning"]
+    C --> D["📏 Rule-Based Checks<br/>(Style Guide, Grammar, Readability)"]
+    C --> E
+    subgraph RAG["🔥 RAG (Retrieval-Augmented Generation)"]
+        E["🧠 Embedding Generation"]
+        E --> F["💾 Store in ChromaDB<br/>+ Knowledge Base"]
+        F --> G["💡 AI Suggestions & Feedback"]
+    end
+    D --> G
+    G --> H["📑 Report Generation"]
+</div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'default' });
+mermaid.run({ querySelector: '#docscanner-flow' });
+</script>
+
+</body>
+</html>

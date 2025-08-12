@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAG Workflow - Animated & Stylish</title>
+<style>
+/* ===== Animated Arrows ===== */
+.mermaid svg .edgePaths path {
+  stroke-dasharray: 20 10 !important;
+  animation: dash 1.5s linear infinite !important;
+  stroke-width: 2px;
+}
+@keyframes dash {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+/* ===== Rounded, modern node boxes ===== */
+.mermaid svg rect {
+  rx: 10;
+  ry: 10;
+  stroke-width: 2px;
+  filter: drop-shadow(2px 2px 5px rgba(0,0,0,0.15));
+}
+
+/* ===== Stage-specific colors ===== */
+.mermaid svg .node rect {
+  fill: #e3f2fd !important; /* default light blue */
+  stroke: #2196f3 !important; /* blue border */
+}
+
+/* Understanding stage */
+.mermaid svg .node[id*="B"] rect {
+  fill: #fff8e1 !important; /* soft yellow */
+  stroke: #ffb300 !important;
+}
+
+/* Retrieval stage */
+.mermaid svg .node[id*="C"], 
+.mermaid svg .node[id*="D"] rect {
+  fill: #e8f5e9 !important; /* light green */
+  stroke: #43a047 !important;
+}
+
+/* Generation stage */
+.mermaid svg .node[id*="E"], 
+.mermaid svg .node[id*="F"] rect {
+  fill: #f3e5f5 !important; /* light purple */
+  stroke: #8e24aa !important;
+}
+
+/* Output stage */
+.mermaid svg .node[id*="G"] rect {
+  fill: #fff3e0 !important; /* light orange */
+  stroke: #fb8c00 !important;
+}
+
+/* ===== Text styling ===== */
+.mermaid svg text {
+  font-family: 'Segoe UI', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+
+<div class="mermaid" id="rag-flow">
+flowchart TD
+    A["📝 Ask a Question"] --> B["🤔 Understand the Question<br/>(Turn into search form)"]
+    B --> C["🔍 Retrieve Helpful Info<br/>(Search the knowledge base)"]
+    C --> D["📂 Select the Best Bits<br/>(Most relevant info)"]
+    D --> E["🔗 Merge with the Question"]
+    E --> F["💡 Generate the Answer<br/>(AI writes the reply)"]
+    F --> G["📢 Deliver Answer to the User"]
+</div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'default' });
+mermaid.run({ querySelector: '#rag-flow' });
+</script>
+
+</body>
+</html>
