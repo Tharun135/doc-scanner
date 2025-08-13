@@ -1,0 +1,39 @@
+# Test Document for Progress Analysis
+
+This is a test document to demonstrate the new progressive analysis feature with percentage indicators.
+
+## Introduction
+The document analysis system has been enhanced to provide real-time progress updates during the analysis process. Users can now see exactly what stage the analysis is at and how much has been completed.
+
+## Features
+The new progress system includes:
+- Real-time percentage updates (0% to 100%)
+- Stage indicators showing current processing step
+- Detailed status messages for each phase
+- Smooth progress bar animation
+- Better user experience during analysis
+
+## Analysis Stages
+The system breaks down analysis into several key stages:
+
+1. **Parsing Stage (10%)**: The system reads and parses the uploaded document, extracting text content from various file formats including TXT, DOCX, PDF, and Markdown files.
+
+2. **Segmentation Stage (20%)**: The document is broken down into individual sentences using advanced natural language processing techniques with spaCy models.
+
+3. **Analysis Stage (20-90%)**: Each sentence is analyzed against the comprehensive rule set. This is the longest stage as it processes each sentence individually for grammar, style, and content issues.
+
+4. **Reporting Stage (95%)**: The system generates a comprehensive analysis report with quality metrics, issue counts, and recommendations.
+
+5. **Completion Stage (100%)**: Final results are prepared and presented to the user with all feedback items properly categorized and linked.
+
+## Benefits
+This progressive approach provides several advantages:
+- Users know the system is working and haven't stalled
+- Clear indication of remaining time and effort
+- Better understanding of the analysis complexity
+- Professional user experience similar to modern applications
+
+## Technical Implementation
+The backend uses Flask with Server-Sent Events for real-time updates, while the frontend displays an animated progress bar with percentage indicators and stage descriptions.
+
+This enhancement significantly improves the user experience, especially for larger documents that require more processing time.

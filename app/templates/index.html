@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Doc Scanner – Advanced Analysis</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -234,43 +237,340 @@
             background: linear-gradient(135deg, #000000, #1a1a1a);
         }
         #loadingOverlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(18,28,58,0.85);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(42, 59, 90, 0.95), rgba(42, 155, 170, 0.95));
+            backdrop-filter: blur(10px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .progress-container {
+            text-align: center;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            padding: 40px;
+            border-radius: 20px;
+            min-width: 400px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .progress-title {
+            font-size: 20px;
+            margin-bottom: 30px;
+            color: #ffffff;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Circular Progress Indicator */
+        .circular-progress {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 30px;
+        }
+        
+        .circular-progress svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
+        }
+        
+        .circular-progress .track {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 8;
+        }
+        
+        .circular-progress .progress-ring {
+            fill: none;
+            stroke: url(#gradient);
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 440;
+            stroke-dashoffset: 440;
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: pulse 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% {
+                stroke-width: 8;
+                filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
+            }
+            100% {
+                stroke-width: 10;
+                filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8));
+            }
+        }
+        
+        /* Particle effect around circular progress */
+        .circular-progress::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent, rgba(255, 215, 0, 0.2), transparent, rgba(255, 165, 0, 0.3), transparent);
+            animation: rotate 3s linear infinite;
+            z-index: -1;
+        }
+        
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .progress-percentage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 28px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #FFD700, 0 0 10px #FFD700;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            to {
+                text-shadow: 0 0 10px #FFD700, 0 0 20px #FFD700, 0 0 30px #FFD700;
+                transform: translate(-50%, -50%) scale(1.05);
+            }
+        }
+        
+        /* Linear Progress Bar */
+        .progress-bar-container {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            height: 8px;
+            margin: 25px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar-fill {
+            background: linear-gradient(90deg, #FFD700, #FFA500, #FF6B6B);
+            height: 100%;
+            width: 0%;
+            border-radius: 15px;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+            100% {
+                left: 100%;
+            }
+        }
+        
+        .progress-message {
+            font-size: 16px;
+            color: #ffffff;
+            margin-top: 15px;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            min-height: 24px;
+        }
+        
+        .progress-stage {
+            font-size: 14px;
+            color: #cccccc;
+            margin-top: 8px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .progress-icon {
+            font-size: 16px;
+            margin-right: 8px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        /* Stage indicators */
+        .stage-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stage-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .stage-indicator.active {
+            background: #FFD700;
+            box-shadow: 0 0 10px #FFD700;
+            animation: bounce 1s ease-in-out infinite;
+        }
+        
+        .stage-indicator.completed {
+            background: #00FF88;
+            box-shadow: 0 0 10px #00FF88;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-8px);
+            }
+            60% {
+                transform: translateY(-4px);
+            }
+        }
+        
+        @keyframes celebration {
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+            25% {
+                transform: scale(1.2) rotate(5deg);
+            }
+            50% {
+                transform: scale(1.1) rotate(-5deg);
+            }
+            75% {
+                transform: scale(1.15) rotate(3deg);
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        @keyframes completePulse {
+            0% {
+                stroke-width: 8;
+                filter: drop-shadow(0 0 5px rgba(0, 255, 136, 0.5));
+            }
+            50% {
+                stroke-width: 12;
+                filter: drop-shadow(0 0 25px rgba(0, 255, 136, 1));
+            }
+            100% {
+                stroke-width: 8;
+                filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.7));
+            }
+        }
+        
+        @keyframes completeShimmer {
+            0% {
+                background-position: -100% 0;
+            }
+            100% {
+                background-position: 100% 0;
+            }
+        }
+        
+        /* Celebration animations */
+        @keyframes celebration {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+            25% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+            75% {
+                transform: translate(-50%, -50%) scale(1.15);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        @keyframes completePulse {
+            0% {
+                stroke-width: 8;
+                filter: drop-shadow(0 0 5px rgba(0, 255, 136, 0.5));
+            }
+            50% {
+                stroke-width: 12;
+                filter: drop-shadow(0 0 25px rgba(0, 255, 136, 1));
+            }
+            100% {
+                stroke-width: 8;
+                filter: drop-shadow(0 0 15px rgba(0, 255, 136, 0.7));
+            }
+        }
+        
+        @keyframes completeShimmer {
+            0% {
+                background: linear-gradient(90deg, #FFD700, #FFA500, #FF6B6B);
+            }
+            50% {
+                background: linear-gradient(90deg, #00FF88, #00D4AA, #0099CC);
+            }
+            100% {
+                background: linear-gradient(90deg, #00FF88, #00D4AA, #0099CC);
+            }
+        }
 .spinner-container {
     text-align: center;
     color: #FFD700;
-}
-
-/* AI Enhancement Indicators */
-.ai-enhancement-badge {
-    background: linear-gradient(45deg, #6c5ce7, #a29bfe);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    margin-left: 0.5rem;
-}
-
-.rag-badge {
-    background: linear-gradient(45deg, #00b894, #00cec9);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    margin-left: 0.5rem;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.7); }
-    70% { box-shadow: 0 0 0 8px rgba(0, 184, 148, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
 }
 
 .sources-container {
@@ -360,7 +660,7 @@
         }
         
         .ai-feedback-icon {
-            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            background: #6c757d;
             color: white;
             border: none;
             border-radius: 50%;
@@ -375,12 +675,12 @@
         }
         
         .ai-feedback-icon:hover {
-            background: linear-gradient(45deg, #5a4fcf, #8b7ff7);
+            background: #5a6268;
             transform: scale(1.1);
         }
         
         .ai-feedback-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #495057;
             border: none;
             color: white;
             border-radius: 8px;
@@ -441,7 +741,7 @@
 }
 
 .quality-progress .progress-bar {
-    background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+    background: #6c757d;
     transition: width 1s ease;
 }
 
@@ -628,7 +928,6 @@
                         </div>
                         <button class="btn btn-primary w-100" type="submit">
                             <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
-                            <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
                     </form>
                 </div>
@@ -963,14 +1262,30 @@
         // Form submission
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            console.log('Form submitted! Selected files:', selectedFiles.length);
+            // alert(`Form submitted with ${selectedFiles.length} files`); // Debug alert - removed
 
             if (selectedFiles.length === 0) {
                 alert('Please select at least one file first.');
                 return;
             }
 
-            // Show spinner
-            document.getElementById('loadingOverlay').style.display = 'flex';
+            // Show progress overlay with debugging
+            console.log('Showing loading overlay...');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+                loadingOverlay.style.zIndex = '99999'; // Force to top
+                console.log('Loading overlay should now be visible');
+                console.log('Overlay display style:', loadingOverlay.style.display);
+            } else {
+                console.error('Loading overlay element not found!');
+                alert('ERROR: Loading overlay element not found!');
+            }
+
+            // Initialize progress display immediately
+            updateProgress(0, "Starting analysis...", "parsing");
 
             const submitBtn = uploadForm.querySelector('button[type="submit"]');
             const originalBtnContent = submitBtn.innerHTML;
@@ -979,8 +1294,8 @@
 
             try {
                 if (selectedFiles.length === 1) {
-                    // Single file upload (existing logic)
-                    await processSingleFile(selectedFiles[0]);
+                    // Single file upload with progress
+                    await processSingleFileWithProgress(selectedFiles[0]);
                 } else {
                     // Batch upload
                     await processBatchFiles(selectedFiles);
@@ -989,17 +1304,293 @@
                 console.error('Upload error:', error);
                 alert('An error occurred during upload: ' + error.message);
             } finally {
-                // Hide spinner
-                document.getElementById('loadingOverlay').style.display = 'none';
-                submitBtn.innerHTML = originalBtnContent;
-                submitBtn.disabled = false;
+                // Hide spinner with delay to show completion
+                setTimeout(() => {
+                    console.log('Hiding loading overlay...');
+                    if (loadingOverlay) {
+                        loadingOverlay.style.display = 'none';
+                    }
+                    submitBtn.innerHTML = originalBtnContent;
+                    submitBtn.disabled = false;
+                }, 1000); // 1 second delay to see completion
             }
         });
 
+        async function processSingleFileWithProgress(file) {
+            // Initialize progress
+            updateProgress(0, "Starting analysis...", "parsing");
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                console.log('Attempting progressive upload...');
+                
+                // Start progressive analysis
+                const response = await fetch('/upload_progressive', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Progressive upload response:', response.status);
+
+                if (!response.ok) {
+                    // Show error but don't fallback immediately - let user see what happened
+                    console.error('Progressive upload failed with status:', response.status);
+                    updateProgress(0, `Progressive upload failed (${response.status}). Trying fallback...`, "error");
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Show error for 2 seconds
+                    return await processSingleFile(file);
+                }
+
+                const initialResult = await response.json();
+                console.log('Progressive upload result:', initialResult);
+                
+                if (!initialResult.success) {
+                    console.error('Progressive analysis failed:', initialResult.error);
+                    updateProgress(0, `Analysis failed: ${initialResult.error || 'Unknown error'}. Trying fallback...`, "error");
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Show error for 2 seconds
+                    return await processSingleFile(file);
+                }
+
+                const analysisId = initialResult.analysis_id;
+                console.log('Starting progress monitoring for ID:', analysisId);
+                
+                // Poll for progress updates
+                return new Promise((resolve, reject) => {
+                    const pollProgress = async () => {
+                        try {
+                            console.log('Polling progress for:', analysisId);
+                            const progressResponse = await fetch(`/analysis_progress/${analysisId}`);
+                            
+                            if (!progressResponse.ok) {
+                                throw new Error(`Progress fetch failed: ${progressResponse.status}`);
+                            }
+                            
+                            const progress = await progressResponse.json();
+                            console.log('Progress update:', progress);
+                            
+                            updateProgress(
+                                progress.percentage || 0, 
+                                progress.message || "Processing...", 
+                                progress.stage || "working"
+                            );
+                            
+                            if (progress.completed) {
+                                if (progress.error) {
+                                    console.error('Analysis completed with error:', progress.error);
+                                    updateProgress(0, `Error: ${progress.error}. Trying fallback...`, "error");
+                                    await new Promise(resolve => setTimeout(resolve, 2000));
+                                    try {
+                                        const fallbackResult = await processSingleFile(file);
+                                        resolve(fallbackResult);
+                                    } catch (fallbackError) {
+                                        reject(new Error(progress.error));
+                                    }
+                                } else if (progress.result) {
+                                    console.log('Analysis completed successfully:', progress.result);
+                                    // Analysis complete, render results
+                                    renderChart(progress.result.report || {}, progress.result.sentences || []);
+                                    renderContent(progress.result.content || '', progress.result.sentences || []);
+                                    resolve(progress.result);
+                                } else {
+                                    reject(new Error('Analysis completed but no result found'));
+                                }
+                            } else {
+                                // Continue polling
+                                setTimeout(pollProgress, 200);
+                            }
+                        } catch (error) {
+                            console.error('Progress polling failed:', error);
+                            updateProgress(0, `Progress polling failed: ${error.message}. Trying fallback...`, "error");
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            try {
+                                const fallbackResult = await processSingleFile(file);
+                                resolve(fallbackResult);
+                            } catch (fallbackError) {
+                                reject(error);
+                            }
+                        }
+                    };
+                    
+                    pollProgress();
+                });
+            } catch (error) {
+                console.error('Progressive upload completely failed:', error);
+                updateProgress(0, `Upload failed: ${error.message}. Trying fallback...`, "error");
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return await processSingleFile(file);
+            }
+        }
+
+        function updateProgress(percentage, message, stage) {
+            console.log(`🎯 Progress Update: ${percentage}% - Stage: ${stage} - Message: ${message}`);
+            
+            const progressPercentage = document.getElementById('progressPercentage');
+            const progressBarFill = document.getElementById('progressBarFill');
+            const progressRing = document.getElementById('progressRing');
+            const progressMessage = document.getElementById('progressMessage');
+            const progressStage = document.getElementById('progressStage');
+            const progressIcon = document.querySelector('.progress-icon');
+            
+            // Force progress display visibility
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'flex';
+                loadingOverlay.style.zIndex = '99999';
+                console.log('Progress overlay displayed');
+            }
+            
+            // Update percentage display
+            if (progressPercentage) {
+                progressPercentage.textContent = `${Math.round(percentage)}%`;
+                
+                // Add celebration effect when reaching 100%
+                if (percentage >= 100) {
+                    progressPercentage.style.animation = 'celebration 0.8s ease-in-out';
+                    setTimeout(() => {
+                        if (progressPercentage.style) {
+                            progressPercentage.style.animation = 'glow 2s ease-in-out infinite alternate';
+                        }
+                    }, 800);
+                }
+                
+                console.log('Updated percentage display');
+            } else {
+                console.error('Progress percentage element not found');
+            }
+            
+            // Update circular progress ring
+            if (progressRing) {
+                const circumference = 2 * Math.PI * 70; // radius = 70
+                const offset = circumference - (percentage / 100) * circumference;
+                progressRing.style.strokeDashoffset = offset;
+                
+                // Add completion effect
+                if (percentage >= 100) {
+                    progressRing.style.stroke = 'url(#completionGradient)';
+                    progressRing.style.animation = 'completePulse 1s ease-in-out';
+                }
+                
+                console.log(`Updated circular progress to ${percentage}%`);
+            }
+            
+            // Update linear progress bar
+            if (progressBarFill) {
+                progressBarFill.style.width = `${percentage}%`;
+                
+                // Add completion effect
+                if (percentage >= 100) {
+                    progressBarFill.style.background = 'linear-gradient(90deg, #00FF88, #00D4AA, #0099CC)';
+                    progressBarFill.style.animation = 'completeShimmer 1s ease-in-out';
+                }
+                
+                console.log(`Updated progress bar width to ${percentage}%`);
+            } else {
+                console.error('Progress bar fill element not found');
+            }
+            
+            if (progressMessage) {
+                progressMessage.textContent = message;
+                console.log('Updated progress message');
+            } else {
+                console.error('Progress message element not found');
+            }
+            
+            // Update document title with progress
+            if (percentage < 100) {
+                document.title = `(${Math.round(percentage)}%) Analyzing - Doc Scanner`;
+            } else {
+                document.title = 'Doc Scanner - Analysis Complete';
+            }
+            
+            // Update stage indicators
+            updateStageIndicators(stage, percentage);
+            
+            if (progressStage) {
+                const stageConfig = {
+                    'parsing': { name: 'Parsing Document', icon: 'fas fa-file-alt' },
+                    'segmentation': { name: 'Breaking into Sentences', icon: 'fas fa-cut' }, 
+                    'analysis': { name: 'Analyzing Content Quality', icon: 'fas fa-search' },
+                    'reporting': { name: 'Generating Report', icon: 'fas fa-chart-bar' },
+                    'complete': { name: 'Analysis Complete', icon: 'fas fa-check-circle' },
+                    'error': { name: 'Error Occurred', icon: 'fas fa-exclamation-triangle' }
+                };
+                
+                const config = stageConfig[stage] || { name: stage, icon: 'fas fa-brain' };
+                progressStage.textContent = config.name;
+                console.log(`Updated stage to: ${config.name} (${percentage}%)`);
+                
+                if (progressIcon) {
+                    progressIcon.className = `${config.icon} progress-icon`;
+                    
+                    // Add celebration icon effect when complete
+                    if (stage === 'complete') {
+                        progressIcon.style.animation = 'celebration 0.8s ease-in-out';
+                    }
+                    
+                    console.log(`Updated icon to: ${config.icon}`);
+                }
+            }
+        }
+        
+        function updateStageIndicators(stage, percentage) {
+            const stages = ['stage1', 'stage2', 'stage3', 'stage4'];
+            const stageMap = {
+                'parsing': 0,
+                'segmentation': 1,
+                'analysis': 2,
+                'reporting': 3,
+                'complete': 4
+            };
+            
+            const currentStageIndex = stageMap[stage] || 0;
+            
+            stages.forEach((stageId, index) => {
+                const stageElement = document.getElementById(stageId);
+                if (stageElement) {
+                    stageElement.classList.remove('active', 'completed');
+                    
+                    // Mark stages as completed based on percentage and current stage
+                    if (stage === 'complete' && percentage >= 100) {
+                        // All stages completed
+                        stageElement.classList.add('completed');
+                    } else if (index < currentStageIndex) {
+                        // Previous stages are completed
+                        stageElement.classList.add('completed');
+                    } else if (index === currentStageIndex) {
+                        // Current stage is active
+                        stageElement.classList.add('active');
+                    }
+                    // Future stages remain default (gray)
+                }
+            });
+            
+            // Update stage tooltips with better descriptions
+            const stageDescriptions = [
+                'Parsing Document Structure',
+                'Segmenting into Sentences', 
+                'Analyzing Content Quality',
+                'Generating Final Report'
+            ];
+            
+            stages.forEach((stageId, index) => {
+                const stageElement = document.getElementById(stageId);
+                if (stageElement && stageDescriptions[index]) {
+                    stageElement.setAttribute('title', stageDescriptions[index]);
+                }
+            });
+        }
+
         async function processSingleFile(file) {
+            // Show progress even for fallback upload
+            updateProgress(0, "Using standard upload method...", "parsing");
+            
             const formData = new FormData();
             formData.append('file', file);
 
+            // Simulate progress for standard upload
+            updateProgress(20, "Uploading file...", "parsing");
+            
             const response = await fetch('/upload', {
                 method: 'POST',
                 body: formData
@@ -1007,9 +1598,123 @@
 
             if (!response.ok) throw new Error('Upload failed');
 
+            updateProgress(80, "Processing results...", "reporting");
+            
             const result = await response.json();
+            
+            updateProgress(100, "Analysis complete!", "complete");
+            
+            // Small delay to show completion
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             renderChart(result.report || {}, result.sentences || []);
             renderContent(result.content || '', result.sentences || []);
+        }
+
+        async function processSingleFileWithProgress(file) {
+            // Initialize progress
+            updateProgress(0, "Starting analysis...", "parsing");
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                console.log('Attempting progressive upload...');
+                
+                // Start progressive analysis
+                const response = await fetch('/upload_progressive', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Progressive upload response:', response.status);
+
+                if (!response.ok) {
+                    // Show error but don't fallback immediately - let user see what happened
+                    console.error('Progressive upload failed with status:', response.status);
+                    updateProgress(0, `Progressive upload failed (${response.status}). Trying fallback...`, "error");
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Show error for 2 seconds
+                    return await processSingleFile(file);
+                }
+
+                const initialResult = await response.json();
+                console.log('Progressive upload result:', initialResult);
+                
+                if (!initialResult.success) {
+                    console.error('Progressive analysis failed:', initialResult.error);
+                    updateProgress(0, `Analysis failed: ${initialResult.error || 'Unknown error'}. Trying fallback...`, "error");
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Show error for 2 seconds
+                    return await processSingleFile(file);
+                }
+
+                const analysisId = initialResult.analysis_id;
+                console.log('Starting progress monitoring for ID:', analysisId);
+                
+                // Poll for progress updates
+                return new Promise((resolve, reject) => {
+                    const pollProgress = async () => {
+                        try {
+                            console.log('Polling progress for:', analysisId);
+                            const progressResponse = await fetch(`/analysis_progress/${analysisId}`);
+                            
+                            if (!progressResponse.ok) {
+                                throw new Error(`Progress fetch failed: ${progressResponse.status}`);
+                            }
+                            
+                            const progress = await progressResponse.json();
+                            console.log('Progress update:', progress);
+                            
+                            updateProgress(
+                                progress.percentage || 0, 
+                                progress.message || "Processing...", 
+                                progress.stage || "working"
+                            );
+                            
+                            if (progress.completed) {
+                                if (progress.error) {
+                                    console.error('Analysis completed with error:', progress.error);
+                                    updateProgress(0, `Error: ${progress.error}. Trying fallback...`, "error");
+                                    await new Promise(resolve => setTimeout(resolve, 2000));
+                                    try {
+                                        const fallbackResult = await processSingleFile(file);
+                                        resolve(fallbackResult);
+                                    } catch (fallbackError) {
+                                        reject(new Error(progress.error));
+                                    }
+                                } else if (progress.result) {
+                                    console.log('Analysis completed successfully:', progress.result);
+                                    // Analysis complete, render results
+                                    renderChart(progress.result.report || {}, progress.result.sentences || []);
+                                    renderContent(progress.result.content || '', progress.result.sentences || []);
+                                    resolve(progress.result);
+                                } else {
+                                    reject(new Error('Analysis completed but no result found'));
+                                }
+                            } else {
+                                // Continue polling
+                                setTimeout(pollProgress, 200);
+                            }
+                        } catch (error) {
+                            console.error('Progress polling failed:', error);
+                            updateProgress(0, `Progress polling failed: ${error.message}. Trying fallback...`, "error");
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            try {
+                                const fallbackResult = await processSingleFile(file);
+                                resolve(fallbackResult);
+                            } catch (fallbackError) {
+                                reject(error);
+                            }
+                        }
+                    };
+                    
+                    pollProgress();
+                });
+            } catch (error) {
+                console.error('Progressive upload completely failed:', error);
+                updateProgress(0, `Upload failed: ${error.message}. Trying fallback...`, "error");
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return await processSingleFile(file);
+            }
         }
 
         async function processBatchFiles(files) {
@@ -1092,20 +1797,65 @@
         async function processBatchIndividual(files) {
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
+                const fileProgress = Math.round((i / files.length) * 100);
+                
+                // Update overall progress in the loading overlay
+                updateProgress(
+                    fileProgress, 
+                    `Processing file ${i + 1} of ${files.length}: ${file.name}`, 
+                    'analysis'
+                );
+                
                 updateProgressItem(file.name, 'processing', 'Analyzing...');
 
                 try {
+                    // Use progressive analysis for each file in batch too
                     const formData = new FormData();
                     formData.append('file', file);
 
-                    const response = await fetch('/upload', {
+                    const response = await fetch('/upload_progressive', {
                         method: 'POST',
                         body: formData
                     });
 
                     if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
 
-                    const result = await response.json();
+                    const initialResult = await response.json();
+                    if (!initialResult.success) {
+                        throw new Error(initialResult.error || 'Analysis failed');
+                    }
+
+                    const analysisId = initialResult.analysis_id;
+                    
+                    // Wait for this file to complete
+                    const result = await new Promise((resolve, reject) => {
+                        const pollProgress = async () => {
+                            try {
+                                const progressResponse = await fetch(`/analysis_progress/${analysisId}`);
+                                const progress = await progressResponse.json();
+                                
+                                // Update individual file progress
+                                if (progress.percentage > 0) {
+                                    updateProgressItem(file.name, 'processing', `${Math.round(progress.percentage)}% - ${progress.message}`);
+                                }
+                                
+                                if (progress.completed) {
+                                    if (progress.error) {
+                                        reject(new Error(progress.error));
+                                    } else if (progress.result) {
+                                        resolve(progress.result);
+                                    } else {
+                                        reject(new Error('Analysis completed but no result found'));
+                                    }
+                                } else {
+                                    setTimeout(pollProgress, 200);
+                                }
+                            } catch (error) {
+                                reject(error);
+                            }
+                        };
+                        pollProgress();
+                    });
                     
                     batchResults.push({
                         filename: file.name,
@@ -1130,6 +1880,9 @@
                     updateProgressItem(file.name, 'error', `Error: ${error.message}`);
                 }
             }
+            
+            // Update final progress
+            updateProgress(100, `Completed processing ${files.length} files`, 'complete');
         }
 
         function calculateQualityScore(sentences) {
@@ -1297,7 +2050,19 @@
 
         // Chart rendering
         function renderChart(report, sentences) {
-    const ctx = document.getElementById('analysisChart').getContext('2d');
+            console.log('🎯 CRITICAL DEBUG - renderChart called with:');
+            console.log('📊 Report:', report);
+            console.log('📝 Sentences:', sentences);
+            console.log('📈 Sentences length:', sentences ? sentences.length : 'NULL');
+            console.log('🔍 First sentence:', sentences && sentences[0] ? sentences[0] : 'NULL');
+            
+            if (!sentences || sentences.length === 0) {
+                console.error('❌ CRITICAL: No sentences data received!');
+                alert('CRITICAL ERROR: No analysis data received. Check console for details.');
+                return;
+            }
+            
+            const ctx = document.getElementById('analysisChart').getContext('2d');
 
     if (analysisChart) {
         analysisChart.destroy();
@@ -1404,8 +2169,6 @@
                     <i class="fas fa-robot me-2"></i>
                     <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
                     <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
-                    <span class="ai-enhancement-badge ms-2">${aiSuggestion.method}</span>
-                    ${aiSuggestion.method && aiSuggestion.method.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
                 </div>
                 
                 <div class="mb-3">
@@ -1657,7 +2420,7 @@
                         animation: slideIn 0.3s ease;
                     }
                     .toast-notification.loading {
-                        background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+                        background: #6c757d;
                     }
                     .toast-notification.error {
                         background: #e74c3c;
@@ -2357,9 +3120,21 @@
 
         // Enhanced content rendering with sentence highlighting
         function renderContent(content, sentences) {
+            console.log('🔍 renderContent called with:', {
+                content: content ? content.substring(0, 100) + '...' : 'NULL',
+                sentencesLength: sentences ? sentences.length : 'NULL',
+                sentencesType: typeof sentences
+            });
+            
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
+            
+            console.log('🔍 DOM elements found:', {
+                documentContent: !!documentContent,
+                feedbackContent: !!feedbackContent,
+                aiFeedbackContent: !!aiFeedbackContent
+            });
             
             // Update dashboard metrics
             updateDocumentMetrics(content, sentences);
@@ -2380,8 +3155,8 @@
             // Clear AI feedback data
             aiFeedbackData = {};
             
-            console.log('Processing sentences:', sentences.length);
-            console.log('Sentences data:', sentences);
+            console.log('🔍 Processing sentences:', sentences ? sentences.length : 'NULL');
+            console.log('🔍 Sentences data:', sentences);
             
             // Create enhanced HTML content with highlighted sentences
             const originalContentDiv = document.createElement('div');
@@ -2900,11 +3675,50 @@
             }
         }
     </script>
+    <!-- Enhanced Loading Overlay with Circular Progress -->
     <div id="loadingOverlay" style="display:none;">
-      <div class="spinner-container">
-        <i class="fas fa-spinner fa-spin fa-5x"></i>
-        <div style="margin-top:20px;font-size:1.5rem;">Analyzing, please wait...</div>
-      </div>
+        <div class="progress-container">
+            <div class="progress-title">
+                <i class="fas fa-brain progress-icon"></i> Analyzing Document
+            </div>
+            
+            <!-- Circular Progress Indicator -->
+            <div class="circular-progress">
+                <svg viewBox="0 0 150 150">
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#FFA500;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#FF6B6B;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="completionGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#00FF88;stop-opacity:1" />
+                            <stop offset="50%" style="stop-color:#00D4AA;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#0099CC;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="track" cx="75" cy="75" r="70"></circle>
+                    <circle class="progress-ring" cx="75" cy="75" r="70" id="progressRing"></circle>
+                </svg>
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+            </div>
+            
+            <!-- Linear Progress Bar -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBarFill"></div>
+            </div>
+            
+            <div class="progress-message" id="progressMessage">Initializing analysis...</div>
+            <div class="progress-stage" id="progressStage">Starting</div>
+            
+            <!-- Stage Indicators -->
+            <div class="stage-indicators">
+                <div class="stage-indicator" id="stage1" title="Parsing Document Structure"></div>
+                <div class="stage-indicator" id="stage2" title="Segmenting into Sentences"></div>
+                <div class="stage-indicator" id="stage3" title="Analyzing Content Quality"></div>
+                <div class="stage-indicator" id="stage4" title="Generating Final Report"></div>
+            </div>
+        </div>
     </div>
     <div id="suggestionModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:#fff; color:#222; padding:2rem; border-radius:8px; min-width:300px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
@@ -2959,5 +3773,8 @@
             </div>
         </div>
     </div>
+
+    <script>
+    </script>
 </body>
 </html>

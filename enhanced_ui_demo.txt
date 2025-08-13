@@ -1,0 +1,19 @@
+This is a comprehensive test document designed to showcase the enhanced circular progress indicator and progressive analysis features of the Doc Scanner application.
+
+The new analyzing interface features a beautiful circular progress indicator with a rotating gradient ring that smoothly animates as the analysis progresses. The percentage is displayed prominently in the center with an attractive glowing effect.
+
+Below the circular indicator, users will see a modern linear progress bar with a shimmer animation effect that adds visual appeal during the analysis process. The progress bar uses a gradient color scheme that transitions from gold to orange to red.
+
+The interface includes stage indicators at the bottom that show the current phase of analysis: parsing, analysis, processing, and finalizing. Each stage lights up with different colors and animations as the process advances.
+
+This document contains multiple sentences to demonstrate how the progressive analysis works in real-time. Users can observe the progress updates as each sentence is processed and analyzed for grammar, style, and readability issues.
+
+The background of the loading overlay uses a beautiful gradient with blur effects to create a modern, professional appearance. The entire interface is designed to be both informative and visually engaging.
+
+The circular progress indicator includes particle effects and rotating elements that make the waiting experience more pleasant for users. The animations are smooth and performance-optimized to ensure they don't interfere with the actual analysis process.
+
+This enhanced user interface represents a significant improvement over traditional static loading screens and provides users with real-time feedback about the analysis progress.
+
+The progressive analysis feature works seamlessly with both single files and batch processing, maintaining the same attractive visual feedback throughout the entire workflow.
+
+Users will appreciate the professional appearance and smooth animations that make the document analysis process feel modern and responsive.

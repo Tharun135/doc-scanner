@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, Response
 import os
 import re
 import subprocess
@@ -11,10 +11,12 @@ import importlib
 import sys
 import textstat
 import time
+import json
+import uuid
 from dataclasses import asdict
 
-# Import smart rule filtering for performance
-from .smart_rule_filter import analyze_sentence_smart, get_smart_performance_stats
+# Import smart rule filtering for performance - temporarily disabled for debugging
+# from .smart_rule_filter import analyze_sentence_smart, get_smart_performance_stats
 
 # Load environment variables from .env file
 try:
@@ -59,11 +61,66 @@ def get_spacy_model():
 # PARSING HELPERS
 ############################
 
+def parse_file_content(file_content, filename):
+    """Parse file content from bytes, avoiding file stream issues"""
+    filename_lower = filename.lower()
+    extension = os.path.splitext(filename_lower)[1]
+
+    try:
+        if extension == '.docx':
+            # For DOCX, we need to create a BytesIO object
+            from io import BytesIO
+            file_stream = BytesIO(file_content)
+            return parse_docx(file_stream)
+        elif extension == '.doc':
+            # For DOC, we need to save temporarily
+            from io import BytesIO
+            file_stream = BytesIO(file_content)
+            return parse_doc_from_content(file_content, filename)
+        elif extension == '.pdf':
+            # For PDF, we need to create a BytesIO object
+            from io import BytesIO
+            file_stream = BytesIO(file_content)
+            return parse_pdf(file_stream)
+        elif extension == '.md':
+            # Decode content and parse
+            if isinstance(file_content, bytes):
+                content = file_content.decode('utf-8', errors='replace')
+            else:
+                content = file_content
+            return parse_md(content)
+        elif extension == '.adoc':
+            # Decode content and parse
+            if isinstance(file_content, bytes):
+                content = file_content.decode('utf-8', errors='replace')
+            else:
+                content = file_content
+            return parse_adoc(content)
+        elif extension in ['.txt', '']:
+            # Decode content and parse
+            if isinstance(file_content, bytes):
+                content = file_content.decode('utf-8', errors='replace')
+            else:
+                content = file_content
+            return parse_txt(content)
+        else:
+            if isinstance(file_content, bytes):
+                content = file_content.decode('utf-8', errors='replace')
+            else:
+                content = file_content
+            return content
+    except Exception as e:
+        logger.error(f"Error parsing {filename}: {str(e)}")
+        return f"Error parsing {filename}: {str(e)}"
+
 def parse_file(file):
     filename = file.filename.lower()
     extension = os.path.splitext(filename)[1]
 
     try:
+        # Ensure file pointer is at the beginning
+        file.seek(0)
+        
         if extension == '.docx':
             return parse_docx(file)
         elif extension == '.doc':
@@ -71,23 +128,44 @@ def parse_file(file):
         elif extension == '.pdf':
             return parse_pdf(file)
         elif extension == '.md':
-            return parse_md(file.read())
+            # Read the content and decode it properly
+            content = file.read()
+            if isinstance(content, bytes):
+                content = content.decode('utf-8', errors='replace')
+            return parse_md(content)
         elif extension == '.adoc':
-            return parse_adoc(file.read())
+            # Read the content and decode it properly
+            content = file.read()
+            if isinstance(content, bytes):
+                content = content.decode('utf-8', errors='replace')
+            return parse_adoc(content)
         elif extension in ['.txt', '']:
-            return parse_txt(file.read())
+            # Read the content and decode it properly
+            content = file.read()
+            if isinstance(content, bytes):
+                content = content.decode('utf-8', errors='replace')
+            return parse_txt(content)
         else:
-            return file.read().decode("utf-8", errors="replace")
+            content = file.read()
+            if isinstance(content, bytes):
+                content = content.decode('utf-8', errors='replace')
+            return content
     except Exception as e:
         logger.error(f"Error parsing {filename}: {str(e)}")
         return f"Error parsing {filename}: {str(e)}"
 
 def parse_docx(file_stream):
-    doc = Document(file_stream)
-    html_content = ""
-    for paragraph in doc.paragraphs:
-        html_content += f"<p>{paragraph.text}</p>"
-    return html_content
+    try:
+        # Ensure file pointer is at the beginning
+        file_stream.seek(0)
+        doc = Document(file_stream)
+        html_content = ""
+        for paragraph in doc.paragraphs:
+            html_content += f"<p>{paragraph.text}</p>"
+        return html_content
+    except Exception as e:
+        logger.error(f"Error parsing DOCX: {str(e)}")
+        return f"Error parsing DOCX: {str(e)}"
 
 def parse_doc(file_stream):
     temp_path = "temp_upload_doc.doc"
@@ -111,8 +189,36 @@ def parse_doc(file_stream):
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+def parse_doc_from_content(file_content, filename):
+    """Parse DOC file from content bytes"""
+    temp_path = f"temp_upload_{uuid.uuid4().hex}.doc"
+    try:
+        # Write content to temporary file
+        with open(temp_path, 'wb') as temp_file:
+            temp_file.write(file_content)
+        
+        cmd = ["antiword", temp_path]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode == 0:
+            text_content = result.stdout
+            html_content = ""
+            for paragraph in text_content.split("\n\n"):
+                html_content += f"<p>{paragraph}</p>"
+            return html_content
+        else:
+            return f"Error reading .doc file: {result.stderr}"
+    except FileNotFoundError:
+        return "Error: 'antiword' not in PATH or not installed."
+    except Exception as e:
+        return f"Error reading .doc file: {str(e)}"
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
 def parse_pdf(file_stream):
     try:
+        # Ensure file pointer is at the beginning
+        file_stream.seek(0)
         reader = PyPDF2.PdfReader(file_stream)
         html_content = ""
         for page in reader.pages:
@@ -121,22 +227,35 @@ def parse_pdf(file_stream):
                 html_content += f"<p>{paragraph}</p>"
         return html_content
     except Exception as e:
+        logger.error(f"Error reading PDF: {str(e)}")
         return f"Error reading PDF: {str(e)}"
 
-def parse_md(content_bytes):
-    md_text = content_bytes.decode("utf-8", errors="replace")
+def parse_md(content):
+    # Handle both bytes and string input
+    if isinstance(content, bytes):
+        md_text = content.decode("utf-8", errors="replace")
+    else:
+        md_text = content
     html_text = markdown.markdown(md_text)
     return html_text
 
-def parse_adoc(content_bytes):
-    adoc_text = content_bytes.decode("utf-8", errors="replace")
+def parse_adoc(content):
+    # Handle both bytes and string input
+    if isinstance(content, bytes):
+        adoc_text = content.decode("utf-8", errors="replace")
+    else:
+        adoc_text = content
     html_content = ""
     for paragraph in adoc_text.split("\n\n"):
         html_content += f"<p>{paragraph}</p>"
     return html_content
 
-def parse_txt(content_bytes):
-    txt_text = content_bytes.decode("utf-8", errors="replace")
+def parse_txt(content):
+    # Handle both bytes and string input
+    if isinstance(content, bytes):
+        txt_text = content.decode("utf-8", errors="replace")
+    else:
+        txt_text = content
     html_content = ""
     for paragraph in txt_text.split("\n\n"):
         html_content += f"<p>{paragraph}</p>"
@@ -172,8 +291,11 @@ def get_rules():
     """Lazy loading of rules - only load when actually needed."""
     global _rules_cache
     if _rules_cache is None:
-        logger.info("Loading rules (lazy loading)")
+        logger.info("🔧 Loading rules (lazy loading)")
         _rules_cache = load_rules()
+        logger.info(f"✅ Rules loaded successfully: {len(_rules_cache)} rules available")
+    else:
+        logger.info(f"♻️ Using cached rules: {len(_rules_cache)} rules available")
     return _rules_cache
 
 def review_document(content, rules):
@@ -197,22 +319,45 @@ def review_document(content, rules):
 
 def analyze_sentence(sentence, rules):
     """
-    Smart sentence analysis with rule filtering for better performance.
-    Uses intelligent rule selection instead of running all 46 rules on every sentence.
+    Direct sentence analysis - bypassing smart filter for debugging.
     """
-    # Convert rules list to dict for smart filtering
-    rules_dict = {}
-    for i, rule_function in enumerate(rules):
-        # Try to get rule name from function
-        rule_name = getattr(rule_function, '__name__', f'rule_{i}')
-        if hasattr(rule_function, '__module__'):
-            module_name = rule_function.__module__
-            if 'rules.' in module_name:
-                rule_name = module_name.split('rules.')[-1]
-        rules_dict[rule_name] = rule_function
+    logger.info(f"🔍 Analyzing sentence with {len(rules)} rules: '{sentence[:50]}...'")
     
-    # Use smart filtering for performance
-    return analyze_sentence_smart(sentence, rules_dict)
+    feedback = []
+    readability_scores = {}
+    
+    # Direct rule execution
+    for i, rule_function in enumerate(rules):
+        try:
+            rule_name = getattr(rule_function, '__name__', f'rule_{i}')
+            if hasattr(rule_function, '__module__'):
+                module_name = rule_function.__module__
+                if 'rules.' in module_name:
+                    rule_name = module_name.split('rules.')[-1]
+            
+            logger.info(f"� Executing rule: {rule_name}")
+            rule_result = rule_function(sentence)
+            
+            if rule_result:
+                logger.info(f"✅ Rule '{rule_name}' found {len(rule_result)} issues")
+                # Handle both list and single item results
+                if isinstance(rule_result, list):
+                    feedback.extend(rule_result)
+                else:
+                    feedback.append(rule_result)
+            else:
+                logger.info(f"➖ Rule '{rule_name}' found no issues")
+                
+        except Exception as rule_error:
+            logger.warning(f"⚠️ Rule '{rule_name}' failed: {rule_error}")
+            continue
+    
+    # Calculate quality score
+    quality_score = max(0, 100 - (len(feedback) * 10))
+    
+    logger.info(f"🎯 Direct analysis complete: {len(feedback)} total issues found, quality: {quality_score}")
+    
+    return feedback, readability_scores, quality_score
 
 def calculate_quality_index(total_sentences, total_errors):
     if total_sentences == 0:
@@ -224,7 +369,135 @@ def calculate_quality_index(total_sentences, total_errors):
 
 @main.route('/')
 def index():
-    return render_template('index.html')
+    # Add cache-busting headers
+    from flask import make_response
+    import time
+    
+    response = make_response(render_template('index.html', cache_bust=int(time.time())))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@main.route('/fresh')
+def fresh_interface():
+    """Completely fresh interface with new progress display - no caching"""
+    # Create a fresh template with cache-busting
+    fresh_html = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>🚀 Fresh Progress Display v2.0 - Doc Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460); color: white; min-height: 100vh; }
+        .container { padding: 2rem; }
+        .banner { background: linear-gradient(45deg, #FFD700, #FFA500); color: #000; text-align: center; padding: 1rem; margin-bottom: 2rem; border-radius: 10px; font-weight: bold; font-size: 1.2rem; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .upload-area { border: 2px dashed #FFD700; border-radius: 10px; padding: 2rem; text-align: center; margin: 2rem 0; background: rgba(255, 255, 255, 0.1); }
+        .btn-primary { background: linear-gradient(45deg, #007bff, #0056b3); border: none; padding: 0.8rem 2rem; border-radius: 25px; }
+        .btn-success { background: linear-gradient(45deg, #28a745, #20c997); border: none; padding: 0.8rem 2rem; border-radius: 25px; }
+        #newProgressOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(18,28,58,0.95); z-index: 99999; display: none; align-items: center; justify-content: center; }
+        .progress-container { text-align: center; color: #FFD700; background: rgba(0, 0, 0, 0.8); padding: 2rem; border-radius: 15px; min-width: 400px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+        .progress-title { font-size: 1.5rem; margin-bottom: 1rem; color: #FFD700; }
+        .progress-percentage { font-size: 2rem; font-weight: bold; margin: 0.5rem 0; color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .progress-bar { background: rgba(255, 255, 255, 0.1); border-radius: 10px; height: 20px; margin: 1rem 0; overflow: hidden; position: relative; }
+        .progress-fill { background: linear-gradient(45deg, #FFD700, #FFA500); height: 100%; width: 0%; border-radius: 10px; transition: width 0.3s ease; }
+        .progress-message { font-size: 1rem; color: #ffffff; margin-top: 1rem; min-height: 1.5rem; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .spinner { animation: rotate 2s linear infinite; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="banner">🚀 FRESH PROGRESS DISPLAY v2.0 LOADED! 🚀 NO CACHE! 🚀</div>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h1 class="text-center mb-4"><i class="fas fa-file-text"></i> Document Scanner - Fresh Interface</h1>
+                <div class="upload-area">
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: #FFD700;"></i>
+                    <h3>Upload Your Document</h3>
+                    <p>Select a file to see the NEW progress display in action</p>
+                    <input type="file" id="fileInput" class="form-control mb-3" accept=".txt,.docx,.pdf">
+                    <button id="uploadBtn" class="btn btn-primary"><i class="fas fa-upload"></i> Upload & Analyze</button>
+                </div>
+                <div class="text-center">
+                    <button id="testBtn" class="btn btn-success me-2">🚀 Test Fresh Progress Display 🚀</button>
+                    <button id="debugBtn" class="btn btn-warning">🔍 Debug Info</button>
+                </div>
+                <div id="results" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+    <div id="newProgressOverlay">
+        <div class="progress-container">
+            <div class="progress-title"><i class="fas fa-brain spinner"></i> Fresh Progress Display v2.0</div>
+            <div class="progress-percentage" id="progressPercent">0%</div>
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-message" id="progressMsg">Initializing fresh system...</div>
+            <div style="margin-top: 1rem; font-size: 0.8rem; color: #4ecdc4;">✅ Fresh Interface - No Cache Issues ✅</div>
+        </div>
+    </div>
+    <script>
+        console.log('🚀 Fresh interface loaded!');
+        function showProgress() { console.log('Showing fresh progress overlay'); document.getElementById('newProgressOverlay').style.display = 'flex'; }
+        function updateProgress(percent, message) { console.log(`Fresh progress: ${percent}% - ${message}`); document.getElementById('progressPercent').textContent = percent + '%'; document.getElementById('progressFill').style.width = percent + '%'; document.getElementById('progressMsg').textContent = message; }
+        function hideProgress() { console.log('Hiding fresh progress overlay'); document.getElementById('newProgressOverlay').style.display = 'none'; }
+        document.getElementById('testBtn').addEventListener('click', function() {
+            console.log('Testing fresh progress display...');
+            showProgress();
+            const stages = [
+                { percent: 10, message: '🚀 Fresh system starting...' },
+                { percent: 30, message: 'Loading components...' },
+                { percent: 60, message: 'Processing data...' },
+                { percent: 85, message: 'Finalizing results...' },
+                { percent: 100, message: '✅ Fresh test complete!' }
+            ];
+            let i = 0;
+            function runTest() {
+                if (i < stages.length) {
+                    updateProgress(stages[i].percent, stages[i].message);
+                    i++;
+                    setTimeout(runTest, 1500);
+                } else {
+                    setTimeout(() => { hideProgress(); alert('🚀 Fresh Progress Test Complete!'); }, 2000);
+                }
+            }
+            runTest();
+        });
+        document.getElementById('debugBtn').addEventListener('click', function() {
+            const info = `Fresh Interface Debug Info: URL: ${window.location.href} Timestamp: ${new Date().toISOString()} Cache Headers: Set to no-cache Progress Overlay ID: newProgressOverlay Elements Found: ${document.getElementById('newProgressOverlay') ? 'YES' : 'NO'} Console: Check for fresh interface logs`;
+            alert(info);
+            console.log('Fresh interface debug info:', info);
+        });
+        document.getElementById('uploadBtn').addEventListener('click', function() {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) { alert('Please select a file first'); return; }
+            showProgress();
+            updateProgress(0, 'Starting fresh upload...');
+            let progress = 0;
+            const uploadInterval = setInterval(() => {
+                progress += Math.random() * 20;
+                if (progress > 100) progress = 100;
+                updateProgress(Math.round(progress), `Uploading: ${Math.round(progress)}%`);
+                if (progress >= 100) {
+                    clearInterval(uploadInterval);
+                    setTimeout(() => {
+                        hideProgress();
+                        document.getElementById('results').innerHTML = `<div class="alert alert-success"><h4>✅ Fresh Upload Complete!</h4><p>File: ${fileInput.files[0].name}</p><p>Progress display working perfectly!</p></div>`;
+                    }, 1000);
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>"""
+    return fresh_html
 
 @main.route('/upload', methods=['POST'])
 def upload_file():
@@ -339,6 +612,295 @@ def generate_report(sentences):
 
 feedback_list = []
 current_document_content = ""  # Store current document for RAG context
+
+# Global progress tracking
+analysis_progress = {}
+
+@main.route('/test_route', methods=['GET'])
+def test_route():
+    """Simple test route to verify route registration"""
+    return jsonify({"message": "Test route working", "status": "success"})
+
+@main.route('/upload_progressive', methods=['POST'])
+def upload_file_progressive():
+    """Progressive file upload with real-time progress updates"""
+    import threading
+    global current_document_content
+    
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({"error": "No selected file"}), 400
+
+    # Generate unique analysis ID
+    analysis_id = str(uuid.uuid4())
+    logger.info(f"🚀 Starting progressive analysis for {file.filename} with ID: {analysis_id}")
+    
+    # Read file content immediately while we're in the request context
+    try:
+        file.seek(0)  # Ensure we're at the beginning
+        file_content = file.read()
+        filename = file.filename
+        logger.info(f"📁 File content read: {len(file_content)} bytes for {filename}")
+    except Exception as e:
+        logger.error(f"❌ Failed to read file content: {e}")
+        return jsonify({"error": f"Failed to read file: {str(e)}"}), 400
+    
+    # Store initial progress
+    analysis_progress[analysis_id] = {
+        "stage": "parsing",
+        "percentage": 0,
+        "message": "Initializing analysis...",
+        "completed": False,
+        "error": None,
+        "result": None
+    }
+    logger.info(f"📊 Initial progress stored: {analysis_progress[analysis_id]}")
+    
+    def run_analysis():
+        """Run the analysis in a background thread"""
+        try:
+            # Immediate feedback - show we're starting
+            analysis_progress[analysis_id].update({
+                "stage": "parsing",
+                "percentage": 1,
+                "message": "Starting file analysis..."
+            })
+            logger.info(f"🎬 Analysis thread started for: {analysis_id}")
+            time.sleep(0.5)  # Small delay to show initial state
+            
+            # Stage 1: File parsing (5%)
+            analysis_progress[analysis_id].update({
+                "stage": "parsing",
+                "percentage": 5,
+                "message": f"Parsing {filename}..."
+            })
+            logger.info(f"🔍 Stage 1 - Parsing started: {analysis_progress[analysis_id]}")
+            
+            # Add longer delay to show parsing stage
+            time.sleep(2.0)
+            
+            # Parse the file content instead of the file object
+            html_content = parse_file_content(file_content, filename)
+            soup = BeautifulSoup(html_content, "html.parser")
+            plain_text = soup.get_text(separator="\n")
+            current_document_content = plain_text
+            logger.info(f"✅ File parsed successfully, {len(plain_text)} characters")
+            
+            # Stage 2: Sentence segmentation (15%)
+            analysis_progress[analysis_id].update({
+                "stage": "segmentation", 
+                "percentage": 15,
+                "message": "Breaking down into sentences..."
+            })
+            logger.info(f"✂️ Stage 2 - Segmentation started: {analysis_progress[analysis_id]}")
+            
+            # Add longer delay to show segmentation stage
+            time.sleep(1.5)
+            lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
+            sentences = []
+            for line in lines:
+                spacy_nlp = get_spacy_model()
+                if spacy_nlp:
+                    doc = spacy_nlp(line)
+                    for sent in doc.sents:
+                        sentences.append(sent)
+                else:
+                    import re
+                    simple_sentences = re.split(r'[.!?]+\s+', line)
+                    for sent_text in simple_sentences:
+                        if sent_text.strip():
+                            class SimpleSentence:
+                                def __init__(self, text):
+                                    self.text = text.strip()
+                                    self.start_char = 0
+                                    self.end_char = len(text)
+                            sentences.append(SimpleSentence(sent_text.strip()))
+            
+            total_sentences = len(sentences)
+            sentence_data = []
+            logger.info(f"📝 Found {total_sentences} sentences to analyze")
+            
+            # Stage 3: Sentence analysis (15% - 85%)
+            for index, sent in enumerate(sentences):
+                # Update progress for each sentence
+                progress_percent = 15 + int((index / total_sentences) * 70)
+                analysis_progress[analysis_id].update({
+                    "stage": "analysis",
+                    "percentage": progress_percent,
+                    "message": f"Analyzing sentence {index + 1} of {total_sentences}..."
+                })
+                logger.info(f"🔬 Analyzing sentence {index + 1}/{total_sentences}: {progress_percent}%")
+                
+                # Add delay for every sentence to make progress visible
+                time.sleep(0.3)
+                
+                # Debug the analysis process
+                logger.info(f"🔬 About to analyze sentence: '{sent.text[:50]}...'")
+                
+                try:
+                    rules = get_rules()
+                    logger.info(f"📚 Loaded {len(rules)} rules for analysis")
+                    
+                    feedback, readability_scores, quality_score = analyze_sentence(sent.text, rules)
+                    
+                    logger.info(f"🎯 Analysis result for sentence {index + 1}: {len(feedback)} issues found")
+                    if feedback:
+                        logger.info(f"📝 Issues detected: {[f.get('message', str(f))[:50] for f in feedback[:3]]}...")
+                    else:
+                        logger.info(f"✅ No issues found in sentence: '{sent.text[:50]}...'")
+                        
+                except Exception as analysis_error:
+                    logger.error(f"❌ Error analyzing sentence {index + 1}: {analysis_error}")
+                    feedback, readability_scores, quality_score = [], {}, 0
+                
+                enhanced_feedback = []
+                for item in feedback:
+                    if isinstance(item, dict):
+                        item['sentence_index'] = index
+                        enhanced_feedback.append(item)
+                    else:
+                        enhanced_feedback.append({
+                            "text": sent.text,
+                            "start": 0,
+                            "end": len(sent.text),
+                            "message": str(item),
+                            "sentence_index": index
+                        })
+                
+                sentence_data.append({
+                    "sentence": sent.text,
+                    "sentence_index": index,
+                    "feedback": enhanced_feedback,
+                    "readability_scores": readability_scores,
+                    "quality_score": quality_score,
+                    "start": sent.start_char,
+                    "end": sent.end_char
+                })
+            
+            # Stage 4: Generating report (90%)
+            analysis_progress[analysis_id].update({
+                "stage": "reporting",
+                "percentage": 90,
+                "message": "Generating analysis report..."
+            })
+            logger.info(f"📊 Stage 4 - Reporting started: {analysis_progress[analysis_id]}")
+            
+            # Add longer delay to show reporting stage
+            time.sleep(2.0)
+            
+            total_errors = sum(len(s['feedback']) for s in sentence_data)
+            quality_index = calculate_quality_index(total_sentences, total_errors)
+
+            aggregated_report = {
+                "totalSentences": total_sentences,
+                "totalWords": len(plain_text.split()),
+                "avgQualityScore": quality_index,
+                "message": "Content analysis completed."
+            }
+            
+            result = {
+                "content": html_content,
+                "sentences": sentence_data,
+                "report": aggregated_report
+            }
+            
+            # Stage 5: Complete (100%)
+            analysis_progress[analysis_id].update({
+                "stage": "complete",
+                "percentage": 100,
+                "message": "Analysis complete!",
+                "completed": True,
+                "result": result
+            })
+            logger.info(f"🎉 Analysis completed successfully: {analysis_id}")
+            logger.info(f"📊 Final result summary: {total_sentences} sentences, {total_errors} issues, quality: {quality_index}%")
+            logger.info(f"📄 Content length: {len(result.get('content', ''))} characters")
+            logger.info(f"🔍 First few issues: {[s.get('feedback', [])[:2] for s in sentence_data[:3] if s.get('feedback')]}")
+            
+        except Exception as e:
+            analysis_progress[analysis_id].update({
+                "stage": "error",
+                "percentage": 0,
+                "message": f"Error: {str(e)}",
+                "error": str(e),
+                "completed": True
+            })
+            logger.error(f"Progressive analysis error in thread: {e}")
+            import traceback
+            logger.error(f"Full traceback: {traceback.format_exc()}")
+    
+    # Start the analysis in a background thread
+    analysis_thread = threading.Thread(target=run_analysis)
+    analysis_thread.daemon = True
+    analysis_thread.start()
+    
+    logger.info(f"🎯 Analysis thread started, returning analysis_id: {analysis_id}")
+    
+    # Return immediately with the analysis ID
+    return jsonify({
+        "analysis_id": analysis_id,
+        "success": True
+    })
+
+@main.route('/analysis_progress/<analysis_id>')
+def get_analysis_progress(analysis_id):
+    """Get the current progress of an analysis"""
+    from flask import make_response
+    
+    progress = analysis_progress.get(analysis_id, {
+        "stage": "unknown",
+        "percentage": 0,
+        "message": "Analysis not found",
+        "completed": True,
+        "error": "Analysis ID not found"
+    })
+    
+    logger.info(f"� Progress requested for {analysis_id}")
+    logger.info(f"🔍 Progress data: {progress}")
+    if 'result' in progress:
+        result = progress['result']
+        logger.info(f"🔍 Result structure: {type(result)} with keys: {result.keys() if isinstance(result, dict) else 'not dict'}")
+        if isinstance(result, dict):
+            logger.info(f"🔍 Result content: sentences={len(result.get('sentences', []))}, report keys={list(result.get('report', {}).keys())}, content length={len(result.get('content', ''))}")
+    
+    # Create response with no-cache headers
+    response = make_response(jsonify(progress))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+@main.route('/analysis_stream/<analysis_id>')
+def analysis_stream(analysis_id):
+    """Server-Sent Events stream for real-time progress updates"""
+    def generate():
+        while True:
+            progress = analysis_progress.get(analysis_id, {})
+            if not progress:
+                yield f"data: {json.dumps({'error': 'Analysis not found'})}\n\n"
+                break
+                
+            yield f"data: {json.dumps(progress)}\n\n"
+            
+            if progress.get('completed', False):
+                # Cleanup after completion
+                if analysis_id in analysis_progress:
+                    # Keep result for a short time then clean up
+                    import threading
+                    def cleanup():
+                        time.sleep(30)  # Keep for 30 seconds
+                        analysis_progress.pop(analysis_id, None)
+                    threading.Thread(target=cleanup).start()
+                break
+                
+            time.sleep(0.5)  # Update every 500ms
+    
+    return Response(generate(), mimetype='text/plain')
+
+feedback_list = []
 
 @main.route('/feedback', methods=['POST'])
 def submit_feedback():

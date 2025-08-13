@@ -1,0 +1,15 @@
+This is a test document to demonstrate the progressive analysis feature.
+
+The system should show real-time progress updates as it processes this document. Each sentence will be analyzed individually, and users can see the percentage completion.
+
+This sentence is intentionally written in passive voice to trigger some feedback. Complex grammatical structures and long sentences may also be detected by the analysis engine.
+
+The progress indicator shows different stages: parsing, segmentation, analysis, and reporting. Users will see animated progress bars and detailed status messages throughout the process.
+
+This enhancement significantly improves user experience during document analysis. The system provides transparency about what's happening during the analysis process.
+
+Technical terms like API, JSON, HTML, and CSS should be properly formatted. The document scanner uses advanced algorithms to detect various writing issues.
+
+Long, complex sentences that contain multiple clauses and subclauses may be flagged for readability improvements, especially when they exceed the recommended length limits.
+
+The final result should show comprehensive feedback about grammar, style, readability, and technical terminology usage throughout the entire document.

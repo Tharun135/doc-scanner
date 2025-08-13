@@ -1,0 +1,7 @@
+This sentence are having bad grammar and should be detect by the rules.
+
+The document was written by me and it have passive voice.
+
+This is a very long sentence that goes on and on and contains way too many words which makes it difficult to read and understand because it violates the principle of clear and concise writing.
+
+Their are spelling errors and grammer mistakes in this text.
