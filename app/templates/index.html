@@ -680,12 +680,13 @@
         }
         
         .ai-feedback-content {
-            background: #495057;
-            border: none;
-            color: white;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #212529;
             border-radius: 8px;
             padding: 1rem;
-            margin-bottom: 1rem;        }
+            margin-bottom: 1rem;
+        }
         
         .performance-indicator {
     position: fixed;
@@ -2172,28 +2173,28 @@
                 </div>
                 
                 <div class="mb-3">
-                    <div class="text-light mb-2"><strong>📋 Issue:</strong></div>
-                    <div class="bg-dark bg-opacity-25 p-2 rounded">${feedback}</div>
+                    <div class="text-dark mb-2"><strong>📋 Issue:</strong></div>
+                    <div class="bg-light border p-2 rounded">${feedback}</div>
                 </div>
                 
                 <div class="mb-3">
-                    <div class="text-light mb-2"><strong>Original sentence:</strong></div>
-                    <div class="bg-dark bg-opacity-25 p-2 rounded font-italic">"${sentence}"</div>
+                    <div class="text-dark mb-2"><strong>Original sentence:</strong></div>
+                    <div class="bg-light border p-2 rounded font-italic">"${sentence}"</div>
                 </div>
                 
                 <div class="mb-3">
-                    <div class="text-light mb-2"><strong>AI Suggestion:</strong></div>
-                    <div class="suggestion-text bg-light text-dark p-3 rounded">
+                    <div class="text-dark mb-2"><strong>AI Suggestion:</strong></div>
+                    <div class="suggestion-text bg-primary bg-opacity-10 text-dark p-3 rounded border">
                         ${formatAISuggestion(aiSuggestion.suggestion)}
                     </div>
                 </div>
                 
                 ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
                 <div class="mb-3">
-                    <div class="text-light mb-2"><strong>📚 Knowledge Sources:</strong></div>
+                    <div class="text-dark mb-2"><strong>📚 Knowledge Sources:</strong></div>
                     <div class="sources-container">
                         ${aiSuggestion.sources.map(source => `
-                            <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2">
+                            <div class="source-item bg-light border p-2 rounded mb-2">
                                 <small class="text-muted">${source.type === 'guideline' ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
                                 <div class="source-content">${source.content}</div>
                             </div>

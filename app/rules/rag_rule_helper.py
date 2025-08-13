@@ -10,28 +10,22 @@ import html
 import re
 
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
-RAG_ENABLED = True  # Enabled for RAG functionality
+RAG_ENABLED = True  # Enabled for AI-only functionality
 
-# Local AI system is the primary source - NO MORE GOOGLE API!
+# Local AI system is the only source - No more fallbacks needed!
 try:
     from .smart_rag_manager import get_smart_rag_suggestion, get_rag_status
     SMART_RAG_AVAILABLE = True
     get_smart_rag_suggestion = get_smart_rag_suggestion  # Ensure it's properly bound
-    logging.info("Smart local AI manager loaded successfully")
+    logging.info("Smart local AI manager loaded successfully - fallbacks disabled")
 except ImportError as e:
     SMART_RAG_AVAILABLE = False
     get_smart_rag_suggestion = None  # Set to None if not available
-    logging.warning(f"Smart local AI manager not available: {e}")
+    logging.error(f"Smart local AI manager not available: {e}")
 
-# Legacy optimizers (not needed but keep for compatibility)
-try:
-    from .rag_performance_optimizer import get_fast_rag_suggestion, get_cache_stats
-    FAST_RAG_AVAILABLE = True
-except ImportError:
-    FAST_RAG_AVAILABLE = False
-
-# REMOVED: Google API RAG system - no longer needed with local AI
-RAG_AVAILABLE = False  # Disable old Google API system
+# REMOVED: Legacy optimizers and fallback systems - AI only now
+FAST_RAG_AVAILABLE = False
+RAG_AVAILABLE = False  # Disable old systems
 
 logger = logging.getLogger(__name__)
 
@@ -84,47 +78,49 @@ def format_rag_suggestion(raw_suggestion: str, rule_name: str = "unknown") -> st
 def check_with_rag(content: str, rule_name: str = "unknown", 
                    description: str = "", rule_patterns=None, **kwargs) -> List[str]:
     """
-    Simple RAG checker for basic rules with performance optimization.
+    AI-only checker using unlimited local Ollama AI.
+    No fallbacks - AI-powered suggestions only.
     
     Args:
         content: The text content to check
         rule_name: Name of the rule for logging/debugging
         description: Description of what the rule checks for
-        rule_patterns: Optional rule patterns (ignored when RAG disabled)
+        rule_patterns: Optional rule patterns (ignored - AI handles everything)
         **kwargs: Additional arguments (ignored)
     
     Returns:
-        List of suggestion strings
+        List of AI-generated suggestion strings
     """
-    # Early return if RAG is disabled for performance
+    # Early return if RAG is disabled
     if not RAG_ENABLED:
         return []
     
     suggestions = []
     
     try:
-        # Use fast RAG if available, fallback to standard RAG
-        if FAST_RAG_AVAILABLE:
-            # Get fast cached suggestion with 3-second timeout
-            rag_suggestion = get_fast_rag_suggestion(
+        # Use local AI system exclusively - no fallbacks
+        if SMART_RAG_AVAILABLE and get_smart_rag_suggestion is not None:
+            # Get AI suggestion using unlimited local Ollama
+            rag_suggestion, source = get_smart_rag_suggestion(
                 text=content,
                 rule_name=rule_name,
-                context=description,
-                timeout=3.0  # Quick timeout for responsiveness
+                context=description
             )
             
             if rag_suggestion:
                 formatted_suggestion = format_rag_suggestion(rag_suggestion, rule_name)
                 if formatted_suggestion:
                     suggestions.append(formatted_suggestion)
-                    logger.debug(f"Fast RAG suggestion provided for {rule_name}")
+                    logger.info(f"AI suggestion provided for {rule_name} from {source}")
+                else:
+                    logger.warning(f"AI suggestion formatting failed for {rule_name}")
             else:
-                logger.debug(f"Fast RAG returned no suggestion for {rule_name}")
+                logger.warning(f"AI returned no suggestion for {rule_name}")
         else:
-            logger.debug(f"No local AI system available for {rule_name}")
+            logger.error(f"Local AI system not available for {rule_name} - no fallbacks enabled")
             
     except Exception as e:
-        logger.warning(f"Local AI error for {rule_name}: {e}")
+        logger.error(f"Local AI error for {rule_name}: {e}")
     
     return suggestions
 
@@ -132,18 +128,19 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
                    rule_name: str = "unknown", 
                    fallback_suggestions: List[str] = None) -> List[Dict[str, Any]]:
     """
-    Advanced RAG-enabled rule checker with smart fallback.
+    AI-only rule checker with unlimited local Ollama.
+    Returns None if AI fails - no smart fallbacks.
     
     Args:
         content: The text content to check
         rule_patterns: Dictionary containing pattern detection logic
         rule_name: Name of the rule for logging/debugging
-        fallback_suggestions: List of fallback suggestions when RAG is unavailable
+        fallback_suggestions: Ignored - no fallbacks used
     
     Returns:
-        List of suggestion dictionaries with RAG enhancements
+        List of AI-generated suggestion dictionaries, or None if AI failed
     """
-    # Early return if RAG is disabled for performance
+    # Early return if RAG is disabled
     if not RAG_ENABLED:
         return []
     
@@ -159,7 +156,9 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
     if 'detect_function' in rule_patterns:
         detected_issues = rule_patterns['detect_function'](content, text_content)
     
-    # Process each detected issue with RAG
+    # If no issues detected by the pattern, return empty list (not None)
+    if not detected_issues:
+        return []
     for issue in detected_issues:
         if not isinstance(issue, dict):
             # Convert string issues to dict format
@@ -171,14 +170,13 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
                 "context": text_content[:200]  # First 200 chars as context
             }
         
-        # Try local AI first
-        rag_suggestion = None
+        # Use local AI exclusively - no fallbacks
         if SMART_RAG_AVAILABLE and get_smart_rag_suggestion is not None:
             try:
                 feedback_text = issue.get("message", "")
                 sentence_context = issue.get("context", "")
                 
-                # Use local AI instead of Google API
+                # Use unlimited local AI
                 local_ai_result, source = get_smart_rag_suggestion(
                     text=sentence_context or feedback_text,
                     rule_name=rule_name,
@@ -186,43 +184,33 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
                 )
                 
                 if local_ai_result:
-                    # Format the local AI suggestion to be user-friendly
+                    # Format the AI suggestion to be user-friendly
                     formatted_suggestion = format_rag_suggestion(local_ai_result, rule_name)
-                    rag_suggestion = formatted_suggestion
-                    logger.info(f"Local AI suggestion generated for {rule_name} from {source}")
+                    
+                    suggestions.append({
+                        "text": issue.get("text", ""),
+                        "start": issue.get("start", 0),
+                        "end": issue.get("end", 0),
+                        "message": formatted_suggestion,
+                        "method": "ai_unlimited",
+                        "rule": rule_name,
+                        "source": source,
+                        "original_issue": issue.get("message", "")
+                    })
+                    logger.info(f"AI suggestion generated for {rule_name} from {source}")
                 else:
-                    logger.debug(f"Local AI returned no suggestion for {rule_name}")
+                    logger.warning(f"AI returned no suggestion for {rule_name}")
+                    # Return None to indicate AI failure - let rule use fallback
+                    return None
                     
             except Exception as e:
                 logger.error(f"Local AI error in {rule_name}: {e}")
-        
-        # Use local AI suggestion if available, otherwise use fallback
-        if rag_suggestion:
-            suggestions.append({
-                "text": issue.get("text", ""),
-                "start": issue.get("start", 0),
-                "end": issue.get("end", 0),
-                "message": rag_suggestion,
-                "method": "rag_enhanced",
-                "rule": rule_name,
-                "original_issue": issue.get("message", "")
-            })
+                # Return None to indicate AI failure - let rule use fallback
+                return None
         else:
-            # Smart fallback
-            fallback_message = issue.get("message", "")
-            if fallback_suggestions:
-                # Use rule-specific fallback
-                fallback_message = fallback_suggestions[0] if fallback_suggestions else fallback_message
-            
-            suggestions.append({
-                "text": issue.get("text", ""),
-                "start": issue.get("start", 0),
-                "end": issue.get("end", 0),
-                "message": fallback_message,
-                "method": "rule_based_fallback",
-                "rule": rule_name,
-                "note": "RAG unavailable - using rule-based suggestion"
-            })
+            logger.error(f"Local AI system not available for {rule_name}")
+            # Return None to indicate AI failure - let rule use fallback
+            return None
     
     return suggestions
 

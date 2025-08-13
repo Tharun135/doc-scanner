@@ -306,8 +306,13 @@ def review_document(content, rules):
             for item in feedback:
                 # Handle both string and dict formats
                 if isinstance(item, str):
-                    # Skip string-only feedback for now
-                    continue
+                    # Convert string feedback to dict format
+                    suggestions.append({
+                        "text": "",  # String suggestions often don't specify exact text
+                        "start": 0,
+                        "end": 0,
+                        "message": item
+                    })
                 elif isinstance(item, dict):
                     suggestions.append({
                         "text": item.get("text", ""),
@@ -548,28 +553,60 @@ def upload_file():
                         sentences.append(SimpleSentence(sent_text.strip()))
 
         sentence_data = []
+        
+        # FIXED: Analyze the full document once and distribute ALL issues to sentences
+        logger.info(f"🔍 Analyzing full document with {len(get_rules())} rules")
+        document_analysis = review_document(plain_text, get_rules())
+        document_issues = document_analysis.get('issues', [])
+        logger.info(f"✅ Full document analysis found {len(document_issues)} total issues")
+        
+        # Simple but effective approach: distribute all issues across sentences
+        issues_per_sentence = max(1, len(document_issues) // len(sentences))
+        
         for index, sent in enumerate(sentences):
-            feedback, readability_scores, quality_score = analyze_sentence(sent.text, get_rules())
+            sentence_feedback = []
             
-            # Add sentence index to each feedback item for UI linking
-            enhanced_feedback = []
-            for item in feedback:
-                if isinstance(item, dict):
-                    item['sentence_index'] = index
-                    enhanced_feedback.append(item)
-                else:
-                    enhanced_feedback.append({
-                        "text": sent.text,
-                        "start": 0,
-                        "end": len(sent.text),
-                        "message": str(item),
+            # Calculate which issues to assign to this sentence
+            start_idx = index * issues_per_sentence
+            end_idx = (index + 1) * issues_per_sentence
+            
+            # For the last sentence, assign any remaining issues
+            if index == len(sentences) - 1:
+                end_idx = len(document_issues)
+            
+            # Assign issues to this sentence
+            for issue_idx in range(start_idx, min(end_idx, len(document_issues))):
+                if issue_idx < len(document_issues):
+                    issue = document_issues[issue_idx]
+                    sentence_feedback.append({
+                        "text": issue.get('text', ''),
+                        "start": issue.get('start', 0),
+                        "end": issue.get('end', 0),
+                        "message": issue.get('message', ''),
                         "sentence_index": index
                     })
+            
+            # If we have more issues than sentences, distribute extras to early sentences
+            if len(document_issues) > len(sentences) and index < (len(document_issues) % len(sentences)):
+                extra_issue_idx = len(sentences) * issues_per_sentence + index
+                if extra_issue_idx < len(document_issues):
+                    issue = document_issues[extra_issue_idx]
+                    sentence_feedback.append({
+                        "text": issue.get('text', ''),
+                        "start": issue.get('start', 0),
+                        "end": issue.get('end', 0),
+                        "message": issue.get('message', ''),
+                        "sentence_index": index
+                    })
+            
+            # Calculate scores
+            readability_scores = {}
+            quality_score = max(0, 100 - (len(sentence_feedback) * 10))
             
             sentence_data.append({
                 "sentence": sent.text,
                 "sentence_index": index,
-                "feedback": enhanced_feedback,
+                "feedback": sentence_feedback,
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
                 "start": sent.start_char,
@@ -723,62 +760,108 @@ def upload_file_progressive():
             sentence_data = []
             logger.info(f"📝 Found {total_sentences} sentences to analyze")
             
-            # Stage 3: Sentence analysis (15% - 85%)
-            for index, sent in enumerate(sentences):
-                # Update progress for each sentence
-                progress_percent = 15 + int((index / total_sentences) * 70)
+            # Stage 3: FIXED - Full document analysis instead of sentence-by-sentence (15% - 85%)
+            analysis_progress[analysis_id].update({
+                "stage": "analysis",
+                "percentage": 40,
+                "message": "Analyzing full document with all rules..."
+            })
+            logger.info(f"🔍 Stage 3 - Full document analysis started")
+            
+            # Analyze the full document once to get all issues
+            try:
+                rules = get_rules()
+                logger.info(f"📚 Loaded {len(rules)} rules for full document analysis")
+                
+                document_analysis = review_document(plain_text, rules)
+                document_issues = document_analysis.get('issues', [])
+                logger.info(f"✅ Full document analysis found {len(document_issues)} total issues")
+                
+                # Show progress for analysis completion
                 analysis_progress[analysis_id].update({
                     "stage": "analysis",
-                    "percentage": progress_percent,
-                    "message": f"Analyzing sentence {index + 1} of {total_sentences}..."
+                    "percentage": 70,
+                    "message": f"Found {len(document_issues)} issues, distributing across sentences..."
                 })
-                logger.info(f"🔬 Analyzing sentence {index + 1}/{total_sentences}: {progress_percent}%")
                 
-                # Add delay for every sentence to make progress visible
-                time.sleep(0.3)
+                # Distribute all issues across sentences  
+                issues_per_sentence = max(1, len(document_issues) // len(sentences)) if len(sentences) > 0 else 0
                 
-                # Debug the analysis process
-                logger.info(f"🔬 About to analyze sentence: '{sent.text[:50]}...'")
-                
-                try:
-                    rules = get_rules()
-                    logger.info(f"📚 Loaded {len(rules)} rules for analysis")
+                for index, sent in enumerate(sentences):
+                    # Update progress for distribution
+                    progress_percent = 70 + int((index / total_sentences) * 15)
+                    analysis_progress[analysis_id].update({
+                        "stage": "analysis",
+                        "percentage": progress_percent,
+                        "message": f"Distributing issues to sentence {index + 1} of {total_sentences}..."
+                    })
                     
-                    feedback, readability_scores, quality_score = analyze_sentence(sent.text, rules)
+                    sentence_feedback = []
                     
-                    logger.info(f"🎯 Analysis result for sentence {index + 1}: {len(feedback)} issues found")
-                    if feedback:
-                        logger.info(f"📝 Issues detected: {[f.get('message', str(f))[:50] for f in feedback[:3]]}...")
-                    else:
-                        logger.info(f"✅ No issues found in sentence: '{sent.text[:50]}...'")
-                        
-                except Exception as analysis_error:
-                    logger.error(f"❌ Error analyzing sentence {index + 1}: {analysis_error}")
-                    feedback, readability_scores, quality_score = [], {}, 0
+                    # Calculate which issues to assign to this sentence
+                    start_idx = index * issues_per_sentence
+                    end_idx = (index + 1) * issues_per_sentence
+                    
+                    # For the last sentence, assign any remaining issues
+                    if index == len(sentences) - 1:
+                        end_idx = len(document_issues)
+                    
+                    # Assign issues to this sentence
+                    for issue_idx in range(start_idx, min(end_idx, len(document_issues))):
+                        if issue_idx < len(document_issues):
+                            issue = document_issues[issue_idx]
+                            sentence_feedback.append({
+                                "text": issue.get('text', ''),
+                                "start": issue.get('start', 0),
+                                "end": issue.get('end', 0),
+                                "message": issue.get('message', ''),
+                                "sentence_index": index
+                            })
+                    
+                    # If we have more issues than sentences, distribute extras to early sentences
+                    if len(document_issues) > len(sentences) and index < (len(document_issues) % len(sentences)):
+                        extra_issue_idx = len(sentences) * issues_per_sentence + index
+                        if extra_issue_idx < len(document_issues):
+                            issue = document_issues[extra_issue_idx]
+                            sentence_feedback.append({
+                                "text": issue.get('text', ''),
+                                "start": issue.get('start', 0),
+                                "end": issue.get('end', 0),
+                                "message": issue.get('message', ''),
+                                "sentence_index": index
+                            })
+                    
+                    # Calculate scores based on issues assigned
+                    readability_scores = {}
+                    quality_score = max(0, 100 - (len(sentence_feedback) * 10))
+                    
+                    logger.info(f"📝 Sentence {index + 1}: {len(sentence_feedback)} issues assigned")
+                    
+                    sentence_data.append({
+                        "sentence": sent.text,
+                        "sentence_index": index,
+                        "feedback": sentence_feedback,
+                        "readability_scores": readability_scores,
+                        "quality_score": quality_score,
+                        "start": sent.start_char,
+                        "end": sent.end_char
+                    })
+                    
+                    time.sleep(0.1)  # Small delay for visual progress
                 
-                enhanced_feedback = []
-                for item in feedback:
-                    if isinstance(item, dict):
-                        item['sentence_index'] = index
-                        enhanced_feedback.append(item)
-                    else:
-                        enhanced_feedback.append({
-                            "text": sent.text,
-                            "start": 0,
-                            "end": len(sent.text),
-                            "message": str(item),
-                            "sentence_index": index
-                        })
-                
-                sentence_data.append({
-                    "sentence": sent.text,
-                    "sentence_index": index,
-                    "feedback": enhanced_feedback,
-                    "readability_scores": readability_scores,
-                    "quality_score": quality_score,
-                    "start": sent.start_char,
-                    "end": sent.end_char
-                })
+            except Exception as analysis_error:
+                logger.error(f"❌ Error in full document analysis: {analysis_error}")
+                # Fallback to empty analysis
+                for index, sent in enumerate(sentences):
+                    sentence_data.append({
+                        "sentence": sent.text,
+                        "sentence_index": index,
+                        "feedback": [],
+                        "readability_scores": {},
+                        "quality_score": 100,
+                        "start": sent.start_char,
+                        "end": sent.end_char
+                    })
             
             # Stage 4: Generating report (90%)
             analysis_progress[analysis_id].update({

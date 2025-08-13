@@ -35,36 +35,31 @@ nlp.add_pipe("custom_sentencizer", before="parser")
 
 def check(content):
     """
-    Check for long sentences using RAG with smart fallback.
-    Primary: RAG-enhanced suggestions for sentence breaking
-    Fallback: Rule-based long sentence detection with basic splitting suggestions
+    Check for long sentences using AI-only detection.
+    No legacy fallbacks - pure AI suggestions only.
     """
     
-    # Temporarily disable RAG for performance - use legacy approach
-    RAG_AVAILABLE_FOR_THIS_RULE = False  # Set to True to re-enable RAG
-    
     # Use RAG-enhanced checking if available
-    if RAG_HELPER_AVAILABLE and RAG_AVAILABLE_FOR_THIS_RULE:
-        logger.info("Using RAG-enhanced long sentence checking")
+    if RAG_HELPER_AVAILABLE:
+        logger.info("Using AI-only long sentence checking")
         
         rule_patterns = {
             'detect_function': detect_long_sentence_issues
         }
         
-        fallback_suggestions = [
-            "Break this long sentence into shorter ones for better readability. Aim for 15-20 words per sentence."
-        ]
-        
-        return check_with_rag_advanced(
+        rag_result = check_with_rag_advanced(
             content=content,
             rule_patterns=rule_patterns,
             rule_name="long_sentences",
-            fallback_suggestions=fallback_suggestions
+            fallback_suggestions=None
         )
+        
+        # Return AI results or empty list if AI fails
+        return rag_result if rag_result is not None else []
     
-    # Legacy fallback when RAG helper is not available
-    logger.warning("RAG helper not available, using legacy long sentence detection")
-    return check_legacy_long_sentences(content)
+    # No RAG helper available - return empty
+    logger.info("RAG helper not available - no legacy fallback, returning empty")
+    return []
 
 def check_legacy_long_sentences(content):
     """Legacy long sentence detection for fallback when RAG is not available."""

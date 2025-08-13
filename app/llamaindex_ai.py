@@ -5,7 +5,7 @@ This module provides context-aware suggestions using local Ollama models (Mistra
 Features:
 - Local Ollama AI for unlimited, free intelligent responses
 - LlamaIndex RAG with ChromaDB for context-aware analysis
-- Support for Mistral and Phi-3 models
+- Support for Mistral/Phi-3 models
 - No API quotas or costs
 - Natural language explanations
 - Fallbacks when local AI unavailable
@@ -183,6 +183,97 @@ class LlamaIndexAISuggestionEngine:
             logger.error(f"Failed to initialize LlamaIndex AI system: {e}")
             self.is_initialized = False
     
+    def _create_direct_prompt(self, feedback_text: str, sentence_context: str, document_type: str) -> str:
+        """Create a focused prompt for direct Ollama API calls."""
+        if "passive voice" in feedback_text.lower():
+            return f"""Convert this passive voice sentence to active voice and provide 3 good active alternatives:
+
+Sentence: "{sentence_context}"
+
+Provide exactly 3 options in this format:
+OPTION 1: [strong active voice alternative]
+OPTION 2: [different active voice alternative]  
+OPTION 3: [third active voice alternative]
+WHY: Converts passive voice to active voice for clearer communication.
+
+Be concise and direct."""
+
+        elif "long sentence" in feedback_text.lower():
+            return f"""Break this long sentence into shorter, clearer sentences:
+
+Sentence: "{sentence_context}"
+
+Provide exactly 3 options in this format:
+OPTION 1:
+• [first part]
+• [second part]
+
+OPTION 2:
+• [alternative split first part]
+• [alternative split second part]
+
+OPTION 3: [combined alternative as single sentence]
+WHY: Breaks long sentence into clearer, shorter segments.
+
+Be concise and direct."""
+
+        elif "modal verb" in feedback_text.lower():
+            return f"""Remove unnecessary modal verbs to make this more direct:
+
+Sentence: "{sentence_context}"
+
+Provide exactly 3 options in this format:
+OPTION 1: [rewritten without modal verbs]
+OPTION 2: [alternative without modal verbs]
+OPTION 3: [third alternative]
+WHY: Removes unnecessary modal verbs for direct instructions.
+
+Be concise and direct."""
+
+        else:
+            return f"""Improve this text to address: {feedback_text}
+
+Text: "{sentence_context}"
+
+Provide exactly 3 options in this format:
+OPTION 1: [improved version]
+OPTION 2: [alternative improvement]
+OPTION 3: [third alternative]
+WHY: [brief explanation of the improvement]
+
+Be concise and direct."""
+    
+    def _format_ai_response(self, ai_response: str, feedback_text: str, sentence_context: str) -> str:
+        """Format AI response to ensure consistent structure."""
+        # If AI already provided proper format, use it
+        if "OPTION 1:" in ai_response and "WHY:" in ai_response:
+            return ai_response.strip()
+        
+        # If AI gave a simple answer, format it properly
+        lines = ai_response.strip().split('\n')
+        if len(lines) >= 3:
+            # Try to extract multiple options from response
+            options = [line.strip() for line in lines if line.strip() and not line.strip().startswith('WHY')][:3]
+            if len(options) >= 2:
+                formatted = "\n".join([f"OPTION {i+1}: {opt}" for i, opt in enumerate(options)])
+                formatted += f"\nWHY: Addresses {feedback_text.lower()} for better writing clarity."
+                return formatted
+        
+        # Single response - create variations
+        base_response = lines[0].strip() if lines else ai_response.strip()
+        
+        if "passive voice" in feedback_text.lower():
+            return f"""OPTION 1: {base_response}
+OPTION 2: {base_response.replace('The system', 'The interface') if 'system' in base_response else f'Alternative: {base_response}'}
+OPTION 3: {base_response.replace('The ', 'This ') if base_response.startswith('The ') else f'You can write: {base_response}'}
+WHY: Converts passive voice to active voice for clearer communication."""
+        
+        else:
+            return f"""OPTION 1: {base_response}
+OPTION 2: Alternative: {base_response}
+OPTION 3: Consider: {base_response}
+WHY: Addresses {feedback_text.lower()} for better writing clarity."""
+    
     def _initialize_writing_knowledge(self):
         """Initialize the knowledge base with writing guidelines and rules."""
         writing_guidelines = [
@@ -273,76 +364,78 @@ class LlamaIndexAISuggestionEngine:
             document_content = ""
             
         try:
-            # Special case: For long sentences, use rule-based splitting first
+            # AGGRESSIVE PERFORMANCE OPTIMIZATION: Only use AI for critical rules
+            critical_ai_rules = ["passive_voice", "long_sentences"]
+            
+            # For non-critical rules, skip AI entirely to maximize speed
+            is_critical_rule = any(critical in feedback_text.lower() for critical in ["passive voice", "long sentence", "sentence too long"])
+            
+            if not is_critical_rule:
+                logger.info(f"Skipping AI for performance - using rule-based fallback only")
+                return None
+            
+            # Special case: For long sentences, use rule-based splitting first (fastest option)
             if ("long sentence" in feedback_text.lower() or "sentence too long" in feedback_text.lower()) and sentence_context:
                 logger.info("Using enhanced rule-based splitting for long sentence")
                 return self.generate_smart_fallback(feedback_text, sentence_context)
             
-            # Primary method: Use LlamaIndex RAG for intelligent suggestions
+            # Use direct Ollama API for speed and reliability  
             if self.is_initialized and self._test_ollama_working():
-                logger.info(f"Using LlamaIndex AI with model: {self.model_name}")
+                logger.info(f"Using direct Ollama API with model: {self.model_name}")
                 
-                # Create a comprehensive query for RAG
-                query = self._create_rag_query(feedback_text, sentence_context, document_type)
+                start_time = time.time()
                 
-                # Get RAG response with timeout protection
-                response = self._safe_query_execution(query)
+                # Create a focused prompt for the specific issue
+                prompt = self._create_direct_prompt(feedback_text, sentence_context, document_type)
                 
-                if response:
-                    # Extract suggestion from response
-                    suggestion = str(response).strip()
+                # Direct Ollama API call (faster than RAG)
+                response = requests.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": self.model_name,
+                        "prompt": prompt,
+                        "stream": False
+                    },
+                    timeout=3  # Very short timeout for speed
+                )
+                
+                elapsed = time.time() - start_time
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_response = result.get("response", "").strip()
                     
-                    # For passive voice, let AI handle it completely, don't override
-                    if "passive voice" in feedback_text.lower() and suggestion and len(suggestion) > 50:
-                        # AI provided a good response, use it as-is
-                        logger.info("Using pure AI suggestion without rule-based enhancement")
+                    if ai_response:
+                        # Format the response properly
+                        formatted_suggestion = self._format_ai_response(ai_response, feedback_text, sentence_context)
+                        
+                        logger.info(f"Direct Ollama suggestion generated in {elapsed:.2f}s")
                         return {
-                            "suggestion": suggestion,
-                            "ai_answer": suggestion,
+                            "suggestion": formatted_suggestion,
+                            "ai_answer": ai_response,
                             "confidence": "high",
-                            "method": "llamaindex_rag",
+                            "method": "direct_ollama",
                             "model": self.model_name,
-                            "sources": "local_knowledge_base",
+                            "processing_time": elapsed,
                             "context_used": {
                                 "document_type": document_type,
                                 "writing_goals": writing_goals,
-                                "primary_ai": "ollama_local",
-                                "issue_detection": "rule_based"
+                                "feedback_type": feedback_text
                             }
                         }
                     else:
-                        # Enhance with specific fixes if needed (non-passive voice cases)
-                        enhanced_suggestion = self._enhance_suggestion(
-                            suggestion, feedback_text, sentence_context
-                        )
-                        
-                        logger.info("LlamaIndex AI suggestion generated successfully")
-                        return {
-                            "suggestion": enhanced_suggestion,
-                            "ai_answer": suggestion,
-                            "confidence": "high",
-                            "method": "llamaindex_rag",
-                            "model": self.model_name,
-                            "sources": "local_knowledge_base",
-                            "context_used": {
-                                "document_type": document_type,
-                                "writing_goals": writing_goals,
-                                "primary_ai": "ollama_local",
-                                "issue_detection": "rule_based"
-                            }
-                        }
+                        logger.warning("AI returned empty response")
+                        return None
                 else:
-                    logger.warning("Ollama query failed, using smart fallback")
+                    logger.warning("Ollama query failed")
+                    return None
             else:
-                logger.warning("LlamaIndex AI not available or Ollama not working, using smart fallback")
-            
-            # Fallback: Smart rule-based response
-            return self.generate_smart_fallback(feedback_text, sentence_context)
+                logger.warning("LlamaIndex AI not available or Ollama not working")
+                return None
             
         except Exception as e:
             logger.error(f"LlamaIndex suggestion failed: {str(e)}")
-            # Fall back to smart response
-            return self.generate_smart_fallback(feedback_text, sentence_context)
+            return None
     
     def _create_rag_query(self, feedback_text: str, sentence_context: str, document_type: str) -> str:
         """Create an effective query for RAG retrieval."""
@@ -600,11 +693,11 @@ class LlamaIndexAISuggestionEngine:
                     sentence2 += '.'
                 
                 options = [
-                    f"OPTION 1 has sentence 1: {sentence1.rstrip('.')}, sentence 2: {sentence2.rstrip('.')}",
-                    f"OPTION 2 has sentence 1: {parts[0].strip().rstrip('.')}, sentence 2: This {sentence2.lower().rstrip('.')}",
+                    f"OPTION 1:\n• {sentence1.rstrip('.')}\n• {sentence2.rstrip('.')}",
+                    f"OPTION 2:\n• {parts[0].strip().rstrip('.')}\n• This {sentence2.lower().rstrip('.')}",
                     f"OPTION 3: {sentence1} {sentence2}"
                 ]
-                return "\n".join(options) + "\nWHY: Breaks long sentence into clearer, shorter segments."
+                return "\n\n".join(options) + "\nWHY: Breaks long sentence into clearer, shorter segments."
         
         elif " and " in sentence and len(sentence) > 60:
             parts = sentence.split(" and ", 1)
@@ -615,19 +708,19 @@ class LlamaIndexAISuggestionEngine:
                     sentence2 += '.'
                 
                 options = [
-                    f"OPTION 1 has sentence 1: {sentence1.rstrip('.')}, sentence 2: {sentence2.rstrip('.')}",
-                    f"OPTION 2 has sentence 1: {parts[0].strip().rstrip('.')}, sentence 2: Additionally, {sentence2.lower().rstrip('.')}",
+                    f"OPTION 1:\n• {sentence1.rstrip('.')}\n• {sentence2.rstrip('.')}",
+                    f"OPTION 2:\n• {parts[0].strip().rstrip('.')}\n• Additionally, {sentence2.lower().rstrip('.')}",
                     f"OPTION 3: {sentence1} {sentence2}"
                 ]
-                return "\n".join(options) + "\nWHY: Breaks long sentence into clearer, shorter segments."
+                return "\n\n".join(options) + "\nWHY: Breaks long sentence into clearer, shorter segments."
         
         # If no good split point found, return formatted options anyway
         options = [
-            f"OPTION 1: {sentence.rstrip('.')}",
+            f"OPTION 1:\n• {sentence.rstrip('.')[:len(sentence)//2]}\n• {sentence.rstrip('.')[len(sentence)//2:]}",
             f"OPTION 2: Consider breaking this into shorter parts",
             f"OPTION 3: Revise for clarity and conciseness"
         ]
-        return "\n".join(options) + "\nWHY: Addresses sentence length for better readability."
+        return "\n\n".join(options) + "\nWHY: Addresses sentence length for better readability."
     
     def generate_smart_fallback(self, feedback_text: str, sentence_context: str = "") -> Dict[str, Any]:
         """
@@ -747,18 +840,21 @@ class LlamaIndexAISuggestionEngine:
             if not self._check_ollama_service():
                 return False
             
-            # Try a simple request to test if model actually works
+            # Try a very simple request to test if model actually works
             test_response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
                     "model": self.model_name,
-                    "prompt": "Test",
+                    "prompt": "Hi",
                     "stream": False
                 },
-                timeout=15
+                timeout=2  # Very fast test
             )
             
-            return test_response.status_code == 200 and "response" in test_response.json()
+            if test_response.status_code == 200:
+                result = test_response.json()
+                return "response" in result and len(result.get("response", "").strip()) > 0
+            return False
         except Exception as e:
             logger.warning(f"Ollama test failed: {e}")
             return False

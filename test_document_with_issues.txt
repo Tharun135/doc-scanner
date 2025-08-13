@@ -1,0 +1,7 @@
+Test Document with Issues
+
+The document was written by the team. It should be reviewed carefully by management. This process needs to be done quickly because there are many deadlines that were set by the project coordinators.
+
+The system can be configured by clicking on the settings button. Passwords should be changed regularly by users for better security purposes.
+
+This sentence has too many words and should probably be broken into smaller pieces because it is difficult to read and understand when everything is combined into one very long sentence that goes on and on.

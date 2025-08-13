@@ -1,0 +1,239 @@
+{
+  "content": "<p>The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding. The utilization of complex terminology makes the document harder to understand. Additionally, there are very important points that need to be addressed. Furthermore, the implementation was conducted by the development team.</p>",
+  "report": {
+    "avgQualityScore": 0,
+    "message": "Content analysis completed.",
+    "totalSentences": 6,
+    "totalWords": 83
+  },
+  "sentences": [
+    {
+      "end": 39,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Issue: Unnecessary modifier detected - consider removing 'very' as it may not add value",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Issue: Unnecessary modifier detected - consider removing 'very' as it may not add value",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        }
+      ],
+      "quality_score": 60,
+      "readability_scores": {},
+      "sentence": "The document was written by the author.",
+      "sentence_index": 0,
+      "start": 0
+    },
+    {
+      "end": 88,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Consider removing unnecessary modifier: 'very long' → 'long' or use a stronger word.",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider removing unnecessary modifier: 'extremely difficult' → 'difficult' or use a stronger word.",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider removing unnecessary modifier: 'very important' → 'important' or use a stronger word.",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        }
+      ],
+      "quality_score": 60,
+      "readability_scores": {},
+      "sentence": "It was reviewed extensively by the team members.",
+      "sentence_index": 1,
+      "start": 40
+    },
+    {
+      "end": 312,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Weak verb construction: Replace 'there are very' with list the items directly for directness.",
+          "sentence_index": 2,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 2,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 2,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Many sentences start with the same word. Consider varying sentence beginnings.",
+          "sentence_index": 2,
+          "start": 0,
+          "text": ""
+        }
+      ],
+      "quality_score": 60,
+      "readability_scores": {},
+      "sentence": "This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding.",
+      "sentence_index": 2,
+      "start": 89
+    },
+    {
+      "end": 392,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 3,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 223,
+          "message": "Consider breaking into shorter sentences: '• This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 3,
+          "start": 0,
+          "text": "This is a very long sentence that continues to go ..."
+        },
+        {
+          "end": 38,
+          "message": "Possible passive voice detected - consider active voice",
+          "sentence_index": 3,
+          "start": 0,
+          "text": "The document was written by the author"
+        }
+      ],
+      "quality_score": 70,
+      "readability_scores": {},
+      "sentence": "The utilization of complex terminology makes the document harder to understand.",
+      "sentence_index": 3,
+      "start": 313
+    },
+    {
+      "end": 465,
+      "feedback": [
+        {
+          "end": 87,
+          "message": "Possible passive voice detected - consider active voice",
+          "sentence_index": 4,
+          "start": 40,
+          "text": "It was reviewed extensively by the team members"
+        },
+        {
+          "end": 464,
+          "message": "Possible passive voice detected - consider active voice",
+          "sentence_index": 4,
+          "start": 393,
+          "text": "Additionally, there are very important points that need to be addressed"
+        },
+        {
+          "end": 535,
+          "message": "Possible passive voice detected - consider active voice",
+          "sentence_index": 4,
+          "start": 466,
+          "text": "Furthermore, the implementation was conducted by the development team"
+        }
+      ],
+      "quality_score": 70,
+      "readability_scores": {},
+      "sentence": "Additionally, there are very important points that need to be addressed.",
+      "sentence_index": 4,
+      "start": 393
+    },
+    {
+      "end": 536,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 5,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 5,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 5,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 5,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '• The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point'",
+          "sentence_index": 5,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Many sentences start with the same word. Consider varying sentence beginnings.",
+          "sentence_index": 5,
+          "start": 0,
+          "text": ""
+        }
+      ],
+      "quality_score": 40,
+      "readability_scores": {},
+      "sentence": "Furthermore, the implementation was conducted by the development team.",
+      "sentence_index": 5,
+      "start": 466
+    }
+  ]
+}

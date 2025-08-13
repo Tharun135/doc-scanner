@@ -29,6 +29,9 @@ class SmartRAGManager:
         self._local_ai_engine = None
         self._ai_initialized = False
         
+        # PERFORMANCE MODE: Skip AI for non-critical rules
+        self.performance_mode = True  # Enable for faster analysis
+        
         # LAZY LOADING: Don't initialize AI engine until actually needed
         logger.info("🚀 Smart RAG Manager ready (AI engine will load on first use)")
     
@@ -100,25 +103,28 @@ class SmartRAGManager:
         
         self._save_response_cache()
     
-    def get_fallback_suggestion(self, text: str, rule_name: str) -> Optional[str]:
-        """Provide fallback suggestion when AI is unavailable."""
-        fallback_suggestions = {
-            "passive_voice": "Consider converting to active voice for clarity.",
-            "long_sentences": "Consider breaking this into shorter sentences.",
-            "technical_terms": "Ensure technical terms are properly capitalized.",
-            "grammar_issues": "Review grammar and sentence structure.",
-            "style_formatting": "Check formatting consistency.",
-        }
-        
-        return fallback_suggestions.get(rule_name, "Consider reviewing this text for improvement.")
-    
     def get_smart_suggestion(self, text: str, rule_name: str, context: str = "") -> tuple[Optional[str], str]:
         """
         Get smart suggestion using LOCAL OLLAMA AI (unlimited usage).
+        No fallbacks - AI-only suggestions.
         
         Returns:
-            (suggestion, source) where source is 'cache', 'local_ai', or 'fallback'
+            (suggestion, source) where source is 'cache', 'local_ai', or 'ai_error'
         """
+        # PERFORMANCE MODE: Only use AI for critical rules
+        if self.performance_mode:
+            # Expanded critical rules that benefit from AI suggestions
+            # Note: These match the actual rule_name parameters passed to check_with_rag
+            critical_rules = [
+                "passive_voice", "long_sentences", "manual_steps_rewriting", 
+                "grammar_issues", "redundant_phrases", "readability_metrics",
+                "spelling_checker", "style_guide", "modal_verbs_can_may",
+                "cross_references_links", "document_structure", "inclusive_language"
+            ]
+            if not any(critical in rule_name for critical in critical_rules):
+                logger.info(f"Performance mode: Skipping AI for {rule_name}")
+                return None, "performance_skip"
+        
         # Check cache first for instant response
         cached = self.get_cached_response(text, rule_name)
         if cached:
@@ -150,21 +156,21 @@ class SmartRAGManager:
                     if suggestion and suggestion.strip():
                         # Cache the successful response
                         self.cache_response(text, rule_name, suggestion)
-                        logger.debug(f"🤖 Local AI suggestion for {rule_name} in {elapsed:.2f}s")
+                        logger.info(f"🤖 Local AI suggestion for {rule_name} in {elapsed:.2f}s")
                         return suggestion, "local_ai"
                     else:
-                        logger.debug(f"Local AI returned empty suggestion for {rule_name}")
+                        logger.warning(f"Local AI returned empty suggestion for {rule_name}")
+                        return None, "ai_error"
                 else:
-                    logger.debug(f"Local AI returned invalid result for {rule_name}")
+                    logger.warning(f"Local AI returned invalid result for {rule_name}")
+                    return None, "ai_error"
                     
             except Exception as e:
-                logger.warning(f"Local AI error for {rule_name}: {e}")
+                logger.error(f"Local AI error for {rule_name}: {e}")
+                return None, "ai_error"
         else:
-            logger.debug("Local AI engine not available")
-        
-        # Fallback when AI fails
-        fallback = self.get_fallback_suggestion(text, rule_name)
-        return fallback, "fallback"
+            logger.error("Local AI engine not available")
+            return None, "ai_error"
     
     def _create_rule_specific_prompt(self, text: str, rule_name: str, context: str = "") -> str:
         """Create optimized prompt for specific rule types."""
@@ -184,15 +190,17 @@ class SmartRAGManager:
         return base_prompt
     
     def get_status(self) -> Dict[str, Any]:
-        """Get current local AI system status."""
+        """Get current local AI system status - AI-only, no fallbacks."""
         return {
             "ai_engine_available": self._local_ai_engine is not None,
             "ai_engine_initialized": getattr(self._local_ai_engine, 'is_initialized', False) if self._local_ai_engine else False,
             "ai_init_attempted": self._ai_initialized,
             "cached_responses": len(self.response_cache),
             "quota_limits": "NONE - Unlimited local AI usage! 🚀",
+            "fallback_system": "DISABLED - AI-only suggestions",
             "model_info": getattr(self._local_ai_engine, 'model_name', 'Not loaded yet') if self._local_ai_engine else "Lazy loading enabled",
-            "loading_strategy": "Lazy loading - AI engine loads on first use for fast startup"
+            "loading_strategy": "Lazy loading - AI engine loads on first use for fast startup",
+            "suggestion_mode": "AI-ONLY (no rule-based fallbacks)"
         }
 
 # Global manager instance (lazy loaded)
@@ -207,7 +215,7 @@ def _get_rag_manager():
 
 def get_smart_rag_suggestion(text: str, rule_name: str, context: str = "") -> tuple[Optional[str], str]:
     """
-    Get AI suggestion using LOCAL OLLAMA MODEL (unlimited usage).
+    Get AI suggestion using LOCAL OLLAMA MODEL (unlimited usage, AI-only).
     
     Args:
         text: Text to analyze
@@ -218,12 +226,12 @@ def get_smart_rag_suggestion(text: str, rule_name: str, context: str = "") -> tu
         (suggestion, source) where source indicates where suggestion came from:
         - 'cache': Instant cached response
         - 'local_ai': Fresh AI response from local Ollama
-        - 'fallback': Rule-based fallback suggestion
+        - 'ai_error': AI system failed (no fallbacks)
     """
     return _get_rag_manager().get_smart_suggestion(text, rule_name, context)
 
 def get_rag_status() -> Dict[str, Any]:
-    """Get local AI system status - NO QUOTAS, UNLIMITED USAGE! 🚀"""
+    """Get local AI system status - NO QUOTAS, UNLIMITED USAGE, AI-ONLY! 🚀"""
     return _get_rag_manager().get_status()
 
 def clear_local_ai_cache():
@@ -240,5 +248,6 @@ def get_cache_stats() -> Dict[str, Any]:
         "cached_responses": len(manager.response_cache),
         "ai_engine_available": manager._local_ai_engine is not None,
         "unlimited_usage": True,
-        "quota_free": "✅ No quotas with local Ollama!"
+        "quota_free": "✅ No quotas with local Ollama!",
+        "fallback_system": "❌ Disabled - AI-only mode"
     }

@@ -26,35 +26,72 @@ logger = logging.getLogger(__name__)
 # Note: Now using shared spaCy model instead of individual loading
 # This improves performance significantly
 
+def _emergency_passive_detection(content):
+    """
+    Emergency minimal passive voice detection when AI is completely unavailable.
+    Only basic pattern matching for critical passive voice patterns.
+    """
+    suggestions = []
+    
+    # Simple passive voice patterns - just the most obvious ones
+    passive_patterns = [
+        r'\b(was|were|is|are|been|be)\s+\w+(ed|en)\b',  # was written, were taken, etc.
+        r'\b(was|were|is|are)\s+\w+ed\s+by\b',  # was written by, were taken by
+    ]
+    
+    sentences = content.split('.')
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if len(sentence) < 10:  # Skip very short fragments
+            continue
+            
+        for pattern in passive_patterns:
+            if re.search(pattern, sentence, re.IGNORECASE):
+                suggestions.append({
+                    'text': sentence[:100] + "..." if len(sentence) > 100 else sentence,
+                    'start': content.find(sentence),
+                    'end': content.find(sentence) + len(sentence),
+                    'message': "Possible passive voice detected - consider active voice",
+                    'method': 'emergency_fallback',
+                    'rule': 'passive_voice'
+                })
+                break  # Only report once per sentence
+                
+    return suggestions
+
 def check(content):
     """
-    Check for passive voice issues using RAG with smart fallback.
-    Primary: RAG-enhanced suggestions
-    Fallback: Rule-based passive voice detection
+    Check for passive voice issues using AI-first with emergency fallback.
+    Primary: AI-only suggestions
+    Emergency: Basic pattern detection when AI completely unavailable
     """
     
     # Use RAG-enhanced checking if available
     if RAG_HELPER_AVAILABLE:
-        logger.info("Using RAG-enhanced passive voice checking")
+        logger.info("Using AI-only passive voice checking")
         
         rule_patterns = {
             'detect_function': detect_passive_voice_issues
         }
         
-        fallback_suggestions = [
-            "Convert passive voice to active voice for clearer, more direct communication. Example: Change 'The report was written by John' to 'John wrote the report'."
-        ]
-        
-        return check_with_rag_advanced(
+        rag_result = check_with_rag_advanced(
             content=content,
             rule_patterns=rule_patterns,
             rule_name="passive_voice",
-            fallback_suggestions=fallback_suggestions
+            fallback_suggestions=None
         )
+        
+        # If AI returns results, use them
+        if rag_result and len(rag_result) > 0:
+            return rag_result
+        
+        # Emergency fallback: basic pattern detection only when AI completely fails
+        logger.info("AI unavailable - using emergency pattern detection for passive voice")
+        return _emergency_passive_detection(content)
     
-    # Legacy fallback when RAG helper is not available
-    logger.warning("RAG helper not available, using legacy passive voice detection")
-    return check_legacy_passive_voice(content)
+    # No RAG helper available - return empty
+    logger.info("RAG helper not available - no legacy fallback, returning empty")
+    return []
 
 def check_legacy_passive_voice(content):
     """Legacy passive voice detection for fallback when RAG is not available."""

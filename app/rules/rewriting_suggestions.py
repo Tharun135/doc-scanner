@@ -16,14 +16,13 @@ except ImportError:
 nlp = get_nlp_model()
 
 def check(content):
-    """Check for manual steps and action verb improvements."""
-    suggestions = []
+    """Check for manual steps and action verb improvements using AI-only."""
     
     # Strip HTML tags from content
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
     
-    # Use RAG system if available
+    # Use RAG system - AI-only, no fallbacks
     if RAG_HELPER_AVAILABLE:
         rag_suggestions = check_with_rag(
             content, 
@@ -33,74 +32,8 @@ def check(content):
         if rag_suggestions:
             return rag_suggestions
     
-    doc = nlp(text_content)
-    
-    # Rule 1: Check for verb forms that could be converted to imperative
-    action_verbs = {
-        r'\bclicks?\b': 'Click',
-        r'\bselects?\b': 'Select', 
-        r'\bopens?\b': 'Open',
-        r'\btypes?\b': 'Enter',
-        r'\bputs?\b': 'Enter',
-        r'\bscrolls?\b': 'Scroll',
-        r'\bexpands?\b': 'Expand',
-        r'\bloads?\b': 'Load',
-        r'\bnavigates?(?!\s+to)\b': 'Navigate to',  # Only match "navigate(s)" not followed by "to"
-        r'\bdrags?\b': 'Drag',
-        r'\bdrops?\b': 'Drop',
-        r'\bhighlights?\b': 'Highlight',
-        r'\bchooses?\b': 'Choose',
-        r'\bpresses?\b': 'Press'
-    }
-    
-    for pattern, replacement in action_verbs.items():
-        if re.search(pattern, text_content, re.IGNORECASE):
-            # Check if it's in a procedural context
-            sentences_with_action = []
-            for sent in doc.sents:
-                if re.search(pattern, sent.text, re.IGNORECASE):
-                    sentences_with_action.append(sent.text.strip())
-            
-            if sentences_with_action and _is_procedural_context(sentences_with_action):
-                # Find the specific sentence with the verb
-                for sent in doc.sents:
-                    sent_verb_match = re.search(pattern, sent.text, re.IGNORECASE)
-                    if sent_verb_match:
-                        found_verb = sent_verb_match.group()
-                        
-                        # Special handling for "types" - check if it's used as a verb or noun
-                        if pattern == r'\btypes?\b':
-                            if not _is_types_verb_usage(sent, found_verb):
-                                continue  # Skip if "types" is used as a noun
-                        
-                        # Special handling for "navigate" - skip if already followed by "to"
-                        if pattern == r'\bnavigates?(?!\s+to)\b':
-                            # Double-check that "to" doesn't immediately follow in the sentence
-                            match_end = sent_verb_match.end()
-                            remaining_text = sent.text[match_end:].lstrip()
-                            if remaining_text.lower().startswith('to'):
-                                continue  # Skip if "to" follows the matched verb
-                        
-                        # Only suggest if the found verb is different from the replacement
-                        if found_verb.lower() != replacement.lower():
-                            suggestions.append({
-                                "text": sent.text.strip(),
-                                "start": sent.start_char,
-                                "end": sent.end_char,
-                                "message": f"Consider using imperative form '{replacement}' instead of '{found_verb}' for clearer instructions."
-                            })
-                        break  # Only add suggestion once per pattern
-    
-    # Rule 2: Check for sequences that could be numbered steps
-    if _has_sequential_indicators(text_content):
-        suggestions.append({
-            "text": text_content[:100] + "..." if len(text_content) > 100 else text_content,
-            "start": 0,
-            "end": len(text_content),
-            "message": "This content appears to contain sequential instructions. Consider formatting as numbered manual steps."
-        })
-    
-    return suggestions
+    # If AI not available, return empty (no legacy fallback)
+    return []
 
 def _is_procedural_context(sentences):
     """Check if sentences are in a procedural/instructional context."""

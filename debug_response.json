@@ -1,0 +1,37 @@
+{
+  "content": "<p>This document contains writing issues. The passive voice was used extensively throughout this document.</p>",
+  "report": {
+    "avgQualityScore": 50,
+    "message": "Content analysis completed.",
+    "totalSentences": 2,
+    "totalWords": 14
+  },
+  "sentences": [
+    {
+      "end": 38,
+      "feedback": [
+        {
+          "end": 102,
+          "message": "Possible passive voice detected - consider active voice",
+          "sentence_index": 0,
+          "start": 39,
+          "text": "The passive voice was used extensively throughout this document"
+        }
+      ],
+      "quality_score": 90,
+      "readability_scores": {},
+      "sentence": "This document contains writing issues.",
+      "sentence_index": 0,
+      "start": 0
+    },
+    {
+      "end": 103,
+      "feedback": [],
+      "quality_score": 100,
+      "readability_scores": {},
+      "sentence": "The passive voice was used extensively throughout this document.",
+      "sentence_index": 1,
+      "start": 39
+    }
+  ]
+}

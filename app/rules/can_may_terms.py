@@ -15,9 +15,8 @@ nlp = get_nlp_model()
 
 def check(content):
     """
-    Check for modal verb issues (can/may/could) using RAG with smart fallback.
-    Primary: RAG-enhanced suggestions
-    Fallback: Rule-based modal verb detection
+    Check for modal verb issues (can/may/could) using AI-only detection.
+    No legacy fallbacks - pure AI suggestions only.
     """
     
     # Use RAG-enhanced checking if available
@@ -26,19 +25,18 @@ def check(content):
             'detect_function': detect_modal_verb_issues
         }
         
-        fallback_suggestions = [
-            "Modal verb usage: Use 'can' for ability and permission, 'may' for possibility and formal permission, 'could' for past actions or polite requests."
-        ]
-        
-        return check_with_rag(
+        rag_result = check_with_rag(
             content=content,
             rule_patterns=rule_patterns,
             rule_name="modal_verbs_can_may",
-            fallback_suggestions=fallback_suggestions
+            fallback_suggestions=None
         )
+        
+        # Return AI results or empty list if AI fails
+        return rag_result if rag_result else []
     
-    # Legacy fallback when RAG helper is not available
-    return check_legacy_modal_verbs(content)
+    # No RAG helper available - return empty (no legacy fallback)
+    return []
 
 def check_legacy_modal_verbs(content):
     """Legacy modal verb checking for fallback when RAG is not available."""

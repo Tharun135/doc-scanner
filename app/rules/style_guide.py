@@ -17,9 +17,8 @@ nlp = get_nlp_model()
 
 def check(content):
     """
-    Check for style guide issues using RAG with smart fallback.
-    Primary: RAG-enhanced suggestions
-    Fallback: Rule-based detection
+    Check for style guide issues using AI-only detection.
+    No legacy fallbacks - pure AI suggestions only.
     """
     
     # Use RAG-enhanced checking if available
@@ -28,19 +27,18 @@ def check(content):
             'detect_function': detect_style_guide_issues
         }
         
-        fallback_suggestions = [
-            "Style issue detected. Consider using concise, clear language and following consistent formatting guidelines."
-        ]
-        
-        return check_with_rag(
+        rag_result = check_with_rag(
             content=content,
             rule_patterns=rule_patterns,
             rule_name="style_guide",
-            fallback_suggestions=fallback_suggestions
+            fallback_suggestions=None
         )
+        
+        # Return AI results or empty list if AI fails
+        return rag_result if rag_result else []
     
-    # Legacy fallback when RAG helper is not available
-    return check_legacy_style_guide(content)
+    # No RAG helper available - return empty (no legacy fallback)
+    return []
 
 def detect_style_guide_issues(content: str, text_content: str):
     """
