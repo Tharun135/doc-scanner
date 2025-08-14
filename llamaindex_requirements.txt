@@ -1,0 +1,16 @@
+# Additional requirements for LlamaIndex AI integration
+# Add these to your requirements.txt
+
+llama-index>=0.9.0
+llama-index-llms-ollama>=0.1.0
+llama-index-embeddings-huggingface>=0.1.0
+ollama>=0.1.0
+
+# Optional: for better performance
+torch>=2.0.0
+transformers>=4.30.0
+
+# Note: Ollama must be installed separately
+# 1. Download from: https://ollama.ai/
+# 2. Install the model: ollama pull llama3.2:3b
+# 3. Start Ollama service: ollama serve

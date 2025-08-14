@@ -24,7 +24,7 @@ except ImportError:
     logger = logging.getLogger(__name__)
     logger.warning("python-dotenv not available - environment variables must be set manually")
 
-# Add the parent directory to the path for imports
+# Add the parent directory to the path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 main = Blueprint('main', __name__)
@@ -363,144 +363,59 @@ def get_feedbacks():
 
 @main.route('/ai_suggestion', methods=['POST'])
 def ai_suggestion():
-    global current_document_content  # Access global variable
+    """Get RAG-powered AI suggestions for writing improvements."""
+    global current_document_content
     
-    from .ai_improvement import get_enhanced_ai_suggestion
-    from .performance_monitor import track_suggestion, learning_system
-    import uuid
-    import time
+    # Import RAG system
+    try:
+        from .rules.rag_main import get_rag_suggestion
+    except ImportError:
+        return jsonify({"error": "RAG system not available"}), 500
     
     data = request.get_json()
-    feedback_text = data.get('feedback')
+    feedback_text = data.get('feedback', '')
     sentence_context = data.get('sentence', '')
     document_type = data.get('document_type', 'general')
     writing_goals = data.get('writing_goals', ['clarity', 'conciseness'])
     
-    logger.info(f"AI suggestion request: feedback='{feedback_text[:50]}...', sentence='{sentence_context[:50]}...'")
-    
     if not feedback_text:
-        logger.error("No feedback provided in AI suggestion request")
-        return jsonify({"error": "No feedback provided"}), 400
-
-    suggestion_id = str(uuid.uuid4())
-    start_time = time.time()
-
+        return jsonify({"error": "No feedback text provided"}), 400
+    
     try:
-        # First try learned suggestions from user feedback
-        learned_suggestion = learning_system.get_learned_suggestion(feedback_text, sentence_context)
-        
-        if learned_suggestion:
-            response_time = time.time() - start_time
-            track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                           document_type, "learned_pattern", response_time)
-            
-            logger.info(f"Using learned pattern suggestion for: {feedback_text[:30]}...")
-            return jsonify({
-                "suggestion": learned_suggestion,
-                "gemini_answer": "Using learned pattern from previous user feedback.",
-                "confidence": "high",
-                "method": "learned_pattern",
-                "suggestion_id": suggestion_id,
-                "note": "Generated using learned patterns from user feedback"
-            })
-        
-        # Use enhanced AI suggestion system with RAG
-        logger.info("Getting enhanced AI suggestion with RAG context...")
-        result = get_enhanced_ai_suggestion(
-            feedback_text=feedback_text,
+        # Use RAG system to get contextual suggestions
+        rag_response = get_rag_suggestion(
+            issue_text=feedback_text,
             sentence_context=sentence_context,
-            document_type=document_type,
-            writing_goals=writing_goals,
-            document_content=current_document_content  # Pass document content for RAG
+            category=document_type
         )
         
-        # Validate result structure
-        if not result or not isinstance(result, dict):
-            raise ValueError(f"Invalid result structure: {type(result)}")
-            
-        if 'suggestion' not in result:
-            raise ValueError(f"Missing 'suggestion' in result: {list(result.keys())}")
-            
-        if not result['suggestion'] or not str(result['suggestion']).strip():
-            raise ValueError("Empty or whitespace-only suggestion returned")
+        # Format response for web interface
+        response = {
+            "suggestion": rag_response.get('suggestion', 'No specific suggestion available'),
+            "original_text": sentence_context,
+            "improved_text": rag_response.get('improved_text', sentence_context),
+            "explanation": rag_response.get('explanation', 'RAG-powered improvement suggestion'),
+            "source": rag_response.get('source', 'Knowledge Base'),
+            "confidence": rag_response.get('confidence', 0.8),
+            "category": rag_response.get('category', 'general'),
+            "timestamp": time.time()
+        }
         
-        response_time = time.time() - start_time
-        track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                        document_type, result.get("method", "unknown"), response_time)
-        
-        logger.info(f"AI suggestion successful using method: {result.get('method', 'unknown')}")
-        return jsonify({
-            "suggestion": result["suggestion"],
-            "gemini_answer": result.get("gemini_answer", ""),
-            "confidence": result.get("confidence", "medium"),
-            "method": result.get("method", "unknown"),
-            "suggestion_id": suggestion_id,
-            "context_used": result.get("context_used", {}),
-            "sources": result.get("sources", []),
-            "note": f"Generated using {result.get('method', 'unknown')} approach"
-        })
+        logger.info(f"RAG suggestion provided for: {feedback_text[:50]}...")
+        return jsonify(response)
         
     except Exception as e:
-        logger.error(f"AI suggestion error: {str(e)}")
-        response_time = time.time() - start_time
-        
-        # Final fallback
-        suggestion = generate_smart_suggestion(feedback_text)
-        track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                        document_type, "basic_fallback", response_time)
-        
-        return jsonify({
-            "suggestion": suggestion, 
-            "gemini_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
-            "confidence": "low",
-            "method": "basic_fallback",
-            "suggestion_id": suggestion_id,
-            "note": "Using basic fallback suggestions"
-        })
-
-def generate_smart_suggestion(feedback_text):
-    """Generate intelligent suggestions based on feedback content"""
-    feedback_lower = feedback_text.lower()
-    
-    # Grammar and style suggestions
-    if "passive" in feedback_lower or "passive voice" in feedback_lower:
-        return "Try using active voice instead of passive voice. Replace 'was done by' with the subject doing the action directly."
-    
-    elif "long" in feedback_lower and ("sentence" in feedback_lower or "paragraph" in feedback_lower):
-        return "Break this into shorter sentences. Aim for 15-20 words per sentence for better readability."
-    
-    elif "complex" in feedback_lower or "complicated" in feedback_lower:
-        return "Simplify the language. Use shorter words and clearer phrases to make your meaning more accessible."
-    
-    elif "unclear" in feedback_lower or "confusing" in feedback_lower:
-        return "Add more specific details or context. Consider providing examples or breaking down complex concepts."
-    
-    elif "repetitive" in feedback_lower or "redundant" in feedback_lower:
-        return "Remove repeated words or phrases. Vary your sentence structure and vocabulary for better flow."
-    
-    elif "formal" in feedback_lower and ("too" in feedback_lower or "overly" in feedback_lower):
-        return "Use more conversational language. Replace formal terms with everyday words your audience will understand."
-    
-    elif "informal" in feedback_lower and ("too" in feedback_lower or "overly" in feedback_lower):
-        return "Use more professional language. Avoid contractions and casual expressions in formal writing."
-    
-    elif "transition" in feedback_lower or "flow" in feedback_lower:
-        return "Add transition words like 'however', 'therefore', 'furthermore' to connect your ideas more smoothly."
-    
-    elif "evidence" in feedback_lower or "support" in feedback_lower:
-        return "Add supporting evidence, examples, or data to strengthen your argument and make it more convincing."
-    
-    elif "conclusion" in feedback_lower:
-        return "Strengthen your conclusion by summarizing key points and clearly stating the implications or next steps."
-    
-    else:
-        # General suggestion based on common writing issues
-        return "Consider breaking long sentences into shorter ones, using active voice, and adding specific examples to support your points."
+        logger.error(f"Error getting RAG suggestion: {e}")
+        return jsonify({"error": f"Failed to get suggestion: {str(e)}"}), 500
 
 @main.route('/suggestion_feedback', methods=['POST'])
 def suggestion_feedback():
     """Record user feedback on AI suggestions."""
-    from .performance_monitor import record_user_feedback
+    try:
+        from .performance_monitor import record_user_feedback
+    except ImportError:
+        logger.warning("Performance monitor not available")
+        return jsonify({"message": "Feedback noted (monitor unavailable)"})
     
     data = request.get_json()
     suggestion_id = data.get('suggestion_id')
@@ -530,12 +445,18 @@ def suggestion_feedback():
 @main.route('/performance_dashboard', methods=['GET'])
 def performance_dashboard():
     """Get performance dashboard data."""
-    from .performance_monitor import get_performance_dashboard
-    
     try:
+        from .performance_monitor import get_performance_dashboard
         dashboard_data = get_performance_dashboard()
         return jsonify(dashboard_data)
-        
+    except ImportError:
+        logger.warning("Performance monitor not available")
+        return jsonify({
+            "error": "Performance dashboard not available",
+            "suggestions_count": 0,
+            "avg_response_time": 0,
+            "user_satisfaction": 0
+        })
     except Exception as e:
         logger.error(f"Error getting dashboard data: {str(e)}")
         return jsonify({"error": "Failed to get dashboard data"}), 500
@@ -543,7 +464,18 @@ def performance_dashboard():
 @main.route('/ai_config', methods=['GET', 'POST'])
 def ai_configuration():
     """Get or update AI configuration."""
-    from .ai_config import config_manager
+    try:
+        from .ai_config import config_manager
+    except ImportError:
+        logger.warning("AI config manager not available")
+        if request.method == 'GET':
+            return jsonify({
+                "available_models": ["RAG System"],
+                "suggestion_config": {"enabled": True},
+                "feature_flags": {"rag_enabled": True}
+            })
+        else:
+            return jsonify({"message": "Configuration not available"})
     
     if request.method == 'GET':
         try:
@@ -733,3 +665,10 @@ def debug_ai():
     debug_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'debug_ai_frontend.html')
     with open(debug_file_path, 'r', encoding='utf-8') as f:
         return f.read()
+
+if __name__ == '__main__':
+    from . import create_app
+    print("🚀 Starting Doc Scanner with RAG System...")
+    print("🌐 Access at: http://localhost:5000")
+    app = create_app()
+    app.run(debug=True, host='0.0.0.0', port=5000)
