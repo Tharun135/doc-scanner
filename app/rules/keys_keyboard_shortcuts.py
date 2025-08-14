@@ -173,7 +173,36 @@ def check(content):
         pattern = rf'\b{verb}\b'
         matches = re.finditer(pattern, content, flags=re.IGNORECASE)
         for match in matches:
-            suggestions.append(f"Use 'select' instead of '{match.group()}' for UI actions.")
+            # Check context to ensure this is actually about UI actions
+            context = content[max(0, match.start()-50):match.end()+50].lower()
+            
+            # Strong UI indicators that clearly suggest interface interactions
+            strong_ui_indicators = [
+                'menu', 'button', 'option', 'dialog', 'dropdown', 'checkbox', 'radio', 
+                'interface', 'ui', 'screen', 'panel', 'window', 'toolbar', 'tab'
+            ]
+            
+            # Weaker indicators that need additional context
+            weak_ui_indicators = ['list', 'item']
+            
+            # Check for strong UI indicators
+            has_strong_ui = any(indicator in context for indicator in strong_ui_indicators)
+            
+            # Check for weak indicators with additional UI context
+            has_weak_ui_with_context = False
+            if any(indicator in context for indicator in weak_ui_indicators):
+                # Additional UI context words that make it more likely to be UI-related
+                ui_context_words = ['click', 'select', 'press', 'tap', 'interface', 'gui', 'application', 'software', 'program']
+                has_weak_ui_with_context = any(word in context for word in ui_context_words)
+            
+            # Only flag if there are clear UI context indicators
+            if has_strong_ui or has_weak_ui_with_context:
+                suggestions.append({
+                    "text": match.group(),
+                    "start": match.start(),
+                    "end": match.end(),
+                    "message": f"Use 'select' instead of '{match.group()}' for UI actions."
+                })
     
     # Rule 6: Use consistent terminology for pointing devices (e.g., 'mouse pointer' not 'cursor')
     cursor_matches = re.finditer(r'\bcursor\b', content, flags=re.IGNORECASE)

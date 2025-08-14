@@ -646,50 +646,89 @@ def upload_file():
 
         sentence_data = []
         
-        # FIXED: Analyze the full document once and distribute ALL issues to sentences
+        # FIXED: Analyze the full document once and map issues to correct sentences by position
         logger.info(f"🔍 Analyzing full document with {len(get_rules())} rules")
         document_analysis = review_document(plain_text, get_rules())
         document_issues = document_analysis.get('issues', [])
         logger.info(f"✅ Full document analysis found {len(document_issues)} total issues")
         
-        # Simple but effective approach: distribute all issues across sentences
-        issues_per_sentence = max(1, len(document_issues) // len(sentences))
+        # Build a mapping of character positions to sentences for accurate issue assignment
+        sentence_position_map = []
+        current_pos = 0
+        for index, sent in enumerate(sentences):
+            # Find the actual position of this sentence in the full text
+            sentence_start = plain_text.find(sent.text, current_pos)
+            if sentence_start != -1:
+                sentence_end = sentence_start + len(sent.text)
+                sentence_position_map.append({
+                    'index': index,
+                    'start': sentence_start,
+                    'end': sentence_end,
+                    'sentence': sent
+                })
+                current_pos = sentence_end
+            else:
+                # Fallback if sentence not found - use spaCy positions if available
+                if hasattr(sent, 'start_char') and hasattr(sent, 'end_char'):
+                    sentence_position_map.append({
+                        'index': index,
+                        'start': sent.start_char,
+                        'end': sent.end_char,
+                        'sentence': sent
+                    })
+                else:
+                    # Last resort: approximate position
+                    sentence_position_map.append({
+                        'index': index,
+                        'start': current_pos,
+                        'end': current_pos + len(sent.text),
+                        'sentence': sent
+                    })
+                    current_pos += len(sent.text)
+        
+        # Function to find which sentence contains an issue position
+        def find_sentence_for_issue(issue_start, issue_end):
+            for sent_info in sentence_position_map:
+                # Check if issue overlaps with this sentence
+                if (issue_start >= sent_info['start'] and issue_start < sent_info['end']) or \
+                   (issue_end > sent_info['start'] and issue_end <= sent_info['end']) or \
+                   (issue_start <= sent_info['start'] and issue_end >= sent_info['end']):
+                    return sent_info['index']
+            return None  # Issue doesn't match any sentence
+        
+        # Initialize sentence feedback lists
+        sentence_feedback_map = {i: [] for i in range(len(sentences))}
+        unmatched_issues = []
+        
+        # Assign each issue to the correct sentence based on position
+        for issue in document_issues:
+            issue_start = issue.get('start', 0)
+            issue_end = issue.get('end', 0)
+            
+            # Only try to match issues that have valid position information
+            if issue_start > 0 or issue_end > 0:
+                sentence_index = find_sentence_for_issue(issue_start, issue_end)
+                if sentence_index is not None:
+                    sentence_feedback_map[sentence_index].append({
+                        "text": issue.get('text', ''),
+                        "start": issue_start,
+                        "end": issue_end,
+                        "message": issue.get('message', ''),
+                        "sentence_index": sentence_index
+                    })
+                else:
+                    unmatched_issues.append(issue)
+            else:
+                # Issues without position info - these are problematic and should be fixed in rules
+                unmatched_issues.append(issue)
+        
+        if unmatched_issues:
+            logger.warning(f"⚠️ {len(unmatched_issues)} issues could not be matched to sentences (likely rules with missing position info)")
+            for issue in unmatched_issues:
+                logger.warning(f"   Unmatched issue: {issue.get('message', '')}")
         
         for index, sent in enumerate(sentences):
-            sentence_feedback = []
-            
-            # Calculate which issues to assign to this sentence
-            start_idx = index * issues_per_sentence
-            end_idx = (index + 1) * issues_per_sentence
-            
-            # For the last sentence, assign any remaining issues
-            if index == len(sentences) - 1:
-                end_idx = len(document_issues)
-            
-            # Assign issues to this sentence
-            for issue_idx in range(start_idx, min(end_idx, len(document_issues))):
-                if issue_idx < len(document_issues):
-                    issue = document_issues[issue_idx]
-                    sentence_feedback.append({
-                        "text": issue.get('text', ''),
-                        "start": issue.get('start', 0),
-                        "end": issue.get('end', 0),
-                        "message": issue.get('message', ''),
-                        "sentence_index": index
-                    })
-            
-            # If we have more issues than sentences, distribute extras to early sentences
-            if len(document_issues) > len(sentences) and index < (len(document_issues) % len(sentences)):
-                extra_issue_idx = len(sentences) * issues_per_sentence + index
-                if extra_issue_idx < len(document_issues):
-                    issue = document_issues[extra_issue_idx]
-                    sentence_feedback.append({
-                        "text": issue.get('text', ''),
-                        "start": issue.get('start', 0),
-                        "end": issue.get('end', 0),
-                        "message": issue.get('message', ''),
-                        "sentence_index": index
-                    })
+            sentence_feedback = sentence_feedback_map[index]
             
             # Calculate scores
             readability_scores = {}
@@ -876,8 +915,94 @@ def upload_file_progressive():
                     "message": f"Found {len(document_issues)} issues, distributing across sentences..."
                 })
                 
-                # Distribute all issues across sentences  
-                issues_per_sentence = max(1, len(document_issues) // len(sentences)) if len(sentences) > 0 else 0
+                # Map all issues to correct sentences by position instead of arbitrary distribution
+                
+                # Build a mapping of character positions to sentences for accurate issue assignment
+                sentence_position_map = []
+                current_pos = 0
+                for index, sent in enumerate(sentences):
+                    # Find the actual position of this sentence in the full text
+                    sentence_start = plain_text.find(sent.text, current_pos)
+                    if sentence_start != -1:
+                        sentence_end = sentence_start + len(sent.text)
+                        sentence_position_map.append({
+                            'index': index,
+                            'start': sentence_start,
+                            'end': sentence_end,
+                            'sentence': sent
+                        })
+                        current_pos = sentence_end
+                    else:
+                        # Fallback if sentence not found - use spaCy positions if available
+                        if hasattr(sent, 'start_char') and hasattr(sent, 'end_char'):
+                            sentence_position_map.append({
+                                'index': index,
+                                'start': sent.start_char,
+                                'end': sent.end_char,
+                                'sentence': sent
+                            })
+                        else:
+                            # Last resort: approximate position
+                            sentence_position_map.append({
+                                'index': index,
+                                'start': current_pos,
+                                'end': current_pos + len(sent.text),
+                                'sentence': sent
+                            })
+                            current_pos += len(sent.text)
+                
+                # Function to find which sentence contains an issue position
+                def find_sentence_for_issue(issue_start, issue_end):
+                    for sent_info in sentence_position_map:
+                        # Check if issue overlaps with this sentence
+                        if (issue_start >= sent_info['start'] and issue_start < sent_info['end']) or \
+                           (issue_end > sent_info['start'] and issue_end <= sent_info['end']) or \
+                           (issue_start <= sent_info['start'] and issue_end >= sent_info['end']):
+                            return sent_info['index']
+                    return None  # Issue doesn't match any sentence
+                
+                # Initialize sentence feedback lists
+                sentence_feedback_map = {i: [] for i in range(len(sentences))}
+                unmatched_issues = []
+                
+                # Assign each issue to the correct sentence based on position
+                for issue in document_issues:
+                    issue_start = issue.get('start', 0)
+                    issue_end = issue.get('end', 0)
+                    
+                    # Only try to match issues that have valid position information
+                    if issue_start > 0 or issue_end > 0:
+                        sentence_index = find_sentence_for_issue(issue_start, issue_end)
+                        if sentence_index is not None:
+                            # For large documents (>20 sentences), skip RAG enhancement to improve speed
+                            if total_sentences > 20:
+                                enhanced_feedback = {
+                                    "enhanced_response": issue.get('message', ''),
+                                    "method": "fast_mode"
+                                }
+                            else:
+                                # Enhanced with RAG system (timeout protected)
+                                enhanced_feedback = enhance_issue_with_rag(issue, plain_text, timeout_seconds=1)
+                            
+                            sentence_feedback_map[sentence_index].append({
+                                "text": issue.get('text', ''),
+                                "start": issue_start,
+                                "end": issue_end,
+                                "message": enhanced_feedback.get('enhanced_response', issue.get('message', '')),
+                                "original_message": issue.get('message', ''),
+                                "rag_enhanced": enhanced_feedback.get('method', '') == 'enhanced_rag',
+                                "sentence_index": sentence_index
+                            })
+                        else:
+                            unmatched_issues.append(issue)
+                    else:
+                        # Issues without position info - these are problematic and should be fixed in rules
+                        unmatched_issues.append(issue)
+                
+                if unmatched_issues:
+                    logger.warning(f"⚠️ {len(unmatched_issues)} issues could not be matched to sentences (likely rules with missing position info)")
+                    for issue in unmatched_issues:
+                        logger.warning(f"   Unmatched issue: {issue.get('message', '')}")
                 
                 for index, sent in enumerate(sentences):
                     # Update progress for distribution with more informative messages
@@ -892,53 +1017,7 @@ def upload_file_progressive():
                         "message": status_message
                     })
                     
-                    sentence_feedback = []
-                    
-                    # Calculate which issues to assign to this sentence
-                    start_idx = index * issues_per_sentence
-                    end_idx = (index + 1) * issues_per_sentence
-                    
-                    # For the last sentence, assign any remaining issues
-                    if index == len(sentences) - 1:
-                        end_idx = len(document_issues)
-                    
-                    # Assign issues to this sentence with RAG enhancement
-                    for issue_idx in range(start_idx, min(end_idx, len(document_issues))):
-                        if issue_idx < len(document_issues):
-                            issue = document_issues[issue_idx]
-                            
-                            # For large documents (>20 sentences), skip RAG enhancement to improve speed
-                            if total_sentences > 20:
-                                enhanced_feedback = {
-                                    "enhanced_response": issue.get('message', ''),
-                                    "method": "fast_mode"
-                                }
-                            else:
-                                # Enhanced with RAG system (timeout protected)
-                                enhanced_feedback = enhance_issue_with_rag(issue, plain_text, timeout_seconds=1)
-                            
-                            sentence_feedback.append({
-                                "text": issue.get('text', ''),
-                                "start": issue.get('start', 0),
-                                "end": issue.get('end', 0),
-                                "message": enhanced_feedback.get('enhanced_response', issue.get('message', '')),
-                                "original_message": issue.get('message', ''),
-                                "rag_enhanced": enhanced_feedback.get('method', '') == 'enhanced_rag',
-                                "sentence_index": index
-                            })
-                    
-                    # If we have more issues than sentences, distribute extras to early sentences
-                    if len(document_issues) > len(sentences) and index < (len(document_issues) % len(sentences)):
-                        extra_issue_idx = len(sentences) * issues_per_sentence + index
-                        if extra_issue_idx < len(document_issues):
-                            issue = document_issues[extra_issue_idx]
-                            sentence_feedback.append({
-                                "text": issue.get('text', ''),
-                                "start": issue.get('start', 0),
-                                "end": issue.get('end', 0),
-                                "message": issue.get('message', ''),
-                                "sentence_index": index
-                            })
+                    sentence_feedback = sentence_feedback_map[index]
                     
                     # Calculate scores based on issues assigned
                     readability_scores = {}
