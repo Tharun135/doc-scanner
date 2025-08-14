@@ -168,10 +168,15 @@ def check_exclamation_overuse(text_content):
         
         # Flag if more than 10% of sentences use exclamation points
         if exclamation_ratio > 0.1 and exclamation_count > 2:
+            # Find the first exclamation point for positioning
+            first_exclamation = text_content.find('!')
+            if first_exclamation == -1:
+                first_exclamation = 0  # Fallback
+                
             suggestions.append({
-                "text": "",
-                "start": 0,
-                "end": 0,
+                "text": "!",
+                "start": first_exclamation,  # FIXED: Use position of first exclamation
+                "end": first_exclamation + 1,
                 "message": f"Excessive exclamation point usage: {exclamation_count} exclamation points in {total_sentences} sentences. Consider using periods for most statements."
             })
     
@@ -190,26 +195,66 @@ def check_exclamation_overuse(text_content):
 
 def check_quotation_marks(text_content):
     """Check for quotation mark consistency and proper usage."""
+    import re
     suggestions = []
     
-    # Check for mismatched quotation marks
-    single_quotes = text_content.count("'")
+    # IMPROVED: Distinguish between apostrophes and actual single quotation marks
+    # Count only single quotes that are likely to be quotation marks, not apostrophes
+    
+    # Find actual single quotation marks (not apostrophes)
+    # Apostrophes are typically within words (contractions) or possessives
+    # Quotation marks are typically at word boundaries
+    
+    # Pattern to find apostrophes (contractions and possessives)
+    apostrophe_pattern = r"[a-zA-Z]'[a-zA-Z]|[a-zA-Z]'s\b|[a-zA-Z]'t\b|[a-zA-Z]'re\b|[a-zA-Z]'ve\b|[a-zA-Z]'ll\b|[a-zA-Z]'d\b|[a-zA-Z]'m\b"
+    apostrophes = len(re.findall(apostrophe_pattern, text_content))
+    
+    # Count all single quotes
+    total_single_quotes = text_content.count("'")
+    
+    # Actual quotation marks = total single quotes - apostrophes
+    quotation_single_quotes = total_single_quotes - apostrophes
+    
+    # Check for double quotes (these are always quotation marks)
     double_quotes = text_content.count('"')
     
-    # Check for uneven quote counts (potential mismatch)
-    if single_quotes % 2 != 0:
-        suggestions.append({
-            "text": "",
-            "start": 0,
-            "end": 0,
-            "message": f"Unmatched single quotation marks detected. Found {single_quotes} single quotes - should be even number."
-        })
+    # Check for uneven quote counts (potential mismatch) - only for actual quotation marks
+    if quotation_single_quotes > 0 and quotation_single_quotes % 2 != 0:
+        # Find the first single quote that's not an apostrophe
+        first_quote_pos = 0
+        for match in re.finditer(r"'", text_content):
+            pos = match.start()
+            # Check if this is likely an apostrophe
+            if pos > 0 and pos < len(text_content) - 1:
+                before_char = text_content[pos - 1]
+                after_char = text_content[pos + 1]
+                # Skip if it looks like an apostrophe (letter before and after, or possessive/contraction)
+                if (before_char.isalpha() and after_char.isalpha()) or \
+                   (before_char.isalpha() and after_char in 's') or \
+                   (before_char.isalpha() and text_content[pos:pos+3] in ["'t ", "'re", "'ve", "'ll", "'d ", "'m "]):
+                    continue
+            # This looks like a quotation mark
+            first_quote_pos = pos
+            break
+            
+        if first_quote_pos > 0:
+            suggestions.append({
+                "text": "'",
+                "start": first_quote_pos,
+                "end": first_quote_pos + 1,
+                "message": f"Unmatched single quotation marks detected. Found {quotation_single_quotes} quotation marks - should be even number. (Apostrophes in contractions like \"don't\" are not counted)"
+            })
     
     if double_quotes % 2 != 0:
+        # Find the first double quote for positioning
+        first_double_quote = text_content.find('"')
+        if first_double_quote == -1:
+            first_double_quote = 0  # Fallback
+            
         suggestions.append({
-            "text": "",
-            "start": 0,
-            "end": 0,
+            "text": '"',
+            "start": first_double_quote,  # FIXED: Use position of first double quote
+            "end": first_double_quote + 1,
             "message": f"Unmatched double quotation marks detected. Found {double_quotes} double quotes - should be even number."
         })
     
@@ -229,12 +274,49 @@ def check_quotation_marks(text_content):
 
 def check_dash_usage(text_content):
     """Check for proper hyphen, en-dash, and em-dash usage."""
+    import re
     suggestions = []
     
     # Check for double hyphens that should be em-dashes
+    # BUT exclude markdown syntax contexts
     double_hyphen = re.finditer(r'--+', text_content)
     
     for match in double_hyphen:
+        # Get the context around the match
+        start_pos = match.start()
+        end_pos = match.end()
+        
+        # Find the line containing this match
+        line_start = text_content.rfind('\n', 0, start_pos) + 1
+        line_end = text_content.find('\n', end_pos)
+        if line_end == -1:
+            line_end = len(text_content)
+        
+        current_line = text_content[line_start:line_end]
+        
+        # Skip if this looks like markdown table syntax
+        # Markdown tables use | and --- patterns
+        if '|' in current_line and re.search(r'^\s*\|?[\s\-\|:]+\|?\s*$', current_line.strip()):
+            continue
+            
+        # Skip if this is a markdown horizontal rule (--- on its own line)
+        if re.match(r'^\s*-{3,}\s*$', current_line.strip()):
+            continue
+            
+        # Skip if this is part of a YAML front matter or similar (--- at start of line)
+        if re.match(r'^\s*-{3,}', current_line.strip()):
+            continue
+            
+        # Skip if this appears to be a code block or technical content
+        # Look for surrounding context that suggests technical usage
+        context_before = text_content[max(0, start_pos - 50):start_pos]
+        context_after = text_content[end_pos:min(len(text_content), end_pos + 50)]
+        
+        # Skip if surrounded by code-like characters
+        if any(char in context_before + context_after for char in ['`', '{', '}', '<', '>', '=', 'http']):
+            continue
+        
+        # If we get here, it's likely a genuine case where em-dash should be used
         suggestions.append({
             "text": match.group(0),
             "start": match.start(),

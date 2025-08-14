@@ -48,5 +48,95 @@
     "method": "enhanced_rag",
     "processing_time": 78.68973565101624,
     "timestamp": "2025-08-14T09:42:35.345416"
+  },
+  "e7f562cd37eeaac6d5bf694fd5155660": {
+    "original_issue": "appropriate",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: appropriate",
+    "knowledge_retrieved": "",
+    "enhanced_response": "appropriate",
+    "method": "enhanced_rag",
+    "processing_time": 76.81296277046204,
+    "timestamp": "2025-08-14T13:55:32.274882"
+  },
+  "955071446418aff2961e222aee6c78ec": {
+    "original_issue": "Customer is responsible for configuring the applic...",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: Customer is responsible for configuring the applic",
+    "knowledge_retrieved": "",
+    "enhanced_response": "Customer is responsible for configuring the applic...",
+    "method": "enhanced_rag",
+    "processing_time": 79.84156894683838,
+    "timestamp": "2025-08-14T13:55:36.307213"
+  },
+  "2ac5924c53f2f3e4249ab693b945db52": {
+    "original_issue": "The operator personnel accessing the system is wel...",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: The operator personnel accessing the system is wel",
+    "knowledge_retrieved": "",
+    "enhanced_response": "The operator personnel accessing the system is wel...",
+    "method": "enhanced_rag",
+    "processing_time": 83.10981440544128,
+    "timestamp": "2025-08-14T13:55:40.589575"
+  },
+  "3ef5bdd8fc75c6f95532ee5c293da36b": {
+    "original_issue": "Operator is responsible for configuring the PLCs w...",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: Operator is responsible for configuring the PLCs w",
+    "knowledge_retrieved": "",
+    "enhanced_response": "Operator is responsible for configuring the PLCs w...",
+    "method": "enhanced_rag",
+    "processing_time": 87.1829879283905,
+    "timestamp": "2025-08-14T13:55:45.667218"
+  },
+  "3ca33db22d24b2f213b9b64f8f1039bd": {
+    "original_issue": "Security guidelines for usage of USB sticks within shop floor are applied",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: Security guidelines for usage of USB sticks within shop floor are applied",
+    "knowledge_retrieved": "",
+    "enhanced_response": "Security guidelines for usage of USB sticks within shop floor are applied",
+    "method": "enhanced_rag",
+    "processing_time": 92.3269944190979,
+    "timestamp": "2025-08-14T13:55:51.823343"
+  },
+  "3b5bbd53279dda9af228465c5144ad95": {
+    "original_issue": "The system is installed in an environment that ensures physical access is limited to authorized main...",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: The system is installed in an environment that ensures physical access is limited to authorized main",
+    "knowledge_retrieved": "",
+    "enhanced_response": "The system is installed in an environment that ensures physical access is limited to authorized main...",
+    "method": "enhanced_rag",
+    "processing_time": 98.5421051979065,
+    "timestamp": "2025-08-14T13:55:59.041796"
+  },
+  "3bd8c5ba6e0a0ca4dfb39d3b21f23251": {
+    "original_issue": "Centralized IT security components (Active Directory, Centralized IT Logging Server) are provided an...",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: Centralized IT security components  Active Directory  Centralized IT Logging Server  are provided an",
+    "knowledge_retrieved": "",
+    "enhanced_response": "Centralized IT security components (Active Directory, Centralized IT Logging Server) are provided an...",
+    "method": "enhanced_rag",
+    "processing_time": 105.92146944999695,
+    "timestamp": "2025-08-14T13:56:07.436931"
+  },
+  "329d186011c143b3ad6c9b5db125f2bf": {
+    "original_issue": "hardware, firmware and operating",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: hardware  firmware and operating",
+    "knowledge_retrieved": "",
+    "enhanced_response": "hardware, firmware and operating",
+    "method": "enhanced_rag",
+    "processing_time": 108.35182929039001,
+    "timestamp": "2025-08-14T13:56:10.881688"
+  },
+  "7d224a6996093dc8bbd7d986054106eb": {
+    "original_issue": "'",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: ",
+    "knowledge_retrieved": "",
+    "enhanced_response": "'",
+    "method": "enhanced_rag",
+    "processing_time": 69.57882976531982,
+    "timestamp": "2025-08-14T14:06:40.424522"
   }
 }

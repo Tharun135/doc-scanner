@@ -148,6 +148,11 @@ def check_legacy_modal_verbs(content):
     # Rule 3: Detect overuse of "can" and suggest rewording
     can_count = len([token for token in doc if token.text.lower() == "can"])
     if can_count > 3:  # Threshold for overuse (customizable)
+        # Find the first occurrence of "can" for positioning
+        first_can_pos = content.lower().find("can")
+        if first_can_pos == -1:
+            first_can_pos = 0  # Fallback
+            
         # Find a sentence with multiple "can" usage
         sample_sentence = ""
         for sent in doc.sents:
@@ -157,8 +162,8 @@ def check_legacy_modal_verbs(content):
                 break
         suggestions.append({
             "text": "can",
-            "start": 0,
-            "end": 3,
+            "start": first_can_pos,  # FIXED: Use actual position of first "can"
+            "end": first_can_pos + 3,  # FIXED: Position + length of "can"
             "message": f"Overuse of modal verb 'can' ({can_count} instances). Consider rephrasing to avoid overusing 'can'. Example sentence: {sample_sentence}"
         })
 

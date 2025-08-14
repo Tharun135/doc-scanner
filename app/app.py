@@ -640,7 +640,7 @@ def upload_file():
         # Store the document content for RAG context
         current_document_content = plain_text
 
-        # ENHANCED: Extract text blocks more carefully to preserve sentences
+        # Process paragraph blocks for sentence segmentation
         paragraph_blocks = []
         
         # Process different HTML elements that represent text blocks
@@ -666,45 +666,70 @@ def upload_file():
                 block_text = re.sub(r'\s+', ' ', block_text.strip())
                 # Only add if it's substantial content (not just punctuation)
                 if len(block_text.strip()) > 2 and not re.match(r'^[.!?,:;\s]*$', block_text):
-                    paragraph_blocks.append(block_text)
-        # ENHANCED: Process paragraph blocks for sentence segmentation
+                    paragraph_blocks.append({
+                        'plain': block_text,
+                        'html': str(element)  # Store both plain and HTML
+                    })
+
+        # ENHANCED: Process paragraph blocks for sentence segmentation with HTML preservation
         sentences = []
-        for block in paragraph_blocks:
+        
+        # Process each paragraph block
+        for block_data in paragraph_blocks:
+            plain_block = block_data['plain']
+            html_block = block_data['html']
+            
             spacy_nlp = get_spacy_model()
             if spacy_nlp:
-                # Use spaCy to split block into sentences
-                doc = spacy_nlp(block)
+                # Use spaCy to split plain text into sentences
+                doc = spacy_nlp(plain_block)
+                
                 for sent in doc.sents:
-                    # Enhanced sentence cleaning and validation
-                    cleaned_text = re.sub(r'\s+', ' ', sent.text.strip())
+                    plain_sentence = re.sub(r'\s+', ' ', sent.text.strip())
+                    
                     # Skip very short fragments, pure punctuation, or whitespace
-                    if len(cleaned_text) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', cleaned_text):
-                        # Ensure sentence doesn't start/end with formatting artifacts
-                        cleaned_text = re.sub(r'^[^\w\d]+', '', cleaned_text)  # Remove leading non-alphanumeric
-                        cleaned_text = re.sub(r'[^\w\d.!?]+$', '', cleaned_text)  # Remove trailing non-alphanumeric except sentence endings
-                        if len(cleaned_text) > 3:
-                            sentences.append(sent)
+                    if len(plain_sentence) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', plain_sentence):
+                        
+                        # ENHANCED: For single sentence paragraphs, use the full HTML
+                        # For multi-sentence paragraphs, we'll use the HTML with the plain text for now
+                        # This is a reasonable compromise that preserves formatting
+                        html_sentence = html_block  # Use the full HTML element
+                        
+                        # If there are multiple sentences in this paragraph, we need to be more careful
+                        # For now, we'll use the HTML element but note this could be improved
+                        if len(list(doc.sents)) > 1:
+                            logger.debug(f"Multiple sentences in paragraph, using full HTML for: {plain_sentence[:50]}...")
+                        
+                        # Create enhanced sentence object with both plain and HTML versions
+                        class EnhancedSentence:
+                            def __init__(self, plain_text, html_text):
+                                self.text = plain_text  # For spaCy compatibility and analysis
+                                self.html_text = html_text  # For display with formatting
+                                self.start_char = 0  # Will be updated in position mapping
+                                self.end_char = len(plain_text)
+                        
+                        sentences.append(EnhancedSentence(plain_sentence, html_sentence))
+                        
             else:
                 # Enhanced fallback: regex splitting when spaCy is not available
                 import re
-                # More sophisticated sentence splitting patterns
-                # Split by sentence-ending punctuation followed by space and capital letter or number
-                simple_sentences = re.split(r'[.!?]+\s+(?=[A-Z0-9])', block)
+                simple_sentences = re.split(r'[.!?]+\s+(?=[A-Z0-9])', plain_block)
+                
                 for sent_text in simple_sentences:
                     cleaned_sent = sent_text.strip()
                     if cleaned_sent and len(cleaned_sent) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', cleaned_sent):
-                        # Create a more robust sentence object
+                        
+                        # Use the full HTML block for fallback sentences
+                        html_sent = html_block
+                        
                         class SimpleSentence:
-                            def __init__(self, text):
-                                # Enhanced text cleaning
-                                self.text = re.sub(r'\s+', ' ', text.strip())
-                                # Remove leading/trailing formatting artifacts
-                                self.text = re.sub(r'^[^\w\d]+', '', self.text)
-                                self.text = re.sub(r'[^\w\d.!?]+$', '', self.text)
+                            def __init__(self, plain_text, html_text):
+                                self.text = plain_text
+                                self.html_text = html_text
                                 self.start_char = 0
-                                self.end_char = len(self.text)
-                        if len(cleaned_sent) > 3:
-                            sentences.append(SimpleSentence(cleaned_sent))
+                                self.end_char = len(plain_text)
+                        
+                        sentences.append(SimpleSentence(cleaned_sent, html_sent))
 
         sentence_data = []
         
@@ -858,80 +883,29 @@ def upload_file():
             readability_scores = {}
             quality_score = max(0, 100 - (len(sentence_feedback) * 10))
             
-            # ENHANCED: Find corresponding HTML segment for better highlighting
+            # ENHANCED: Get both plain and HTML versions of the sentence
             sentence_text = sent.text.strip()
-            html_segment = None
             
-            # Try to find the sentence in the HTML content for proper highlighting
-            try:
-                words = sentence_text.split()
-                if len(words) >= 2:
-                    # IMPROVED: More flexible pattern matching
-                    import re
-                    
-                    # Method 1: Try exact sentence match first (handles simple cases)
-                    if sentence_text in html_content:
-                        html_segment = sentence_text
-                        logger.debug(f"Found exact match for sentence {index}")
-                    else:
-                        # Method 2: Use first and last words with flexible pattern
-                        first_word = re.escape(words[0])
-                        last_word = re.escape(words[-1])
-                        
-                        # Create pattern that allows HTML tags, spaces, and other words between
-                        # This handles cases like "You can choose" -> "You can choose to set... by activating the <strong>Enable Autostart</strong> option"
-                        flexible_pattern = f'{first_word}[\\s\\S]*?{last_word}'
-                        match = re.search(flexible_pattern, html_content, re.DOTALL | re.IGNORECASE)
-                        
-                        if match and match.group(0):
-                            candidate = match.group(0).strip()
-                            # Validate the match isn't too long (sanity check)
-                            if len(candidate) <= len(sentence_text) * 4:  # Allow for HTML tags
-                                html_segment = re.sub(r'\s+', ' ', candidate)
-                                logger.debug(f"Found flexible match for sentence {index}")
-                        
-                        # Method 3: Try word-by-word approach for complex formatting
-                        if not html_segment and len(words) >= 3:
-                            # Use first 3 and last 2 words for more precise matching
-                            first_three = ' '.join(words[:3])
-                            last_two = ' '.join(words[-2:]) if len(words) > 3 else words[-1]
-                            
-                            first_escaped = re.escape(first_three)
-                            last_escaped = re.escape(last_two)
-                            
-                            precise_pattern = f'{first_escaped}[\\s\\S]*?{last_escaped}'
-                            match = re.search(precise_pattern, html_content, re.DOTALL | re.IGNORECASE)
-                            
-                            if match:
-                                candidate = match.group(0).strip()
-                                if len(candidate) <= len(sentence_text) * 3:
-                                    html_segment = re.sub(r'\s+', ' ', candidate)
-                                    logger.debug(f"Found precise match for sentence {index}")
-                
-                elif len(words) == 1:
-                    # Single word sentences
-                    if sentence_text in html_content:
-                        html_segment = sentence_text
-                        
-            except Exception as e:
-                logger.debug(f"Could not find HTML segment for sentence {index}: {e}")
-            
-            # Log the result for debugging
-            if html_segment:
-                logger.debug(f"HTML segment for sentence {index}: '{html_segment[:100]}...'")
+            # Check if this is an enhanced sentence with HTML content
+            sentence_with_html = sentence_text
+            if hasattr(sent, 'html_text') and sent.html_text:
+                sentence_with_html = sent.html_text
+                logger.info(f"✅ Using HTML text for sentence {index}: '{sentence_with_html[:100]}...'")
+                logger.info(f"   Plain text was: '{sentence_text[:100]}...'")
             else:
-                logger.warning(f"No HTML segment found for sentence {index}: '{sentence_text[:50]}...'")
+                logger.warning(f"⚠️  No HTML text found for sentence {index}, using plain: '{sentence_text[:100]}...'")
             
             sentence_data.append({
-                "sentence": sent.text,
+                "sentence": sentence_with_html,  # CHANGED: Use HTML version if available
                 "sentence_index": index,
                 "feedback": sentence_feedback,
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
                 "start": sent.start_char,
                 "end": sent.end_char,
-                "html_segment": html_segment,  # NEW: HTML segment for better highlighting
-                "words": sentence_text.split()[:5]  # NEW: First few words for matching
+                "html_segment": sentence_with_html,  # CHANGED: Use same HTML content
+                "html_text": sentence_with_html,  # ADDED: Explicit html_text property for frontend
+                "words": sentence_text.split()[:5]  # Use plain text for word matching
             })
 
         total_sentences = len(sentence_data)

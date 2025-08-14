@@ -234,13 +234,24 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
         sentences = re.split(r'[.!?]+', text_content)
         sentences = [s.strip() for s in sentences if s.strip()]
     
+    current_pos = 0  # Track position in the full text
+    
     for sent in sentences:
         if hasattr(sent, 'text'):
             sent_text = sent.text.strip()
+            # For spaCy sentences, use the actual character positions
+            sent_start = sent.start_char
+            sent_end = sent.end_char
             # spaCy-based passive detection
             spacy_passive = any(token.dep_ == "auxpass" for token in sent)
         else:
             sent_text = str(sent).strip()
+            # For regex fallback, find the position in the full text
+            sent_start = text_content.find(sent_text, current_pos)
+            if sent_start == -1:
+                sent_start = current_pos  # Fallback if not found
+            sent_end = sent_start + len(sent_text)
+            current_pos = sent_end
             spacy_passive = False
         
         # Pattern-based passive voice detection
@@ -289,18 +300,24 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
         if spacy_passive or pattern_passive:
             # Find passive phrase for specific feedback
             passive_phrase = ""
+            phrase_start = sent_start  # Default to sentence start
+            phrase_end = sent_end      # Default to sentence end
+            
             for pattern in all_passive_patterns:
                 match = re.search(pattern, sent_text, re.IGNORECASE)
                 if match:
                     passive_phrase = match.group()
+                    # Calculate the position of the passive phrase within the full text
+                    phrase_start = sent_start + match.start()
+                    phrase_end = sent_start + match.end()
                     break
             
             issue_text = passive_phrase if passive_phrase else "passive voice construction"
             
             issues.append({
                 "text": issue_text,
-                "start": 0,  # Could be improved with actual position
-                "end": len(issue_text),
+                "start": phrase_start,  # FIXED: Use actual position
+                "end": phrase_end,      # FIXED: Use actual end position
                 "message": f"Passive voice detected: '{issue_text}' - convert to active voice for clearer, more direct communication.",
                 "context": sent_text,
                 "sentence": sent_text
@@ -327,11 +344,22 @@ def detect_long_sentence_issues(content: str, text_content: str) -> List[Dict[st
         sentences = re.split(r'[.!?]+', text_content)
         sentences = [s.strip() for s in sentences if s.strip()]
     
+    current_pos = 0  # Track position in the full text
+    
     for sent in sentences:
         if hasattr(sent, 'text'):
             sent_text = sent.text.strip()
+            # For spaCy sentences, use the actual character positions
+            sent_start = sent.start_char
+            sent_end = sent.end_char
         else:
             sent_text = str(sent).strip()
+            # For regex fallback, find the position in the full text
+            sent_start = text_content.find(sent_text, current_pos)
+            if sent_start == -1:
+                sent_start = current_pos  # Fallback if not found
+            sent_end = sent_start + len(sent_text)
+            current_pos = sent_end
         
         # Count words
         word_count = len(sent_text.split())
@@ -339,8 +367,8 @@ def detect_long_sentence_issues(content: str, text_content: str) -> List[Dict[st
         if word_count > 25:  # Threshold for long sentences
             issues.append({
                 "text": sent_text[:50] + "..." if len(sent_text) > 50 else sent_text,
-                "start": 0,
-                "end": len(sent_text),
+                "start": sent_start,  # FIXED: Use actual position in text
+                "end": sent_end,      # FIXED: Use actual end position
                 "message": f"Long sentence detected ({word_count} words). Consider breaking into shorter sentences for better readability.",
                 "context": sent_text,
                 "sentence": sent_text,
