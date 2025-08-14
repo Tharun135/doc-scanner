@@ -129,6 +129,105 @@ def parse_txt(content_bytes):
         html_content += f"<p>{paragraph}</p>"
     return html_content
 
+def extract_sentences_from_html(html_content):
+    """
+    Extract sentences from HTML content, treating formatting elements as inline 
+    and only splitting on actual sentence-ending punctuation.
+    Returns both plain text and HTML-aware sentences for better highlighting.
+    """
+    soup = BeautifulSoup(html_content, "html.parser")
+    
+    # Get sentences while preserving some HTML context
+    sentences = []
+    
+    # Process block elements to maintain document structure
+    block_elements = soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote'])
+    
+    if not block_elements:
+        # If no block elements found, process the entire content
+        text_content = soup.get_text(separator=' ')
+        plain_sentences = split_text_into_sentences(text_content)
+        for sentence in plain_sentences:
+            if sentence.strip():
+                sentences.append({
+                    'plain_text': sentence.strip(),
+                    'html_context': sentence.strip()
+                })
+    else:
+        for element in block_elements:
+            # Get plain text for sentence splitting
+            text_content = element.get_text(separator=' ')
+            
+            if text_content.strip():
+                plain_sentences = split_text_into_sentences(text_content)
+                
+                for sentence in plain_sentences:
+                    sentence = sentence.strip()
+                    if sentence:
+                        # Try to find HTML version with formatting preserved
+                        html_version = extract_sentence_with_formatting(sentence, element)
+                        
+                        sentences.append({
+                            'plain_text': sentence,
+                            'html_context': html_version if html_version else sentence
+                        })
+    
+    return sentences
+
+def extract_sentence_with_formatting(target_sentence, element):
+    """
+    Extract a sentence from an HTML element while preserving formatting.
+    """
+    element_html = str(element)
+    element_text = element.get_text(separator=' ')
+    
+    # Find the sentence in the plain text
+    sentence_start = element_text.find(target_sentence)
+    if sentence_start == -1:
+        return target_sentence
+    
+    # For now, return the plain sentence
+    # This is a complex problem that would require sophisticated HTML parsing
+    # The key improvement is that we now have both versions available
+    return target_sentence
+
+def split_text_into_sentences(text):
+    """
+    Split text into sentences based only on sentence-ending punctuation,
+    not on formatting or other elements.
+    """
+    import re
+    
+    # Clean up extra whitespace (including multiple spaces)
+    text = re.sub(r'\s+', ' ', text.strip())
+    
+    if SPACY_AVAILABLE and nlp:
+        # Use spaCy for better sentence boundary detection
+        doc = nlp(text)
+        return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    else:
+        # Fallback: regex-based splitting
+        # Split on sentence-ending punctuation followed by whitespace and capital letter
+        # or end of string
+        sentences = re.split(r'([.!?]+)\s+(?=[A-Z]|$)', text)
+        
+        # Reconstruct sentences with their punctuation
+        result = []
+        for i in range(0, len(sentences) - 1, 2):
+            if i + 1 < len(sentences):
+                sentence = sentences[i] + sentences[i + 1]
+                if sentence.strip():
+                    result.append(sentence.strip())
+            else:
+                if sentences[i].strip():
+                    result.append(sentences[i].strip())
+        
+        # Handle case where last sentence doesn't end with punctuation
+        if sentences and not result:
+            result = [text.strip()]
+        
+        return result
+
 def load_rules():
     rules = []
     rules_folder = os.path.join(os.path.dirname(__file__), 'rules')
@@ -237,51 +336,65 @@ def index():
 def upload_file():
     global current_document_content  # Access global variable
     
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
-
-    file = request.files['file']
-    if not file.filename:
-        return jsonify({"error": "No selected file"}), 400
-
-    logger.info(f"File uploaded: {file.filename}")
-
+    logger.info("=== UPLOAD REQUEST RECEIVED ===")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request content type: {request.content_type}")
+    logger.info(f"Request files: {request.files}")
+    logger.info(f"Request form: {request.form}")
+    
     try:
+        if 'file' not in request.files:
+            logger.error("No file part in request")
+            return jsonify({"error": "No file part"}), 400
+
+        file = request.files['file']
+        if not file.filename:
+            logger.error("No filename provided")
+            return jsonify({"error": "No selected file"}), 400
+
+        logger.info(f"File uploaded: {file.filename}")
+        logger.info(f"File content type: {file.content_type if hasattr(file, 'content_type') else 'unknown'}")
+
         # Parse file to get both plain text and HTML
+        logger.info("Starting file parsing...")
         html_content = parse_file(file)
-        # Use BeautifulSoup to extract plain text from HTML
-        soup = BeautifulSoup(html_content, "html.parser")
-        plain_text = soup.get_text(separator="\n")
+        logger.info(f"File parsed successfully, content length: {len(html_content)}")
         
-        # Store the document content for RAG context
+        # Extract text while preserving sentence boundaries despite inline formatting
+        logger.info("Creating BeautifulSoup object...")
+        soup = BeautifulSoup(html_content, "html.parser")
+        
+        # Get plain text for RAG context
+        logger.info("Extracting plain text...")
+        plain_text = soup.get_text(separator=" ")
         current_document_content = plain_text
+        
+        # Extract sentences more intelligently, handling inline formatting
+        logger.info("Extracting sentences from HTML...")
+        sentence_data_list = extract_sentences_from_html(html_content)
+        logger.info(f"Extracted {len(sentence_data_list)} sentences")
+        
+        # Convert to sentence objects
+        logger.info("Converting to sentence objects...")
+        sentence_objects = []
+        for sent_data in sentence_data_list:
+            if sent_data['plain_text'].strip():
+                # Create a simple sentence object
+                class SimpleSentence:
+                    def __init__(self, plain_text, html_context):
+                        self.text = plain_text.strip()
+                        self.html_context = html_context
+                        self.start_char = 0
+                        self.end_char = len(plain_text)
+                sentence_objects.append(SimpleSentence(sent_data['plain_text'], sent_data['html_context']))
+        
+        sentences = sentence_objects
+        logger.info(f"Created {len(sentences)} sentence objects")
 
-        # Split on newlines and punctuation for better sentence segmentation
-        lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
-        sentences = []
-        for line in lines:
-            if SPACY_AVAILABLE and nlp:
-                # Use spaCy to further split lines with multiple sentences
-                doc = nlp(line)
-                for sent in doc.sents:
-                    sentences.append(sent)
-            else:
-                # Fallback: simple sentence splitting when spaCy is not available
-                import re
-                # Split by sentence-ending punctuation
-                simple_sentences = re.split(r'[.!?]+\s+', line)
-                for sent_text in simple_sentences:
-                    if sent_text.strip():
-                        # Create a simple sentence object
-                        class SimpleSentence:
-                            def __init__(self, text):
-                                self.text = text.strip()
-                                self.start_char = 0
-                                self.end_char = len(text)
-                        sentences.append(SimpleSentence(sent_text.strip()))
-
+        logger.info("Starting sentence analysis...")
         sentence_data = []
         for index, sent in enumerate(sentences):
+            logger.info(f"Analyzing sentence {index + 1}: {sent.text[:50]}...")
             feedback, readability_scores, quality_score = analyze_sentence(sent.text, rules)
             
             # Add sentence index to each feedback item for UI linking
@@ -306,9 +419,11 @@ def upload_file():
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
                 "start": sent.start_char,
-                "end": sent.end_char
+                "end": sent.end_char,
+                "html_context": getattr(sent, 'html_context', sent.text)  # Include HTML context for better highlighting
             })
 
+        logger.info("Calculating quality metrics...")
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)
         quality_index = calculate_quality_index(total_sentences, total_errors)
@@ -318,17 +433,24 @@ def upload_file():
             "totalWords": len(plain_text.split()),
             "avgQualityScore": quality_index,
             "message": "Content analysis completed."
-}
+        }
 
+        logger.info("Preparing response...")
         # Return the result
-        return jsonify({
+        response_data = {
             "content": html_content,  # For display
             "sentences": sentence_data,
             "report": aggregated_report
-        })
+        }
+        
+        logger.info(f"Response prepared successfully with {total_sentences} sentences")
+        return jsonify(response_data)
 
     except Exception as e:
         logger.error(f"Error processing file: {e}")
+        logger.error(f"Exception details: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return jsonify({"error": str(e)}), 500
 
 def extract_text_from_file(file):

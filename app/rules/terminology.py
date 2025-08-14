@@ -79,9 +79,31 @@ def check(content: str) -> List[str]:
     return suggestions
 
 def _split_into_sentences(content: str) -> List[str]:
-    """Split content into sentences."""
-    sentences = re.split(r'[.!?]+', content)
-    return [s.strip() for s in sentences if s.strip()]
+    """Split content into sentences while preserving formatting within sentences."""
+    import re
+    
+    # Clean up extra whitespace but preserve sentence structure
+    content = re.sub(r'\s+', ' ', content.strip())
+    
+    # Split only on sentence-ending punctuation followed by whitespace and capital letter
+    sentences = re.split(r'([.!?]+)\s+(?=[A-Z])', content)
+    
+    # Reconstruct sentences with their punctuation
+    result = []
+    for i in range(0, len(sentences) - 1, 2):
+        if i + 1 < len(sentences):
+            sentence = sentences[i] + sentences[i + 1]
+            if sentence.strip():
+                result.append(sentence.strip())
+        else:
+            if sentences[i].strip():
+                result.append(sentences[i].strip())
+    
+    # Handle case where content doesn't end with proper punctuation
+    if sentences and not result and content.strip():
+        result = [content.strip()]
+    
+    return result
 
 def _check_product_names(sentence: str) -> List[str]:
     """Check for proper product name capitalization."""

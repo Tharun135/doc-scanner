@@ -1,0 +1,5 @@
+This is a simple test document. It contains some **bold text** and other formatting.
+
+This is another paragraph with a [link](http://example.com) in the middle of the sentence.
+
+Finally, this paragraph has an image: ![test image](test.jpg) in the sentence.

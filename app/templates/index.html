@@ -191,6 +191,30 @@
             background-color: #ef9a9a;
         }
 
+        .sentence-navigator {
+            border-left: 4px solid #007bff;
+            background: rgba(0, 123, 255, 0.1) !important;
+        }
+
+        .sentence-navigator .sentence-item {
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+        }
+
+        .sentence-navigator .sentence-item:hover {
+            background: rgba(0, 123, 255, 0.2) !important;
+            transform: translateX(5px);
+        }
+
+        .sentence-navigator .sentence-item.has-feedback {
+            border-left-color: #ffc107 !important;
+        }
+
+        .sentence-navigator h6 {
+            color: #007bff;
+            font-weight: 600;
+        }
+
         .document-section table {
             width: 100%;
             border-collapse: collapse;
@@ -1908,12 +1932,73 @@
                         behavior: 'smooth'
                     });
                 }
+            } else {
+                // If sentence wasn't highlighted in the document, show it in a modal or alert
+                console.log(`Sentence ${sentenceIndex} not found in document, showing fallback view`);
+                
+                if (window.currentSentences && window.currentSentences[sentenceIndex]) {
+                    const sentence = window.currentSentences[sentenceIndex];
+                    
+                    // Create a temporary modal to show the sentence
+                    const modal = document.createElement('div');
+                    modal.className = 'modal fade';
+                    modal.style.display = 'block';
+                    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                    modal.innerHTML = `
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Sentence ${sentenceIndex + 1}</h5>
+                                    <button type="button" class="btn-close" onclick="this.closest('.modal').remove()"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p><strong>Full sentence:</strong></p>
+                                    <div class="alert alert-light">${sentence.sentence}</div>
+                                    ${sentence.feedback && sentence.feedback.length > 0 ? `
+                                        <p><strong>Issues found:</strong></p>
+                                        <ul>
+                                            ${sentence.feedback.map(fb => `<li>${fb.message}</li>`).join('')}
+                                        </ul>
+                                    ` : '<p class="text-success">No issues found in this sentence.</p>'}
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                    
+                    // Auto-remove after 10 seconds
+                    setTimeout(() => {
+                        if (modal.parentNode) {
+                            modal.remove();
+                        }
+                    }, 10000);
+                }
             }
             
             // Also highlight in interactive section if it exists
             const interactiveSentence = document.getElementById(`sentence-${sentenceIndex}`);
             if (interactiveSentence) {
                 interactiveSentence.classList.add('highlight');
+            }
+            
+            // Highlight the corresponding sentence in the navigator if it exists
+            const navigatorSentence = document.querySelector(`[data-sentence-index="${sentenceIndex}"].sentence-item`);
+            if (navigatorSentence) {
+                // Remove existing highlights from navigator
+                document.querySelectorAll('.sentence-item').forEach(item => {
+                    item.style.backgroundColor = item.classList.contains('has-feedback') ? 'rgba(255, 193, 7, 0.1)' : 'rgba(0,0,0,0.05)';
+                });
+                
+                // Highlight the current sentence in navigator
+                navigatorSentence.style.backgroundColor = '#007bff';
+                navigatorSentence.style.color = 'white';
+                
+                // Scroll to the sentence in navigator
+                navigatorSentence.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
         
@@ -2003,39 +2088,35 @@
                     const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
                     const feedbackClass = hasFeedback ? ' has-feedback' : '';
                     
-                    // Approach 1: Direct HTML match (works for simple cases)
+                    // Approach 1: Try exact match first
                     if (processedContent.includes(sentence)) {
                         const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
                         processedContent = processedContent.replace(sentence, replacement);
                         found = true;
-                        console.log(`✓ Direct HTML match for sentence ${index}`);
+                        console.log(`✓ Exact match for sentence ${index}`);
                     }
                     
-                    // Approach 2: Try to find sentence in plain text and map back to HTML
-                    if (!found && plainTextContent.includes(sentence)) {
-                        // Special handling for sentences with angle brackets (URLs, etc.)
-                        if (sentence.includes('<') && sentence.includes('>')) {
-                            // For sentences with angle brackets, try direct text match first
-                            if (processedContent.includes(sentence)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                                processedContent = processedContent.replace(sentence, replacement);
-                                found = true;
-                                console.log(`✓ Direct text match for sentence with angle brackets ${index}`);
-                            }
-                        }
+                    // Approach 2: Try matching with normalized whitespace
+                    if (!found) {
+                        // Normalize both the sentence and content for better matching
+                        const normalizedSentence = sentence.replace(/\s+/g, ' ').trim();
+                        const contentWords = plainTextContent.split(/\s+/);
+                        const sentenceWords = normalizedSentence.split(/\s+/);
                         
-                        // Standard word-based pattern matching
-                        if (!found) {
-                            // Find all words in the sentence
-                            const words = sentence.split(/\s+/).filter(word => word.length > 2);
-                            
-                            if (words.length > 0) {
-                                // Create a regex that finds the sentence allowing for HTML tags between words
-                                const wordPattern = words.map(word => 
-                                    word.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
-                                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
+                        // Find the sentence in plain text
+                        for (let i = 0; i <= contentWords.length - sentenceWords.length; i++) {
+                            const contentSlice = contentWords.slice(i, i + sentenceWords.length).join(' ');
+                            if (contentSlice.toLowerCase() === normalizedSentence.toLowerCase()) {
+                                // Found the sentence in plain text, now try to locate it in HTML
+                                const beforeWords = contentWords.slice(0, i).join(' ');
+                                const afterWords = contentWords.slice(i + sentenceWords.length).join(' ');
                                 
-                                const regex = new RegExp(wordPattern, 'i');
+                                // Create a more flexible pattern that allows for HTML tags
+                                const wordsPattern = sentenceWords.map(word => 
+                                    word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+                                ).join('(?:\\s*<[^>]*>\\s*|\\s+)+');
+                                
+                                const regex = new RegExp(wordsPattern, 'i');
                                 const match = processedContent.match(regex);
                                 
                                 if (match) {
@@ -2043,62 +2124,71 @@
                                     const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
                                     processedContent = processedContent.replace(matchedText, replacement);
                                     found = true;
-                                    console.log(`✓ HTML pattern match for sentence ${index}`);
+                                    console.log(`✓ Normalized whitespace match for sentence ${index}`);
+                                    break;
                                 }
                             }
                         }
                     }
                     
-                    // Approach 3: Fuzzy text-only match (last resort)
+                    // Approach 3: Word-based fuzzy matching
                     if (!found) {
-                        // Try to find just the key parts of the sentence
-                        const significantWords = sentence.split(/\s+/).filter(word => 
-                            word.length > 3 && !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'was', 'one', 'our', 'out', 'day', 'get', 'use', 'man', 'new', 'now', 'old', 'see', 'him', 'two', 'how', 'its', 'who', 'oil', 'sit', 'set'].includes(word.toLowerCase())
-                        );
+                        const words = sentence.split(/\s+/).filter(word => word.length > 2);
                         
-                        if (significantWords.length >= 2) {
-                            let bestMatch = null;
-                            let bestMatchLength = 0;
+                        if (words.length >= 2) {
+                            // Get first and last significant words
+                            const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const lastWord = words[words.length - 1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                             
-                            // Look for the longest substring that contains significant words
-                            const tempDiv2 = document.createElement('div');
-                            tempDiv2.innerHTML = processedContent;
-                            const textContent = tempDiv2.textContent;
+                            // Create pattern that finds text starting with first word and ending with last word
+                            const pattern = `${firstWord}[^.!?]*${lastWord}`;
+                            const regex = new RegExp(pattern, 'i');
                             
-                            significantWords.forEach(word => {
-                                const wordRegex = new RegExp(`[^.!?]*${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.!?]*[.!?]`, 'gi');
-                                const matches = textContent.match(wordRegex);
-                                if (matches) {
-                                    matches.forEach(match => {
-                                        if (match.length > bestMatchLength) {
-                                            bestMatch = match.trim();
-                                            bestMatchLength = match.length;
-                                        }
-                                    });
-                                }
-                            });
-                            
-                            if (bestMatch && processedContent.includes(bestMatch)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${bestMatch}</span>`;
-                                processedContent = processedContent.replace(bestMatch, replacement);
+                            const match = processedContent.match(regex);
+                            if (match) {
+                                const matchedText = match[0];
+                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
+                                processedContent = processedContent.replace(matchedText, replacement);
                                 found = true;
-                                console.log(`✓ Fuzzy match for sentence ${index}: "${bestMatch}"`);
+                                console.log(`✓ Fuzzy word-based match for sentence ${index}`);
                             }
                         }
                     }
                     
-                    if (!found) {
-                        console.warn(`✗ Could not find sentence ${index} in content:`, sentence);
+                    // Approach 4: If still not found, try partial word matching
+                    if (!found && sentence.length > 10) {
+                        // Take the middle portion of the sentence (remove first and last few characters)
+                        const middlePortion = sentence.substring(5, sentence.length - 5);
                         
-                        // As absolute last resort, just add a marker
-                        const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${sentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
-                        
-                        // Try to insert the marker near related content
-                        const firstWords = sentence.split(' ').slice(0, 3).join(' ');
-                        if (processedContent.includes(firstWords)) {
-                            processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
-                            console.log(`Added fallback marker for sentence ${index}`);
+                        if (processedContent.includes(middlePortion)) {
+                            // Find the full sentence that contains this middle portion
+                            const beforeMatch = processedContent.split(middlePortion)[0];
+                            const afterMatch = processedContent.split(middlePortion)[1];
+                            
+                            // Look for sentence boundaries
+                            const beforePattern = /[^.!?]*$/;
+                            const afterPattern = /^[^.!?]*[.!?]/;
+                            
+                            const beforeResult = beforeMatch.match(beforePattern);
+                            const afterResult = afterMatch.match(afterPattern);
+                            
+                            if (beforeResult && afterResult) {
+                                const fullMatch = beforeResult[0] + middlePortion + afterResult[0];
+                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${fullMatch}</span>`;
+                                processedContent = processedContent.replace(fullMatch, replacement);
+                                found = true;
+                                console.log(`✓ Partial match for sentence ${index}`);
+                            }
                         }
+                    }
+                    
+                    // Last resort: Don't add markers, just create a clickable span in the document
+                    if (!found) {
+                        console.warn(`Could not highlight sentence ${index}:`, sentence);
+                        // Instead of adding [Sentence X] markers, we'll handle this differently
+                        // We'll add an invisible span that can still be clicked
+                        const invisibleMarker = `<span class="sentence-highlight${feedbackClass} sentence-fallback" id="content-sentence-${index}" data-sentence-index="${index}" data-sentence-text="${sentence.replace(/"/g, '&quot;')}" style="display:none;"></span>`;
+                        processedContent = invisibleMarker + processedContent;
                     }
                 }
             });
@@ -2373,6 +2463,46 @@
             
             // Store sentences for reference
             window.currentSentences = sentences;
+            
+            // Check if any sentences couldn't be highlighted and add a sentence navigator
+            const unhighlightedSentences = sentences.filter((_, index) => {
+                return !enhancedContent.includes(`id="content-sentence-${index}"`);
+            });
+            
+            if (unhighlightedSentences.length > 0) {
+                console.log(`${unhighlightedSentences.length} sentences could not be highlighted. Adding sentence navigator.`);
+                
+                // Create a sentence navigator for unhighlighted sentences
+                const sentenceNavigator = document.createElement('div');
+                sentenceNavigator.className = 'sentence-navigator alert alert-info mt-3';
+                sentenceNavigator.innerHTML = `
+                    <h6><i class="fas fa-list"></i> Sentence Navigator</h6>
+                    <p class="mb-2">Some sentences couldn't be highlighted in the document. Click below to view them:</p>
+                    <div class="sentence-list">
+                        ${sentences.map((sentenceData, index) => {
+                            const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
+                            const feedbackClass = hasFeedback ? 'has-feedback' : '';
+                            return `
+                                <div class="sentence-item ${feedbackClass}" data-sentence-index="${index}" style="cursor: pointer; padding: 5px; margin: 2px 0; border-left: 3px solid ${hasFeedback ? '#ffc107' : '#transparent'}; background: ${hasFeedback ? 'rgba(255, 193, 7, 0.1)' : 'rgba(0,0,0,0.05)'}; border-radius: 3px;">
+                                    <strong>Sentence ${index + 1}:</strong> ${sentenceData.sentence.substring(0, 100)}${sentenceData.sentence.length > 100 ? '...' : ''}
+                                    ${hasFeedback ? `<span class="badge bg-warning ms-2">${sentenceData.feedback.length} issue(s)</span>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                
+                originalContentDiv.appendChild(sentenceNavigator);
+                
+                // Add click handlers for sentence navigation
+                sentenceNavigator.addEventListener('click', (e) => {
+                    const sentenceItem = e.target.closest('.sentence-item');
+                    if (sentenceItem) {
+                        const sentenceIndex = parseInt(sentenceItem.dataset.sentenceIndex);
+                        highlightSentence(sentenceIndex);
+                    }
+                });
+            }
             
             // Add the enhanced content to document
             documentContent.appendChild(originalContentDiv);
