@@ -1,0 +1,8 @@
+This **bold** sentence needs a period
+Check out this [great website](https://example.com) for more details
+Here is an image ![screenshot](image.jpg) showing the results
+Use the `print()` function to display text
+This sentence with multiple **formatting** and [links](url) is missing punctuation
+
+This sentence ends properly with a period.
+This one also has correct punctuation!

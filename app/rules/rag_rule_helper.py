@@ -298,6 +298,10 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
         pattern_passive = any(re.search(pattern, sent_text, re.IGNORECASE) for pattern in all_passive_patterns)
         
         if spacy_passive or pattern_passive:
+            # SAFETY CHECK: Skip very short sentences that are unlikely to be meaningful passive voice
+            if len(sent_text.strip()) < 8:  # Skip very short fragments like "The", "It is", etc.
+                continue
+                
             # Find passive phrase for specific feedback
             passive_phrase = ""
             phrase_start = sent_start  # Default to sentence start

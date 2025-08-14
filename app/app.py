@@ -687,18 +687,20 @@ def upload_file():
                 for sent in doc.sents:
                     plain_sentence = re.sub(r'\s+', ' ', sent.text.strip())
                     
-                    # Skip very short fragments, pure punctuation, or whitespace
-                    if len(plain_sentence) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', plain_sentence):
+                    # ENHANCED: Skip very short fragments, pure punctuation, or whitespace
+                    # Increased minimum length to prevent false positives like "The", "It is", etc.
+                    if (len(plain_sentence) > 8 and 
+                        not re.match(r'^[.!?,:;\s\-_]*$', plain_sentence) and
+                        len(plain_sentence.split()) >= 2):  # Require at least 2 words
                         
-                        # ENHANCED: For single sentence paragraphs, use the full HTML
-                        # For multi-sentence paragraphs, we'll use the HTML with the plain text for now
-                        # This is a reasonable compromise that preserves formatting
-                        html_sentence = html_block  # Use the full HTML element
+                        # FIXED: Create individual sentence HTML instead of using full paragraph
+                        # For now, wrap the sentence text in a simple paragraph to preserve basic formatting
+                        # This fixes the issue where all sentences showed the same full paragraph content
+                        html_sentence = f"<p>{plain_sentence}</p>"
                         
-                        # If there are multiple sentences in this paragraph, we need to be more careful
-                        # For now, we'll use the HTML element but note this could be improved
+                        # Log sentence processing for debugging
                         if len(list(doc.sents)) > 1:
-                            logger.debug(f"Multiple sentences in paragraph, using full HTML for: {plain_sentence[:50]}...")
+                            logger.debug(f"Processing sentence {len(sentences)+1} from multi-sentence paragraph: {plain_sentence[:50]}...")
                         
                         # Create enhanced sentence object with both plain and HTML versions
                         class EnhancedSentence:
@@ -717,10 +719,14 @@ def upload_file():
                 
                 for sent_text in simple_sentences:
                     cleaned_sent = sent_text.strip()
-                    if cleaned_sent and len(cleaned_sent) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', cleaned_sent):
+                    # ENHANCED: Match the stricter filtering from spaCy path
+                    if (cleaned_sent and 
+                        len(cleaned_sent) > 8 and 
+                        not re.match(r'^[.!?,:;\s\-_]*$', cleaned_sent) and
+                        len(cleaned_sent.split()) >= 2):  # Require at least 2 words
                         
-                        # Use the full HTML block for fallback sentences
-                        html_sent = html_block
+                        # FIXED: Create individual sentence HTML instead of using full paragraph
+                        html_sent = f"<p>{cleaned_sent}</p>"
                         
                         class SimpleSentence:
                             def __init__(self, plain_text, html_text):
@@ -858,11 +864,30 @@ def upload_file():
             if issue_start > 0 or issue_end > 0:
                 sentence_index = find_sentence_for_issue(issue_start, issue_end)
                 if sentence_index is not None:
+                    # ENHANCED: Ensure clear messages for all issues
+                    original_message = issue.get('message', '')
+                    issue_text = issue.get('text', '')
+                    
+                    # If message is missing or unclear, generate a better one
+                    if not original_message or len(original_message.strip()) < 10 or original_message == issue_text:
+                        if 'appropriate' in issue_text.lower():
+                            enhanced_message = f"Be specific instead of 'appropriate': define what makes it suitable"
+                        elif 'passive voice' in original_message.lower() or 'are applied' in issue_text or 'is installed' in issue_text:
+                            enhanced_message = f"Possible passive voice detected - consider active voice"
+                        elif len(issue_text) < 20 and issue_text.strip():
+                            enhanced_message = f"Writing improvement suggested: '{issue_text}' needs revision for clarity"
+                        elif len(issue_text) > 50:
+                            enhanced_message = f"Consider breaking this into shorter, clearer segments: '{issue_text[:30]}...'"
+                        else:
+                            enhanced_message = f"Issue detected: '{issue_text}' - consider revision for better clarity"
+                    else:
+                        enhanced_message = original_message
+                    
                     sentence_feedback_map[sentence_index].append({
                         "text": issue.get('text', ''),
                         "start": issue_start,
                         "end": issue_end,
-                        "message": issue.get('message', ''),
+                        "message": enhanced_message,
                         "sentence_index": sentence_index
                     })
                 else:

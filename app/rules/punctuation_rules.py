@@ -47,7 +47,7 @@ def check(content):
 
     # Fallback to rule-based detection
     suggestions.extend(check_oxford_comma(text_content))
-    suggestions.extend(check_period_placement(text_content))
+    # suggestions.extend(check_period_placement(text_content))  # DISABLED: Period detection rule removed per user request
     suggestions.extend(check_exclamation_overuse(text_content))
     suggestions.extend(check_quotation_marks(text_content))
     suggestions.extend(check_dash_usage(text_content))
@@ -102,6 +102,7 @@ def check_oxford_comma(text_content):
 
 def check_period_placement(text_content):
     """Check for missing periods at the end of sentences."""
+    import re
     suggestions = []
     
     # Split into lines and check each line
@@ -124,34 +125,66 @@ def check_period_placement(text_content):
             line.isupper() or  # Skip headings in all caps
             ':' in line and len(line) < 50):  # Skip labels/captions
             continue
+        
+        # ENHANCED: Clean the line for proper punctuation detection
+        # Remove markdown formatting to see the actual sentence structure
+        cleaned_line = line
+        
+        # Remove markdown bold/italic formatting but keep the content
+        cleaned_line = re.sub(r'\*\*([^*]+)\*\*', r'\1', cleaned_line)  # **bold** -> bold
+        cleaned_line = re.sub(r'\*([^*]+)\*', r'\1', cleaned_line)      # *italic* -> italic
+        cleaned_line = re.sub(r'_([^_]+)_', r'\1', cleaned_line)        # _italic_ -> italic
+        
+        # Remove link syntax but keep the text
+        cleaned_line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', cleaned_line)  # [text](url) -> text
+        
+        # Remove image syntax completely (images don't contribute to sentence meaning)
+        cleaned_line = re.sub(r'!\[[^\]]*\]\([^)]+\)', '', cleaned_line)  # ![alt](src) -> (empty)
+        
+        # Remove inline code formatting
+        cleaned_line = re.sub(r'`([^`]+)`', r'\1', cleaned_line)  # `code` -> code
+        
+        # Clean up any extra spaces
+        cleaned_line = re.sub(r'\s+', ' ', cleaned_line).strip()
+        
+        # Now check if the cleaned line looks like a complete sentence but missing period
+        if (len(cleaned_line.split()) >= 5 and  # At least 5 words
+            not cleaned_line.endswith(('.', '!', '?', ':', ';', '"', "'", ')', ']', '}')) and
+            not cleaned_line.endswith('...')):
             
-        # Check if line looks like a complete sentence but missing period
-        if (len(line.split()) >= 5 and  # At least 5 words
-            not line.endswith(('.', '!', '?', ':', ';', '"', "'", ')', ']', '}')) and
-            not line.endswith('...') and
-            re.search(r'\b(the|a|an|is|are|was|were|have|has|will|can|should|would)\b', line.lower())):
+            # Enhanced keyword detection - look for various sentence indicators
+            basic_words = r'\b(the|a|an|is|are|was|were|have|has|will|can|should|would|this|that|these|those)\b'
+            content_words = r'\b(for|with|from|about|more|info|information|example|result|details|content|text)\b'
+            action_words = r'\b(check|use|see|view|click|read|find|get|take|make|create|show|display)\b'
             
-            # Find the actual position of this line in the full document
-            line_position_in_document = text_content.find(line, line_start_position)
-            if line_position_in_document == -1:
-                # Fallback: try to find the line without position constraint
-                line_position_in_document = text_content.find(line)
+            has_sentence_indicators = (
+                re.search(basic_words, cleaned_line.lower()) or
+                re.search(content_words, cleaned_line.lower()) or
+                re.search(action_words, cleaned_line.lower())
+            )
             
-            if line_position_in_document != -1:
-                suggestions.append({
-                    "text": line,
-                    "start": line_position_in_document,
-                    "end": line_position_in_document + len(line),
-                    "message": f"Consider adding period at end of sentence: '{line}'"
-                })
-            else:
-                # Last resort: use approximate position (this shouldn't happen often)
-                suggestions.append({
-                    "text": line,
-                    "start": line_start_position,
-                    "end": line_start_position + len(line),
-                    "message": f"Consider adding period at end of sentence: '{line}'"
-                })
+            if has_sentence_indicators:
+                # Find the actual position of this line in the full document
+                line_position_in_document = text_content.find(line, line_start_position)
+                if line_position_in_document == -1:
+                    # Fallback: try to find the line without position constraint
+                    line_position_in_document = text_content.find(line)
+                
+                if line_position_in_document != -1:
+                    suggestions.append({
+                        "text": line,  # Use original line with formatting for highlighting
+                        "start": line_position_in_document,
+                        "end": line_position_in_document + len(line),
+                        "message": f"Consider adding period at end of sentence: '{cleaned_line}'"  # Show cleaned version in message
+                    })
+                else:
+                    # Last resort: use approximate position (this shouldn't happen often)
+                    suggestions.append({
+                        "text": line,
+                        "start": line_start_position,
+                        "end": line_start_position + len(line),
+                        "message": f"Consider adding period at end of sentence: '{cleaned_line}'"
+                    })
     
     return suggestions
 
