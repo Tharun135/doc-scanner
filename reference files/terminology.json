@@ -1,0 +1,54 @@
+{
+  "category": "Terminology",
+  "rules": [
+    {
+      "id": "term-001",
+      "title": "Use Consistent Terminology",
+      "description": "Use the same term consistently to refer to the same concept throughout a document or product.",
+      "example_incorrect": "Click the 'Start' button in one place and 'Begin' button in another for the same function.",
+      "example_correct": "Click the 'Start' button everywhere it refers to the same action."
+    },
+    {
+      "id": "term-002",
+      "title": "Prefer Industry-Standard Terms",
+      "description": "Use terminology that is widely recognized within the industry or technology domain.",
+      "example_incorrect": "Use 'shutdown script' when the industry term is 'termination script'.",
+      "example_correct": "Use 'termination script' to align with industry standards."
+    },
+    {
+      "id": "term-003",
+      "title": "Avoid Jargon When Possible",
+      "description": "Replace specialized or internal jargon with plain language unless the target audience is guaranteed to understand it.",
+      "example_incorrect": "We’ll refactor the CRUD endpoints in the microservice.",
+      "example_correct": "We’ll update the create, read, update, and delete operations in the service."
+    },
+    {
+      "id": "term-004",
+      "title": "Define New or Specialized Terms",
+      "description": "Introduce and define terms the first time they appear, especially if they are technical or product-specific.",
+      "example_incorrect": "Use the SLA settings to adjust response time requirements.",
+      "example_correct": "Use the Service Level Agreement (SLA) settings to adjust response time requirements."
+    },
+    {
+      "id": "term-005",
+      "title": "Use Singular Nouns for Concepts",
+      "description": "When referring to a concept as a category, use singular form unless referring to multiple distinct items.",
+      "example_incorrect": "The softwares are installed on all devices.",
+      "example_correct": "The software is installed on all devices."
+    },
+    {
+      "id": "term-006",
+      "title": "Avoid Redundant Terms",
+      "description": "Do not use words that duplicate meaning already implied by other words.",
+      "example_incorrect": "ATM machine",
+      "example_correct": "ATM"
+    },
+    {
+      "id": "term-007",
+      "title": "Follow Product Terminology Guidelines",
+      "description": "If your product or organization has an approved terminology list, follow it exactly for spelling, capitalization, and phrasing.",
+      "example_incorrect": "Sign into your account.",
+      "example_correct": "Sign in to your account."
+    }
+  ]
+}

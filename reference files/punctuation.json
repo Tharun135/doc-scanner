@@ -1,0 +1,77 @@
+{
+  "category": "Punctuation",
+  "rules": [
+    {
+      "id": "punctuation_001",
+      "title": "Use the Oxford comma",
+      "description": "In lists of three or more items, place a comma before the conjunction.",
+      "examples": {
+        "correct": "We installed the software, configured the network, and updated the drivers.",
+        "incorrect": "We installed the software, configured the network and updated the drivers."
+      }
+    },
+    {
+      "id": "punctuation_002",
+      "title": "Use periods for complete sentences",
+      "description": "End every complete sentence with a period unless it is a question or exclamation.",
+      "examples": {
+        "correct": "The update is complete.",
+        "incorrect": "The update is complete"
+      }
+    },
+    {
+      "id": "punctuation_003",
+      "title": "Avoid excessive exclamation points",
+      "description": "Use exclamation points sparingly and only when necessary to convey urgency or strong emotion.",
+      "examples": {
+        "correct": "Warning: Data will be lost if you continue.",
+        "incorrect": "Warning! Data will be lost if you continue!"
+      }
+    },
+    {
+      "id": "punctuation_004",
+      "title": "Use a colon to introduce lists or examples",
+      "description": "Use a colon after an independent clause to introduce a list, example, or explanation.",
+      "examples": {
+        "correct": "You will need three items: a screwdriver, a wrench, and a hammer.",
+        "incorrect": "You will need: a screwdriver, a wrench, and a hammer."
+      }
+    },
+    {
+      "id": "punctuation_005",
+      "title": "Use semicolons to separate complex list items",
+      "description": "Use semicolons between items in a list if the items contain commas.",
+      "examples": {
+        "correct": "We invited John, the manager; Lisa, the project lead; and Mark, the technician.",
+        "incorrect": "We invited John, the manager, Lisa, the project lead, and Mark, the technician."
+      }
+    },
+    {
+      "id": "punctuation_006",
+      "title": "Use quotation marks correctly",
+      "description": "Place commas and periods inside quotation marks. Place colons and semicolons outside.",
+      "examples": {
+        "correct": "Click the button labeled 'Submit.'",
+        "incorrect": "Click the button labeled 'Submit'."
+      }
+    },
+    {
+      "id": "punctuation_007",
+      "title": "Avoid double spaces after punctuation",
+      "description": "Use only one space after a period, question mark, or exclamation point.",
+      "examples": {
+        "correct": "The installation is complete. Restart your system.",
+        "incorrect": "The installation is complete.  Restart your system."
+      }
+    },
+    {
+      "id": "punctuation_008",
+      "title": "Use ellipses for omitted text",
+      "description": "Use an ellipsis to indicate omitted text or a pause. Include a space before and after.",
+      "examples": {
+        "correct": "The report stated, 'The results were inconclusive … and further research is needed.'",
+        "incorrect": "The report stated, 'The results were inconclusive...and further research is needed.'"
+      }
+    }
+  ]
+}

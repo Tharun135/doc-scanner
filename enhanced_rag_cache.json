@@ -1,0 +1,52 @@
+{
+  "7246c159fa6b58bed8a10981f0d4768a": {
+    "original_issue": "",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: ",
+    "knowledge_retrieved": "",
+    "enhanced_response": "",
+    "method": "enhanced_rag",
+    "processing_time": 72.35342717170715,
+    "timestamp": "2025-08-14T09:27:14.722923"
+  },
+  "2416846534e91a297429052ae8df8fee": {
+    "original_issue": "info \"NOTICE\"\n\n\nWhen a new project is downloaded, ...",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: info  NOTICE \n\n\nWhen a new project is downloaded",
+    "knowledge_retrieved": "",
+    "enhanced_response": "info \"NOTICE\"\n\n\nWhen a new project is downloaded, ...",
+    "method": "enhanced_rag",
+    "processing_time": 79.3404471874237,
+    "timestamp": "2025-08-14T09:38:43.935552"
+  },
+  "427e21bcc6df75e3d89938613faad678": {
+    "original_issue": "The home page is displayed",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: The home page is displayed",
+    "knowledge_retrieved": "",
+    "enhanced_response": "The home page is displayed",
+    "method": "enhanced_rag",
+    "processing_time": 78.31083917617798,
+    "timestamp": "2025-08-14T09:40:02.349895"
+  },
+  "ec03c0785e60affbb9b7e7faac1e6bbc": {
+    "original_issue": "You are redirected to browse the windows explorer",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: You are redirected to browse the windows explorer",
+    "knowledge_retrieved": "",
+    "enhanced_response": "You are redirected to browse the windows explorer",
+    "method": "enhanced_rag",
+    "processing_time": 74.09954738616943,
+    "timestamp": "2025-08-14T09:41:16.552090"
+  },
+  "efe8be087832e68d4204104e655c8c0d": {
+    "original_issue": "!!! info \"NOTICE\"\n\n\nWhen a new project is downloaded, it replaces the existing UMC data with either ...",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: info  NOTICE \n\n\nWhen a new project is downloaded  it replaces the existing UMC data with either",
+    "knowledge_retrieved": "",
+    "enhanced_response": "!!! info \"NOTICE\"\n\n\nWhen a new project is downloaded, it replaces the existing UMC data with either ...",
+    "method": "enhanced_rag",
+    "processing_time": 78.68973565101624,
+    "timestamp": "2025-08-14T09:42:35.345416"
+  }
+}

@@ -1,0 +1,182 @@
+[
+  {
+    "id": "MSTP-031",
+    "category": "Formatting",
+    "title": "Use sentence case for headings",
+    "description": "Capitalize only the first word and proper nouns in headings unless your style guide specifies otherwise.",
+    "examples": {
+      "incorrect": "How To Install The Software",
+      "correct": "How to install the software"
+    },
+    "source": "Microsoft Style Guide, Headings section",
+    "tags": ["headings", "capitalization", "sentence case"]
+  },
+  {
+    "id": "MSTP-032",
+    "category": "Formatting",
+    "title": "Use numbered lists for sequential steps",
+    "description": "Use a numbered list when the order of steps matters, such as in procedures.",
+    "examples": {
+      "incorrect": "• Click Start\n• Select Settings\n• Click Update",
+      "correct": "1. Click Start.\n2. Select Settings.\n3. Click Update."
+    },
+    "source": "Microsoft Style Guide, Procedures section",
+    "tags": ["lists", "procedures", "numbered lists"]
+  },
+  {
+    "id": "MSTP-033",
+    "category": "Formatting",
+    "title": "Use bulleted lists for unordered items",
+    "description": "Use a bulleted list when the order of items does not matter.",
+    "examples": {
+      "incorrect": "1. Red\n2. Green\n3. Blue",
+      "correct": "• Red\n• Green\n• Blue"
+    },
+    "source": "Microsoft Style Guide, Lists section",
+    "tags": ["bulleted lists", "unordered lists", "formatting"]
+  },
+  {
+    "id": "MSTP-034",
+    "category": "Formatting",
+    "title": "Format UI elements in bold",
+    "description": "Use bold to format names of buttons, menus, and commands.",
+    "examples": {
+      "incorrect": "Click the Save button.",
+      "correct": "Click the **Save** button."
+    },
+    "source": "Microsoft Style Guide, UI formatting",
+    "tags": ["UI elements", "bold formatting", "visual clarity"]
+  },
+  {
+    "id": "MSTP-035",
+    "category": "Formatting",
+    "title": "Format file names and paths in italics or monospace",
+    "description": "Use a monospace font or italics for file names and paths to distinguish them from surrounding text.",
+    "examples": {
+      "incorrect": "Open config.yml in the editor.",
+      "correct": "Open `config.yml` in the editor."
+    },
+    "source": "Microsoft Style Guide, Code and File Names section",
+    "tags": ["file names", "monospace font", "formatting"]
+  },
+  {
+    "id": "MSTP-036",
+    "category": "Formatting",
+    "title": "Use code blocks for multi-line code samples",
+    "description": "When showing multi-line code, use a fenced code block with language syntax highlighting.",
+    "examples": {
+      "incorrect": "Type: print('Hello')\nprint('World')",
+      "correct": "```python\nprint('Hello')\nprint('World')\n```"
+    },
+    "source": "Microsoft Style Guide, Code Samples section",
+    "tags": ["code blocks", "syntax highlighting", "formatting"]
+  },
+  {
+    "id": "MSTP-037",
+    "category": "Formatting",
+    "title": "Avoid underlining for emphasis",
+    "description": "Use bold or italics for emphasis, as underlining can be mistaken for hyperlinks.",
+    "examples": {
+      "incorrect": "This is _important_.",
+      "correct": "This is **important**."
+    },
+    "source": "Microsoft Style Guide, Emphasis section",
+    "tags": ["emphasis", "bold", "italics"]
+  },
+  {
+    "id": "MSTP-038",
+    "category": "Formatting",
+    "title": "Keep line length under 80 characters for code examples",
+    "description": "Wrap long code lines to improve readability and avoid horizontal scrolling.",
+    "examples": {
+      "incorrect": "SELECT column1, column2, column3, column4, column5, column6 FROM table_name WHERE condition = true;",
+      "correct": "SELECT column1, column2, column3, column4, column5,\n       column6 FROM table_name WHERE condition = true;"
+    },
+    "source": "Microsoft Style Guide, Code Formatting section",
+    "tags": ["code formatting", "line length", "readability"]
+  },
+  {
+    "id": "MSTP-039",
+    "category": "Formatting",
+    "title": "Use tables for structured data",
+    "description": "Present data in tables when it involves multiple attributes or comparisons.",
+    "examples": {
+      "incorrect": "Plan A: $10/month, Basic features. Plan B: $20/month, Advanced features.",
+      "correct": "| Plan | Price | Features |\n|------|-------|----------|\n| A    | $10   | Basic    |\n| B    | $20   | Advanced |"
+    },
+    "source": "Microsoft Style Guide, Tables section",
+    "tags": ["tables", "structured data", "formatting"]
+  },
+  {
+    "id": "MSTP-040",
+    "category": "Formatting",
+    "title": "Use consistent indentation",
+    "description": "Use consistent indentation in lists, code, and nested content for visual clarity.",
+    "examples": {
+      "incorrect": "1. Step one\n    2. Step two\n  3. Step three",
+      "correct": "1. Step one\n2. Step two\n3. Step three"
+    },
+    "source": "Microsoft Style Guide, Formatting section",
+    "tags": ["indentation", "lists", "consistency"]
+  },
+  {
+    "id": "MSTP-041",
+    "category": "Formatting",
+    "title": "Use italics for UI messages and placeholders",
+    "description": "Format system messages or placeholder text in italics to distinguish them from user input.",
+    "examples": {
+      "incorrect": "Enter your name in the field labeled Name.",
+      "correct": "Enter your name in the field labeled *Name*."
+    },
+    "source": "Microsoft Style Guide, UI Text section",
+    "tags": ["UI messages", "italics", "formatting"]
+  },
+  {
+    "id": "MSTP-042",
+    "category": "Formatting",
+    "title": "Capitalize only UI labels as they appear",
+    "description": "Write UI element labels exactly as they appear in the software, including capitalization.",
+    "examples": {
+      "incorrect": "Click the save button.",
+      "correct": "Click the Save button."
+    },
+    "source": "Microsoft Style Guide, UI Formatting section",
+    "tags": ["UI labels", "capitalization", "formatting"]
+  },
+  {
+    "id": "MSTP-043",
+    "category": "Formatting",
+    "title": "Use consistent spacing after punctuation",
+    "description": "Use one space after periods, commas, and colons.",
+    "examples": {
+      "incorrect": "Click Save.  Then close the window.",
+      "correct": "Click Save. Then close the window."
+    },
+    "source": "Microsoft Style Guide, Spacing section",
+    "tags": ["spacing", "punctuation", "consistency"]
+  },
+  {
+    "id": "MSTP-044",
+    "category": "Formatting",
+    "title": "Keep headings and subheadings concise",
+    "description": "Use short, descriptive headings to help readers scan content quickly.",
+    "examples": {
+      "incorrect": "How to change the settings in the application to improve performance",
+      "correct": "Improve application performance"
+    },
+    "source": "Microsoft Style Guide, Headings section",
+    "tags": ["headings", "conciseness", "formatting"]
+  },
+  {
+    "id": "MSTP-045",
+    "category": "Formatting",
+    "title": "Avoid manual numbering in text",
+    "description": "Use auto-numbered lists instead of typing numbers manually to prevent errors when updating content.",
+    "examples": {
+      "incorrect": "1) Do this\n2) Do that\n3) Done",
+      "correct": "1. Do this\n2. Do that\n3. Done"
+    },
+    "source": "Microsoft Style Guide, Lists section",
+    "tags": ["numbered lists", "auto numbering", "formatting"]
+  }
+]

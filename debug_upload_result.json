@@ -1,0 +1,143 @@
+{
+  "content": "<p>The document was written by the author. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point.</p>",
+  "report": {
+    "avgQualityScore": 0,
+    "message": "Content analysis completed.",
+    "totalSentences": 2,
+    "totalWords": 37
+  },
+  "sentences": [
+    {
+      "end": 39,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Issue: Unnecessary modifier detected - consider removing 'very' as it may not add value",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider removing unnecessary modifier: 'very long' \u2192 'long' or use a stronger word.",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider removing unnecessary modifier: 'extremely difficult' \u2192 'difficult' or use a stronger word.",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 55,
+          "message": "Remove 'very' or use a stronger word. 'Very good' \u2192 'excellent'",
+          "sentence_index": 0,
+          "start": 50,
+          "text": "very"
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 0,
+          "start": 0,
+          "text": ""
+        }
+      ],
+      "quality_score": 20,
+      "readability_scores": {},
+      "sentence": "The document was written by the author.",
+      "sentence_index": 0,
+      "start": 0
+    },
+    {
+      "end": 207,
+      "feedback": [
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 167,
+          "message": "Consider breaking into shorter sentences: '\u2022 This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": "This is a very long sentence that continues to go ..."
+        },
+        {
+          "end": 38,
+          "message": "Possible passive voice detected - consider active voice",
+          "sentence_index": 1,
+          "start": 0,
+          "text": "The document was written by the author"
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        },
+        {
+          "end": 0,
+          "message": "Consider rewriting as: '\u2022 The document was written by the author. This is a very long sentence that continues to go on'",
+          "sentence_index": 1,
+          "start": 0,
+          "text": ""
+        }
+      ],
+      "quality_score": 20,
+      "readability_scores": {},
+      "sentence": "This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point.",
+      "sentence_index": 1,
+      "start": 40
+    }
+  ]
+}

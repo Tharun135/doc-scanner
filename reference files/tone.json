@@ -1,0 +1,56 @@
+[
+  {
+    "id": "tone-001",
+    "title": "Maintain a Neutral, Professional Tone",
+    "description": "Use an objective and professional voice in technical writing. Avoid personal opinions, slang, or overly casual language unless specified by the brand voice guidelines.",
+    "examples": {
+      "incorrect": "I think this feature is super cool and easy to use!",
+      "correct": "This feature simplifies the process for the user."
+    }
+  },
+  {
+    "id": "tone-002",
+    "title": "Avoid Humor or Sarcasm",
+    "description": "Humor, sarcasm, or irony can be misunderstood and should be avoided in technical content.",
+    "examples": {
+      "incorrect": "If you mess this up, you’ll be in big trouble!",
+      "correct": "Incorrect configuration can cause system errors."
+    }
+  },
+  {
+    "id": "tone-003",
+    "title": "Be Encouraging, Not Commanding",
+    "description": "Use polite, instructive language instead of authoritarian commands. This keeps the tone user-friendly.",
+    "examples": {
+      "incorrect": "You must click the Submit button now.",
+      "correct": "Click the Submit button to complete the process."
+    }
+  },
+  {
+    "id": "tone-004",
+    "title": "Use Second Person for Direct Instructions",
+    "description": "When giving instructions, address the reader as 'you'. This makes the content more direct and clear.",
+    "examples": {
+      "incorrect": "The user should click the Submit button.",
+      "correct": "Click the Submit button."
+    }
+  },
+  {
+    "id": "tone-005",
+    "title": "Avoid Marketing Language in Technical Documentation",
+    "description": "Focus on facts, features, and instructions. Avoid promotional phrases unless the content is explicitly for marketing.",
+    "examples": {
+      "incorrect": "This groundbreaking feature will change your life!",
+      "correct": "This feature automates the backup process."
+    }
+  },
+  {
+    "id": "tone-006",
+    "title": "Be Inclusive and Respectful",
+    "description": "Avoid language that could be interpreted as biased, exclusionary, or disrespectful.",
+    "examples": {
+      "incorrect": "Ask the guys in the IT department for help.",
+      "correct": "Contact the IT department for assistance."
+    }
+  }
+]

@@ -1,0 +1,9 @@
+Testing the new punctuation and filler word rules! This is very exciting!!!
+
+I think that these rules will really help users. In order to test them, we need to check various things, basically.
+
+The end result should be quite good, sort of. We'll finish soon and see how they work.
+
+"Hello", she said -- this is a test. I like red, blue and green colors
+
+Its working great! You're rules are helpful.

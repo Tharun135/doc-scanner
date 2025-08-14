@@ -40,8 +40,8 @@ def check(content):
     suggestions.extend(check_heading_hierarchy(content, soup))
     suggestions.extend(check_list_formatting(content, text_content))
     suggestions.extend(check_numbering_consistency(text_content))
-    suggestions.extend(check_capitalization_consistency(text_content))
-    suggestions.extend(check_spacing_consistency(text_content))
+    # Removed: check_capitalization_consistency (mixed capitalization rule)
+    # Removed: check_spacing_consistency (excessive blank lines rule)
 
     return suggestions if suggestions else []
 
@@ -177,8 +177,9 @@ def check_capitalization_consistency(text_content):
                 sentence_case_count += 1
         
         total = len(potential_headings)
-        if title_case_count > 0 and sentence_case_count > 0:
-            suggestions.append(f"Mixed capitalization in headings: {title_case_count} title case, {sentence_case_count} sentence case. Consider using consistent capitalization.")
+        # DISABLED: Mixed capitalization rule removed per user request
+        # if title_case_count > 0 and sentence_case_count > 0:
+        #     suggestions.append(f"Mixed capitalization in headings: {title_case_count} title case, {sentence_case_count} sentence case. Consider using consistent capitalization.")
         
         if all_caps_count > 0 and total > all_caps_count:
             suggestions.append("Mixed use of ALL CAPS and regular case in headings. Consider consistent capitalization.")
@@ -214,8 +215,9 @@ def check_spacing_consistency(text_content):
         else:
             blank_line_count = 0
     
-    if max_consecutive_blanks > 2:
-        suggestions.append(f"Excessive blank lines: Found {max_consecutive_blanks} consecutive blank lines. Consider using single blank lines for separation.")
+    # DISABLED: Excessive blank lines rule removed per user request
+    # if max_consecutive_blanks > 2:
+    #     suggestions.append(f"Excessive blank lines: Found {max_consecutive_blanks} consecutive blank lines. Consider using single blank lines for separation.")
     
     return suggestions
 

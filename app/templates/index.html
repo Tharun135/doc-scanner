@@ -2916,7 +2916,7 @@
         }
 
         // Enhanced feedback rendering with AI suggestions and hover highlighting
-        async function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
+        function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
             const feedbackContainer = document.getElementById('feedbackContent');
             
             console.log('renderFeedbackWithAI called with:', feedback, sentence, sentenceIndex);
@@ -3178,34 +3178,18 @@
                 addContentSentenceHandlers();
             }, 100);
             
-            // Process sentences with AI enhancement - in document order
+            // Process sentences with feedback - immediate rendering
             let feedbackCount = 0;
-            const feedbackPromises = [];
             
-            // Collect all feedback rendering promises to maintain order
             sentences.forEach((sentenceData, index) => {
                 console.log(`Sentence ${index}:`, sentenceData);
                 if (sentenceData.feedback && sentenceData.feedback.length > 0) {
                     feedbackCount++;
                     console.log(`Rendering feedback for sentence ${index}:`, sentenceData.feedback);
-                    // Store the promise with the index to maintain order
-                    feedbackPromises.push({
-                        index: index,
-                        promise: renderFeedbackWithAI(sentenceData.feedback, sentenceData.sentence, index)
-                    });
+                    // Render feedback immediately
+                    renderFeedbackWithAI(sentenceData.feedback, sentenceData.sentence, index);
                 }
             });
-            
-            // Wait for all feedback to be rendered in order
-            if (feedbackPromises.length > 0) {
-                // Process feedback in sequential order
-                feedbackPromises.sort((a, b) => a.index - b.index);
-                
-                // Execute promises sequentially to maintain order
-                feedbackPromises.reduce((prevPromise, current) => {
-                    return prevPromise.then(() => current.promise);
-                }, Promise.resolve());
-            }
             
             // If no feedback found, show a message
             if (feedbackCount === 0) {

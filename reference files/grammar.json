@@ -1,0 +1,182 @@
+[
+  {
+    "id": "MSTP-001",
+    "category": "Grammar",
+    "title": "Use active voice",
+    "description": "Prefer active voice to make sentences direct and concise. Active voice identifies the actor and action clearly.",
+    "examples": {
+      "incorrect": "The document was approved by the manager.",
+      "correct": "The manager approved the document."
+    },
+    "source": "Microsoft Style Guide, Section 4.3",
+    "tags": ["active voice", "passive voice", "sentence structure", "clarity"]
+  },
+  {
+    "id": "MSTP-002",
+    "category": "Grammar",
+    "title": "Ensure subject–verb agreement",
+    "description": "Match the subject and verb in number and person to maintain grammatical accuracy.",
+    "examples": {
+      "incorrect": "The results of the test is ready.",
+      "correct": "The results of the test are ready."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["subject verb agreement", "plural", "singular", "grammar rules"]
+  },
+  {
+    "id": "MSTP-003",
+    "category": "Grammar",
+    "title": "Use parallel structure in lists",
+    "description": "In lists or series, keep all items in the same grammatical form to improve readability.",
+    "examples": {
+      "incorrect": "The application can scan documents, analyzing errors, and suggestions are given.",
+      "correct": "The application can scan documents, analyze errors, and give suggestions."
+    },
+    "source": "Microsoft Style Guide, Lists section",
+    "tags": ["parallel structure", "lists", "grammar consistency"]
+  },
+  {
+    "id": "MSTP-004",
+    "category": "Grammar",
+    "title": "Avoid noun strings",
+    "description": "Break up long strings of nouns with prepositions or hyphens to make the meaning clearer.",
+    "examples": {
+      "incorrect": "User manual style guide rule database",
+      "correct": "Database of user manual style guide rules"
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["noun strings", "word order", "clarity"]
+  },
+  {
+    "id": "MSTP-005",
+    "category": "Grammar",
+    "title": "Place modifiers next to the words they modify",
+    "description": "Avoid misplaced modifiers by positioning them directly next to the words they describe.",
+    "examples": {
+      "incorrect": "Click Save after reviewing the changes quickly.",
+      "correct": "After reviewing the changes, click Save quickly."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["modifiers", "misplaced modifier", "sentence clarity"]
+  },
+  {
+    "id": "MSTP-006",
+    "category": "Grammar",
+    "title": "Avoid double negatives",
+    "description": "Double negatives can confuse readers. Use a single, clear positive or negative statement.",
+    "examples": {
+      "incorrect": "You can't not submit the form.",
+      "correct": "You must submit the form."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["double negatives", "sentence clarity", "grammar"]
+  },
+  {
+    "id": "MSTP-007",
+    "category": "Grammar",
+    "title": "Use the imperative mood for instructions",
+    "description": "Write steps in the imperative mood to make them direct and actionable.",
+    "examples": {
+      "incorrect": "You will need to click the OK button.",
+      "correct": "Click the OK button."
+    },
+    "source": "Microsoft Style Guide, Procedures section",
+    "tags": ["imperative mood", "instructions", "procedural writing"]
+  },
+  {
+    "id": "MSTP-008",
+    "category": "Grammar",
+    "title": "Avoid overuse of pronouns without clear antecedents",
+    "description": "Ensure pronouns clearly refer to the correct noun to avoid ambiguity.",
+    "examples": {
+      "incorrect": "When the user clicks the button, it opens.",
+      "correct": "When the user clicks the button, the dialog opens."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["pronouns", "antecedent", "clarity"]
+  },
+  {
+    "id": "MSTP-009",
+    "category": "Grammar",
+    "title": "Keep sentence structure simple",
+    "description": "Prefer short, direct sentences over complex ones to improve comprehension.",
+    "examples": {
+      "incorrect": "Due to the fact that the system was not configured properly, it resulted in unexpected downtime.",
+      "correct": "The system was misconfigured, causing downtime."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["sentence length", "simplicity", "clarity"]
+  },
+  {
+    "id": "MSTP-010",
+    "category": "Grammar",
+    "title": "Use consistent verb tense within a section",
+    "description": "Maintain the same verb tense to avoid confusing the reader.",
+    "examples": {
+      "incorrect": "The program starts, then it was loading the configuration.",
+      "correct": "The program starts, then loads the configuration."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["verb tense", "consistency", "procedural writing"]
+  },
+  {
+    "id": "MSTP-011",
+    "category": "Grammar",
+    "title": "Avoid dangling participles",
+    "description": "Ensure participial phrases clearly refer to the subject of the sentence.",
+    "examples": {
+      "incorrect": "After reviewing the report, the conclusions were unclear.",
+      "correct": "After reviewing the report, the manager found the conclusions unclear."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["dangling participle", "modifiers", "sentence clarity"]
+  },
+  {
+    "id": "MSTP-012",
+    "category": "Grammar",
+    "title": "Avoid excessive nominalization",
+    "description": "Turn nouns back into verbs where possible to make writing more active and concise.",
+    "examples": {
+      "incorrect": "The implementation of the feature was completed.",
+      "correct": "The team implemented the feature."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["nominalization", "concise writing", "active voice"]
+  },
+  {
+    "id": "MSTP-013",
+    "category": "Grammar",
+    "title": "Avoid unnecessary auxiliary verbs",
+    "description": "Remove unnecessary helping verbs to make sentences more concise.",
+    "examples": {
+      "incorrect": "The program is able to display the report.",
+      "correct": "The program displays the report."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["auxiliary verbs", "conciseness", "clarity"]
+  },
+  {
+    "id": "MSTP-014",
+    "category": "Grammar",
+    "title": "Avoid repetitive sentence structures",
+    "description": "Vary sentence structures to maintain reader engagement and improve flow.",
+    "examples": {
+      "incorrect": "The program loads data. The program checks for errors. The program generates a report.",
+      "correct": "The program loads data, checks for errors, and generates a report."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["sentence variety", "flow", "grammar"]
+  },
+  {
+    "id": "MSTP-015",
+    "category": "Grammar",
+    "title": "Use proper agreement between pronouns and antecedents",
+    "description": "Pronouns should agree with their antecedents in number and gender.",
+    "examples": {
+      "incorrect": "Each user must log out when they finish.",
+      "correct": "Each user must log out when finished."
+    },
+    "source": "Microsoft Style Guide, Grammar section",
+    "tags": ["pronoun agreement", "grammar", "consistency"]
+  }
+]

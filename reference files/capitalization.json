@@ -1,0 +1,59 @@
+{
+  "category": "Capitalization",
+  "rules": [
+    {
+      "id": "capitalization-001",
+      "title": "Capitalize proper nouns",
+      "description": "Capitalize the names of specific people, places, organizations, and products. Do not capitalize generic terms or common nouns unless they are part of a proper name.",
+      "examples": {
+        "correct": "Microsoft Word, Eiffel Tower",
+        "incorrect": "microsoft word, eiffel tower"
+      }
+    },
+    {
+      "id": "capitalization-002",
+      "title": "Capitalize the first word of a sentence",
+      "description": "Always capitalize the first word in a sentence, regardless of the word or its type.",
+      "examples": {
+        "correct": "This is the correct usage.",
+        "incorrect": "this is the incorrect usage."
+      }
+    },
+    {
+      "id": "capitalization-003",
+      "title": "Capitalize UI elements as they appear",
+      "description": "Capitalize buttons, menu items, dialog box titles, and other UI elements exactly as they appear in the product.",
+      "examples": {
+        "correct": "Click Save As.",
+        "incorrect": "Click save as."
+      }
+    },
+    {
+      "id": "capitalization-004",
+      "title": "Do not capitalize common nouns",
+      "description": "Do not capitalize generic terms unless they begin a sentence or are part of a proper noun.",
+      "examples": {
+        "correct": "Use a web browser to access the page.",
+        "incorrect": "Use a Web Browser to access the page."
+      }
+    },
+    {
+      "id": "capitalization-005",
+      "title": "Capitalize acronyms and initialisms",
+      "description": "Capitalize all letters in acronyms and initialisms unless the style guide specifies otherwise.",
+      "examples": {
+        "correct": "HTML, NASA",
+        "incorrect": "Html, Nasa"
+      }
+    },
+    {
+      "id": "capitalization-006",
+      "title": "Capitalize headings and titles using sentence-style capitalization",
+      "description": "Capitalize only the first word of a heading or title and any proper nouns, unless your organization uses title case.",
+      "examples": {
+        "correct": "Install the application",
+        "incorrect": "Install The Application"
+      }
+    }
+  ]
+}

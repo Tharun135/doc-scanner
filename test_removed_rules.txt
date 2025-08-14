@@ -1,0 +1,17 @@
+# Test Document with Mixed Capitalization and Blank Lines
+
+## This Is Title Case Heading
+### this is sentence case heading  
+#### Another Title Case Example
+
+
+Some content here.
+
+
+
+
+More content after many blank lines.
+
+
+
+Even more content with lots of spacing.

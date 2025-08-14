@@ -1,0 +1,182 @@
+[
+  {
+    "id": "MSTP-016",
+    "category": "Clarity",
+    "title": "Use plain language",
+    "description": "Write in plain, everyday language to make content understandable for the widest audience. Avoid jargon unless it's necessary and well-defined.",
+    "examples": {
+      "incorrect": "Utilize the interface to commence the initialization process.",
+      "correct": "Use the interface to start the process."
+    },
+    "source": "Microsoft Style Guide, Plain Language section",
+    "tags": ["plain language", "jargon", "readability", "accessibility"]
+  },
+  {
+    "id": "MSTP-017",
+    "category": "Clarity",
+    "title": "Avoid ambiguous terms",
+    "description": "Replace vague terms like 'soon', 'appropriate', or 'as needed' with specific, measurable descriptions.",
+    "examples": {
+      "incorrect": "Restart the system when appropriate.",
+      "correct": "Restart the system after the installation finishes."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["ambiguity", "precision", "specific language"]
+  },
+  {
+    "id": "MSTP-018",
+    "category": "Clarity",
+    "title": "Avoid filler words",
+    "description": "Remove unnecessary words that don't add meaning, such as 'basically', 'actually', or 'in order to'.",
+    "examples": {
+      "incorrect": "In order to save the file, click Save.",
+      "correct": "To save the file, click Save."
+    },
+    "source": "Microsoft Style Guide, Conciseness section",
+    "tags": ["filler words", "conciseness", "clarity"]
+  },
+  {
+    "id": "MSTP-019",
+    "category": "Clarity",
+    "title": "Use short sentences",
+    "description": "Limit sentences to one main idea to improve readability and comprehension.",
+    "examples": {
+      "incorrect": "The system automatically backs up your files to the cloud, which means you can restore them if your device is lost, stolen, or damaged, and it also lets you share them easily.",
+      "correct": "The system automatically backs up your files to the cloud. You can restore them if your device is lost, stolen, or damaged. You can also share them easily."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["sentence length", "readability", "clarity"]
+  },
+  {
+    "id": "MSTP-020",
+    "category": "Clarity",
+    "title": "Avoid nested clauses",
+    "description": "Break up sentences with multiple embedded clauses to prevent confusion.",
+    "examples": {
+      "incorrect": "The user, who has administrator privileges, which are required for this operation, must log in first.",
+      "correct": "Only administrators can perform this operation. Log in with an administrator account first."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["nested clauses", "sentence structure", "clarity"]
+  },
+  {
+    "id": "MSTP-021",
+    "category": "Clarity",
+    "title": "Be consistent with terminology",
+    "description": "Use the same word or phrase to describe the same concept throughout your content.",
+    "examples": {
+      "incorrect": "Click the Submit button to send your form. Press the Send button to confirm.",
+      "correct": "Click Submit to send your form."
+    },
+    "source": "Microsoft Style Guide, Terminology section",
+    "tags": ["terminology", "consistency", "clarity"]
+  },
+  {
+    "id": "MSTP-022",
+    "category": "Clarity",
+    "title": "Avoid cultural references",
+    "description": "Do not use idioms, slang, or cultural references that might not be understood by all audiences.",
+    "examples": {
+      "incorrect": "This feature is the icing on the cake.",
+      "correct": "This feature is an added benefit."
+    },
+    "source": "Microsoft Style Guide, Global Audience section",
+    "tags": ["cultural references", "idioms", "inclusive writing"]
+  },
+  {
+    "id": "MSTP-023",
+    "category": "Clarity",
+    "title": "Avoid excessive abbreviations",
+    "description": "Use abbreviations only when necessary and define them on first use.",
+    "examples": {
+      "incorrect": "Enable the TLS in the UI before setting the DNS.",
+      "correct": "Enable Transport Layer Security (TLS) in the user interface (UI) before setting the Domain Name System (DNS)."
+    },
+    "source": "Microsoft Style Guide, Abbreviations section",
+    "tags": ["abbreviations", "acronyms", "clarity"]
+  },
+  {
+    "id": "MSTP-024",
+    "category": "Clarity",
+    "title": "Avoid redundant words",
+    "description": "Eliminate repeated or unnecessary modifiers to make sentences concise.",
+    "examples": {
+      "incorrect": "The software update is absolutely essential.",
+      "correct": "The software update is essential."
+    },
+    "source": "Microsoft Style Guide, Conciseness section",
+    "tags": ["redundancy", "conciseness", "clarity"]
+  },
+  {
+    "id": "MSTP-025",
+    "category": "Clarity",
+    "title": "Use positive statements",
+    "description": "Phrase statements positively instead of negatively to make them clearer and more encouraging.",
+    "examples": {
+      "incorrect": "Do not forget to save your work.",
+      "correct": "Save your work."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["positive language", "clarity", "instructions"]
+  },
+  {
+    "id": "MSTP-026",
+    "category": "Clarity",
+    "title": "Avoid vague pronouns",
+    "description": "Make sure every pronoun clearly refers to its intended noun.",
+    "examples": {
+      "incorrect": "After installing the update, restart it.",
+      "correct": "After installing the update, restart the application."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["pronouns", "clarity", "antecedent"]
+  },
+  {
+    "id": "MSTP-027",
+    "category": "Clarity",
+    "title": "Limit prepositional phrases",
+    "description": "Too many prepositional phrases can make a sentence long and confusing. Simplify where possible.",
+    "examples": {
+      "incorrect": "The instructions for the completion of the installation of the program are in the manual.",
+      "correct": "The manual contains installation instructions."
+    },
+    "source": "Microsoft Style Guide, Clarity section",
+    "tags": ["prepositional phrases", "conciseness", "clarity"]
+  },
+  {
+    "id": "MSTP-028",
+    "category": "Clarity",
+    "title": "Use descriptive headings",
+    "description": "Headings should clearly describe the content that follows.",
+    "examples": {
+      "incorrect": "Miscellaneous Information",
+      "correct": "Troubleshooting Connection Issues"
+    },
+    "source": "Microsoft Style Guide, Headings section",
+    "tags": ["headings", "clarity", "structure"]
+  },
+  {
+    "id": "MSTP-029",
+    "category": "Clarity",
+    "title": "Eliminate nominalizations",
+    "description": "Use the verb form of a word instead of the noun form to make sentences more direct.",
+    "examples": {
+      "incorrect": "The implementation of the feature improved performance.",
+      "correct": "Implementing the feature improved performance."
+    },
+    "source": "Microsoft Style Guide, Conciseness section",
+    "tags": ["nominalizations", "active voice", "clarity"]
+  },
+  {
+    "id": "MSTP-030",
+    "category": "Clarity",
+    "title": "Avoid overly technical explanations",
+    "description": "Use the simplest explanation possible for the audience without sacrificing accuracy.",
+    "examples": {
+      "incorrect": "The algorithm applies a Fourier transform to the time-domain signal to obtain its frequency components.",
+      "correct": "The software converts the signal into its frequency components for analysis."
+    },
+    "source": "Microsoft Style Guide, Audience section",
+    "tags": ["technical writing", "audience awareness", "clarity"]
+  }
+]

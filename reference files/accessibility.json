@@ -1,0 +1,61 @@
+{
+  "category": "Accessibility",
+  "rules": [
+    {
+      "id": "A001",
+      "title": "Provide Alt Text for Images",
+      "description": "All informative images must have concise and descriptive alt text that conveys the same meaning as the image.",
+      "example_good": "Alt text: 'Diagram showing the login workflow with three steps: Enter credentials, verify email, access dashboard.'",
+      "example_bad": "Alt text: 'Image1' or missing entirely."
+    },
+    {
+      "id": "A002",
+      "title": "Ensure Sufficient Color Contrast",
+      "description": "Use color combinations that meet WCAG contrast ratio guidelines (4.5:1 for normal text, 3:1 for large text).",
+      "example_good": "Dark blue text on a white background.",
+      "example_bad": "Light gray text on a white background."
+    },
+    {
+      "id": "A003",
+      "title": "Do Not Convey Information by Color Alone",
+      "description": "Ensure that meaning is not dependent solely on color; use text labels, patterns, or shapes as additional indicators.",
+      "example_good": "Error messages are in red and preceded by an 'Error:' label.",
+      "example_bad": "Error messages are only in red without any text label."
+    },
+    {
+      "id": "A004",
+      "title": "Use Descriptive Link Text",
+      "description": "Hyperlink text should clearly describe the destination or purpose, avoiding vague labels like 'click here.'",
+      "example_good": "See the 'Installation Guide' for setup steps.",
+      "example_bad": "Click here."
+    },
+    {
+      "id": "A005",
+      "title": "Ensure Keyboard Navigation Support",
+      "description": "All interactive elements should be reachable and operable via keyboard without requiring a mouse.",
+      "example_good": "Tab key moves sequentially through links and buttons in a logical order.",
+      "example_bad": "Some form fields can only be selected with a mouse."
+    },
+    {
+      "id": "A006",
+      "title": "Use Clear, Simple Language",
+      "description": "Write in plain language to make content understandable for a wide audience, including non-native speakers.",
+      "example_good": "Press the power button to start the device.",
+      "example_bad": "Initiate device activation via the primary actuation control."
+    },
+    {
+      "id": "A007",
+      "title": "Provide Captions and Transcripts for Multimedia",
+      "description": "All videos and audio files should have accurate captions and/or transcripts to ensure accessibility.",
+      "example_good": "Video includes synchronized captions and a downloadable transcript.",
+      "example_bad": "Video contains only audio without captions."
+    },
+    {
+      "id": "A008",
+      "title": "Avoid Flashes and Rapid Animations",
+      "description": "Do not use content that flashes more than three times per second or causes seizures.",
+      "example_good": "Smooth fade transitions between images.",
+      "example_bad": "Flashing red banner that blinks rapidly."
+    }
+  ]
+}

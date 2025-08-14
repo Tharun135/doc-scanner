@@ -18,6 +18,17 @@ from dataclasses import asdict
 # Import smart rule filtering for performance - temporarily disabled for debugging
 # from .smart_rule_filter import analyze_sentence_smart, get_smart_performance_stats
 
+# Import Enhanced RAG System for intelligent suggestions
+try:
+    from .enhanced_rag_complete import get_enhanced_suggestion, get_rag_status
+    RAG_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info("Enhanced RAG system imported successfully")
+except ImportError as e:
+    RAG_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Enhanced RAG system not available: {e}")
+
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
@@ -56,6 +67,87 @@ def get_spacy_model():
             SPACY_AVAILABLE = False
     
     return nlp if SPACY_AVAILABLE else None
+
+def enhance_issue_with_rag(issue: dict, context: str = "", timeout_seconds: int = 2) -> dict:
+    """Enhance an issue with the RAG system for intelligent suggestions."""
+    if not RAG_AVAILABLE:
+        return {
+            "enhanced_response": issue.get('message', ''),
+            "method": "original"
+        }
+    
+    try:
+        # For performance: skip RAG enhancement for basic pattern-based issues
+        issue_message = issue.get('message', '')
+        message_lower = issue_message.lower()
+        
+        # Skip RAG for simple, repetitive issues to improve performance
+        if any(skip_pattern in message_lower for skip_pattern in [
+            'consider rewriting as:', 'consider removing unnecessary modifier',
+            'remove \'very\' or use a stronger word'
+        ]):
+            return {
+                "enhanced_response": issue.get('message', ''),
+                "method": "skip_repetitive"
+            }
+        
+        # Extract issue details
+        issue_text = issue.get('text', '')
+        
+        # Determine issue type from message
+        issue_type = "general"
+        if "passive voice" in message_lower:
+            issue_type = "passive_voice"
+        elif "long sentence" in message_lower or "sentence length" in message_lower:
+            issue_type = "long_sentence"
+        elif "modifier" in message_lower or "unnecessary" in message_lower:
+            issue_type = "modifier"
+        elif "clarity" in message_lower:
+            issue_type = "clarity"
+        elif "grammar" in message_lower:
+            issue_type = "grammar"
+        
+        # Quick timeout for RAG enhancement to prevent blocking (cross-platform)
+        import threading
+        import time
+        
+        result_container = {}
+        
+        def rag_worker():
+            try:
+                result_container['result'] = get_enhanced_suggestion(
+                    issue_text=issue_text,
+                    issue_type=issue_type,
+                    context=context[:300]  # Reduced context for faster processing
+                )
+            except Exception as e:
+                result_container['error'] = str(e)
+        
+        # Start RAG enhancement in thread with timeout
+        thread = threading.Thread(target=rag_worker)
+        thread.start()
+        thread.join(timeout=timeout_seconds)
+        
+        if thread.is_alive():
+            # Timeout occurred
+            logger.warning("RAG enhancement timed out")
+            return {
+                "enhanced_response": issue.get('message', ''),
+                "method": "timeout_fallback"
+            }
+        
+        if 'result' in result_container:
+            return result_container['result']
+        elif 'error' in result_container:
+            raise Exception(result_container['error'])
+        
+    except (TimeoutError, Exception) as e:
+        logger.warning(f"RAG enhancement failed or timed out: {e}")
+        return {
+            "enhanced_response": issue.get('message', ''),
+            "method": "original_with_error",
+            "error": str(e)
+        }
 
 ############################
 # PARSING HELPERS
@@ -788,12 +880,16 @@ def upload_file_progressive():
                 issues_per_sentence = max(1, len(document_issues) // len(sentences)) if len(sentences) > 0 else 0
                 
                 for index, sent in enumerate(sentences):
-                    # Update progress for distribution
+                    # Update progress for distribution with more informative messages
                     progress_percent = 70 + int((index / total_sentences) * 15)
+                    status_message = f"Processing sentence {index + 1} of {total_sentences}"
+                    if total_sentences > 20:
+                        status_message += " (fast mode)"
+                    
                     analysis_progress[analysis_id].update({
                         "stage": "analysis",
                         "percentage": progress_percent,
-                        "message": f"Distributing issues to sentence {index + 1} of {total_sentences}..."
+                        "message": status_message
                     })
                     
                     sentence_feedback = []
@@ -806,15 +902,28 @@ def upload_file_progressive():
                     if index == len(sentences) - 1:
                         end_idx = len(document_issues)
                     
-                    # Assign issues to this sentence
+                    # Assign issues to this sentence with RAG enhancement
                     for issue_idx in range(start_idx, min(end_idx, len(document_issues))):
                         if issue_idx < len(document_issues):
                             issue = document_issues[issue_idx]
+                            
+                            # For large documents (>20 sentences), skip RAG enhancement to improve speed
+                            if total_sentences > 20:
+                                enhanced_feedback = {
+                                    "enhanced_response": issue.get('message', ''),
+                                    "method": "fast_mode"
+                                }
+                            else:
+                                # Enhanced with RAG system (timeout protected)
+                                enhanced_feedback = enhance_issue_with_rag(issue, plain_text, timeout_seconds=1)
+                            
                             sentence_feedback.append({
                                 "text": issue.get('text', ''),
                                 "start": issue.get('start', 0),
                                 "end": issue.get('end', 0),
-                                "message": issue.get('message', ''),
+                                "message": enhanced_feedback.get('enhanced_response', issue.get('message', '')),
+                                "original_message": issue.get('message', ''),
+                                "rag_enhanced": enhanced_feedback.get('method', '') == 'enhanced_rag',
                                 "sentence_index": index
                             })
                     
@@ -847,7 +956,9 @@ def upload_file_progressive():
                         "end": sent.end_char
                     })
                     
-                    time.sleep(0.1)  # Small delay for visual progress
+                    # Reduce sleep time for faster processing with large documents
+                    sleep_time = 0.05 if total_sentences > 20 else 0.1
+                    time.sleep(sleep_time)  # Small delay for visual progress
                 
             except Exception as analysis_error:
                 logger.error(f"❌ Error in full document analysis: {analysis_error}")
@@ -1333,6 +1444,30 @@ def calculate_quality_score(sentences):
     # Cap at 0% minimum
     score = max(0, 100 - (total_issues / total_sentences * 100))
     return round(score)
+
+@main.route('/rag-status')
+def rag_status():
+    """Get Enhanced RAG system status for debugging and monitoring."""
+    try:
+        if RAG_AVAILABLE:
+            status = get_rag_status()
+            return jsonify({
+                "success": True,
+                "rag_system": status,
+                "integration": "active"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "RAG system not available",
+                "integration": "disabled"
+            })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "integration": "error"
+        })
 
 @main.route('/debug-ai')
 def debug_ai():
