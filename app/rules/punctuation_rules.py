@@ -107,8 +107,15 @@ def check_period_placement(text_content):
     # Split into lines and check each line
     lines = text_content.split('\n')
     
+    current_position = 0  # Track position in the full document
+    
     for line_num, line in enumerate(lines):
+        line_start_position = current_position
         line = line.strip()
+        original_line = lines[line_num]  # Keep original with whitespace for position calculation
+        
+        # Update position for next iteration (include the newline character)
+        current_position += len(original_line) + 1  # +1 for the \n character
         
         # Skip empty lines, headers, list items, and short phrases
         if (not line or 
@@ -124,12 +131,27 @@ def check_period_placement(text_content):
             not line.endswith('...') and
             re.search(r'\b(the|a|an|is|are|was|were|have|has|will|can|should|would)\b', line.lower())):
             
-            suggestions.append({
-                "text": line,
-                "start": 0,  # Approximate position
-                "end": len(line),
-                "message": f"Consider adding period at end of sentence: '{line}'"
-            })
+            # Find the actual position of this line in the full document
+            line_position_in_document = text_content.find(line, line_start_position)
+            if line_position_in_document == -1:
+                # Fallback: try to find the line without position constraint
+                line_position_in_document = text_content.find(line)
+            
+            if line_position_in_document != -1:
+                suggestions.append({
+                    "text": line,
+                    "start": line_position_in_document,
+                    "end": line_position_in_document + len(line),
+                    "message": f"Consider adding period at end of sentence: '{line}'"
+                })
+            else:
+                # Last resort: use approximate position (this shouldn't happen often)
+                suggestions.append({
+                    "text": line,
+                    "start": line_start_position,
+                    "end": line_start_position + len(line),
+                    "message": f"Consider adding period at end of sentence: '{line}'"
+                })
     
     return suggestions
 
