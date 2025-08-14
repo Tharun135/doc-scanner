@@ -614,35 +614,97 @@ def upload_file():
         html_content = parse_file(file)
         # Use BeautifulSoup to extract plain text from HTML
         soup = BeautifulSoup(html_content, "html.parser")
-        plain_text = soup.get_text(separator="\n")
+        
+        # ENHANCED FIX: Advanced text extraction to preserve sentence integrity
+        # Remove script and style elements that might interfere
+        for script in soup(["script", "style"]):
+            script.decompose()
+        
+        # Use space as separator to prevent breaking sentences with formatting
+        plain_text = soup.get_text(separator=" ")
+        
+        # Enhanced text cleaning and normalization
+        import re
+        # Replace multiple spaces/tabs/newlines with single space
+        plain_text = re.sub(r'\s+', ' ', plain_text)
+        # Clean up spacing around punctuation
+        plain_text = re.sub(r'\s+([.!?,:;])', r'\1', plain_text)
+        # Ensure proper spacing after punctuation
+        plain_text = re.sub(r'([.!?])([A-Z])', r'\1 \2', plain_text)
+        # Remove extra spaces around parentheses and brackets
+        plain_text = re.sub(r'\s*([()[\]{}])\s*', r'\1', plain_text)
+        # Clean up spaces around hyphens and dashes
+        plain_text = re.sub(r'\s+(-+)\s+', r' \1 ', plain_text)
+        plain_text = plain_text.strip()
         
         # Store the document content for RAG context
         current_document_content = plain_text
 
-        # Split on newlines and punctuation for better sentence segmentation
-        lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
+        # ENHANCED: Extract text blocks more carefully to preserve sentences
+        paragraph_blocks = []
+        
+        # Process different HTML elements that represent text blocks
+        text_elements = soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'])
+        
+        for element in text_elements:
+            # Skip elements that are inside other elements we're already processing
+            if element.parent and element.parent.name in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                continue
+                
+            # Extract text with careful handling of inline elements
+            block_text = ""
+            for content in element.contents:
+                if hasattr(content, 'get_text'):
+                    # This is an HTML element
+                    block_text += content.get_text(separator=" ")
+                else:
+                    # This is plain text
+                    block_text += str(content)
+            
+            # Clean and normalize the block text
+            if block_text.strip():
+                block_text = re.sub(r'\s+', ' ', block_text.strip())
+                # Only add if it's substantial content (not just punctuation)
+                if len(block_text.strip()) > 2 and not re.match(r'^[.!?,:;\s]*$', block_text):
+                    paragraph_blocks.append(block_text)
+        # ENHANCED: Process paragraph blocks for sentence segmentation
         sentences = []
-        for line in lines:
+        for block in paragraph_blocks:
             spacy_nlp = get_spacy_model()
             if spacy_nlp:
-                # Use spaCy to further split lines with multiple sentences
-                doc = spacy_nlp(line)
+                # Use spaCy to split block into sentences
+                doc = spacy_nlp(block)
                 for sent in doc.sents:
-                    sentences.append(sent)
+                    # Enhanced sentence cleaning and validation
+                    cleaned_text = re.sub(r'\s+', ' ', sent.text.strip())
+                    # Skip very short fragments, pure punctuation, or whitespace
+                    if len(cleaned_text) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', cleaned_text):
+                        # Ensure sentence doesn't start/end with formatting artifacts
+                        cleaned_text = re.sub(r'^[^\w\d]+', '', cleaned_text)  # Remove leading non-alphanumeric
+                        cleaned_text = re.sub(r'[^\w\d.!?]+$', '', cleaned_text)  # Remove trailing non-alphanumeric except sentence endings
+                        if len(cleaned_text) > 3:
+                            sentences.append(sent)
             else:
-                # Fallback: simple sentence splitting when spaCy is not available
+                # Enhanced fallback: regex splitting when spaCy is not available
                 import re
-                # Split by sentence-ending punctuation
-                simple_sentences = re.split(r'[.!?]+\s+', line)
+                # More sophisticated sentence splitting patterns
+                # Split by sentence-ending punctuation followed by space and capital letter or number
+                simple_sentences = re.split(r'[.!?]+\s+(?=[A-Z0-9])', block)
                 for sent_text in simple_sentences:
-                    if sent_text.strip():
-                        # Create a simple sentence object
+                    cleaned_sent = sent_text.strip()
+                    if cleaned_sent and len(cleaned_sent) > 3 and not re.match(r'^[.!?,:;\s\-_]*$', cleaned_sent):
+                        # Create a more robust sentence object
                         class SimpleSentence:
                             def __init__(self, text):
-                                self.text = text.strip()
+                                # Enhanced text cleaning
+                                self.text = re.sub(r'\s+', ' ', text.strip())
+                                # Remove leading/trailing formatting artifacts
+                                self.text = re.sub(r'^[^\w\d]+', '', self.text)
+                                self.text = re.sub(r'[^\w\d.!?]+$', '', self.text)
                                 self.start_char = 0
-                                self.end_char = len(text)
-                        sentences.append(SimpleSentence(sent_text.strip()))
+                                self.end_char = len(self.text)
+                        if len(cleaned_sent) > 3:
+                            sentences.append(SimpleSentence(cleaned_sent))
 
         sentence_data = []
         
@@ -652,49 +714,111 @@ def upload_file():
         document_issues = document_analysis.get('issues', [])
         logger.info(f"✅ Full document analysis found {len(document_issues)} total issues")
         
-        # Build a mapping of character positions to sentences for accurate issue assignment
+        # ENHANCED: Build a mapping of character positions to sentences for accurate issue assignment
         sentence_position_map = []
         current_pos = 0
+        
         for index, sent in enumerate(sentences):
-            # Find the actual position of this sentence in the full text
-            sentence_start = plain_text.find(sent.text, current_pos)
+            # FIXED: Always use the plain text to find exact positions to ensure consistency
+            sentence_text = sent.text.strip()
+            
+            # Find the actual position of this sentence in the full plain text
+            sentence_start = plain_text.find(sentence_text, current_pos)
+            
             if sentence_start != -1:
-                sentence_end = sentence_start + len(sent.text)
+                sentence_end = sentence_start + len(sentence_text)
                 sentence_position_map.append({
                     'index': index,
                     'start': sentence_start,
                     'end': sentence_end,
-                    'sentence': sent
+                    'sentence': sent,
+                    'text': sentence_text
                 })
                 current_pos = sentence_end
+                logger.debug(f"📍 Sentence {index}: '{sentence_text[:50]}...' mapped to position {sentence_start}-{sentence_end}")
             else:
-                # Fallback if sentence not found - use spaCy positions if available
-                if hasattr(sent, 'start_char') and hasattr(sent, 'end_char'):
+                # If exact text match fails, try fuzzy matching
+                logger.warning(f"⚠️  Could not find exact position for sentence {index}: '{sentence_text[:50]}...'")
+                
+                # Try to find the sentence allowing for minor formatting differences
+                import difflib
+                best_match_pos = -1
+                best_match_ratio = 0
+                
+                # Search in chunks around the current position
+                search_start = max(0, current_pos - 50)
+                search_end = min(len(plain_text), current_pos + len(sentence_text) + 50)
+                search_text = plain_text[search_start:search_end]
+                
+                # Use fuzzy matching to find similar text
+                for i in range(len(search_text) - len(sentence_text) + 1):
+                    chunk = search_text[i:i + len(sentence_text)]
+                    ratio = difflib.SequenceMatcher(None, sentence_text.lower(), chunk.lower()).ratio()
+                    if ratio > best_match_ratio:
+                        best_match_ratio = ratio
+                        best_match_pos = search_start + i
+                
+                if best_match_ratio > 0.8:  # 80% similarity threshold
+                    sentence_end = best_match_pos + len(sentence_text)
                     sentence_position_map.append({
                         'index': index,
-                        'start': sent.start_char,
-                        'end': sent.end_char,
-                        'sentence': sent
+                        'start': best_match_pos,
+                        'end': sentence_end,
+                        'sentence': sent,
+                        'text': sentence_text
                     })
+                    current_pos = sentence_end
+                    logger.info(f"✅ Fuzzy match found for sentence {index} at position {best_match_pos}-{sentence_end} (similarity: {best_match_ratio:.2f})")
                 else:
                     # Last resort: approximate position
+                    logger.warning(f"⚠️  Using approximate position for sentence {index}")
                     sentence_position_map.append({
                         'index': index,
                         'start': current_pos,
-                        'end': current_pos + len(sent.text),
-                        'sentence': sent
+                        'end': current_pos + len(sentence_text),
+                        'sentence': sent,
+                        'text': sentence_text
                     })
-                    current_pos += len(sent.text)
+                    current_pos += len(sentence_text)
         
-        # Function to find which sentence contains an issue position
+        # ENHANCED: Function to find which sentence contains an issue position
         def find_sentence_for_issue(issue_start, issue_end):
+            best_match = None
+            best_overlap = 0
+            
             for sent_info in sentence_position_map:
-                # Check if issue overlaps with this sentence
-                if (issue_start >= sent_info['start'] and issue_start < sent_info['end']) or \
-                   (issue_end > sent_info['start'] and issue_end <= sent_info['end']) or \
-                   (issue_start <= sent_info['start'] and issue_end >= sent_info['end']):
+                # Calculate overlap between issue and sentence
+                overlap_start = max(issue_start, sent_info['start'])
+                overlap_end = min(issue_end, sent_info['end'])
+                overlap = max(0, overlap_end - overlap_start)
+                
+                # Check if this is a better match
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_match = sent_info['index']
+                
+                # Also check if issue is completely within sentence boundaries
+                if (issue_start >= sent_info['start'] and issue_end <= sent_info['end']):
+                    logger.debug(f"🎯 Issue at {issue_start}-{issue_end} fully contained in sentence {sent_info['index']} at {sent_info['start']}-{sent_info['end']}")
                     return sent_info['index']
-            return None  # Issue doesn't match any sentence
+                
+                # Check if issue overlaps significantly with sentence
+                if overlap > 0:
+                    issue_length = issue_end - issue_start
+                    sentence_length = sent_info['end'] - sent_info['start']
+                    overlap_ratio = overlap / min(issue_length, sentence_length) if min(issue_length, sentence_length) > 0 else 0
+                    
+                    if overlap_ratio > 0.5:  # 50% overlap threshold
+                        logger.debug(f"🎯 Issue at {issue_start}-{issue_end} significantly overlaps with sentence {sent_info['index']} (ratio: {overlap_ratio:.2f})")
+                        return sent_info['index']
+            
+            # If no perfect match, return the best overlap if it exists
+            if best_match is not None and best_overlap > 0:
+                logger.debug(f"🔍 Using best overlap match: sentence {best_match} (overlap: {best_overlap})")
+                return best_match
+            
+            logger.warning(f"⚠️  Could not find sentence for issue at position {issue_start}-{issue_end}")
+            return None
         
         # Initialize sentence feedback lists
         sentence_feedback_map = {i: [] for i in range(len(sentences))}
@@ -734,6 +858,70 @@ def upload_file():
             readability_scores = {}
             quality_score = max(0, 100 - (len(sentence_feedback) * 10))
             
+            # ENHANCED: Find corresponding HTML segment for better highlighting
+            sentence_text = sent.text.strip()
+            html_segment = None
+            
+            # Try to find the sentence in the HTML content for proper highlighting
+            try:
+                words = sentence_text.split()
+                if len(words) >= 2:
+                    # IMPROVED: More flexible pattern matching
+                    import re
+                    
+                    # Method 1: Try exact sentence match first (handles simple cases)
+                    if sentence_text in html_content:
+                        html_segment = sentence_text
+                        logger.debug(f"Found exact match for sentence {index}")
+                    else:
+                        # Method 2: Use first and last words with flexible pattern
+                        first_word = re.escape(words[0])
+                        last_word = re.escape(words[-1])
+                        
+                        # Create pattern that allows HTML tags, spaces, and other words between
+                        # This handles cases like "You can choose" -> "You can choose to set... by activating the <strong>Enable Autostart</strong> option"
+                        flexible_pattern = f'{first_word}[\\s\\S]*?{last_word}'
+                        match = re.search(flexible_pattern, html_content, re.DOTALL | re.IGNORECASE)
+                        
+                        if match and match.group(0):
+                            candidate = match.group(0).strip()
+                            # Validate the match isn't too long (sanity check)
+                            if len(candidate) <= len(sentence_text) * 4:  # Allow for HTML tags
+                                html_segment = re.sub(r'\s+', ' ', candidate)
+                                logger.debug(f"Found flexible match for sentence {index}")
+                        
+                        # Method 3: Try word-by-word approach for complex formatting
+                        if not html_segment and len(words) >= 3:
+                            # Use first 3 and last 2 words for more precise matching
+                            first_three = ' '.join(words[:3])
+                            last_two = ' '.join(words[-2:]) if len(words) > 3 else words[-1]
+                            
+                            first_escaped = re.escape(first_three)
+                            last_escaped = re.escape(last_two)
+                            
+                            precise_pattern = f'{first_escaped}[\\s\\S]*?{last_escaped}'
+                            match = re.search(precise_pattern, html_content, re.DOTALL | re.IGNORECASE)
+                            
+                            if match:
+                                candidate = match.group(0).strip()
+                                if len(candidate) <= len(sentence_text) * 3:
+                                    html_segment = re.sub(r'\s+', ' ', candidate)
+                                    logger.debug(f"Found precise match for sentence {index}")
+                
+                elif len(words) == 1:
+                    # Single word sentences
+                    if sentence_text in html_content:
+                        html_segment = sentence_text
+                        
+            except Exception as e:
+                logger.debug(f"Could not find HTML segment for sentence {index}: {e}")
+            
+            # Log the result for debugging
+            if html_segment:
+                logger.debug(f"HTML segment for sentence {index}: '{html_segment[:100]}...'")
+            else:
+                logger.warning(f"No HTML segment found for sentence {index}: '{sentence_text[:50]}...'")
+            
             sentence_data.append({
                 "sentence": sent.text,
                 "sentence_index": index,
@@ -741,7 +929,9 @@ def upload_file():
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
                 "start": sent.start_char,
-                "end": sent.end_char
+                "end": sent.end_char,
+                "html_segment": html_segment,  # NEW: HTML segment for better highlighting
+                "words": sentence_text.split()[:5]  # NEW: First few words for matching
             })
 
         total_sentences = len(sentence_data)
