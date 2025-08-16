@@ -860,7 +860,7 @@ def upload_file():
             issue_start = issue.get('start', 0)
             issue_end = issue.get('end', 0)
             
-            # Only try to match issues that have valid position information
+            # Try to match issues that have valid position information
             if issue_start > 0 or issue_end > 0:
                 sentence_index = find_sentence_for_issue(issue_start, issue_end)
                 if sentence_index is not None:
@@ -893,8 +893,21 @@ def upload_file():
                 else:
                     unmatched_issues.append(issue)
             else:
-                # Issues without position info - these are problematic and should be fixed in rules
-                unmatched_issues.append(issue)
+                # Issues without position info - assign to first sentence as fallback
+                sentence_index = 0 if sentences else None
+                if sentence_index is not None:
+                    original_message = issue.get('message', '')
+                    enhanced_message = original_message or "Writing issue detected - review for clarity"
+                    
+                    sentence_feedback_map[sentence_index].append({
+                        "text": issue.get('text', ''),
+                        "start": 0,
+                        "end": 0,
+                        "message": enhanced_message,
+                        "sentence_index": sentence_index
+                    })
+                else:
+                    unmatched_issues.append(issue)
         
         if unmatched_issues:
             logger.warning(f"⚠️ {len(unmatched_issues)} issues could not be matched to sentences (likely rules with missing position info)")
