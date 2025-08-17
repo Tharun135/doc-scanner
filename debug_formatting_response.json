@@ -1,0 +1,156 @@
+{
+  "content": "<h1>Test Document for Formatting Issues</h1>\n<p>You can choose to set any project to Autostart mode by activating the <strong>Enable Autostart</strong> option.</p>\n<p>This sentence has <strong>bold words</strong> in the middle and should work perfectly.</p>\n<p>Here is a sentence with a <a href=\"https://example.com\">helpful link</a> that should not break.</p>\n<p>This sentence contains an image reference 176617096203-d2e2393 that should not split.</p>\n<p><strong>Bold text at start</strong> of sentence works fine.</p>\n<p>Multiple formatting: you can use <strong>bold text</strong>, add <a href=\"https://test.com\">links</a>, and reference images 12345-abcde in one sentence.</p>",
+  "report": {
+    "avgQualityScore": 0,
+    "message": "Content analysis completed.",
+    "totalSentences": 7,
+    "totalWords": 80
+  },
+  "sentences": [
+    {
+      "content": "<p>Test Document for Formatting Issues</p>",
+      "feedback": [
+        {
+          "end": 35,
+          "message": "Punctuation issue: Sentence may be missing ending punctuation",
+          "sentence_index": 0,
+          "start": 0,
+          "text": "Test Document for Formatting Issues"
+        }
+      ],
+      "html_segment": "<p>Test Document for Formatting Issues</p>",
+      "index": 0,
+      "plain": "Test Document for Formatting Issues",
+      "sentence": "Test Document for Formatting Issues"
+    },
+    {
+      "content": "<p>You can choose to set any project to Autostart mode by activating the Enable Autostart option.</p>",
+      "feedback": [],
+      "html_segment": "<p>You can choose to set any project to Autostart mode by activating the Enable Autostart option.</p>",
+      "index": 1,
+      "plain": "You can choose to set any project to Autostart mode by activating the Enable Autostart option.",
+      "sentence": "You can choose to set any project to Autostart mode by activating the Enable Autostart option."
+    },
+    {
+      "content": "<p>This sentence has bold words in the middle and should work perfectly.</p>",
+      "feedback": [
+        {
+          "end": 53,
+          "message": "Punctuation issue: Consider adding comma in series (Oxford comma)",
+          "sentence_index": 2,
+          "start": 32,
+          "text": "the middle and should"
+        }
+      ],
+      "html_segment": "<p>This sentence has bold words in the middle and should work perfectly.</p>",
+      "index": 2,
+      "plain": "This sentence has bold words in the middle and should work perfectly.",
+      "sentence": "This sentence has bold words in the middle and should work perfectly."
+    },
+    {
+      "content": "<p>Here is a sentence with a helpful link that should not break.</p>",
+      "feedback": [
+        {
+          "end": 4,
+          "message": "Accessibility issue: Generic link text - use descriptive link text",
+          "sentence_index": 3,
+          "start": 0,
+          "text": "Here"
+        },
+        {
+          "end": 52,
+          "message": "Clarity issue: Vague pronoun reference - specify what \"this/that/it\" refers to",
+          "sentence_index": 3,
+          "start": 39,
+          "text": "that should n"
+        }
+      ],
+      "html_segment": "<p>Here is a sentence with a helpful link that should not break.</p>",
+      "index": 3,
+      "plain": "Here is a sentence with a helpful link that should not break.",
+      "sentence": "Here is a sentence with a helpful link that should not break."
+    },
+    {
+      "content": "<p>This sentence contains an image reference 176617096203-d2e2393 that should not split.</p>",
+      "feedback": [
+        {
+          "end": 76,
+          "message": "Clarity issue: Vague pronoun reference - specify what \"this/that/it\" refers to",
+          "sentence_index": 4,
+          "start": 63,
+          "text": "that should n"
+        },
+        {
+          "end": 56,
+          "message": "Formatting issue: Add spaces around operators",
+          "sentence_index": 4,
+          "start": 53,
+          "text": "3-d"
+        },
+        {
+          "end": 54,
+          "message": "Formatting issue: Consider using comma separators for large numbers",
+          "sentence_index": 4,
+          "start": 42,
+          "text": "176617096203"
+        }
+      ],
+      "html_segment": "<p>This sentence contains an image reference 176617096203-d2e2393 that should not split.</p>",
+      "index": 4,
+      "plain": "This sentence contains an image reference 176617096203-d2e2393 that should not split.",
+      "sentence": "This sentence contains an image reference 176617096203-d2e2393 that should not split."
+    },
+    {
+      "content": "<p>Bold text at start of sentence works fine.</p>",
+      "feedback": [],
+      "html_segment": "<p>Bold text at start of sentence works fine.</p>",
+      "index": 5,
+      "plain": "Bold text at start of sentence works fine.",
+      "sentence": "Bold text at start of sentence works fine."
+    },
+    {
+      "content": "<p>Multiple formatting: you can use bold text, add links, and reference images 12345-abcde in one sentence.</p>",
+      "feedback": [
+        {
+          "end": 104,
+          "message": "Accessibility issue: Complex sentence structure - consider simpler language for cognitive accessibility",
+          "sentence_index": 6,
+          "start": 0,
+          "text": "Multiple formatting: you can use bold text, add links, and reference images 12345-abcde in one sentence."
+        },
+        {
+          "end": 104,
+          "message": "Clarity issue: Long sentence with multiple clauses - consider breaking into shorter sentences",
+          "sentence_index": 6,
+          "start": 0,
+          "text": "Multiple formatting: you can use bold text, add links, and reference images 12345-abcde in one sentence."
+        },
+        {
+          "end": 83,
+          "message": "Formatting issue: Add spaces around operators",
+          "sentence_index": 6,
+          "start": 80,
+          "text": "5-a"
+        },
+        {
+          "end": 81,
+          "message": "Formatting issue: Consider using comma separators for large numbers",
+          "sentence_index": 6,
+          "start": 76,
+          "text": "12345"
+        },
+        {
+          "end": 22,
+          "message": "Punctuation issue: Consider capitalizing after colon for complete sentences",
+          "sentence_index": 6,
+          "start": 19,
+          "text": ": y"
+        }
+      ],
+      "html_segment": "<p>Multiple formatting: you can use bold text, add links, and reference images 12345-abcde in one sentence.</p>",
+      "index": 6,
+      "plain": "Multiple formatting: you can use bold text, add links, and reference images 12345-abcde in one sentence.",
+      "sentence": "Multiple formatting: you can use bold text, add links, and reference images 12345-abcde in one sentence."
+    }
+  ]
+}

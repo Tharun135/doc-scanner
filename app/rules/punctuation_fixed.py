@@ -16,13 +16,52 @@ def check(content: str) -> List[Dict[str, Any]]:
     """
     issues = []
     
+    # Helper function to detect if text is likely a title/heading
+    def is_likely_title(text: str) -> bool:
+        """Check if text appears to be a title or heading"""
+        text = text.strip()
+        
+        # Common title characteristics:
+        # 1. Short text (typically under 100 characters)
+        # 2. Doesn't contain multiple sentences
+        # 3. May be title case or all caps
+        # 4. Common title words
+        
+        if len(text) > 100:
+            return False
+            
+        # Check for title case (most words capitalized)
+        words = text.split()
+        if len(words) > 1:
+            capitalized_words = sum(1 for word in words if word and word[0].isupper())
+            if capitalized_words >= len(words) * 0.6:  # 60% or more words capitalized
+                return True
+        
+        # Check for common title patterns
+        title_indicators = [
+            'chapter', 'section', 'part', 'appendix', 'introduction', 'conclusion',
+            'summary', 'overview', 'background', 'methodology', 'results', 'discussion',
+            'references', 'bibliography', 'acknowledgments', 'abstract', 'table of contents'
+        ]
+        
+        text_lower = text.lower()
+        if any(indicator in text_lower for indicator in title_indicators):
+            return True
+            
+        # Check if it's likely a heading (short and doesn't read like a sentence)
+        if len(words) <= 6 and not any(word.lower() in ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with'] for word in words):
+            return True
+            
+        return False
+    
     # Define punctuation patterns
     punctuation_patterns = [
-        # Missing periods at end of sentences
+        # Missing periods at end of sentences (MODIFIED: exclude titles)
         {
             'pattern': r'[a-zA-Z][^.!?]*$',
             'flags': re.MULTILINE,
-            'message': 'Punctuation issue: Sentence may be missing ending punctuation'
+            'message': 'Punctuation issue: Sentence may be missing ending punctuation',
+            'exclude_titles': True  # Added flag to exclude titles
         },
         # Double punctuation
         {
@@ -105,9 +144,15 @@ def check(content: str) -> List[Dict[str, Any]]:
         pattern = pattern_info['pattern']
         flags = pattern_info.get('flags', 0)
         message = pattern_info['message']
+        exclude_titles = pattern_info.get('exclude_titles', False)
         
         for match in re.finditer(pattern, content, flags):
             matched_text = match.group(0)
+            
+            # Skip this match if it's flagged to exclude titles and the text appears to be a title
+            if exclude_titles and is_likely_title(matched_text):
+                continue
+                
             issues.append({
                 "text": matched_text,
                 "start": match.start(),

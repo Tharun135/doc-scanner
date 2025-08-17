@@ -596,6 +596,54 @@ def fresh_interface():
 </html>"""
     return fresh_html
 
+def extract_formatted_sentence_html(block_soup, plain_sentence, original_html_block):
+    """
+    Extract the HTML segment that corresponds to a specific sentence.
+    This preserves formatting like bold, links, and images within the sentence.
+    """
+    try:
+        # Get the text content of the entire block
+        full_text = block_soup.get_text(separator=" ").strip()
+        
+        # If this block contains only one sentence (or is very short), return the full formatted block
+        import re
+        
+        # Count probable sentence boundaries (. ! ? followed by space and capital letter)
+        sentence_boundaries = list(re.finditer(r'[.!?]+\s+(?=[A-Z])', full_text))
+        
+        # If there are no clear sentence boundaries, or the text is short, return the full block
+        if len(sentence_boundaries) == 0 or len(full_text) < 150:
+            # Single sentence or short content - return with original formatting
+            return original_html_block
+        
+        # For multi-sentence blocks, we have a choice:
+        # 1. Return the full block (will have highlighting issues with multiple sentences)
+        # 2. Return plain text (loses formatting)
+        # 3. Try to smartly extract the HTML for just this sentence (complex)
+        
+        # Let's use a smart approach: if the sentence appears to be a complete standalone
+        # sentence that starts or ends the paragraph, try to preserve formatting
+        
+        # Check if our sentence is at the start of the full text
+        if full_text.startswith(plain_sentence.rstrip('.!?')):
+            # This sentence is at the beginning - we can try to extract its HTML
+            # For now, return the original block but flag it for better handling
+            return original_html_block
+            
+        # Check if our sentence is at the end of the full text  
+        if full_text.rstrip('.!?').endswith(plain_sentence.rstrip('.!?')):
+            # This sentence is at the end - we can try to extract its HTML
+            return original_html_block
+            
+        # For sentences in the middle of multi-sentence paragraphs,
+        # we'll use plain text for now to avoid highlighting confusion
+        # TODO: Implement precise HTML extraction for middle sentences
+        return f"<p>{plain_sentence}</p>"
+            
+    except Exception as e:
+        logger.warning(f"Error extracting sentence HTML: {e}")
+        return f"<p>{plain_sentence}</p>"
+
 @main.route('/upload', methods=['POST'])
 def upload_file():
     global current_document_content  # Access global variable
@@ -651,15 +699,9 @@ def upload_file():
             if element.parent and element.parent.name in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
                 continue
                 
-            # Extract text with careful handling of inline elements
-            block_text = ""
-            for content in element.contents:
-                if hasattr(content, 'get_text'):
-                    # This is an HTML element
-                    block_text += content.get_text(separator=" ")
-                else:
-                    # This is plain text
-                    block_text += str(content)
+            # Extract text properly to maintain sentence boundaries
+            # Use get_text on the entire element to preserve sentence structure
+            block_text = element.get_text(separator=" ").strip()
             
             # Clean and normalize the block text
             if block_text.strip():
@@ -684,22 +726,24 @@ def upload_file():
                 # Use spaCy to split plain text into sentences
                 doc = spacy_nlp(plain_block)
                 
-                for sent in doc.sents:
+                # Get all sentences from this block
+                sentence_list = list(doc.sents)
+                
+                for sent in sentence_list:
                     plain_sentence = re.sub(r'\s+', ' ', sent.text.strip())
                     
                     # ENHANCED: Skip very short fragments, pure punctuation, or whitespace
-                    # Increased minimum length to prevent false positives like "The", "It is", etc.
                     if (len(plain_sentence) > 8 and 
                         not re.match(r'^[.!?,:;\s\-_]*$', plain_sentence) and
-                        len(plain_sentence.split()) >= 2):  # Require at least 2 words
+                        len(plain_sentence.split()) >= 2):
                         
-                        # FIXED: Create individual sentence HTML instead of using full paragraph
-                        # For now, wrap the sentence text in a simple paragraph to preserve basic formatting
-                        # This fixes the issue where all sentences showed the same full paragraph content
-                        html_sentence = f"<p>{plain_sentence}</p>"
+                        # ENHANCED: Extract the specific HTML for this sentence with formatting preserved
+                        from bs4 import BeautifulSoup
+                        block_soup = BeautifulSoup(html_block, 'html.parser')
+                        html_sentence = extract_formatted_sentence_html(block_soup, plain_sentence, html_block)
                         
                         # Log sentence processing for debugging
-                        if len(list(doc.sents)) > 1:
+                        if len(sentence_list) > 1:
                             logger.debug(f"Processing sentence {len(sentences)+1} from multi-sentence paragraph: {plain_sentence[:50]}...")
                         
                         # Create enhanced sentence object with both plain and HTML versions
@@ -723,10 +767,12 @@ def upload_file():
                     if (cleaned_sent and 
                         len(cleaned_sent) > 8 and 
                         not re.match(r'^[.!?,:;\s\-_]*$', cleaned_sent) and
-                        len(cleaned_sent.split()) >= 2):  # Require at least 2 words
+                        len(cleaned_sent.split()) >= 2):
                         
-                        # FIXED: Create individual sentence HTML instead of using full paragraph
-                        html_sent = f"<p>{cleaned_sent}</p>"
+                        # ENHANCED: Extract the specific HTML for this sentence with formatting preserved
+                        from bs4 import BeautifulSoup
+                        block_soup = BeautifulSoup(html_block, 'html.parser')
+                        html_sent = extract_formatted_sentence_html(block_soup, cleaned_sent, html_block)
                         
                         class SimpleSentence:
                             def __init__(self, plain_text, html_text):
@@ -784,14 +830,17 @@ def upload_file():
                     logger.warning(f"⚠️ Rule failed for sentence {index}: {e}")
                     continue
             
-            # Add sentence data with feedback - FIXED: Use consistent format
+            # Add sentence data with feedback - ENHANCED: Use original HTML blocks
             sentence_data.append({
                 "content": sentence.html_text,
                 "plain": sentence_text,
                 "sentence": sentence_text,  # ADDED: Frontend expects this property
                 "html_segment": sentence.html_text,  # ADDED: Frontend expects this property
                 "feedback": sentence_feedback,
-                "index": index
+                "index": index,
+                # NEW: Add additional properties to help with highlighting
+                "is_formatted": '<' in sentence.html_text and '>' in sentence.html_text,
+                "html_content": sentence.html_text  # Full HTML block for better highlighting
             })
         
         total_issues = sum(len(s['feedback']) for s in sentence_data)
@@ -906,40 +955,88 @@ def upload_file_progressive():
             
             # Parse the file content instead of the file object
             html_content = parse_file_content(file_content, filename)
-            soup = BeautifulSoup(html_content, "html.parser")
-            plain_text = soup.get_text(separator="\n")
-            current_document_content = plain_text
-            logger.info(f"✅ File parsed successfully, {len(plain_text)} characters")
+            current_document_content = html_content  # Store original HTML for context
+            logger.info(f"✅ File parsed successfully, {len(html_content)} characters")
             
-            # Stage 2: Sentence segmentation (15%)
+            # Stage 2: Sentence segmentation (15%) - FIXED: Use proper HTML-aware processing
             analysis_progress[analysis_id].update({
                 "stage": "segmentation", 
                 "percentage": 15,
-                "message": "Breaking down into sentences..."
+                "message": "Breaking down into sentences with HTML preservation..."
             })
             logger.info(f"✂️ Stage 2 - Segmentation started: {analysis_progress[analysis_id]}")
             
             # Add longer delay to show segmentation stage
             time.sleep(1.5)
-            lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
+            
+            # FIXED: Use the same working sentence processing as upload_file function
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
+            
+            # Remove script and style elements
+            for script in soup(["script", "style"]):
+                script.decompose()
+            
+            # Process paragraph blocks for sentence segmentation
+            paragraph_blocks = []
+            text_elements = soup.find_all(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'li', 'blockquote'])
+            
+            for element in text_elements:
+                # Skip nested elements
+                if element.parent and element.parent.name in ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                    continue
+                    
+                block_text = element.get_text(separator=" ").strip()
+                if block_text.strip() and len(block_text.strip()) > 2:
+                    import re
+                    block_text = re.sub(r'\s+', ' ', block_text.strip())
+                    if not re.match(r'^[.!?,:;\s]*$', block_text):
+                        paragraph_blocks.append({
+                            'plain': block_text,
+                            'html': str(element)
+                        })
+            
+            # Process each paragraph block for sentences
             sentences = []
-            for line in lines:
+            for block_data in paragraph_blocks:
+                plain_block = block_data['plain']
+                html_block = block_data['html']
+                
                 spacy_nlp = get_spacy_model()
                 if spacy_nlp:
-                    doc = spacy_nlp(line)
-                    for sent in doc.sents:
-                        sentences.append(sent)
+                    doc = spacy_nlp(plain_block)
+                    sentence_list = list(doc.sents)
+                    
+                    for sent in sentence_list:
+                        import re
+                        plain_sentence = re.sub(r'\s+', ' ', sent.text.strip())
+                        
+                        if (len(plain_sentence) > 8 and 
+                            not re.match(r'^[.!?,:;\s\-_]*$', plain_sentence) and
+                            len(plain_sentence.split()) >= 2):
+                            
+                            from bs4 import BeautifulSoup
+                            block_soup = BeautifulSoup(html_block, 'html.parser')
+                            html_sentence = extract_formatted_sentence_html(block_soup, plain_sentence, html_block)
+                            
+                            sentences.append({
+                                'sentence': plain_sentence,
+                                'html_segment': html_sentence,
+                                'plain': plain_sentence
+                            })
                 else:
+                    # Fallback without spaCy
                     import re
-                    simple_sentences = re.split(r'[.!?]+\s+', line)
+                    simple_sentences = re.split(r'[.!?]+\s+', plain_block)
                     for sent_text in simple_sentences:
-                        if sent_text.strip():
-                            class SimpleSentence:
-                                def __init__(self, text):
-                                    self.text = text.strip()
-                                    self.start_char = 0
-                                    self.end_char = len(text)
-                            sentences.append(SimpleSentence(sent_text.strip()))
+                        if sent_text.strip() and len(sent_text.strip()) > 8:
+                            sentences.append({
+                                'sentence': sent_text.strip(),
+                                'html_segment': f'<p>{sent_text.strip()}</p>',
+                                'plain': sent_text.strip()
+                            })
+            
+            logger.info(f"📝 Extracted {len(sentences)} sentences using HTML-aware processing")
             
             total_sentences = len(sentences)
             sentence_data = []
@@ -963,7 +1060,9 @@ def upload_file_progressive():
                 
                 for index, sentence in enumerate(sentences):
                     sentence_feedback = []
-                    sentence_text = sentence.text
+                    # FIXED: Access sentence content correctly from dictionary format
+                    sentence_text = sentence.get('sentence', '')  # Get plain text for rule analysis
+                    sentence_html = sentence.get('html_segment', f'<p>{sentence_text}</p>')  # Get HTML for display
                     
                     # Apply each rule to this sentence
                     for rule in rules:
@@ -1002,12 +1101,12 @@ def upload_file_progressive():
                             logger.warning(f"⚠️ Rule failed for sentence {index}: {e}")
                             continue
                     
-                    # Add sentence data with feedback - FIXED: Use correct format for frontend
+                    # Add sentence data with feedback - FIXED: Use properly processed HTML content
                     sentence_data.append({
-                        "content": f"<p>{sentence_text}</p>",  # HTML wrapper for display  
-                        "plain": sentence_text,
-                        "sentence": sentence_text,  # ADDED: Frontend expects this property
-                        "html_segment": f"<p>{sentence_text}</p>",  # ADDED: Frontend expects this property
+                        "content": sentence_html,  # Use extracted HTML segment
+                        "plain": sentence_text,   # Plain text for analysis
+                        "sentence": sentence_text,  # Frontend expects this property
+                        "html_segment": sentence_html,  # Use extracted HTML segment
                         "feedback": sentence_feedback,
                         "index": index
                     })
@@ -1056,11 +1155,13 @@ def upload_file_progressive():
             time.sleep(2.0)
             
             total_errors = sum(len(s['feedback']) for s in sentence_data)
+            # FIXED: Calculate total words from processed sentences
+            total_words = sum(len(s.get('sentence', '').split()) for s in sentence_data)
             quality_index = calculate_quality_index(total_sentences, total_errors)
 
             aggregated_report = {
                 "totalSentences": total_sentences,
-                "totalWords": len(plain_text.split()),
+                "totalWords": total_words,
                 "avgQualityScore": quality_index,
                 "message": "Content analysis completed."
             }

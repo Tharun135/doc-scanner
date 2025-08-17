@@ -2772,33 +2772,143 @@
                 
                 let found = false;
                 
-                // Method 1: Use HTML segment if available (best approach)
-                if (htmlSegment && htmlSegment !== 'None' && processedContent.includes(htmlSegment)) {
-                    if (!processedContent.includes(`data-sentence-index="${index}"`)) {
-                        const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${htmlSegment}</span>`;
-                        processedContent = processedContent.replace(htmlSegment, replacement);
-                        found = true;
-                        console.log(`✅ HTML segment match for sentence ${index}`);
-                    }
-                }
+                // NEW APPROACH: Smart text-based highlighting that preserves formatting
+                // This handles cases where formatting elements are inline with sentence text
                 
-                // Method 2: Direct text matching (fallback)
-                if (!found && processedContent.includes(plainSentence)) {
-                    if (!processedContent.includes(`data-sentence-index="${index}"`)) {
-                        const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${plainSentence}</span>`;
-                        processedContent = processedContent.replace(plainSentence, replacement);
-                        found = true;
-                        console.log(`✅ Plain text match for sentence ${index}`);
+                // Try to find and highlight the sentence text while preserving formatting
+                found = highlightSentenceInFormattedContent(processedContent, plainSentence, index, feedbackClass);
+                if (found) {
+                    processedContent = found;
+                    console.log(`✅ Smart highlight for sentence ${index}`);
+                } else {
+                    // Fallback: Method 1 - Use HTML segment if available
+                    if (htmlSegment && htmlSegment !== 'None' && processedContent.includes(htmlSegment)) {
+                        if (!processedContent.includes(`data-sentence-index="${index}"`)) {
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${htmlSegment}</span>`;
+                            processedContent = processedContent.replace(htmlSegment, replacement);
+                            found = true;
+                            console.log(`✅ HTML segment match for sentence ${index}`);
+                        }
                     }
-                }
-                
-                if (!found) {
-                    console.warn(`❌ Could not highlight sentence ${index}: "${plainSentence.substring(0, 50)}..."`);
+                    
+                    // Fallback: Method 2 - Direct text matching 
+                    if (!found && processedContent.includes(plainSentence)) {
+                        if (!processedContent.includes(`data-sentence-index="${index}"`)) {
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${plainSentence}</span>`;
+                            processedContent = processedContent.replace(plainSentence, replacement);
+                            found = true;
+                            console.log(`✅ Plain text match for sentence ${index}`);
+                        }
+                    }
+                    
+                    if (!found) {
+                        console.warn(`❌ Could not highlight sentence ${index}: "${plainSentence.substring(0, 50)}..."`);
+                    }
                 }
             });
             
             console.log('🎯 Highlighting complete');
             return processedContent;
+        }
+
+        // NEW: Smart highlighting function that preserves formatting within sentences
+        function highlightSentenceInFormattedContent(htmlContent, plainSentence, index, feedbackClass) {
+            // Create a temporary DOM element to work with the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            // Function to get all text nodes and their positions
+            function getTextContent(element) {
+                let fullText = '';
+                const textNodes = [];
+                
+                function walk(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const text = node.textContent;
+                        textNodes.push({
+                            node: node,
+                            start: fullText.length,
+                            end: fullText.length + text.length,
+                            text: text
+                        });
+                        fullText += text;
+                    } else {
+                        for (let child of node.childNodes) {
+                            walk(child);
+                        }
+                    }
+                }
+                
+                walk(element);
+                return { fullText, textNodes };
+            }
+            
+            try {
+                const { fullText, textNodes } = getTextContent(tempDiv);
+                
+                // Clean up whitespace in both texts for comparison
+                const cleanFullText = fullText.replace(/\s+/g, ' ').trim();
+                const cleanSentence = plainSentence.replace(/\s+/g, ' ').trim();
+                
+                // Find the sentence in the full text
+                const sentenceStart = cleanFullText.indexOf(cleanSentence);
+                
+                if (sentenceStart === -1) {
+                    return false; // Sentence not found
+                }
+                
+                const sentenceEnd = sentenceStart + cleanSentence.length;
+                
+                // Find which text nodes contain our sentence
+                const affectedNodes = textNodes.filter(nodeInfo => 
+                    (nodeInfo.start < sentenceEnd && nodeInfo.end > sentenceStart)
+                );
+                
+                if (affectedNodes.length === 0) {
+                    return false;
+                }
+                
+                // For simple cases (sentence contained in single text node), wrap it
+                if (affectedNodes.length === 1) {
+                    const nodeInfo = affectedNodes[0];
+                    const relativeStart = sentenceStart - nodeInfo.start;
+                    const relativeEnd = sentenceEnd - nodeInfo.start;
+                    
+                    if (relativeStart >= 0 && relativeEnd <= nodeInfo.text.length) {
+                        const before = nodeInfo.text.substring(0, relativeStart);
+                        const sentenceText = nodeInfo.text.substring(relativeStart, relativeEnd);
+                        const after = nodeInfo.text.substring(relativeEnd);
+                        
+                        // Create the highlight span
+                        const highlightSpan = document.createElement('span');
+                        highlightSpan.className = `sentence-highlight${feedbackClass}`;
+                        highlightSpan.id = `content-sentence-${index}`;
+                        highlightSpan.setAttribute('data-sentence-index', index);
+                        highlightSpan.textContent = sentenceText;
+                        
+                        // Replace the text node with our new structure
+                        const parent = nodeInfo.node.parentNode;
+                        
+                        if (before) {
+                            parent.insertBefore(document.createTextNode(before), nodeInfo.node);
+                        }
+                        parent.insertBefore(highlightSpan, nodeInfo.node);
+                        if (after) {
+                            parent.insertBefore(document.createTextNode(after), nodeInfo.node);
+                        }
+                        parent.removeChild(nodeInfo.node);
+                        
+                        return tempDiv.innerHTML;
+                    }
+                }
+                
+                // For complex cases (sentence spans multiple nodes), fall back to simple approach
+                return false;
+                
+            } catch (error) {
+                console.warn('Error in smart highlighting:', error);
+                return false;
+            }
         }
 
         // Format AI suggestion (structured output)
