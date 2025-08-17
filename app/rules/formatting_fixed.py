@@ -133,7 +133,7 @@ def check(content: str) -> List[Dict[str, Any]]:
         },
         # Inconsistent quote usage
         {
-            'pattern': r'["""].*?["""]',
+            'pattern': r'["]{3}.*?["]{3}',
             'flags': 0,
             'message': 'Formatting issue: Use consistent quotation marks (straight quotes recommended)'
         },
@@ -178,12 +178,6 @@ def check(content: str) -> List[Dict[str, Any]]:
             'flags': re.MULTILINE,
             'message': 'Formatting issue: Trailing whitespace at end of line'
         },
-        # Mixed case in headers (basic detection)
-        {
-            'pattern': r'^[A-Z][a-z]+\s+[a-z]+\s+[A-Z]',
-            'flags': re.MULTILINE,
-            'message': 'Formatting issue: Inconsistent capitalization in heading'
-        },
         # Number formatting
         {
             'pattern': r'\b\d{4,}\b',
@@ -191,7 +185,33 @@ def check(content: str) -> List[Dict[str, Any]]:
             'message': 'Formatting issue: Consider using comma separators for large numbers'
         }
     ]
-    
+
+    # Only check inconsistent capitalization in actual headings (Markdown or HTML)
+    # Markdown headings: lines starting with #
+    heading_pattern = re.compile(r'^(#+)\s+(.*)$', re.MULTILINE)
+    for match in heading_pattern.finditer(content):
+        heading_text = match.group(2).strip()
+        # If heading contains both lowercase and uppercase words, flag it
+        if re.search(r'[A-Z][a-z]+\s+[a-z]+\s+[A-Z]', heading_text):
+            issues.append({
+                "text": heading_text,
+                "start": match.start(2),
+                "end": match.end(2),
+                "message": "Formatting issue: Inconsistent capitalization in heading"
+            })
+
+    # HTML headings: <h1>...</h1> etc.
+    html_heading_pattern = re.compile(r'<h[1-6][^>]*>(.*?)</h[1-6]>', re.IGNORECASE)
+    for match in html_heading_pattern.finditer(content):
+        heading_text = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        if re.search(r'[A-Z][a-z]+\s+[a-z]+\s+[A-Z]', heading_text):
+            issues.append({
+                "text": heading_text,
+                "start": match.start(1),
+                "end": match.end(1),
+                "message": "Formatting issue: Inconsistent capitalization in heading"
+            })
+
     for pattern_info in formatting_patterns:
         pattern = pattern_info['pattern']
         flags = pattern_info.get('flags', 0)
@@ -205,5 +225,5 @@ def check(content: str) -> List[Dict[str, Any]]:
                 "end": match.end(),
                 "message": message
             })
-    
+
     return issues

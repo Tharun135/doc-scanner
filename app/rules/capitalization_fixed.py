@@ -15,56 +15,37 @@ def check(content: str) -> List[Dict[str, Any]]:
     Returns a list of dictionaries with text positions for app compatibility.
     """
     issues = []
-    
-    # Product names that should be capitalized (case-insensitive search)
-    product_names = [
-        'microsoft', 'windows', 'office', 'excel', 'word', 'powerpoint', 
-        'outlook', 'teams', 'azure', 'github', 'google', 'apple', 'amazon',
-        'oracle', 'ibm', 'intel', 'nvidia', 'amd', 'docker', 'kubernetes',
-        'python', 'java', 'javascript', 'typescript', 'react', 'angular', 'vue'
-    ]
-    
-    # Check for improperly capitalized product names
-    for name in product_names:
-        pattern = r'\b' + re.escape(name) + r'\b'
-        for match in re.finditer(pattern, content, re.IGNORECASE):
-            matched_text = match.group(0)
-            # Only flag if not properly capitalized
-            if matched_text.lower() == name and matched_text != name.title():
-                issues.append({
-                    "text": matched_text,
-                    "start": match.start(),
-                    "end": match.end(),
-                    "message": f"Capitalization issue: '{matched_text}' should be '{name.title()}'"
-                })
-    
-    # Check for acronyms that should be uppercase
-    acronyms = ['api', 'url', 'http', 'https', 'ssl', 'tls', 'vpn', 'lan', 'wan', 
-                'wifi', 'usb', 'cpu', 'gpu', 'ram', 'ssd', 'hdd', 'bios', 'os', 
-                'ui', 'ux', 'cli', 'gui', 'ide', 'sdk', 'rest', 'json', 'xml', 
-                'html', 'css', 'sql', 'aws', 'gcp', 'git', 'mvc', 'orm', 'oop']
-    
-    for acronym in acronyms:
-        pattern = r'\b' + re.escape(acronym) + r'\b'
-        for match in re.finditer(pattern, content, re.IGNORECASE):
-            matched_text = match.group(0)
-            # Only flag if not uppercase
-            if matched_text.lower() == acronym and matched_text != acronym.upper():
-                issues.append({
-                    "text": matched_text,
-                    "start": match.start(),
-                    "end": match.end(),
-                    "message": f"Capitalization issue: '{matched_text}' should be '{acronym.upper()}'"
-                })
-    
-    # Check for sentences starting with lowercase letters
-    sentence_pattern = r'(?:^|[.!?]\s+)([a-z])'
-    for match in re.finditer(sentence_pattern, content, re.MULTILINE):
-        issues.append({
-            "text": match.group(1),
-            "start": match.start(1),
-            "end": match.end(1),
-            "message": "Capitalization issue: Sentence should start with capital letter"
-        })
-    
+
+    # Only check capitalization for headings (Markdown: lines starting with #, ##, etc.)
+    heading_pattern = re.compile(r'^(#+)\s+(.*)$', re.MULTILINE)
+    for match in heading_pattern.finditer(content):
+        heading_text = match.group(2).strip()
+        # Skip check if heading is empty
+        if not heading_text:
+            continue
+        # Check if first character is lowercase (should be capitalized)
+        if heading_text and heading_text[0].islower():
+            issues.append({
+                "text": heading_text,
+                "start": match.start(2),
+                "end": match.end(2),
+                "message": "Formatting issue: Heading should start with a capital letter"
+            })
+        # Do NOT check technical terms (e.g., JSON, API, Python, etc.) in headings; allow them to start with a capital letter
+
+    # Optionally, add HTML heading support:
+    html_heading_pattern = re.compile(r'<h[1-6][^>]*>(.*?)</h[1-6]>', re.IGNORECASE)
+    for match in html_heading_pattern.finditer(content):
+        heading_text = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        if not heading_text:
+            continue
+        if heading_text and heading_text[0].islower():
+            issues.append({
+                "text": heading_text,
+                "start": match.start(1),
+                "end": match.end(1),
+                "message": "Formatting issue: Heading should start with a capital letter"
+            })
+
+    # Never check regular sentences for heading capitalization issues
     return issues
