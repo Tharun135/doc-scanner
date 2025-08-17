@@ -68,18 +68,6 @@ def check(content: str) -> List[Dict[str, Any]]:
     punctuation_patterns = [
         # Missing periods at end of sentences (MODIFIED: exclude titles and colons)
         {
-            'pattern': r'[a-zA-Z][^.!?:]*$',
-            'flags': re.MULTILINE,
-            'message': 'Punctuation issue: Sentence may be missing ending punctuation',
-            'exclude_titles': True  # Added flag to exclude titles
-        },
-        # Double punctuation
-        {
-            'pattern': r'[.!?]{2,}',
-            'flags': 0,
-            'message': 'Punctuation issue: Multiple ending punctuation marks'
-        },
-        {
             'pattern': r',,+',
             'flags': 0,
             'message': 'Punctuation issue: Multiple consecutive commas'
@@ -90,12 +78,7 @@ def check(content: str) -> List[Dict[str, Any]]:
             'flags': re.IGNORECASE,
             'message': 'Punctuation issue: Remove comma before coordinating conjunctions in simple sentences'
         },
-        # Missing comma in lists
-        {
-            'pattern': r'\b[a-zA-Z]+\s+[a-zA-Z]+\s+and\s+[a-zA-Z]+\b',
-            'flags': 0,
-            'message': 'Punctuation issue: Consider adding comma in series (Oxford comma)'
-        },
+        # The Oxford comma rule will be handled separately below
         # Incorrect apostrophe usage
         {
             'pattern': r'\b[a-zA-Z]+s\'\s+[a-zA-Z]',
@@ -113,23 +96,11 @@ def check(content: str) -> List[Dict[str, Any]]:
             'flags': 0,
             'message': 'Punctuation issue: Lowercase letter should follow semicolon unless starting proper noun'
         },
-        # Colon misuse
-        {
-            'pattern': r':\s*[a-z]',
-            'flags': 0,
-            'message': 'Punctuation issue: Consider capitalizing after colon for complete sentences'
-        },
         # Question mark misuse
         {
             'pattern': r'\b(?:please|kindly)\s+[^?]*\?',
             'flags': re.IGNORECASE,
             'message': 'Punctuation issue: Polite requests typically end with periods, not question marks'
-        },
-        # Exclamation mark overuse
-        {
-            'pattern': r'!.*!',
-            'flags': 0,
-            'message': 'Punctuation issue: Multiple exclamation marks in close proximity'
         },
         # Missing hyphens in compound adjectives
         {
@@ -158,16 +129,27 @@ def check(content: str) -> List[Dict[str, Any]]:
         
         for match in re.finditer(pattern, content, flags):
             matched_text = match.group(0)
-            
             # Skip this match if it's flagged to exclude titles and the text appears to be a title
             if exclude_titles and is_likely_title(matched_text):
                 continue
-                
             issues.append({
                 "text": matched_text,
                 "start": match.start(),
                 "end": match.end(),
                 "message": message
             })
-    
+
+    # Oxford comma rule: Only flag if there are 2 or more 'and', 'or', or 'OR' in the sentence
+    oxford_pattern = re.compile(r'\b[a-zA-Z]+\s+[a-zA-Z]+\s+and\s+[a-zA-Z]+\b')
+    for match in oxford_pattern.finditer(content):
+        sentence = match.group(0)
+        # Count 'and', 'or', 'OR' (case-insensitive)
+        conj_count = len(re.findall(r'\b(and|or)\b', sentence, re.IGNORECASE))
+        if conj_count >= 2:
+            issues.append({
+                "text": sentence,
+                "start": match.start(),
+                "end": match.end(),
+                "message": "Punctuation issue: Consider adding comma in series (Oxford comma)"
+            })
     return issues

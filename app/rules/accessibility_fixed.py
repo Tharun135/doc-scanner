@@ -30,12 +30,6 @@ def check(content: str) -> List[Dict[str, Any]]:
             'flags': re.IGNORECASE,
             'message': 'Accessibility issue: Directional references may not be accessible - provide descriptive text'
         },
-        # Generic link text
-        {
-            'pattern': r'\b(?:click here|read more|learn more|more info|more|here)\b',
-            'flags': re.IGNORECASE,
-            'message': 'Accessibility issue: Generic link text - use descriptive link text'
-        },
         # Sensory language without alternatives
         {
             'pattern': r'\b(?:see|look|view|watch|observe|notice|hear|listen|sound)\s+(?:the|this|that)\b',
@@ -96,12 +90,6 @@ def check(content: str) -> List[Dict[str, Any]]:
             'flags': re.IGNORECASE,
             'message': 'Accessibility issue: Ensure focus indicators are clearly visible'
         },
-        # Complex language structure
-        {
-            'pattern': r'[A-Z][^.!?]*(?:,|\s+(?:which|that|who|whom|whose|where|when|while|although|because|since|unless|until))[^.!?]*(?:,|\s+(?:which|that|who|whom|whose|where|when|while|although|because|since|unless|until))[^.!?]*[.!?]',
-            'flags': 0,
-            'message': 'Accessibility issue: Complex sentence structure - consider simpler language for cognitive accessibility'
-        }
     ]
     
     for pattern_info in accessibility_patterns:

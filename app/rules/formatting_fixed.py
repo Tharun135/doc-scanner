@@ -40,12 +40,7 @@ def _check_space_before_punctuation(content: str) -> List[Dict[str, Any]]:
             # Only check for space before punctuation in non-list lines
             for match in re.finditer(r'\s+[.!?,:;]', line):
                 matched_text = match.group(0)
-                issues.append({
-                    "text": matched_text,
-                    "start": current_pos + match.start(),
-                    "end": current_pos + match.end(),
-                    "message": "Formatting issue: Remove space before punctuation"
-                })
+                # Removed: Formatting issue: Remove space before punctuation
         
         # Move to next line (add 1 for the newline character)
         current_pos += len(line) + 1
@@ -137,29 +132,15 @@ def check(content: str) -> List[Dict[str, Any]]:
             'flags': 0,
             'message': 'Formatting issue: Use consistent quotation marks (straight quotes recommended)'
         },
-        # Missing space after punctuation
-        {
-            'pattern': r'[.!?][a-zA-Z]',
-            'flags': 0,
-            'message': 'Formatting issue: Add space after punctuation'
-        },
-        {
-            'pattern': r',[a-zA-Z]',
-            'flags': 0,
-            'message': 'Formatting issue: Add space after comma'
-        },
+    # Removed: Formatting issue: Add space after punctuation
+    # Removed: Formatting issue: Add space after comma
         # Inconsistent bullet points
         {
             'pattern': r'^[\s]*[-*•·]\s*[a-zA-Z]',
             'flags': re.MULTILINE,
             'message': 'Formatting issue: Use consistent bullet point style'
         },
-        # Missing spaces around operators
-        {
-            'pattern': r'[a-zA-Z0-9][=+\-*/][a-zA-Z0-9]',
-            'flags': 0,
-            'message': 'Formatting issue: Add spaces around operators'
-        },
+    # Removed: Formatting issue: Add spaces around operators
         # Inconsistent dash usage
         {
             'pattern': r'[a-zA-Z]-[a-zA-Z]',
