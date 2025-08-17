@@ -1,0 +1,119 @@
+{
+  "content": "<p>The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding. The utilization of complex terminology makes the document harder to understand. Additionally, there are very important points that need to be addressed. Furthermore, the implementation was conducted by the development team.</p>",
+  "report": {
+    "avgQualityScore": 0,
+    "message": "Content analysis completed.",
+    "totalSentences": 6,
+    "totalWords": 83
+  },
+  "sentences": [
+    {
+      "content": "<p>The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding. The utilization of complex terminology makes the document harder to understand. Additionally, there are very important points that need to be addressed. Furthermore, the implementation was conducted by the development team.</p>",
+      "feedback": [],
+      "html_segment": "<p>The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding. The utilization of complex terminology makes the document harder to understand. Additionally, there are very important points that need to be addressed. Furthermore, the implementation was conducted by the development team.</p>",
+      "index": 0,
+      "plain": "The document was written by the author.",
+      "sentence": "The document was written by the author."
+    },
+    {
+      "content": "<p>It was reviewed extensively by the team members.</p>",
+      "feedback": [],
+      "html_segment": "<p>It was reviewed extensively by the team members.</p>",
+      "index": 1,
+      "plain": "It was reviewed extensively by the team members.",
+      "sentence": "It was reviewed extensively by the team members."
+    },
+    {
+      "content": "<p>This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding.</p>",
+      "feedback": [
+        {
+          "end": 223,
+          "message": "Accessibility issue: Complex sentence structure - consider simpler language for cognitive accessibility",
+          "sentence_index": 2,
+          "start": 0,
+          "text": "This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding."
+        },
+        {
+          "end": 223,
+          "message": "Clarity issue: Long sentence with multiple clauses - consider breaking into shorter sentences",
+          "sentence_index": 2,
+          "start": 0,
+          "text": "This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding."
+        },
+        {
+          "end": 59,
+          "message": "Punctuation issue: Consider adding comma in series (Oxford comma)",
+          "sentence_index": 2,
+          "start": 47,
+          "text": "go on and on"
+        },
+        {
+          "end": 222,
+          "message": "Punctuation issue: Consider adding comma in series (Oxford comma)",
+          "sentence_index": 2,
+          "start": 193,
+          "text": "for clarity and understanding"
+        }
+      ],
+      "html_segment": "<p>This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding.</p>",
+      "index": 2,
+      "plain": "This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding.",
+      "sentence": "This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding."
+    },
+    {
+      "content": "<p>The utilization of complex terminology makes the document harder to understand.</p>",
+      "feedback": [
+        {
+          "end": 15,
+          "message": "Clarity issue: Consider using active verb form instead of nominalization",
+          "sentence_index": 3,
+          "start": 4,
+          "text": "utilization"
+        }
+      ],
+      "html_segment": "<p>The utilization of complex terminology makes the document harder to understand.</p>",
+      "index": 3,
+      "plain": "The utilization of complex terminology makes the document harder to understand.",
+      "sentence": "The utilization of complex terminology makes the document harder to understand."
+    },
+    {
+      "content": "<p>Additionally, there are very important points that need to be addressed.</p>",
+      "feedback": [
+        {
+          "end": 72,
+          "message": "Accessibility issue: Complex sentence structure - consider simpler language for cognitive accessibility",
+          "sentence_index": 4,
+          "start": 0,
+          "text": "Additionally, there are very important points that need to be addressed."
+        },
+        {
+          "end": 38,
+          "message": "Clarity issue: Unnecessary qualifier weakens the statement",
+          "sentence_index": 4,
+          "start": 24,
+          "text": "very important"
+        }
+      ],
+      "html_segment": "<p>Additionally, there are very important points that need to be addressed.</p>",
+      "index": 4,
+      "plain": "Additionally, there are very important points that need to be addressed.",
+      "sentence": "Additionally, there are very important points that need to be addressed."
+    },
+    {
+      "content": "<p>The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding. The utilization of complex terminology makes the document harder to understand. Additionally, there are very important points that need to be addressed. Furthermore, the implementation was conducted by the development team.</p>",
+      "feedback": [
+        {
+          "end": 31,
+          "message": "Clarity issue: Consider using active verb form instead of nominalization",
+          "sentence_index": 5,
+          "start": 17,
+          "text": "implementation"
+        }
+      ],
+      "html_segment": "<p>The document was written by the author. It was reviewed extensively by the team members. This is a very long sentence that continues to go on and on without any clear purpose or direction, making it extremely difficult for readers to follow the main point which becomes problematic for clarity and understanding. The utilization of complex terminology makes the document harder to understand. Additionally, there are very important points that need to be addressed. Furthermore, the implementation was conducted by the development team.</p>",
+      "index": 5,
+      "plain": "Furthermore, the implementation was conducted by the development team.",
+      "sentence": "Furthermore, the implementation was conducted by the development team."
+    }
+  ]
+}

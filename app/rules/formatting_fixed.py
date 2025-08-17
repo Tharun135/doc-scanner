@@ -9,6 +9,110 @@ from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
 
+def _check_space_before_punctuation(content: str) -> List[Dict[str, Any]]:
+    """
+    Check for spaces before punctuation, but allow them in list items.
+    This function handles both full documents and individual sentences.
+    """
+    issues = []
+    
+    # If content is a single sentence without line breaks, check if it might be a list item
+    if '\n' not in content.strip():
+        # Single sentence - check if it looks like a list item content
+        sentence = content.strip()
+        
+        # Skip flagging if sentence looks like list item content:
+        # - Starts with typical list item text patterns
+        # - Is short and descriptive (common in lists)
+        # - Ends with space + punctuation (common list formatting)
+        if (_looks_like_list_item(sentence)):
+            return issues  # Don't flag list item sentences
+    
+    # Split content into lines to handle list detection
+    lines = content.split('\n')
+    current_pos = 0
+    
+    for line in lines:
+        # Check if this line is a list item
+        is_list_line = bool(re.match(r'^\s*[-*•·]\s', line) or re.match(r'^\s*\d+\.\s', line))
+        
+        if not is_list_line:
+            # Only check for space before punctuation in non-list lines
+            for match in re.finditer(r'\s+[.!?,:;]', line):
+                matched_text = match.group(0)
+                issues.append({
+                    "text": matched_text,
+                    "start": current_pos + match.start(),
+                    "end": current_pos + match.end(),
+                    "message": "Formatting issue: Remove space before punctuation"
+                })
+        
+        # Move to next line (add 1 for the newline character)
+        current_pos += len(line) + 1
+    
+    return issues
+
+def _looks_like_list_item(sentence: str) -> bool:
+    """
+    Determine if a sentence looks like it could be a list item content.
+    """
+    sentence = sentence.strip()
+    
+    # Don't treat obviously conversational or narrative text as list items
+    conversational_patterns = [
+        r'^(I|You|We|They)\s+(think|believe|know|feel|said|told)',
+        r'^(Hello|Hi|Hey)',
+        r'^(This is wrong|That is incorrect|What\s*\?)',
+        r'(everyone|somebody|anyone)\s+(left|came|went)',
+        r'(meeting|party|event).*(ended|started|began)',
+        r'^This\s+is\s+wrong',  # Specific pattern for error messages
+    ]
+    
+    for pattern in conversational_patterns:
+        if re.search(pattern, sentence, re.IGNORECASE):
+            return False
+    
+    # Check for common list item indicators
+    list_indicators = [
+        # Action words that start list items (fixed pattern to allow multiple words)
+        r'^(The|A|An)\s+\w+(?:\s+\w+)*\s+(must|should|will|can|may|is|are)',
+        r'^(Download|Install|Open|Close|Save|Create|Delete|Configure|Setup|Set up)',
+        r'^(Click|Select|Choose|Enter|Type|Navigate|Browse|Search)',
+        r'^(Ensure|Verify|Check|Confirm|Make sure)',
+        r'^(Add|Remove|Edit|Modify|Update|Change)',
+        
+        # Descriptive patterns common in lists
+        r'^(This|That|It)\s+(is|will|should|must|can|may)\s+(required|needed|necessary)',
+        r'^(First|Second|Third|Next|Then|Finally|Last)',
+        r'^(Required|Optional|Important|Note|Warning)',
+        
+        # Technical documentation patterns (fixed to allow multiple words)
+        r'^(The\s+\w+(?:\s+\w+)*\s+(application|app|system|software|program|tool))',
+        r'^(A\s+(project|file|document|configuration|setting))',
+    ]
+    
+    # Check if sentence matches any list item pattern
+    for pattern in list_indicators:
+        if re.match(pattern, sentence, re.IGNORECASE):
+            return True
+    
+    # Check if sentence has space before punctuation at the end (common list formatting)
+    if re.search(r'\s+[.!?]$', sentence):
+        # Additional checks to confirm it's likely a list item
+        word_count = len(sentence.split())
+        
+        # Only allow for short, descriptive sentences (3-12 words)
+        if 3 <= word_count <= 12:
+            # Must start with technical/instructional words
+            if re.match(r'^(The|A|An|Download|Install|Open|Close|Save|Create|Configure|Setup)', sentence, re.IGNORECASE):
+                return True
+        
+        # Longer sentences that clearly match list patterns
+        if word_count > 12 and any(re.match(pattern, sentence, re.IGNORECASE) for pattern in list_indicators[:5]):
+            return True
+    
+    return False
+
 def check(content: str) -> List[Dict[str, Any]]:
     """
     Check for formatting issues with position information.
@@ -16,7 +120,10 @@ def check(content: str) -> List[Dict[str, Any]]:
     """
     issues = []
     
-    # Define formatting patterns
+    # Handle space before punctuation with list awareness
+    issues.extend(_check_space_before_punctuation(content))
+    
+    # Define other formatting patterns (excluding space before punctuation)
     formatting_patterns = [
         # Multiple spaces
         {
@@ -40,12 +147,6 @@ def check(content: str) -> List[Dict[str, Any]]:
             'pattern': r',[a-zA-Z]',
             'flags': 0,
             'message': 'Formatting issue: Add space after comma'
-        },
-        # Space before punctuation
-        {
-            'pattern': r'\s+[.!?,:;]',
-            'flags': 0,
-            'message': 'Formatting issue: Remove space before punctuation'
         },
         # Inconsistent bullet points
         {

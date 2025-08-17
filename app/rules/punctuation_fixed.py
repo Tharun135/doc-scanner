@@ -48,17 +48,27 @@ def check(content: str) -> List[Dict[str, Any]]:
         if any(indicator in text_lower for indicator in title_indicators):
             return True
             
-        # Check if it's likely a heading (short and doesn't read like a sentence)
-        if len(words) <= 6 and not any(word.lower() in ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with'] for word in words):
-            return True
+        # Check if it's likely a heading (short, no sentence structure, and doesn't end with verbs)
+        if len(words) <= 6:
+            # Must not contain sentence-like structure
+            has_articles = any(word.lower() in ['the', 'a', 'an'] for word in words)
+            has_verbs = any(word.lower() in ['is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'can', 'could', 'should', 'must', 'may', 'might'] for word in words)
+            
+            # If it has verbs or articles, it's likely a sentence, not a title
+            if has_verbs or has_articles:
+                return False
+            
+            # If it doesn't have sentence indicators, it might be a title
+            if not any(word.lower() in ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with'] for word in words):
+                return True
             
         return False
     
     # Define punctuation patterns
     punctuation_patterns = [
-        # Missing periods at end of sentences (MODIFIED: exclude titles)
+        # Missing periods at end of sentences (MODIFIED: exclude titles and colons)
         {
-            'pattern': r'[a-zA-Z][^.!?]*$',
+            'pattern': r'[a-zA-Z][^.!?:]*$',
             'flags': re.MULTILINE,
             'message': 'Punctuation issue: Sentence may be missing ending punctuation',
             'exclude_titles': True  # Added flag to exclude titles
