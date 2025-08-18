@@ -2165,44 +2165,49 @@
             aiDiv.setAttribute('data-feedback-key', feedbackKey);
             aiDiv.setAttribute('data-feedback-type', feedback);
             
-            aiDiv.innerHTML = `
-                <div class="d-flex align-items-center mb-3">
-                    <i class="fas fa-robot me-2"></i>
-                    <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
-                    <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="text-dark mb-2"><strong>📋 Issue:</strong></div>
-                    <div class="bg-light border p-2 rounded">${feedback}</div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="text-dark mb-2"><strong>Original sentence:</strong></div>
-                    <div class="bg-light border p-2 rounded font-italic">"${sentence}"</div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="text-dark mb-2"><strong>AI Suggestion:</strong></div>
-                    <div class="suggestion-text bg-primary bg-opacity-10 text-dark p-3 rounded border">
-                        ${formatAISuggestion(aiSuggestion.suggestion)}
-                    </div>
-                </div>
-                
-                ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
-                <div class="mb-3">
-                    <div class="text-dark mb-2"><strong>📚 Knowledge Sources:</strong></div>
-                    <div class="sources-container">
-                        ${aiSuggestion.sources.map(source => `
-                            <div class="source-item bg-light border p-2 rounded mb-2">
-                                <small class="text-muted">${source.type === 'guideline' ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
-                                <div class="source-content">${source.content}</div>
+        aiDiv.innerHTML = `
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="fas fa-robot me-2"></i>
+                            <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
+                            <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="text-dark mb-2"><strong>📋 Issue:</strong></div>
+                            <div class="bg-light border p-2 rounded">${feedback}</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="text-dark mb-2"><strong>Original sentence:</strong></div>
+                            <div class="bg-light border p-2 rounded font-italic">"${sentence}"</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <strong class="text-dark">AI Suggestion:</strong>
+                                <button class="btn btn-link p-0 ms-2" title="Get another AI suggestion" onclick="regenerateAISuggestion(${sentenceIndex}, '${feedback.replace(/'/g, "&#39;")}', '${sentence.replace(/'/g, "&#39;")}')">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
                             </div>
-                        `).join('')}
-                    </div>
-                </div>
-                ` : ''}
-            `;
+                            <div class="suggestion-text bg-primary bg-opacity-10 text-dark p-3 rounded border">
+                                ${formatAISuggestion(aiSuggestion.suggestion)}
+                            </div>
+                        </div>
+                        
+                        ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
+                        <div class="mb-3">
+                            <div class="text-dark mb-2"><strong>📚 Knowledge Sources:</strong></div>
+                            <div class="sources-container">
+                                ${aiSuggestion.sources.map(source => `
+                                    <div class="source-item bg-light border p-2 rounded mb-2">
+                                        <small class="text-muted">${source.type === 'guideline' ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
+                                        <div class="source-content">${source.content}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    `;
             
             // Insert in order by sentence index, then by feedback type
             const existingItems = Array.from(aiFeedbackContainer.querySelectorAll('.ai-feedback-content[data-sentence-index]'));
@@ -2393,12 +2398,37 @@
                 }, 3000);
             }
         }
-        
-        // Toast notification functions
-        function showLoadingToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'toast-notification loading';
-            toast.innerHTML = `
+        // Function to regenerate AI suggestion when the icon is clicked
+async function regenerateAISuggestion(sentenceIndex, feedback, sentence) {
+    try {
+        // Decode parameters if needed
+        const decodedFeedback = decodeURIComponent(feedback);
+        const decodedSentence = decodeURIComponent(sentence);
+        // Show loading toast
+        const loadingToast = showLoadingToast('Getting another AI suggestion...');
+        // Get new AI suggestion
+        const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
+        hideLoadingToast(loadingToast);
+        if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion && aiSuggestion.suggestion.trim()) {
+            // Create a unique key for this feedback
+            const feedbackKey = `${sentenceIndex}_${encodeURIComponent(decodedFeedback).replace(/[^a-zA-Z0-9]/g, '')}`;
+            // Add to AI tab (replace previous suggestion for this feedback)
+            addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion, feedbackKey);
+            switchTabProgrammatically('ai-feedback');
+            highlightAIFeedback(sentenceIndex, decodedFeedback);
+        } else {
+            showErrorToast('AI suggestion not available.');
+        }
+    } catch (error) {
+        showErrorToast('Error getting another AI suggestion: ' + error.message);
+    }
+}
+
+// Toast notification functions
+function showLoadingToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification loading';
+    toast.innerHTML = `
                 <i class="fas fa-spinner fa-spin me-2"></i>
                 ${message}
             `;
@@ -3525,10 +3555,7 @@
                         <div>
                             <label style="display:block; margin-bottom:0.5rem; font-weight:500;">Max Suggestions per Issue</label>
                             <select id="maxSuggestions" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
-                                <option value="1" ${config.max_suggestions_per_issue === 1 ? 'selected' : ''}>1 suggestion</option>
-                                <option value="2" ${config.max_suggestions_per_issue === 2 ? 'selected' : ''}>2 suggestions</option>
-                                <option value="3" ${config.max_suggestions_per_issue === 3 ? 'selected' : ''}>3 suggestions</option>
-                                <option value="5" ${config.max_suggestions_per_issue === 5 ? 'selected' : ''}>5 suggestions</option>
+                                <option value="1" selected>1 suggestion</option>
                             </select>
                         </div>
                     </div>

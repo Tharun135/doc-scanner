@@ -439,35 +439,27 @@ WHY: Addresses {feedback_text.lower()} for better writing clarity."""
     
     def _create_rag_query(self, feedback_text: str, sentence_context: str, document_type: str) -> str:
         """Create an effective query for RAG retrieval."""
-        # Create specific, detailed queries for better AI responses
-        if "passive voice" in feedback_text.lower():
-            query = f"Convert this passive voice sentence to active voice and provide 3 alternative options: '{sentence_context}'. Format the response as OPTION 1:, OPTION 2:, OPTION 3: with WHY: explanation."
-        elif "long sentence" in feedback_text.lower():
-            query = f"Break this long sentence into shorter, clearer sentences: '{sentence_context}'. Provide 3 different ways to split it."
-        elif "unclear reference" in feedback_text.lower():
-            query = f"Fix this unclear reference and make it more specific: '{sentence_context}'. Provide 3 alternatives."
-        else:
-            # Generic query
-            query_parts = []
-            query_parts.append(f"How to improve this writing issue: {feedback_text}")
-            
-            # Add context if available
-            if sentence_context:
-                query_parts.append(f"In this sentence: '{sentence_context[:200]}'")
-            
-            # Add document type context
-            if document_type != "general":
-                query_parts.append(f"For {document_type} writing")
-                
-            query_parts.append("Provide 3 specific improvement options with explanations.")
-            query = " ".join(query_parts)
-        
+        # Simple prompt: Use the issue as the main context for the suggestion
+        prompt = (
+            "You are an expert technical writing assistant. "
+            "Given the following writing issue, generate a single, clear, and improved version of the sentence. "
+            "Rewrite the sentence completely, not just the problematic part. "
+            "After the suggestion, provide a brief technical explanation (WHY) for your choice. "
+        )
+        context_lines = []
+        context_lines.append(f"Writing issue: {feedback_text}")
+        if sentence_context:
+            context_lines.append(f"Sentence: '{sentence_context[:200]}'")
+        if document_type and document_type != "general":
+            context_lines.append(f"Document type: {document_type}")
+        context_lines.append("Goal: Provide a clear, concise, and improved alternative.")
+        query = prompt + "\n" + "\n".join(context_lines)
         return query
     
     def _enhance_suggestion(self, ai_suggestion: str, feedback_text: str, sentence_context: str) -> str:
         """Enhance AI suggestion with specific, actionable advice."""
         feedback_lower = feedback_text.lower()
-        
+
         # For passive voice issues
         if "passive voice" in feedback_lower or "active voice" in feedback_lower:
             if sentence_context:
@@ -501,15 +493,21 @@ WHY: Addresses {feedback_text.lower()} for better writing clarity."""
                             option1 = active_version
                             option2 = f"Alternative: {active_version}"
                             option3 = f"You can write: {active_version.lower()}"
-                    
-                    return f"OPTION 1: {option1}\nOPTION 2: {option2}\nOPTION 3: {option3}\nWHY: Converts passive voice to active voice for clearer communication."
-        
+
+                    # Avoid repeating the same suggestion in all options
+                    options = [option1, option2, option3]
+                    unique_options = list({opt.strip() for opt in options if opt.strip()})
+                    if len(unique_options) == 1:
+                        return f"SUGGESTION: {unique_options[0]}\n(NOTE: Only one unique suggestion could be generated. Please revise the sentence or provide more context for better results.)"
+                    else:
+                        return "\n".join([f"OPTION {i+1}: {opt}" for i, opt in enumerate(unique_options)]) + "\nWHY: Converts passive voice to active voice for clearer communication."
+
         # For long sentences
         elif "long" in feedback_lower and sentence_context:
             split_sentences = self._split_long_sentence(sentence_context)
             if len(split_sentences) > 1:
                 return f"{ai_suggestion}\n\nSplit into: {' '.join(split_sentences)}"
-        
+
         return ai_suggestion
     
     def _convert_to_active_voice(self, sentence: str) -> str:
@@ -839,90 +837,22 @@ WHY: Addresses {feedback_text.lower()} for better writing clarity."""
         try:
             if not self._check_ollama_service():
                 return False
-            
             # Try a very simple request to test if model actually works
             test_response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
                     "model": self.model_name,
-                    "prompt": "Hi",
+                    "prompt": "Test",
                     "stream": False
                 },
-                timeout=2  # Very fast test
+                timeout=3
             )
-            
             if test_response.status_code == 200:
                 result = test_response.json()
-                return "response" in result and len(result.get("response", "").strip()) > 0
+                return bool(result.get("response"))
             return False
-        except Exception as e:
-            logger.warning(f"Ollama test failed: {e}")
+        except Exception:
             return False
-    
-    def _safe_query_execution(self, query: str):
-        """Execute RAG query with timeout and error handling"""
-        try:
-            # Use threading timeout for cross-platform compatibility
-            import threading
-            import time
-            
-            result = {'response': None, 'error': None}
-            
-            def query_thread():
-                try:
-                    result['response'] = self.query_engine.query(query)
-                except Exception as e:
-                    result['error'] = str(e)
-            
-            # Start query in a separate thread
-            thread = threading.Thread(target=query_thread)
-            thread.daemon = True
-            thread.start()
-            
-            # Wait with timeout
-            thread.join(timeout=30)  # 30 second timeout
-            
-            if thread.is_alive():
-                logger.warning("RAG query timed out")
-                return None
-            
-            if result['error']:
-                logger.warning(f"RAG query failed: {result['error']}")
-                return None
-                
-            return result['response']
-                
-        except Exception as e:
-            logger.warning(f"Safe query execution failed: {e}")
-            return None
-        else:
-            return f"Improve this text: {sentence_context}"
-    
-    def add_document_to_knowledge(self, content: str, metadata: Dict[str, Any] = None):
-        """Add a document to the knowledge base for future reference."""
-        if not self.is_initialized:
-            return False
-        
-        try:
-            doc = Document(text=content, metadata=metadata or {})
-            self.index.insert(doc)
-            logger.info("Document added to knowledge base")
-            return True
-        except Exception as e:
-            logger.error(f"Error adding document to knowledge base: {e}")
-            return False
-    
-    def get_system_status(self) -> Dict[str, Any]:
-        """Get the current status of the AI system."""
-        return {
-            "initialized": self.is_initialized,
-            "model": self.model_name,
-            "ollama_running": self._check_ollama_service(),
-            "model_available": self._check_model_availability(self.model_name),
-            "system_type": "LlamaIndex + ChromaDB + Ollama",
-            "cost": "Free (Local)",
-            "quota": "Unlimited"
-        }
 
 
 # Global instance for easy import
