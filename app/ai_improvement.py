@@ -33,11 +33,7 @@ try:
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
-<<<<<<< HEAD
-    logging.warning("RAG system not available - falling back to rule-based suggestions only")
-=======
-    logging.debug("RAG system not available - falling back to rule-based suggestions only")
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+logging.debug("RAG system not available - falling back to rule-based suggestions only") 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 
 logger = logging.getLogger(__name__)
 
@@ -62,11 +58,7 @@ class GeminiAISuggestionEngine:
         Returns:
             Dict containing suggestion, confidence, and metadata
         """
-<<<<<<< HEAD
-        try:
-            # Primary method: Use Gemini RAG for solution generation
-=======
-        # Safety checks for None inputs
+# Safety checks for None inputs
         if feedback_text is None:
             feedback_text = "general improvement needed"
         if sentence_context is None:
@@ -81,8 +73,7 @@ class GeminiAISuggestionEngine:
                 logger.info("Using enhanced rule-based splitting for long sentence")
                 return self.generate_minimal_fallback(feedback_text, sentence_context)
             
-            # Primary method: Use Gemini RAG for other types of suggestions
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+            # Primary method: Use Gemini RAG for other types of suggestions 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
             if self.rag_available:
                 logger.info("Using Gemini RAG for solution generation")
                 rag_result = get_rag_suggestion(
@@ -127,29 +118,21 @@ class GeminiAISuggestionEngine:
         Generate intelligent fallback when Gemini is unavailable.
         Provides complete sentence rewrites using rule-based logic.
         """
-<<<<<<< HEAD
-        if sentence_context:
-=======
-        # Safety checks for None inputs
+# Safety checks for None inputs
         if feedback_text is None:
             feedback_text = "general improvement needed"
         if sentence_context is None:
             sentence_context = ""
             
-        if sentence_context and sentence_context.strip():
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+        if sentence_context and sentence_context.strip(): 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
             # Generate complete sentence rewrites based on common issues
             suggestion = self._generate_sentence_rewrite(feedback_text, sentence_context)
         else:
             suggestion = f"Writing issue detected: {feedback_text}. Please review and improve this text for clarity, grammar, and style."
         
-<<<<<<< HEAD
-=======
-        # Safety check: ensure suggestion is never empty
+# Safety check: ensure suggestion is never empty
         if not suggestion or not suggestion.strip():
-            suggestion = f"Review and improve this text to address: {feedback_text}"
-        
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+            suggestion = f"Review and improve this text to address: {feedback_text}" 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         return {
             "suggestion": suggestion,
             "gemini_answer": f"Review the text and address: {feedback_text}",
@@ -160,13 +143,7 @@ class GeminiAISuggestionEngine:
     
     def _generate_sentence_rewrite(self, feedback_text: str, sentence_context: str) -> str:
         """Generate complete sentence rewrites using rule-based logic."""
-<<<<<<< HEAD
-        feedback_lower = feedback_text.lower()
-        
-        # Passive voice fixes
-        if "passive voice" in feedback_lower:
-=======
-        # Safety check for None inputs
+# Safety check for None inputs
         if feedback_text is None:
             feedback_text = "general improvement needed"
         if sentence_context is None:
@@ -175,8 +152,7 @@ class GeminiAISuggestionEngine:
         feedback_lower = str(feedback_text).lower()
         
         # Passive voice fixes - detect both "passive voice" and "active voice" (which implies converting from passive)
-        if "passive voice" in feedback_lower or "active voice" in feedback_lower:
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+        if "passive voice" in feedback_lower or "active voice" in feedback_lower: 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
             rewrites = [
                 self._fix_passive_voice(sentence_context),
                 self._alternative_active_voice(sentence_context),
@@ -196,12 +172,7 @@ class GeminiAISuggestionEngine:
                 sentence_context.replace("You may", "You can").replace("you may", "you can"),
                 sentence_context.replace("You may now", "To").replace("you may now", "to")
             ]
-<<<<<<< HEAD
-        # Long sentence fixes
-        elif "long" in feedback_lower or "sentence too long" in feedback_lower:
-            rewrites = self._split_long_sentence(sentence_context)
-=======
-        # Long sentence fixes - special formatting for user's preferred structure
+# Long sentence fixes - special formatting for user's preferred structure
         elif "long" in feedback_lower or "sentence too long" in feedback_lower:
             split_sentences = self._split_long_sentence(sentence_context)
             
@@ -236,8 +207,7 @@ class GeminiAISuggestionEngine:
                 options.append(f"OPTION 2 has sentence 1: Consider breaking this sentence into shorter parts")
             
             why_text = f"WHY: Addresses {feedback_text.lower()} for better technical writing."
-            return "\n".join(options) + f"\n{why_text}"
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+            return "\n".join(options) + f"\n{why_text}" 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         else:
             # Generic improvements
             rewrites = [
@@ -256,28 +226,20 @@ class GeminiAISuggestionEngine:
                 f"Consider alternatives for: {sentence_context}"
             ]
         
-<<<<<<< HEAD
-        # Format as options
-=======
-        # Format as options (for non-long sentence cases)
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+# Format as options (for non-long sentence cases) 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         options = []
         for i, rewrite in enumerate(valid_rewrites[:3], 1):
             options.append(f"OPTION {i}: {rewrite.strip()}")
         
         why_text = f"WHY: Addresses {feedback_text.lower()} for better technical writing."
         
-<<<<<<< HEAD
-        return "\n".join(options) + f"\n{why_text}"
-=======
-        final_suggestion = "\n".join(options) + f"\n{why_text}"
+final_suggestion = "\n".join(options) + f"\n{why_text}"
         
         # Safety check: ensure we never return empty suggestions
         if not final_suggestion or not final_suggestion.strip():
             final_suggestion = f"OPTION 1: Review and improve this text based on: {feedback_text}\nWHY: Addressing the identified writing issue for better clarity."
         
-        return final_suggestion
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+        return final_suggestion 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
     
     def _fix_passive_voice(self, sentence: str) -> str:
         """Basic passive voice to active voice conversion."""
@@ -287,16 +249,13 @@ class GeminiAISuggestionEngine:
         if "was reviewed by the team" in sentence_lower:
             return sentence.replace("was reviewed by the team", "the team reviewed")
         elif "was written by" in sentence_lower:
-<<<<<<< HEAD
-=======
-            # Handle "The report was written by John" -> "John wrote the report"
+# Handle "The report was written by John" -> "John wrote the report"
             import re
             match = re.search(r'(.+?)\s+was\s+written\s+by\s+(.+)', sentence, re.IGNORECASE)
             if match:
                 document = match.group(1).strip()
                 author = match.group(2).strip()
-                return f"{author} wrote {document.lower()}"
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+                return f"{author} wrote {document.lower()}" 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
             return sentence.replace("was written by", "").replace("The document ", "").strip() + " wrote the document"
         elif "was created by" in sentence_lower:
             return sentence.replace("was created by", "").replace("The ", "").strip() + " created this"
@@ -304,9 +263,7 @@ class GeminiAISuggestionEngine:
             return sentence.replace("changes were made", "the team made changes")
         elif "was designed by" in sentence_lower:
             return sentence.replace("was designed by", "").strip() + " designed this"
-<<<<<<< HEAD
-=======
-        elif "are displayed" in sentence_lower:
+elif "are displayed" in sentence_lower:
             return sentence.replace("are displayed", "appear on screen").replace("The configuration options", "The system displays the configuration options")
         elif "is displayed" in sentence_lower:
             return sentence.replace("is displayed", "appears on screen").replace("The ", "The system shows the ")
@@ -327,8 +284,7 @@ class GeminiAISuggestionEngine:
                 if "log" in subject.lower():
                     return sentence.replace(f"{subject} is not generated", f"The system does not generate {subject.lower()}")
                 else:
-                    return sentence.replace(f"{subject} is not generated", f"The system does not generate {subject.lower()}")
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+                    return sentence.replace(f"{subject} is not generated", f"The system does not generate {subject.lower()}") 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         else:
             # Generic active voice conversion
             return sentence.replace("was ", "").replace("were ", "").replace("The ", "This ")
@@ -341,11 +297,7 @@ class GeminiAISuggestionEngine:
             result = sentence.replace("The document was carefully reviewed by the team", "The team carefully reviewed the document")
         elif "several changes were made" in sentence.lower():
             result = sentence.replace("several changes were made", "the team made several changes")
-<<<<<<< HEAD
-        
-        return result if result != sentence else f"Direct version: {sentence.replace('was ', '').replace('were ', '')}"
-=======
-        elif "changes were made" in sentence.lower():
+elif "changes were made" in sentence.lower():
             result = sentence.replace("changes were made", "we implemented changes")
         elif "are displayed" in sentence.lower():
             result = sentence.replace("The configuration options of the data source are displayed", "The system displays the configuration options of the data source")
@@ -366,8 +318,7 @@ class GeminiAISuggestionEngine:
                 author = match.group(2).strip()
                 result = f"{author} authored {document.lower()}"
         
-        return result if result != sentence else f"Direct version: {sentence.replace('was ', '').replace('were ', '').replace('are ', '').replace('is ', '')}"
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+        return result if result != sentence else f"Direct version: {sentence.replace('was ', '').replace('were ', '').replace('are ', '').replace('is ', '')}" 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
     
     def _direct_action_voice(self, sentence: str) -> str:
         """Generate direct action version."""
@@ -376,35 +327,7 @@ class GeminiAISuggestionEngine:
             return "Review the document and make necessary changes for clarity."
         elif "changes were made" in sentence.lower():
             return "Make changes to improve document clarity."
-<<<<<<< HEAD
-        else:
-            return f"Use active voice: {sentence.replace(' was ', ' ').replace(' were ', ' ')}"
-    
-    def _split_long_sentence(self, sentence: str) -> List[str]:
-        """Split long sentences into shorter ones."""
-        # Simple sentence splitting on common conjunctions
-        if " and " in sentence:
-            parts = sentence.split(" and ", 1)
-            return [
-                parts[0].strip() + ".",
-                parts[1].strip().capitalize() if parts[1] else sentence,
-                f"Simplified: {sentence[:50]}..."
-            ]
-        elif " when " in sentence:
-            parts = sentence.split(" when ", 1)
-            return [
-                f"When {parts[1].strip()}, {parts[0].strip().lower()}.",
-                parts[0].strip() + ".",
-                f"Consider: {sentence[:40]}..."
-            ]
-        else:
-            return [
-                sentence[:len(sentence)//2].strip() + ".",
-                sentence[len(sentence)//2:].strip().capitalize(),
-                f"Break this into shorter sentences: {sentence}"
-            ]
-=======
-        elif "are displayed" in sentence.lower():
+elif "are displayed" in sentence.lower():
             return "The interface shows the configuration options of the data source."
         elif "is displayed" in sentence.lower():
             return "The system shows this information clearly."
@@ -662,8 +585,7 @@ class GeminiAISuggestionEngine:
             clean_sentence,
             f"Simplify this sentence for better readability.",
             f"Consider breaking this {len(sentence.split())}-word sentence into smaller parts."
-        ]
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+        ] 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 
 # Global instance for easy use
 ai_engine = GeminiAISuggestionEngine()
@@ -688,3 +610,4 @@ def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
     return ai_engine.generate_contextual_suggestion(
         feedback_text, sentence_context, document_type, writing_goals, document_content
     )
+

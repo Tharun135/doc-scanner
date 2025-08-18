@@ -14,8 +14,6 @@ import textstat
 import time
 from dataclasses import asdict
 
-<<<<<<< HEAD
-=======
 # Load environment variables from .env file
 try:
     from dotenv import load_dotenv
@@ -24,9 +22,7 @@ try:
     logger.info("Environment variables loaded from .env file")
 except ImportError:
     logger = logging.getLogger(__name__)
-    logger.warning("python-dotenv not available - environment variables must be set manually")
-
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+    logger.warning("python-dotenv not available - environment variables must be set manually") 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 # Add the parent directory to the path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -424,13 +420,8 @@ def ai_suggestion():
         if 'suggestion' not in result:
             raise ValueError(f"Missing 'suggestion' in result: {list(result.keys())}")
             
-<<<<<<< HEAD
-        if not result['suggestion']:
-            raise ValueError("Empty suggestion returned")
-=======
-        if not result['suggestion'] or not str(result['suggestion']).strip():
-            raise ValueError("Empty or whitespace-only suggestion returned")
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+if not result['suggestion'] or not str(result['suggestion']).strip():
+            raise ValueError("Empty or whitespace-only suggestion returned") 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context, 
@@ -584,8 +575,6 @@ def ai_configuration():
             logger.error(f"Error updating AI config: {str(e)}")
             return jsonify({"error": "Failed to update configuration"}), 500
 
-<<<<<<< HEAD
-=======
 @main.route('/api_quota_status', methods=['GET'])
 def api_quota_status():
     """Get current API quota status."""
@@ -616,9 +605,7 @@ def reset_api_quota():
         return jsonify({"error": "Rate limiter not available"}), 400
     except Exception as e:
         logger.error(f"Error resetting quota: {str(e)}")
-        return jsonify({"error": "Failed to reset quota"}), 500
-
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+        return jsonify({"error": "Failed to reset quota"}), 500 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 @main.route('/upload_batch', methods=['POST'])
 def upload_batch():
     """Handle batch file upload (zip or multiple files)."""

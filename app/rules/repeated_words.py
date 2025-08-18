@@ -3,8 +3,6 @@ import spacy
 from bs4 import BeautifulSoup
 import html
 
-<<<<<<< HEAD
-=======
 # Import RAG system with fallback
 try:
     from .rag_rule_helper import check_with_rag
@@ -12,9 +10,7 @@ try:
 except ImportError:
     RAG_HELPER_AVAILABLE = False
     import logging
-    logging.debug(f"RAG helper not available for {__name__} - using basic rules")
-
->>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
+    logging.debug(f"RAG helper not available for {__name__} - using basic rules") 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
 try:
     nlp = spacy.load("en_core_web_sm")
@@ -154,3 +150,4 @@ def clean_context(context, full_match):
     
     # Fallback: return the original context if we can't find the match
     return context[:80] + "..." if len(context) > 80 else context
+
