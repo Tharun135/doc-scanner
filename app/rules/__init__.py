@@ -18,7 +18,6 @@ from app.rules.technical_terms import check as check_technical_terms
 from app.rules.grammar_word_choice_b_terms import check as check_grammar_word_choice_b_terms
 from app.rules.c_languages_terms import check as check_c_languages_terms
 from app.rules.cable_terms import check as check_cable_terms
-from app.rules.cabling_terms import check as check_cabling_terms
 from app.rules.cache_terms import check as check_cache_terms
 from app.rules.calendar_terms import check as check_calendar_terms
 from app.rules.callback_terms import check as check_callback_terms
@@ -36,6 +35,14 @@ from app.rules.simple_present_tense import check as check_simple_present_tense
 from app.rules.repeated_words import check as check_repeated_words
 from app.rules.incorrect_verb_forms import check as check_incorrect_verb_forms
 from app.rules.grammar_issues import check as check_grammar_issues
+from app.rules.rewriting_suggestions import check as check_rewriting_suggestions
+from app.rules.redundant_phrases import check as check_redundant_phrases
+from app.rules.document_structure import check as check_document_structure
+from app.rules.inclusive_language import check as check_inclusive_language
+from app.rules.cross_references import check as check_cross_references
+from app.rules.tone_voice import check as check_tone_voice
+from app.rules.readability_metrics import check as check_readability_metrics
+from app.rules.spelling_checker import check as check_spelling_checker
 
 
 rule_functions = [
@@ -43,7 +50,6 @@ rule_functions = [
     check_ai_bot_terms,
     check_c_languages_terms,
     check_cable_terms,
-    check_cabling_terms,
     check_cache_terms,
     check_calendar_terms,
     check_callback_terms,
@@ -55,28 +61,36 @@ rule_functions = [
     check_computer_device_terms,
     check_concise_simple_words,
     check_contractions,
+    check_cross_references,
     check_css_terms,
+    check_document_structure,
     check_grammar_word_choice_b_terms,
     check_grammar_word_choice,
+    check_inclusive_language,
     check_keys_keyboard_shortcuts,
     check_long_sentences,
     check_mouse_interaction_terms,
     check_passive_voice,
+    check_readability_metrics,
+    check_redundant_phrases,
     check_run_vs_carryout_terms,
     check_security_terms,
     check_simple_present_tense,
     check_special_characters,
+    check_spelling_checker,
     check_style_formatting,
     check_style_formatting_b_terms,
     check_style_guide,
     check_technical_terms,
     check_terminology_b_terms,
     check_terminology_usage,
+    check_tone_voice,
     check_touch_pen_interaction_terms,
     check_units_of_measure_terms,
     check_repeated_words,
     check_incorrect_verb_forms,
     check_grammar_issues,
+    check_rewriting_suggestions,
 ]
 
 __all__ = ['rule_functions']

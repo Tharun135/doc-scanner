@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  doc-scanner:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    
+  # Optional: Add a reverse proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - doc-scanner
+    restart: unless-stopped

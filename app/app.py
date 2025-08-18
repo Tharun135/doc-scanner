@@ -14,12 +14,25 @@ import textstat
 import time
 from dataclasses import asdict
 
+<<<<<<< HEAD
+=======
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    logger = logging.getLogger(__name__)
+    logger.info("Environment variables loaded from .env file")
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("python-dotenv not available - environment variables must be set manually")
+
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 # Add the parent directory to the path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 main = Blueprint('main', __name__)
 
-logging.basicConfig(level=logging.DEBUG)  # Or logging.INFO for production
+logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug messages
 logger = logging.getLogger(__name__)
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
@@ -124,16 +137,20 @@ def load_rules():
     rules_folder = os.path.join(os.path.dirname(__file__), 'rules')
     for filename in os.listdir(rules_folder):
         if filename.endswith('.py') and filename != '__init__.py':
-            rule_path = os.path.join(rules_folder, filename)
-            spec = importlib.util.spec_from_file_location(filename[:-3], rule_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-
-            if hasattr(module, "check"):
-                rules.append(module.check)
-                logger.info(f"Loaded rule: {filename} (Function: {module.check.__name__})")
-            else:
-                logger.warning(f"Warning: {filename} does not have a `check` function")
+            module_name = filename[:-3]  # Remove .py extension
+            try:
+                # Import the module using the proper package path
+                module = importlib.import_module(f'app.rules.{module_name}')
+                
+                if hasattr(module, "check"):
+                    rules.append(module.check)
+                    logger.info(f"Loaded rule: {filename} (Function: {module.check.__name__})")
+                else:
+                    logger.warning(f"Warning: {filename} does not have a `check` function")
+            except ImportError as e:
+                logger.error(f"Failed to import rule {filename}: {e}")
+            except Exception as e:
+                logger.error(f"Error loading rule {filename}: {e}")
 
     logger.info(f"Total rules loaded: {len(rules)}")
     return rules
@@ -407,8 +424,13 @@ def ai_suggestion():
         if 'suggestion' not in result:
             raise ValueError(f"Missing 'suggestion' in result: {list(result.keys())}")
             
+<<<<<<< HEAD
         if not result['suggestion']:
             raise ValueError("Empty suggestion returned")
+=======
+        if not result['suggestion'] or not str(result['suggestion']).strip():
+            raise ValueError("Empty or whitespace-only suggestion returned")
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context, 
@@ -562,6 +584,41 @@ def ai_configuration():
             logger.error(f"Error updating AI config: {str(e)}")
             return jsonify({"error": "Failed to update configuration"}), 500
 
+<<<<<<< HEAD
+=======
+@main.route('/api_quota_status', methods=['GET'])
+def api_quota_status():
+    """Get current API quota status."""
+    try:
+        from .rate_limiter import get_quota_status
+        status = get_quota_status()
+        return jsonify(status)
+    except ImportError:
+        return jsonify({
+            "error": "Rate limiter not available",
+            "used": 0,
+            "limit": 50,
+            "remaining": 50,
+            "can_make_request": True
+        })
+    except Exception as e:
+        logger.error(f"Error getting quota status: {str(e)}")
+        return jsonify({"error": "Failed to get quota status"}), 500
+
+@main.route('/reset_quota', methods=['POST'])
+def reset_api_quota():
+    """Manually reset API quota (admin function)."""
+    try:
+        from .rate_limiter import reset_quota
+        reset_quota()
+        return jsonify({"message": "Quota reset successfully"})
+    except ImportError:
+        return jsonify({"error": "Rate limiter not available"}), 400
+    except Exception as e:
+        logger.error(f"Error resetting quota: {str(e)}")
+        return jsonify({"error": "Failed to reset quota"}), 500
+
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 @main.route('/upload_batch', methods=['POST'])
 def upload_batch():
     """Handle batch file upload (zip or multiple files)."""

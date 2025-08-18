@@ -3,6 +3,18 @@ import spacy
 from bs4 import BeautifulSoup
 import html
 
+<<<<<<< HEAD
+=======
+# Import RAG system with fallback
+try:
+    from .rag_rule_helper import check_with_rag
+    RAG_HELPER_AVAILABLE = True
+except ImportError:
+    RAG_HELPER_AVAILABLE = False
+    import logging
+    logging.debug(f"RAG helper not available for {__name__} - using basic rules")
+
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 # Global variable to hold the spaCy model
 nlp = None
 

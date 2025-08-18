@@ -75,7 +75,7 @@
         }
 
         .document-section, .feedback-section {
-            overflow-y: auto;
+            overflow: auto;  /* Enable both horizontal and vertical scrolling */
             padding: 1rem;
             border-radius: 5px;
             background: rgba(0, 0, 0, 0.2);
@@ -312,6 +312,7 @@
     color: white;
     margin-bottom: 1rem;
 }
+<<<<<<< HEAD
 
 .feedback-buttons {
     display: flex;
@@ -335,6 +336,8 @@
             background: var(--secondary-color);
             border-color: var(--secondary-color);
         }
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         
         /* Tab System Styles */
         .tab-container {
@@ -495,6 +498,7 @@
     animation: pulse 2s ease-in-out infinite;
 }
 
+<<<<<<< HEAD
 .quick-actions {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
@@ -515,6 +519,8 @@
     opacity: 0.5;
 }
 
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.02); }
@@ -624,6 +630,54 @@
             border-color: var(--secondary-color);
             background: rgba(42, 155, 170, 0.2);
         }
+<<<<<<< HEAD
+=======
+
+        /* Quota Status Styles */
+        .quota-status {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .quota-indicator {
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+
+        .quota-indicator.quota-high {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+            border: 1px solid #28a745;
+        }
+
+        .quota-indicator.quota-medium {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid #ffc107;
+        }
+
+        .quota-indicator.quota-low {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+            border: 1px solid #dc3545;
+        }
+
+        .quota-progress .progress-bar.quota-high {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .quota-progress .progress-bar.quota-medium {
+            background: linear-gradient(45deg, #ffc107, #fd7e14);
+        }
+
+        .quota-progress .progress-bar.quota-low {
+            background: linear-gradient(45deg, #dc3545, #e74c3c);
+        }
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
     </style>
 </head>
 <body>
@@ -683,6 +737,21 @@
                     <h5><i class="fas fa-brain"></i> AI Writing Assistant</h5>
                 </div>
                 <div class="card-body">
+<<<<<<< HEAD
+=======
+                    <!-- API Quota Status -->
+                    <div class="quota-status mb-3" style="display:none;" id="quotaStatus">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold"><i class="fas fa-battery-three-quarters"></i> API Quota</span>
+                            <span class="quota-indicator" id="quotaIndicator">50/50</span>
+                        </div>
+                        <div class="progress quota-progress" style="height: 8px;">
+                            <div class="progress-bar" role="progressbar" id="quotaProgressBar" style="width: 100%"></div>
+                        </div>
+                        <small class="text-muted" id="quotaDescription">API requests available today</small>
+                    </div>
+                    
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                     <!-- Document Metrics -->
                     <div class="row mb-3">
                         <div class="col-6">
@@ -733,6 +802,7 @@
                             </div>
                         </div>
                     </div>
+<<<<<<< HEAD
                     
                     <!-- Quick Actions -->
                     <div class="quick-actions">
@@ -749,6 +819,8 @@
                             </button>
                         </div>
                     </div>
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                 </div>
             </div>
 
@@ -1497,6 +1569,7 @@
                     </div>
                 </div>
                 ` : ''}
+<<<<<<< HEAD
                 
                 <div class="feedback-buttons">
                     <button class="feedback-btn" onclick="rateSuggestion('${aiSuggestion.suggestion_id}', 'helpful')">
@@ -1512,6 +1585,8 @@
                         <i class="fas fa-search"></i> View Text
                     </button>
                 </div>
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
             `;
             
             // Insert in order by sentence index, then by feedback type
@@ -1613,7 +1688,11 @@
                 // Hide loading
                 hideLoadingToast(loadingToast);
                 
+<<<<<<< HEAD
                 if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion) {
+=======
+                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion && aiSuggestion.suggestion.trim()) {
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                     console.log('✅ AI suggestion success, adding to tab');
                     console.log('AI suggestion object:', aiSuggestion);
                     // Add to AI tab
@@ -1628,8 +1707,18 @@
                     console.error('❌ AI suggestion failed - invalid response:', {
                         aiSuggestion: aiSuggestion,
                         type: typeof aiSuggestion,
+<<<<<<< HEAD
                         hasProperty: aiSuggestion && aiSuggestion.hasOwnProperty('suggestion'),
                         suggestionValue: aiSuggestion ? aiSuggestion.suggestion : 'N/A',
+=======
+                        isObject: aiSuggestion && typeof aiSuggestion === 'object',
+                        hasProperty: aiSuggestion && aiSuggestion.hasOwnProperty('suggestion'),
+                        suggestionValue: aiSuggestion ? aiSuggestion.suggestion : 'N/A',
+                        suggestionType: aiSuggestion && aiSuggestion.suggestion ? typeof aiSuggestion.suggestion : 'N/A',
+                        suggestionTrimmed: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.trim() : 'N/A',
+                        suggestionLength: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.length : 0,
+                        suggestionTrimmedLength: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.trim().length : 0,
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                         feedback: decodedFeedback,
                         sentence: decodedSentence,
                         feedbackKey: feedbackKey
@@ -1689,7 +1778,11 @@
             if (targetItem) {
                 targetItem.style.transform = 'scale(1.02)';
                 targetItem.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
+<<<<<<< HEAD
                 targetItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+=======
+                targetItem.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                 
                 // Remove highlight after a few seconds
                 setTimeout(() => {
@@ -1804,6 +1897,7 @@
             document.getElementById('issuesProgressBar').style.width = issues === 0 ? '100%' : `${Math.max(10, 100 - (issues * 10))}%`;
             document.getElementById('issuesDescription').textContent = 
                 issues === 0 ? 'No issues detected' : `${issues} issue${issues > 1 ? 's' : ''} found`;
+<<<<<<< HEAD
             
             // Enable quick action buttons
             if (issues > 0) {
@@ -1813,6 +1907,8 @@
             if (wordCount > 50) {
                 document.getElementById('summaryBtn').disabled = false;
             }
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         }
 
         function updateSmartInsights() {
@@ -1938,6 +2034,7 @@
             }
         }
 
+<<<<<<< HEAD
         // Quick Actions Implementation
         document.getElementById('fixAllBtn').addEventListener('click', function() {
             if (confirm('Apply all AI suggestions to improve your document?')) {
@@ -1959,6 +2056,8 @@
             showSuccessToast('Document summary generated!');
         });
 
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         function showSuccessToast(message) {
             const toast = document.createElement('div');
             toast.className = 'toast-notification success';
@@ -1992,6 +2091,7 @@
                     const sentenceRect = contentSentence.getBoundingClientRect();
                     const sectionRect = documentSection.getBoundingClientRect();
                     
+<<<<<<< HEAD
                     // Calculate the scroll position to center the sentence
                     const sectionCenter = sectionRect.height / 2;
                     const sentenceRelativeTop = sentenceRect.top - sectionRect.top;
@@ -2000,6 +2100,30 @@
                     // Smooth scroll to the target position
                     documentSection.scrollTo({
                         top: scrollTarget,
+=======
+                    // Calculate vertical scroll position to center the sentence
+                    const sectionCenterY = sectionRect.height / 2;
+                    const sentenceRelativeTop = sentenceRect.top - sectionRect.top;
+                    const verticalScrollTarget = documentSection.scrollTop + sentenceRelativeTop - sectionCenterY;
+                    
+                    // Calculate horizontal scroll position to center the sentence
+                    const sectionCenterX = sectionRect.width / 2;
+                    const sentenceRelativeLeft = sentenceRect.left - sectionRect.left;
+                    const horizontalScrollTarget = documentSection.scrollLeft + sentenceRelativeLeft + (sentenceRect.width / 2) - sectionCenterX;
+                    
+                    // Check if sentence is outside visible area horizontally
+                    const isHorizontallyVisible = sentenceRect.left >= sectionRect.left && 
+                                                 sentenceRect.right <= sectionRect.right;
+                    
+                    // Check if sentence is outside visible area vertically
+                    const isVerticallyVisible = sentenceRect.top >= sectionRect.top && 
+                                               sentenceRect.bottom <= sectionRect.bottom;
+                    
+                    // Smooth scroll to the target position (both horizontal and vertical)
+                    documentSection.scrollTo({
+                        top: !isVerticallyVisible ? verticalScrollTarget : documentSection.scrollTop,
+                        left: !isHorizontallyVisible ? Math.max(0, horizontalScrollTarget) : documentSection.scrollLeft,
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                         behavior: 'smooth'
                     });
                 }
@@ -2044,9 +2168,17 @@
             }
             
             if (sentenceElement) {
+<<<<<<< HEAD
                 sentenceElement.scrollIntoView({ 
                     behavior: 'smooth', 
                     block: 'center' 
+=======
+                // Use scrollIntoView with both vertical and horizontal centering
+                sentenceElement.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center',
+                    inline: 'center'  // This handles horizontal scrolling
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                 });
                 
                 // Temporarily highlight the sentence
@@ -2067,6 +2199,16 @@
             });
         }
 
+<<<<<<< HEAD
+=======
+        // Helper function to escape HTML special characters
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         // Function to add sentence highlighting to HTML content
         function addSentenceHighlighting(htmlContent, sentences) {
             let processedContent = htmlContent;
@@ -2099,6 +2241,7 @@
                     
                     // Approach 2: Try to find sentence in plain text and map back to HTML
                     if (!found && plainTextContent.includes(sentence)) {
+<<<<<<< HEAD
                         // Find all words in the sentence
                         const words = sentence.split(/\s+/).filter(word => word.length > 2);
                         
@@ -2117,6 +2260,40 @@
                                 processedContent = processedContent.replace(matchedText, replacement);
                                 found = true;
                                 console.log(`✓ HTML pattern match for sentence ${index}`);
+=======
+                        // Special handling for sentences with angle brackets (URLs, etc.)
+                        if (sentence.includes('<') && sentence.includes('>')) {
+                            // For sentences with angle brackets, try direct text match first
+                            if (processedContent.includes(sentence)) {
+                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                                processedContent = processedContent.replace(sentence, replacement);
+                                found = true;
+                                console.log(`✓ Direct text match for sentence with angle brackets ${index}`);
+                            }
+                        }
+                        
+                        // Standard word-based pattern matching
+                        if (!found) {
+                            // Find all words in the sentence
+                            const words = sentence.split(/\s+/).filter(word => word.length > 2);
+                            
+                            if (words.length > 0) {
+                                // Create a regex that finds the sentence allowing for HTML tags between words
+                                const wordPattern = words.map(word => 
+                                    word.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
+                                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
+                                
+                                const regex = new RegExp(wordPattern, 'i');
+                                const match = processedContent.match(regex);
+                                
+                                if (match) {
+                                    const matchedText = match[0];
+                                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
+                                    processedContent = processedContent.replace(matchedText, replacement);
+                                    found = true;
+                                    console.log(`✓ HTML pattern match for sentence ${index}`);
+                                }
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                             }
                         }
                     }
@@ -2357,6 +2534,18 @@
                     console.log('Suggestion property length:', result.suggestion?.length);
                     console.log('Suggestion is truthy:', !!result.suggestion);
                     
+<<<<<<< HEAD
+=======
+                    // Check for quota-related responses
+                    if (result && result.quota_status) {
+                        console.log('📊 Quota status in response:', result.quota_status);
+                        updateQuotaDisplay(result.quota_status);
+                    }
+                    
+                    // Refresh quota status after AI request
+                    setTimeout(loadQuotaStatus, 1000);
+                    
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                     // Extra validation to ensure we have a valid result
                     if (result && typeof result === 'object' && result.suggestion) {
                         console.log('✅ Valid AI suggestion object confirmed - validation passed');
@@ -2403,6 +2592,7 @@
             }, 3000);
         }
 
+<<<<<<< HEAD
         async function rateSuggestion(suggestionId, rating) {
             try {
                 const response = await fetch('/suggestion_feedback', {
@@ -2449,6 +2639,9 @@
                 console.error('Implementation feedback error:', error);
             }
         }        // Enhanced content rendering with sentence highlighting
+=======
+        // Enhanced content rendering with sentence highlighting
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         function renderContent(content, sentences) {
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
@@ -2634,9 +2827,87 @@
             showSettingsModal();
         });
 
+<<<<<<< HEAD
         // Initialize modal event handlers when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             initializeModalHandlers();
+=======
+        // Quota Status Management
+        function loadQuotaStatus() {
+            fetch('/api_quota_status')
+                .then(response => response.json())
+                .then(data => {
+                    updateQuotaDisplay(data);
+                })
+                .catch(error => {
+                    console.warn('Could not load quota status:', error);
+                    // Hide quota status if not available
+                    document.getElementById('quotaStatus').style.display = 'none';
+                });
+        }
+
+        function updateQuotaDisplay(quotaData) {
+            const quotaStatus = document.getElementById('quotaStatus');
+            const quotaIndicator = document.getElementById('quotaIndicator');
+            const quotaProgressBar = document.getElementById('quotaProgressBar');
+            const quotaDescription = document.getElementById('quotaDescription');
+
+            if (!quotaData || quotaData.error) {
+                quotaStatus.style.display = 'none';
+                return;
+            }
+
+            // Show quota status
+            quotaStatus.style.display = 'block';
+
+            // Update indicator
+            const remaining = quotaData.remaining || 0;
+            const limit = quotaData.limit || 50;
+            const used = quotaData.used || 0;
+            
+            quotaIndicator.textContent = `${remaining}/${limit}`;
+            
+            // Calculate percentage
+            const percentage = (remaining / limit) * 100;
+            quotaProgressBar.style.width = `${percentage}%`;
+            
+            // Update styles based on remaining quota
+            quotaIndicator.className = 'quota-indicator';
+            quotaProgressBar.className = 'progress-bar';
+            
+            if (percentage > 60) {
+                quotaIndicator.classList.add('quota-high');
+                quotaProgressBar.classList.add('quota-high');
+                quotaDescription.textContent = 'API requests available today';
+            } else if (percentage > 20) {
+                quotaIndicator.classList.add('quota-medium');
+                quotaProgressBar.classList.add('quota-medium');
+                quotaDescription.textContent = 'Limited API requests remaining';
+            } else {
+                quotaIndicator.classList.add('quota-low');
+                quotaProgressBar.classList.add('quota-low');
+                if (remaining === 0) {
+                    quotaDescription.textContent = 'API quota exhausted - resets tomorrow';
+                } else {
+                    quotaDescription.textContent = 'Very few API requests remaining';
+                }
+            }
+
+            // Add next reset time if available
+            if (quotaData.next_reset) {
+                const resetTime = new Date(quotaData.next_reset);
+                const timeString = resetTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                quotaDescription.textContent += ` (resets at ${timeString})`;
+            }
+        }
+
+        // Initialize modal event handlers when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeModalHandlers();
+            loadQuotaStatus();
+            // Check quota status every 5 minutes
+            setInterval(loadQuotaStatus, 5 * 60 * 1000);
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
         });
 
         // If DOM is already loaded, initialize immediately
@@ -2749,6 +3020,7 @@
                             <div style="font-size:1.5rem; font-weight:bold; color:#27ae60;">${stats.avg_rating ? stats.avg_rating.toFixed(1) : 'N/A'}/5</div>
                             <div style="font-size:0.9rem; color:#666;">Avg Rating</div>
                         </div>
+<<<<<<< HEAD
                         <div style="text-align:center;">
                             <div style="font-size:1.5rem; font-weight:bold; color:#e67e22;">${stats.helpful_percentage ? stats.helpful_percentage.toFixed(0) : 0}%</div>
                             <div style="font-size:0.9rem; color:#666;">Helpful</div>
@@ -2757,6 +3029,8 @@
                             <div style="font-size:1.5rem; font-weight:bold; color:#9b59b6;">${stats.implementation_percentage ? stats.implementation_percentage.toFixed(0) : 0}%</div>
                             <div style="font-size:0.9rem; color:#666;">Implemented</div>
                         </div>
+=======
+>>>>>>> 96cc86a16e63ddab59591eb3e60015e1d0b5ea16
                     </div>
                 </div>
             `;

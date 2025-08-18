@@ -3,10 +3,125 @@ import spacy
 from bs4 import BeautifulSoup
 import html
 
+# Import RAG system with fallback
+try:
+    from .rag_rule_helper import check_with_rag
+    RAG_HELPER_AVAILABLE = True
+except ImportError:
+    RAG_HELPER_AVAILABLE = False
+    import logging
+    logging.debug(f"RAG helper not available for {__name__} - using basic rules")
+
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
 nlp = spacy.load("en_core_web_sm")
 
 def check(content):
+    """
+    Check for style guide issues using RAG with smart fallback.
+    Primary: RAG-enhanced suggestions
+    Fallback: Rule-based detection
+    """
+    
+    # Use RAG-enhanced checking if available
+    if RAG_HELPER_AVAILABLE:
+        rule_patterns = {
+            'detect_function': detect_style_guide_issues
+        }
+        
+        fallback_suggestions = [
+            "Style issue detected. Consider using concise, clear language and following consistent formatting guidelines."
+        ]
+        
+        return check_with_rag(
+            content=content,
+            rule_patterns=rule_patterns,
+            rule_name="style_guide",
+            fallback_suggestions=fallback_suggestions
+        )
+    
+    # Legacy fallback when RAG helper is not available
+    return check_legacy_style_guide(content)
+
+def detect_style_guide_issues(content: str, text_content: str):
+    """
+    Detect style guide issues in text.
+    Returns list of detected issues with context.
+    """
+    import re
+    import spacy
+    
+    issues = []
+    
+    # Load spaCy if available
+    try:
+        nlp = spacy.load("en_core_web_sm")
+        doc = nlp(text_content)
+    except:
+        doc = None
+    
+    # Rule 1: Wordiness patterns
+    wordiness_patterns = [
+        (r'\bvery\b', "Remove unnecessary intensifier 'very'"),
+        (r'\bquite\b', "Remove unnecessary intensifier 'quite'"),
+        (r'\babsolutely\b', "Remove unnecessary intensifier 'absolutely'"),
+        (r'\breally\b', "Remove unnecessary intensifier 'really'"),
+        (r'\butilize\b', "Replace 'utilize' with simpler 'use'"),
+        (r'\bprior to\b', "Replace 'prior to' with simpler 'before'"),
+        (r'\bendeavor\b', "Replace 'endeavor' with simpler 'try'")
+    ]
+    
+    for pattern, message in wordiness_patterns:
+        matches = re.finditer(pattern, content, re.IGNORECASE)
+        for match in matches:
+            # Find sentence context
+            sentence_context = ""
+            if doc:
+                match_pos = match.start()
+                for sent in doc.sents:
+                    if sent.start_char <= match_pos <= sent.end_char:
+                        sentence_context = sent.text.strip()
+                        break
+            
+            issues.append({
+                "text": match.group(),
+                "start": match.start(),
+                "end": match.end(),
+                "message": f"Style issue: {message}",
+                "context": sentence_context or text_content[:200],
+                "sentence": sentence_context
+            })
+    
+    # Rule 2: UI terminology issues
+    ui_terms = [
+        (r'\bpress\b', "Use 'click' instead of 'press' for UI actions"),
+        (r'\bmouse over\b', "Use 'hover' instead of 'mouse over'"),
+        (r'\bequipments\b', "Use 'equipment' (singular) instead of 'equipments'")
+    ]
+    
+    for pattern, message in ui_terms:
+        matches = re.finditer(pattern, content, re.IGNORECASE)
+        for match in matches:
+            sentence_context = ""
+            if doc:
+                match_pos = match.start()
+                for sent in doc.sents:
+                    if sent.start_char <= match_pos <= sent.end_char:
+                        sentence_context = sent.text.strip()
+                        break
+            
+            issues.append({
+                "text": match.group(),
+                "start": match.start(),
+                "end": match.end(),
+                "message": f"UI terminology: {message}",
+                "context": sentence_context or text_content[:200],
+                "sentence": sentence_context
+            })
+    
+    return issues
+
+def check_legacy_style_guide(content):
+    """Legacy style guide detection for fallback when RAG is not available."""
     suggestions = []
 
     # Strip HTML tags from content

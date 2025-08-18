@@ -3,10 +3,45 @@ import spacy
 from bs4 import BeautifulSoup
 import html
 
+# Import RAG system with fallback
+try:
+    from .rag_rule_helper import check_with_rag, detect_modal_verb_issues
+    RAG_HELPER_AVAILABLE = True
+except ImportError:
+    RAG_HELPER_AVAILABLE = False
+
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
 nlp = spacy.load("en_core_web_sm")
 
 def check(content):
+    """
+    Check for modal verb issues (can/may/could) using RAG with smart fallback.
+    Primary: RAG-enhanced suggestions
+    Fallback: Rule-based modal verb detection
+    """
+    
+    # Use RAG-enhanced checking if available
+    if RAG_HELPER_AVAILABLE:
+        rule_patterns = {
+            'detect_function': detect_modal_verb_issues
+        }
+        
+        fallback_suggestions = [
+            "Modal verb usage: Use 'can' for ability and permission, 'may' for possibility and formal permission, 'could' for past actions or polite requests."
+        ]
+        
+        return check_with_rag(
+            content=content,
+            rule_patterns=rule_patterns,
+            rule_name="modal_verbs_can_may",
+            fallback_suggestions=fallback_suggestions
+        )
+    
+    # Legacy fallback when RAG helper is not available
+    return check_legacy_modal_verbs(content)
+
+def check_legacy_modal_verbs(content):
+    """Legacy modal verb checking for fallback when RAG is not available."""
     suggestions = []
     processed_sentences = set()  # Track processed sentences to avoid duplicates
 
@@ -16,69 +51,8 @@ def check(content):
 
     # Define doc using nlp
     doc = nlp(text_content)
-    
-    # Rule 1: Check for "can" usage and provide specific rewrite suggestions
-    for token in doc:
-        if token.text.lower() == "can" and token.dep_ == "aux":
-            sentence = token.sent.text.strip()
-            sentence_key = f"can_{sentence}"
-            
-            # Skip if we already processed this sentence for "can" usage
-            if sentence_key in processed_sentences:
-                continue
-            
-            # Provide specific rewrite suggestion for "can"
-            if "you can" in sentence.lower():
-                # Convert to imperative form
-                rewritten = re.sub(r'\byou can\s+(\w+)', r'\1', sentence, flags=re.IGNORECASE)
-                if rewritten and rewritten[0].islower():
-                    rewritten = rewritten[0].upper() + rewritten[1:]
-                suggestions.append(f"Issue: Use of modal verb 'can' - should describe direct action")
-                processed_sentences.add(sentence_key)
-            elif "can be" in sentence.lower():
-                rewritten = re.sub(r'\bcan be\b', 'is', sentence, flags=re.IGNORECASE)
-                suggestions.append(f"Issue: Use of modal verb 'can be' - should describe direct state")
-                processed_sentences.add(sentence_key)
-            else:
-                # Handle other patterns of "can"
-                pattern = r'(\w+)\s+can\s+(\w+)'
-                match = re.search(pattern, sentence, re.IGNORECASE)
-                if match:
-                    subject = match.group(1)
-                    verb = match.group(2)
-                    if subject.lower() not in ['i', 'you', 'we', 'they'] and not subject.lower().endswith('s'):
-                        verb_form = verb + "s" if not verb.endswith('s') else verb
-                    else:
-                        verb_form = verb
-                    rewritten = re.sub(pattern, f'{subject} {verb_form}', sentence, flags=re.IGNORECASE)
-                    suggestions.append(f"Issue: Use of modal verb 'can' - should describe direct action")
-                    processed_sentences.add(sentence_key)
-    
-    # Rule 1b: Check for "can" being used to express permission (additional specific case)
-    for token in doc:
-        if token.text.lower() == "can" and token.dep_ == "aux":
-            sentence = token.sent.text.strip()
-            sentence_key = f"can_permission_{sentence}"
-            
-            # Skip if we already processed this sentence for general "can" usage
-            if f"can_{sentence}" in processed_sentences:
-                continue
-            
-            # Skip if we already processed this sentence for "can" permission usage
-            if sentence_key in processed_sentences:
-                continue
-            
-            # Flag permission-related usage of "can" with additional context
-            if "permission" in sentence.lower() or "allowed" in sentence.lower() or "authorize" in sentence.lower():
-                suggestions.append({
-                    "text": token.text,
-                    "start": token.idx,
-                    "end": token.idx + len(token.text),
-                    "message": f"Use of 'can' for permission context. Consider using 'allowed to' or 'able to' instead. Sentence: {sentence}"
-                })
-                processed_sentences.add(sentence_key)
 
-    # Rule 2: Check all "may" usage and provide context-aware suggestions
+    # Rule 1: Check all "may" usage and provide context-aware suggestions
     may_pattern = r'\bmay\b'
     processed_may_sentences = set()
     matches = re.finditer(may_pattern, content, flags=re.IGNORECASE)
@@ -144,7 +118,7 @@ def check(content):
                 
                 processed_may_sentences.add(sentence_key)
 
-    # Rule 3: Ensure "could" is used only for the past and not as a substitute for "can"
+    # Rule 2: Ensure "could" is used only for the past and not as a substitute for "can"
     could_pattern = r'\bcould\b'
     processed_could_sentences = set()
     matches = re.finditer(could_pattern, content, flags=re.IGNORECASE)
@@ -173,7 +147,7 @@ def check(content):
                     })
                 processed_could_sentences.add(sentence_key)
 
-    # Rule 4: Detect overuse of "can" and suggest rewording
+    # Rule 3: Detect overuse of "can" and suggest rewording
     can_count = len([token for token in doc if token.text.lower() == "can"])
     if can_count > 3:  # Threshold for overuse (customizable)
         # Find a sentence with multiple "can" usage
