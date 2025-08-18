@@ -112,14 +112,14 @@ class EnhancedRAGSystem:
             
             # Find available model
             if not self._check_model_availability(self.model_name):
-                fallback_models = ["mistral", "phi3", "llama2", "tinyllama"]
+                fallback_models = ["tinyllama", "phi3:mini", "mistral", "phi3", "llama2"]
                 for fallback in fallback_models:
                     if self._check_model_availability(fallback):
                         logger.info(f"Using fallback model: {fallback}")
                         self.model_name = fallback
                         break
                 else:
-                    logger.error("No compatible models found. Please install: ollama pull mistral")
+                    logger.error("No compatible models found. Please install: ollama pull tinyllama")
                     return
             
             # Initialize LLM
@@ -278,39 +278,218 @@ class EnhancedRAGSystem:
             return ""
     
     def polish_with_llm(self, knowledge: str, original_issue: str, context: str = "") -> str:
-        """Use LLM to polish the knowledge into a perfect response."""
+        """Use LLM to create a perfect rewritten sentence or specific solution."""
         if not self.is_initialized or not self.llm:
-            logger.warning("LLM not initialized, cannot polish response")
-            return knowledge if knowledge else original_issue
+            logger.warning("LLM not initialized, using simple rewriter fallback")
+            return self._get_simple_rewrite_fallback(original_issue)
         
         try:
-            polish_prompt = f"""You are an expert writing coach. Create a clear, helpful, and grammatically perfect suggestion.
+            # Determine the specific issue type from knowledge/context
+            issue_type = self._identify_issue_type(original_issue, knowledge)
+            
+            # Create a focused prompt based on the specific issue
+            polish_prompt = f"""Fix this {issue_type} issue. Return ONLY the corrected sentence.
 
-ORIGINAL ISSUE: {original_issue}
-KNOWLEDGE: {knowledge}
-CONTEXT: {context}
+PROBLEM: "{original_issue}"
+ISSUE: {issue_type}
 
-Provide a concise, actionable suggestion that:
-1. Is grammatically perfect
-2. Explains the issue clearly
-3. Gives specific improvement advice
-4. Is encouraging and professional
+{self._get_issue_specific_instructions(issue_type)}
 
-Response:"""
+CORRECTED SENTENCE:"""
             
             response = self.llm.complete(polish_prompt)
-            polished_text = str(response).strip()
+            rewritten_text = str(response).strip()
             
-            # Clean up the response
-            polished_text = re.sub(r'\n+', ' ', polished_text)
-            polished_text = re.sub(r'\s+', ' ', polished_text)
+            # Clean up the response - remove prompt echo and get just the solution
+            lines = rewritten_text.split('\n')
             
-            logger.info(f"LLM polished response: {len(polished_text)} characters")
-            return polished_text
+            # Look for the actual corrected sentence (usually the last meaningful line)
+            solution = ""
+            for line in reversed(lines):
+                line = line.strip()
+                if line and not line.endswith(':') and not line.startswith('TASK:') and not line.startswith('SOLUTION:') and not line.startswith('CONTEXT:'):
+                    # Skip lines that look like instructions
+                    if not any(keyword in line.lower() for keyword in ['example:', 'provide only', 'corrected version', 'replace', 'eliminate']):
+                        solution = line
+                        break
+            
+            # If no clean solution found, try to extract from the end
+            if not solution:
+                solution = rewritten_text.split('\n')[-1].strip()
+            
+            # Final cleanup
+            solution = re.sub(r'^.*?:\s*', '', solution)  # Remove any remaining prefix
+            solution = re.sub(r'\s+', ' ', solution).strip()
+            solution = solution.strip('"').strip("'")
+            
+            # Validate the solution is actually different and reasonable
+            if (solution and 
+                solution.lower().strip() != original_issue.lower().strip() and
+                len(solution) > 5 and
+                not solution.startswith("I ") and
+                not "I'm" in solution and
+                not "Here's" in solution and
+                not solution.upper() == solution):  # Avoid all-caps responses
+                
+                logger.info(f"LLM generated valid solution for {issue_type}: {len(solution)} chars")
+                return solution
+            else:
+                logger.warning(f"LLM solution invalid for {issue_type}, using simple rewriter")
+                return self._get_simple_rewrite_fallback(original_issue)
             
         except Exception as e:
-            logger.error(f"Error polishing with LLM: {e}")
-            return knowledge if knowledge else original_issue
+            logger.error(f"Error rewriting with LLM: {e}")
+            return self._get_simple_rewrite_fallback(original_issue)
+    
+    def _get_simple_rewrite_fallback(self, original_issue: str) -> str:
+        """Get a solution using the simple pattern-based rewriter."""
+        try:
+            from .simple_rewriter import get_issue_solution
+            
+            # Use the same issue identification method as the LLM
+            issue_type = self._identify_issue_type(original_issue)
+            
+            solution = get_issue_solution(original_issue, issue_type)
+            logger.info(f"Simple rewriter generated solution for {issue_type}: {len(solution)} chars")
+            return solution
+            
+        except Exception as e:
+            logger.error(f"Simple rewriter failed: {e}")
+            return f"Fix needed: {original_issue}"
+    
+    def _identify_issue_type(self, sentence: str, knowledge: str = "") -> str:
+        """Identify the specific writing issue type."""
+        sentence_lower = sentence.lower()
+        knowledge_lower = knowledge.lower() if knowledge else ""
+        
+        # Check for passive voice
+        if (" was " in sentence_lower or " were " in sentence_lower or " is " in sentence_lower) and " by " in sentence_lower:
+            return "passive voice"
+        elif "passive voice" in knowledge_lower:
+            return "passive voice"
+        
+        # Check for long sentences
+        elif len(sentence.split()) > 25:
+            return "overly long sentence"
+        elif "long sentence" in knowledge_lower or "sentence length" in knowledge_lower:
+            return "overly long sentence"
+        
+        # Check for modal verbs
+        elif any(modal in sentence_lower for modal in ["can be", "will be", "may be", "should be", "might be"]):
+            return "weak modal verb construction"
+        elif "modal verb" in knowledge_lower:
+            return "weak modal verb construction"
+        
+        # Check for weak words
+        elif any(weak in sentence_lower for weak in ["very", "quite", "rather", "really", "actually", "just"]):
+            return "weak word usage"
+        elif "weak word" in knowledge_lower:
+            return "weak word usage"
+        
+        # Check for wordiness
+        elif any(wordy in sentence_lower for wordy in ["there is", "there are", "it is", "in order to"]):
+            return "wordy construction"
+        
+        # Check for unclear pronoun reference
+        elif sentence_lower.count(" it ") > 1 or sentence_lower.count(" they ") > 1:
+            return "unclear pronoun reference"
+        
+        # Default
+        return "unclear writing"
+    
+    def _get_issue_specific_instructions(self, issue_type: str) -> str:
+        """Get specific instructions for fixing the identified issue."""
+        instructions = {
+            "passive voice": """
+SOLUTION: Convert to active voice by making the doer of the action the subject.
+- Find who/what is doing the action
+- Make them the subject
+- Use the active form of the verb
+Example: "The report was written by John" → "John wrote the report" """,
+            
+            "overly long sentence": """
+SOLUTION: Break into shorter, clearer sentences.
+- Split at natural break points (and, but, however)
+- Keep related ideas together
+- Ensure each sentence has one main idea
+Example: "The system processes data and generates reports and sends notifications" → "The system processes data. It generates reports and sends notifications." """,
+            
+            "weak modal verb construction": """
+SOLUTION: Use stronger, more direct language.
+- Replace "can be used to" with active verbs
+- Replace "will be able to" with "will"
+- Be more definitive and confident
+Example: "This can be used to improve performance" → "This improves performance" """,
+            
+            "weak word usage": """
+SOLUTION: Remove or replace weak intensifiers and qualifiers.
+- Remove "very", "quite", "rather", "really"
+- Replace with stronger, specific words
+- Be more direct and confident
+Example: "This is very good" → "This is excellent" """,
+            
+            "wordy construction": """
+SOLUTION: Use more direct, concise language.
+- Replace "there is/are" with direct subjects
+- Replace "in order to" with "to"
+- Eliminate unnecessary words
+Example: "There are three issues" → "Three issues exist" """,
+            
+            "unclear pronoun reference": """
+SOLUTION: Replace unclear pronouns with specific nouns.
+- Identify what "it", "they", "this" refer to
+- Replace with the actual noun
+- Ensure clarity for the reader
+Example: "The system processes data and it generates reports" → "The system processes data and the system generates reports" """,
+            
+            "unclear writing": """
+SOLUTION: Make the meaning clearer and more direct.
+- Use simple, clear language
+- Ensure logical flow
+- Be specific rather than vague
+- Remove unnecessary complexity"""
+        }
+        
+        return instructions.get(issue_type, instructions["unclear writing"])
+    
+    def _apply_basic_fixes(self, sentence: str) -> str:
+        """Apply basic grammatical fixes if LLM fails."""
+        fixed = sentence.strip()
+        
+        # Fix passive voice patterns
+        passive_patterns = [
+            (r'(.+?) was (\w+ed) by (.+)', r'\3 \2 \1'),
+            (r'(.+?) were (\w+ed) by (.+)', r'\3 \2 \1'),
+            (r'(.+?) is (\w+ed) by (.+)', r'\3 \2s \1'),
+            (r'(.+?) are (\w+ed) by (.+)', r'\3 \2 \1')
+        ]
+        
+        for pattern, replacement in passive_patterns:
+            match = re.search(pattern, fixed, re.IGNORECASE)
+            if match:
+                fixed = re.sub(pattern, replacement, fixed, flags=re.IGNORECASE)
+                break
+        
+        # Fix long sentences by splitting
+        if len(fixed.split()) > 25:
+            # Look for natural break points
+            conjunctions = [' and ', ' but ', ' however ', ' therefore ', ' meanwhile ']
+            for conj in conjunctions:
+                if conj in fixed:
+                    parts = fixed.split(conj, 1)
+                    if len(parts) == 2:
+                        fixed = f"{parts[0].strip()}. {parts[1].strip().capitalize()}"
+                        break
+        
+        # Remove weak words
+        weak_words = ['very', 'quite', 'rather', 'really', 'just', 'actually']
+        for weak in weak_words:
+            fixed = re.sub(rf'\b{weak}\s+', '', fixed, flags=re.IGNORECASE)
+        
+        # Clean up spacing
+        fixed = re.sub(r'\s+', ' ', fixed).strip()
+        
+        return fixed
     
     def get_enhanced_suggestion(self, issue_text: str, issue_type: str = "general", 
                               context: str = "") -> Dict[str, Any]:
@@ -326,14 +505,14 @@ Response:"""
             return self.response_cache[cache_key]
         
         try:
-            # Step 1: Transform issue to query
+            # Step 1: Transform issue to query with context about the specific issue
             query = self.transform_issue_to_query(issue_text, issue_type)
             
-            # Step 2: Search knowledge base
+            # Step 2: Search knowledge base for issue-specific solutions
             knowledge = self.search_knowledge(query)
             
-            # Step 3: Polish with LLM
-            polished_response = self.polish_with_llm(knowledge, issue_text, context)
+            # Step 3: Generate solution-focused response with LLM
+            solution_response = self.polish_with_llm(knowledge, issue_text, f"Issue type: {issue_type}. Context: {context}")
             
             # Create enhanced response
             enhanced_suggestion = {
@@ -341,7 +520,7 @@ Response:"""
                 "issue_type": issue_type,
                 "query_used": query,
                 "knowledge_retrieved": knowledge,
-                "enhanced_response": polished_response,
+                "enhanced_response": solution_response,
                 "method": "enhanced_rag",
                 "processing_time": time.time() - start_time,
                 "timestamp": datetime.now().isoformat()

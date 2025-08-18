@@ -64,6 +64,25 @@ class LlamaIndexAISuggestionEngine:
         
         logger.info(f"LlamaIndex AI Suggestion Engine initialized. LlamaIndex available: {self.llamaindex_available}")
         
+    def _categorize_feedback(self, feedback_text: str) -> str:
+        """Categorize feedback to help RAG system understand the issue type."""
+        feedback_lower = feedback_text.lower()
+        
+        if "passive voice" in feedback_lower:
+            return "passive_voice"
+        elif "long sentence" in feedback_lower or "sentence length" in feedback_lower:
+            return "long_sentence"
+        elif "modal verb" in feedback_lower:
+            return "modal_verb"
+        elif "clarity" in feedback_lower:
+            return "clarity"
+        elif "grammar" in feedback_lower:
+            return "grammar"
+        elif "weak word" in feedback_lower or "modifier" in feedback_lower:
+            return "word_choice"
+        else:
+            return "general"
+        
     def generate_contextual_suggestion(self, feedback_text: str, sentence_context: str = "",
                                      document_type: str = "general", 
                                      writing_goals: List[str] = None,
@@ -84,29 +103,60 @@ class LlamaIndexAISuggestionEngine:
             document_content = ""
             
         try:
-            # Use Lightning AI for all suggestions - ultra-fast responses
+            # First try the Enhanced RAG system for intelligent suggestions
+            try:
+                from .enhanced_rag_complete import get_enhanced_suggestion
+                logger.info("Attempting Enhanced RAG suggestion")
+                
+                rag_result = get_enhanced_suggestion(
+                    issue_text=sentence_context,
+                    issue_type=self._categorize_feedback(feedback_text),
+                    context=document_content[:500]  # Limit context size for performance
+                )
+                
+                if rag_result and rag_result.get('enhanced_response'):
+                    logger.info("Enhanced RAG suggestion generated successfully")
+                    return {
+                        "suggestion": rag_result["enhanced_response"],
+                        "ai_answer": f"Enhanced with RAG: {rag_result.get('method', 'unknown')}",
+                        "confidence": "high",
+                        "method": "enhanced_rag",
+                        "model": "ollama_rag",
+                        "sources": rag_result.get("knowledge_retrieved", ""),
+                        "context_used": {
+                            "document_type": document_type,
+                            "writing_goals": writing_goals,
+                            "rag_query": rag_result.get("query_used", ""),
+                            "processing_time": rag_result.get("processing_time", 0)
+                        }
+                    }
+                else:
+                    logger.warning("Enhanced RAG returned empty result")
+                    
+            except Exception as rag_error:
+                logger.warning(f"Enhanced RAG failed: {rag_error}")
+            
+            # Fallback to Lightning AI for ultra-fast responses
             if self.llamaindex_available and self.llamaindex_engine:
-                logger.info("Using Lightning AI for solution generation")
+                logger.info("Using Lightning AI fallback")
                 ai_result = self.llamaindex_engine.generate_contextual_suggestion(
                     feedback_text=feedback_text,
                     sentence_context=sentence_context
                 )
                 
                 if ai_result:
-                    logger.info("LlamaIndex AI suggestion generated successfully")
+                    logger.info("Lightning AI suggestion generated successfully")
                     return {
                         "suggestion": ai_result["suggestion"],
-                        "ai_answer": ai_result.get("ai_answer", ""),
-                        "confidence": ai_result.get("confidence", "high"),
-                        "method": "llamaindex_ai",
-                        "model": ai_result.get("model", "ollama_local"),
-                        "sources": ai_result.get("sources", []),
+                        "ai_answer": ai_result.get("ai_answer", "Using pattern-based suggestions"),
+                        "confidence": ai_result.get("confidence", "medium"),
+                        "method": "lightning_ai",
+                        "model": "pattern_based",
+                        "sources": [],
                         "context_used": {
-                            **ai_result.get("context_used", {}),
                             "document_type": document_type,
                             "writing_goals": writing_goals,
-                            "primary_ai": "ollama_local",
-                            "issue_detection": "rule_based"
+                            "fallback_reason": "Enhanced RAG unavailable"
                         }
                     }
                 else:

@@ -138,5 +138,75 @@
     "method": "enhanced_rag",
     "processing_time": 69.57882976531982,
     "timestamp": "2025-08-14T14:06:40.424522"
+  },
+  "9ad58abd28d49c66112d1f9284e52b12": {
+    "original_issue": "This sentence is written in passive voice.",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: This sentence is written in passive voice",
+    "knowledge_retrieved": "",
+    "enhanced_response": "This sentence is written in passive voice.",
+    "method": "enhanced_rag",
+    "processing_time": 2.611222505569458,
+    "timestamp": "2025-08-18T16:37:58.301894"
+  },
+  "3f18b92b3c40c39e64375f301501c3e3": {
+    "original_issue": "Click SIMATIC S7 Connector app tile",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: Click SIMATIC S7 Connector app tile",
+    "knowledge_retrieved": "",
+    "enhanced_response": "Click SIMATIC S7 Connector app tile",
+    "method": "enhanced_rag",
+    "processing_time": 80.25566148757935,
+    "timestamp": "2025-08-18T16:55:38.533458"
+  },
+  "a196e4ca8ea4c2540d3412f947d98cef": {
+    "original_issue": "The report was written by the team.",
+    "issue_type": "passive_voice",
+    "query_used": "How to convert passive voice to active voice for: The report was written by the team",
+    "knowledge_retrieved": "",
+    "enhanced_response": "The report was written by the team.",
+    "method": "enhanced_rag",
+    "processing_time": 47.43565344810486,
+    "timestamp": "2025-08-18T17:19:50.359780"
+  },
+  "f35dce7e1dc4c24e6bc7965e74b70246": {
+    "original_issue": "There are many issues that need to be addressed in this document that was created by the development team and should be reviewed carefully.",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: There are many issues that need to be addressed in this document that was created by the development team and should be reviewed carefully",
+    "knowledge_retrieved": "",
+    "enhanced_response": "There are many issues that need to be addressed in this document that was created by the development team and should be reviewed carefully.",
+    "method": "enhanced_rag",
+    "processing_time": 17.681926012039185,
+    "timestamp": "2025-08-18T17:19:50.618344"
+  },
+  "0fd4204ada8c6dbd2eadf85016dbef1e": {
+    "original_issue": "You can configure Optimized S7-Protocol (S7-1200/1500) controller data source in the SIMATIC S7 Connector application",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: You can configure Optimized S7 Protocol  S7 1200 1500  controller data source in the SIMATIC S7 Connector application",
+    "knowledge_retrieved": "",
+    "enhanced_response": "1. Download and install the SIMATIIC S7 Connector application from the official website or app store. 2. Open the application and navigate to the \"Data Source\" tab. 3. Select \"Optimized S7-Protocol (S7-1200/1500)\" as the data source type. 4. Enter the host IP address, port number, and authentication credentials for your Optimized S7-Protocol controller. 5. Click \"Save\" to save the configuration. 6. Once the configuration is saved, you can connect to the Optimized S7-Protocol (S7-1200/1500) controller using the SIMATIIC S7 Connector application and start configuring your PLC or SCADA system.",
+    "method": "enhanced_rag",
+    "processing_time": 41.56101942062378,
+    "timestamp": "2025-08-18T18:05:28.080162"
+  },
+  "9c191dd5f2f66b14d600a6b20215b390": {
+    "original_issue": "There are many complex issues that need to be carefully addressed in this comprehensive document that was created by our experienced development team and should definitely be reviewed thoroughly by all stakeholders.",
+    "issue_type": "general",
+    "query_used": "How to improve this writing: There are many complex issues that need to be carefully addressed in this comprehensive document that was created by our experienced development team and should definitely be reviewed thoroughly by all stakeholders",
+    "knowledge_retrieved": "",
+    "enhanced_response": "This comprehensive document has been carefully crafted by our experienced development team, and it is essential that all stakeholders review it thoroughly to ensure its accuracy and relevance.",
+    "method": "enhanced_rag",
+    "processing_time": 20.717922687530518,
+    "timestamp": "2025-08-18T18:16:50.741633"
+  },
+  "5c1627e7567e5d7694ac43894d1ff564": {
+    "original_issue": "The system can be used to process documents effectively.",
+    "issue_type": "modal_verb",
+    "query_used": "How to improve this writing: The system can be used to process documents effectively",
+    "knowledge_retrieved": "",
+    "enhanced_response": "The system can efficiently manage and process documents, making it an effective tool for businesses.",
+    "method": "enhanced_rag",
+    "processing_time": 14.177771806716919,
+    "timestamp": "2025-08-18T18:17:05.003362"
   }
 }
