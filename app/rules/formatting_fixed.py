@@ -158,12 +158,6 @@ def check(content: str) -> List[Dict[str, Any]]:
             'pattern': r'[^\s]\s+$',
             'flags': re.MULTILINE,
             'message': 'Formatting issue: Trailing whitespace at end of line'
-        },
-        # Number formatting
-        {
-            'pattern': r'\b\d{4,}\b',
-            'flags': 0,
-            'message': 'Formatting issue: Consider using comma separators for large numbers'
         }
     ]
 
@@ -193,6 +187,40 @@ def check(content: str) -> List[Dict[str, Any]]:
                 "message": "Formatting issue: Inconsistent capitalization in heading"
             })
 
+    # Collect heading ranges so we can skip some formatting checks inside titles
+    heading_ranges = []
+    for m in heading_pattern.finditer(content):
+        heading_ranges.append((m.start(2), m.end(2)))
+    for m in html_heading_pattern.finditer(content):
+        heading_ranges.append((m.start(1), m.end(1)))
+
+    # Also treat a short first line (common title without markup) as a heading/title
+    # Criteria: first non-empty line, short number of words, not a markdown/HTML heading, and not a code block marker
+    first_line_match = re.search(r'^(.*)$', content, re.MULTILINE)
+    if first_line_match:
+        first_line = first_line_match.group(1).strip()
+        if first_line:
+            word_count = len(first_line.split())
+            char_count = len(first_line)
+            # Heuristic: consider it a title if <= 8 words and <= 60 chars
+            if word_count <= 8 and char_count <= 60:
+                # Skip if it already looks like a markdown heading or an HTML tag
+                if not re.match(r'^#{1,6}\s', first_line) and not first_line.startswith('<') and not first_line.startswith('```'):
+                    fl_start = first_line_match.start(1)
+                    fl_end = first_line_match.end(1)
+                    heading_ranges.append((fl_start, fl_end))
+
+    # Build sentence spans to identify which sentence a match belongs to
+    sentence_spans = []
+    for m in re.finditer(r'[^.!?]+[.!?]?|\n+', content, re.DOTALL):
+        # normalize spans: skip pure whitespace spans
+        span_text = m.group(0)
+        if span_text.strip() == '':
+            continue
+        sentence_spans.append((m.start(), m.end()))
+
+    seen = set()  # store tuples of (message, sentence_index) to avoid duplicates per sentence
+
     for pattern_info in formatting_patterns:
         pattern = pattern_info['pattern']
         flags = pattern_info.get('flags', 0)
@@ -200,6 +228,28 @@ def check(content: str) -> List[Dict[str, Any]]:
         
         for match in re.finditer(pattern, content, flags):
             matched_text = match.group(0)
+
+            # Do not apply the large-number comma suggestion inside headings/titles
+            if 'comma separators' in message:
+                in_heading = any(start <= match.start() < end for (start, end) in heading_ranges)
+                if in_heading:
+                    continue
+
+            # Determine which sentence span this match belongs to
+            sentence_index = None
+            for idx, (s_start, s_end) in enumerate(sentence_spans):
+                if s_start <= match.start() < s_end:
+                    sentence_index = idx
+                    break
+
+            # If we couldn't map to a sentence, allow the issue (use -1 as bucket)
+            key = (message, sentence_index if sentence_index is not None else -1)
+            if key in seen:
+                # Duplicate issue of same message in same sentence — skip
+                continue
+
+            seen.add(key)
+
             issues.append({
                 "text": matched_text,
                 "start": match.start(),

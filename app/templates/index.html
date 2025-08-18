@@ -153,6 +153,7 @@
         }
 
         .sentence-highlight {
+            color: inherit;
             transition: all 0.2s ease;
             cursor: pointer;
             padding: 2px 4px;
@@ -2793,7 +2794,8 @@ function showLoadingToast(message) {
             
             sentences.forEach((sentenceData, index) => {
                 const htmlSegment = sentenceData.html_segment;
-                const plainSentence = sentenceData.sentence.trim();
+                const rawSentence = sentenceData.sentence || '';
+        const plainSentence = rawSentence.trim().replace(/^\\[+\\s*/, '').replace(/\\s*\\]+$/, '');
                 
                 if (!plainSentence) return;
                 
