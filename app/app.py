@@ -43,7 +43,184 @@ except Exception as e:
     SPACY_AVAILABLE = False
 
 ############################
-# PARSING HELPERS
+# SENTENCE EXTRACTION HELPERS
+############################
+
+def extract_sentences_with_html_preservation(html_content):
+    """
+    Extract sentences from HTML content while preserving the HTML structure.
+    Returns a list of sentence objects that contain both the original HTML and plain text versions.
+    """
+    sentences = []
+    
+    # Parse HTML content
+    soup = BeautifulSoup(html_content, "html.parser")
+    
+    # Process each paragraph and text block separately
+    text_elements = soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th'])
+    
+    for element in text_elements:
+        if not element.get_text().strip():
+            continue
+            
+        # Get the HTML content of this element
+        element_html = str(element)
+        
+        # Get the plain text version for analysis
+        element_text = element.get_text()
+        
+        # Split the text into sentences while tracking positions
+        if SPACY_AVAILABLE and nlp:
+            # Use spaCy for better sentence segmentation
+            doc = nlp(element_text)
+            for sent in doc.sents:
+                sent_text = sent.text.strip()
+                if sent_text:
+                    # Find corresponding HTML fragment
+                    html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
+                    
+                    # Create sentence object with both HTML and text versions
+                    class EnhancedSentence:
+                        def __init__(self, text, html_fragment, start_char=0, end_char=None):
+                            self.text = text.strip()
+                            self.html_fragment = html_fragment
+                            self.start_char = start_char
+                            self.end_char = end_char if end_char else len(text)
+                    
+                    sentences.append(EnhancedSentence(sent_text, html_fragment))
+        else:
+            # Fallback: simple sentence splitting when spaCy is not available
+            import re
+            simple_sentences = re.split(r'[.!?]+\s+', element_text)
+            for sent_text in simple_sentences:
+                sent_text = sent_text.strip()
+                if sent_text:
+                    # Find corresponding HTML fragment
+                    html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
+                    
+                    class SimpleSentence:
+                        def __init__(self, text, html_fragment):
+                            self.text = text.strip()
+                            self.html_fragment = html_fragment
+                            self.start_char = 0
+                            self.end_char = len(text)
+                    
+                    sentences.append(SimpleSentence(sent_text, html_fragment))
+    
+    # Remove duplicate sentences based on text content
+    seen_sentences = set()
+    unique_sentences = []
+    
+    for sentence in sentences:
+        # Create a normalized version for comparison (strip whitespace and newlines)
+        normalized_text = ' '.join(sentence.text.split())
+        
+        if normalized_text and normalized_text not in seen_sentences:
+            seen_sentences.add(normalized_text)
+            unique_sentences.append(sentence)
+    
+    return unique_sentences
+
+def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
+    """
+    Find the HTML fragment that corresponds to a specific sentence within an element.
+    This preserves HTML tags like <strong>, <em>, <a>, <code>, etc.
+    """
+    soup = BeautifulSoup(element_html, "html.parser")
+    
+    # Get the first actual HTML element (skip the document wrapper)
+    first_element = soup.find()
+    if not first_element:
+        return sentence_text
+    
+    element_plain_text = first_element.get_text().strip()
+    
+    # Simple case: if the element contains only this sentence
+    if element_plain_text.strip() == sentence_text.strip():
+        # Return the inner HTML (content without the wrapper tag)
+        if hasattr(first_element, 'contents') and first_element.contents:
+            inner_content = ''.join(str(content) for content in first_element.contents)
+            return inner_content
+        return sentence_text
+    
+    # Complex case: sentence is part of a larger element
+    sentence_start = full_text.find(sentence_text.strip())
+    if sentence_start == -1:
+        return sentence_text  # Fallback - return plain text
+    
+    sentence_end = sentence_start + len(sentence_text.strip())
+    
+    # If this sentence spans the entire element content, return the inner HTML
+    if sentence_start == 0 and sentence_end >= len(full_text.strip()):
+        if hasattr(first_element, 'contents') and first_element.contents:
+            inner_content = ''.join(str(content) for content in first_element.contents)
+            return inner_content
+    
+    # For partial matches, try to find the corresponding HTML portion
+    try:
+        # Get all text nodes and their positions to map back to HTML
+        html_content = str(first_element)
+        
+        # Create a temporary element to work with
+        temp_soup = BeautifulSoup(html_content, "html.parser")
+        temp_element = temp_soup.find()
+        
+        if temp_element:
+            # Try to find the sentence text within the element
+            element_text = temp_element.get_text()
+            
+            # Find the sentence within the element's text
+            local_sentence_start = element_text.find(sentence_text.strip())
+            if local_sentence_start != -1:
+                local_sentence_end = local_sentence_start + len(sentence_text.strip())
+                
+                # Try to map this back to HTML by looking for text patterns
+                # For now, if we can find the exact sentence text in the HTML, return it with any inline tags
+                html_str = str(temp_element)
+                if sentence_text.strip() in html_str:
+                    # Look for the sentence with potential HTML tags
+                    import re
+                    # Create a pattern that allows HTML tags within the sentence
+                    words = sentence_text.strip().split()
+                    if words:
+                        # Create pattern allowing HTML tags between and within words
+                        pattern_words = [re.escape(word) for word in words]
+                        pattern = r'(?:<[^>]*>)*\s*' + r'(?:\s*<[^>]*>\s*)*\s+(?:<[^>]*>)*\s*'.join(pattern_words) + r'\s*(?:<[^>]*>)*'
+                        
+                        match = re.search(pattern, html_str, re.IGNORECASE | re.DOTALL)
+                        if match:
+                            return match.group(0).strip()
+                
+                # Fallback: return the plain text
+                return sentence_text.strip()
+    except Exception as e:
+        # If anything goes wrong, return the plain text
+        return sentence_text.strip()
+    
+    # Final fallback
+    return sentence_text.strip()
+
+############################
+# FILE PARSING HELPERS
+############################
+
+def parse_file(file):
+    def find_text_in_element(element, target):
+        if isinstance(element, str):
+            if target in element:
+                # Found in text node
+                start_idx = element.find(target)
+                end_idx = start_idx + len(target)
+                return element[start_idx:end_idx]
+        else:
+            # Check if target spans across this element
+            element_text = element.get_text()
+            if target in element_text:
+                # The target text is contained within this element
+                # Return the entire element HTML for now
+                return str(element)
+############################
+# FILE PARSING HELPERS
 ############################
 
 def parse_file(file):
@@ -249,40 +426,23 @@ def upload_file():
     try:
         # Parse file to get both plain text and HTML
         html_content = parse_file(file)
-        # Use BeautifulSoup to extract plain text from HTML
+        
+        # Store the original HTML content for highlighting
+        # Extract sentences that preserve HTML structure while also having plain text for analysis
+        sentences = extract_sentences_with_html_preservation(html_content)
+        
+        # Use BeautifulSoup to extract plain text for RAG context
         soup = BeautifulSoup(html_content, "html.parser")
         plain_text = soup.get_text(separator="\n")
         
         # Store the document content for RAG context
         current_document_content = plain_text
 
-        # Split on newlines and punctuation for better sentence segmentation
-        lines = [line.strip() for line in plain_text.split('\n') if line.strip()]
-        sentences = []
-        for line in lines:
-            if SPACY_AVAILABLE and nlp:
-                # Use spaCy to further split lines with multiple sentences
-                doc = nlp(line)
-                for sent in doc.sents:
-                    sentences.append(sent)
-            else:
-                # Fallback: simple sentence splitting when spaCy is not available
-                import re
-                # Split by sentence-ending punctuation
-                simple_sentences = re.split(r'[.!?]+\s+', line)
-                for sent_text in simple_sentences:
-                    if sent_text.strip():
-                        # Create a simple sentence object
-                        class SimpleSentence:
-                            def __init__(self, text):
-                                self.text = text.strip()
-                                self.start_char = 0
-                                self.end_char = len(text)
-                        sentences.append(SimpleSentence(sent_text.strip()))
-
         sentence_data = []
         for index, sent in enumerate(sentences):
-            feedback, readability_scores, quality_score = analyze_sentence(sent.text, rules)
+            # Use the plain text version for analysis
+            plain_text_sentence = sent.text
+            feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
             
             # Add sentence index to each feedback item for UI linking
             enhanced_feedback = []
@@ -292,15 +452,16 @@ def upload_file():
                     enhanced_feedback.append(item)
                 else:
                     enhanced_feedback.append({
-                        "text": sent.text,
+                        "text": plain_text_sentence,
                         "start": 0,
-                        "end": len(sent.text),
+                        "end": len(plain_text_sentence),
                         "message": str(item),
                         "sentence_index": index
                     })
             
             sentence_data.append({
-                "sentence": sent.text,
+                "sentence": plain_text_sentence,  # Plain text for analysis
+                "html_sentence": getattr(sent, 'html_fragment', plain_text_sentence),  # HTML version for highlighting
                 "sentence_index": index,
                 "feedback": enhanced_feedback,
                 "readability_scores": readability_scores,
