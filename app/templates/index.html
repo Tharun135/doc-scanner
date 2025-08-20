@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         :root {
             --primary-color: #2A3B5A;
@@ -390,30 +391,75 @@
 
 .stage-item.completed {
     color: #4CAF50;
+    transform: scale(1.05);
+    transition: all 0.3s ease;
+}
+
+.stage-item.completed i {
+    color: #4CAF50 !important;
+    animation: completePulse 2s ease-in-out;
 }
 
 .stage-item.active {
     color: #FFD700;
-    transform: scale(1.1);
+    transform: scale(1.15);
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.stage-item.active i {
+    color: #FFD700 !important;
+    animation: activeBounce 1.5s infinite;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .stage-item.pending {
     color: rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.stage-item.pending i {
+    color: rgba(255, 255, 255, 0.3) !important;
 }
 
 .stage-item i {
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
     display: block;
-}
-
-.stage-item.active i {
-    animation: bounce 1.5s infinite;
+    transition: all 0.3s ease;
 }
 
 @keyframes pulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); }
+}
+
+@keyframes activeBounce {
+    0%, 20%, 50%, 80%, 100% { 
+        transform: translateY(0) scale(1); 
+    }
+    40% { 
+        transform: translateY(-8px) scale(1.1); 
+    }
+    60% { 
+        transform: translateY(-4px) scale(1.05); 
+    }
+}
+
+@keyframes completePulse {
+    0% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+    50% { 
+        transform: scale(1.1);
+        box-shadow: 0 0 0 8px rgba(76, 175, 80, 0.3);
+    }
+    100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
 }
 
 @keyframes bounce {
@@ -1012,6 +1058,11 @@
     </div>
 
     <script>
+        // WebSocket connection for real-time progress
+        const socket = io();
+        let currentRoomId = null;
+        let isRealTimeProgress = false;
+
         // File upload handling
         const dropzone = document.getElementById('dropzone');
         const fileInput = document.getElementById('fileInput');
@@ -1023,6 +1074,152 @@
         let analysisChart;
         let selectedFiles = [];
         let batchResults = [];
+
+        // WebSocket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to WebSocket server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from WebSocket server');
+        });
+
+        socket.on('progress_update', (data) => {
+            console.log('Progress update received:', data);
+            
+            if (isRealTimeProgress && currentRoomId) {
+                updateRealTimeProgress(data);
+            }
+        });
+
+        function updateRealTimeProgress(data) {
+            // Update percentage
+            document.getElementById('progressPercentage').textContent = data.percentage + '%';
+            
+            // Update progress bar
+            document.getElementById('progressBar').style.width = data.percentage + '%';
+            
+            // Update stage info
+            if (data.stage_name) {
+                document.getElementById('stageName').textContent = data.stage_name;
+                
+                // Update stage icon based on current stage
+                const stageIcons = {
+                    'Upload': 'fas fa-upload',
+                    'Parse': 'fas fa-file-alt', 
+                    'Extract': 'fas fa-cut',
+                    'Analyze': 'fas fa-search',
+                    'Report': 'fas fa-chart-line',
+                    'Complete': 'fas fa-check-circle'
+                };
+                
+                const iconElement = document.getElementById('stageIcon');
+                if (iconElement && stageIcons[data.stage_name]) {
+                    iconElement.innerHTML = `<i class="${stageIcons[data.stage_name]}"></i>`;
+                }
+            }
+            document.getElementById('stageDescription').textContent = data.message;
+            
+            // Update stage list icons - light up current and completed stages
+            updateStageListIcons(data.percentage, data.stage_name);
+            
+            // Update ETA
+            if (data.eta_seconds > 0) {
+                const seconds = Math.ceil(data.eta_seconds);
+                let etaText;
+                if (seconds < 60) {
+                    etaText = `${seconds} seconds`;
+                } else {
+                    const minutes = Math.floor(seconds / 60);
+                    const remainingSeconds = seconds % 60;
+                    etaText = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                }
+                document.getElementById('etaTime').textContent = etaText;
+            } else {
+                document.getElementById('etaTime').textContent = data.completed ? 'Complete!' : 'Almost done...';
+            }
+            
+            // If completed, hide progress after a short delay
+            if (data.completed) {
+                setTimeout(() => {
+                    hideProgressLoader();
+                }, 1000);
+            }
+        }
+
+        function updateStageListIcons(percentage, currentStageName) {
+            // Define stage thresholds and their corresponding list item indices
+            const stageMapping = [
+                { threshold: 0, index: 0, name: 'Upload', icon: 'fas fa-upload' },
+                { threshold: 10, index: 1, name: 'Parse', icon: 'fas fa-file-alt' },
+                { threshold: 30, index: 2, name: 'Extract', icon: 'fas fa-cut' },
+                { threshold: 50, index: 3, name: 'Analyze', icon: 'fas fa-search' },
+                { threshold: 80, index: 4, name: 'Report', icon: 'fas fa-chart-line' }
+            ];
+            
+            // Get all stage items
+            const stageItems = document.querySelectorAll('.stage-item');
+            
+            // Reset all stages to pending first
+            stageItems.forEach(item => {
+                item.classList.remove('completed', 'active', 'pending');
+                item.classList.add('pending');
+            });
+            
+            // Determine current stage based on percentage
+            let currentStageIndex = -1;
+            for (let i = 0; i < stageMapping.length; i++) {
+                if (percentage >= stageMapping[i].threshold) {
+                    currentStageIndex = i;
+                } else {
+                    break;
+                }
+            }
+            
+            // Update stage items
+            stageItems.forEach((item, index) => {
+                const stageIcon = item.querySelector('i');
+                
+                if (index < currentStageIndex) {
+                    // Completed stages - green with check mark
+                    item.classList.remove('pending', 'active');
+                    item.classList.add('completed');
+                    if (stageIcon) {
+                        stageIcon.className = 'fas fa-check-circle';
+                        stageIcon.style.color = '#4CAF50'; // Green color
+                    }
+                } else if (index === currentStageIndex) {
+                    // Current active stage - yellow/gold with animation
+                    item.classList.remove('pending', 'completed');
+                    item.classList.add('active');
+                    if (stageIcon && stageMapping[index]) {
+                        stageIcon.className = stageMapping[index].icon;
+                        stageIcon.style.color = '#FFD700'; // Gold color
+                    }
+                } else {
+                    // Future stages - gray and dimmed
+                    item.classList.remove('completed', 'active');
+                    item.classList.add('pending');
+                    if (stageIcon && stageMapping[index]) {
+                        stageIcon.className = stageMapping[index].icon;
+                        stageIcon.style.color = 'rgba(255, 255, 255, 0.3)'; // Dimmed
+                    }
+                }
+            });
+            
+            // Special case for 100% completion
+            if (percentage >= 100) {
+                stageItems.forEach((item, index) => {
+                    item.classList.remove('pending', 'active');
+                    item.classList.add('completed');
+                    const stageIcon = item.querySelector('i');
+                    if (stageIcon) {
+                        stageIcon.className = 'fas fa-check-circle';
+                        stageIcon.style.color = '#4CAF50';
+                    }
+                });
+            }
+        }
 
         // Handle browse button clicks using event delegation
         document.addEventListener('click', (e) => {
@@ -1256,17 +1453,27 @@
         let progressInterval;
         let startTime;
 
-        function showProgressLoader() {
+        function showProgressLoader(useRealTime = true) {
             document.getElementById('loadingOverlay').style.display = 'flex';
             currentStage = 0;
             startTime = Date.now();
-            updateProgress(0);
-            startProgressSimulation();
+            isRealTimeProgress = useRealTime;
+            
+            if (!useRealTime) {
+                // Use old simulation method as fallback
+                updateProgress(0);
+                startProgressSimulation();
+            } else {
+                // Initialize for real-time updates
+                resetProgress();
+            }
         }
 
         function hideProgressLoader() {
             clearInterval(progressInterval);
             document.getElementById('loadingOverlay').style.display = 'none';
+            isRealTimeProgress = false;
+            currentRoomId = null;
             resetProgress();
         }
 
@@ -1370,8 +1577,8 @@
                 return;
             }
 
-            // Show progress loader
-            showProgressLoader();
+            // Show progress loader with real-time progress enabled
+            showProgressLoader(true);
 
             const submitBtn = uploadForm.querySelector('button[type="submit"]');
             const originalBtnContent = submitBtn.innerHTML;
@@ -1380,37 +1587,85 @@
 
             try {
                 if (selectedFiles.length === 1) {
-                    // Single file upload (existing logic)
+                    // Single file upload with real-time progress
                     await processSingleFile(selectedFiles[0]);
                 } else {
-                    // Batch upload
+                    // Batch upload (use existing logic for now)
                     await processBatchFiles(selectedFiles);
                 }
             } catch (error) {
                 console.error('Upload error:', error);
                 alert('An error occurred during upload: ' + error.message);
             } finally {
-                // Hide progress loader
-                hideProgressLoader();
+                // Hide progress loader only if not using real-time
+                // (real-time progress will hide itself when complete)
+                if (!isRealTimeProgress) {
+                    hideProgressLoader();
+                }
                 submitBtn.innerHTML = originalBtnContent;
                 submitBtn.disabled = false;
             }
         });
 
         async function processSingleFile(file) {
-            const formData = new FormData();
-            formData.append('file', file);
+            try {
+                // Step 1: Get room ID for progress tracking
+                const roomResponse = await fetch('/start_upload', {
+                    method: 'POST'
+                });
+                
+                if (!roomResponse.ok) {
+                    throw new Error('Failed to initialize upload session');
+                }
+                
+                const roomData = await roomResponse.json();
+                currentRoomId = roomData.room_id;
+                
+                // Join the progress room for WebSocket updates
+                socket.emit('join_progress_room', { room_id: currentRoomId });
+                
+                // Step 2: Upload file with room ID
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('room_id', currentRoomId);
 
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData
-            });
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
-            if (!response.ok) throw new Error('Upload failed');
+                if (!response.ok) throw new Error('Upload failed');
 
-            const result = await response.json();
-            renderChart(result.report || {}, result.sentences || []);
-            renderContent(result.content || '', result.sentences || []);
+                const result = await response.json();
+                
+                // Only render results after successful completion
+                // (progress completion will be handled by WebSocket)
+                setTimeout(() => {
+                    renderChart(result.report || {}, result.sentences || []);
+                    renderContent(result.content || '', result.sentences || []);
+                }, 1000); // Small delay to let progress complete animation finish
+                
+                return result;
+            } catch (error) {
+                // If real-time progress fails, fall back to simulation
+                console.warn('Real-time progress failed, using simulation:', error);
+                isRealTimeProgress = false;
+                
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Upload failed');
+
+                const result = await response.json();
+                renderChart(result.report || {}, result.sentences || []);
+                renderContent(result.content || '', result.sentences || []);
+                return result;
+            }
         }
 
         async function processBatchFiles(files) {

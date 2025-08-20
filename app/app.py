@@ -433,6 +433,20 @@ def calculate_quality_index(total_sentences, total_errors):
 def index():
     return render_template('index.html')
 
+@main.route('/start_upload', methods=['POST'])
+def start_upload():
+    """Initialize upload session and return room ID for progress tracking."""
+    import uuid
+    from .progress_tracker import get_progress_tracker
+    
+    room_id = str(uuid.uuid4())
+    progress_tracker = get_progress_tracker()
+    
+    if progress_tracker:
+        progress_tracker.start_session(room_id)
+    
+    return jsonify({"room_id": room_id})
+
 @main.route('/upload', methods=['POST'])
 def upload_file():
     global current_document_content  # Access global variable
@@ -444,11 +458,29 @@ def upload_file():
     if not file.filename:
         return jsonify({"error": "No selected file"}), 400
 
-    logger.info(f"File uploaded: {file.filename}")
+    # Get room_id for progress tracking
+    room_id = request.form.get('room_id')
+    
+    from .progress_tracker import get_progress_tracker
+    progress_tracker = get_progress_tracker()
+
+    logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
 
     try:
+        # Stage 1: Uploading Document (10%)
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 0, f"Uploading {file.filename}...")
+        
+        # Stage 2: Parsing Content (30%)
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 1, f"Parsing {file.filename.split('.')[-1].upper()} content...")
+        
         # Parse file to get both plain text and HTML
         html_content = parse_file(file)
+        
+        # Stage 3: Breaking into Sentences (50%)
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 2, "Identifying sentence boundaries and structure...")
         
         # Store the original HTML content for highlighting
         # Extract sentences that preserve HTML structure while also having plain text for analysis
@@ -461,8 +493,20 @@ def upload_file():
         # Store the document content for RAG context
         current_document_content = plain_text
 
+        # Stage 4: Analyzing with Rules (80%)
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 3, "Applying grammar, style, and readability rules...")
+        
         sentence_data = []
+        total_sentences = len(sentences)
+        
         for index, sent in enumerate(sentences):
+            # Update substep progress for analysis
+            if progress_tracker and room_id and total_sentences > 0:
+                substep_progress = int(75 + (index / total_sentences) * 5)  # 75-80% range
+                progress_tracker.update_progress(room_id, substep_progress, 
+                    f"Analyzing sentence {index + 1} of {total_sentences}...")
+            
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
             feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
@@ -495,6 +539,11 @@ def upload_file():
 
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)
+        
+        # Stage 5: Generating Report (100%)
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 4, "Compiling insights and quality metrics...")
+        
         quality_index = calculate_quality_index(total_sentences, total_errors)
 
         aggregated_report = {
@@ -502,17 +551,28 @@ def upload_file():
             "totalWords": len(plain_text.split()),
             "avgQualityScore": quality_index,
             "message": "Content analysis completed."
-}
+        }
+
+        # Complete progress tracking
+        if progress_tracker and room_id:
+            progress_tracker.complete_session(room_id, success=True, 
+                final_message=f"Analysis complete! Found {total_errors} issues in {total_sentences} sentences.")
 
         # Return the result
         return jsonify({
             "content": html_content,  # For display
             "sentences": sentence_data,
-            "report": aggregated_report
+            "report": aggregated_report,
+            "room_id": room_id  # Include room_id in response
         })
 
     except Exception as e:
         logger.error(f"Error processing file: {e}")
+        
+        # Fail progress tracking
+        if progress_tracker and room_id:
+            progress_tracker.fail_session(room_id, str(e))
+            
         return jsonify({"error": str(e)}), 500
 
 def extract_text_from_file(file):
