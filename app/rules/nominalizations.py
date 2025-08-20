@@ -11,6 +11,12 @@ except ImportError:
     import logging
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
+try:
+    from .title_utils import is_title_or_heading
+    TITLE_UTILS_AVAILABLE = True
+except ImportError:
+    TITLE_UTILS_AVAILABLE = False
+
 nlp = spacy.load("en_core_web_sm")
 
 def check(content):
@@ -23,6 +29,10 @@ def check(content):
     nominalization_pattern = re.compile(r".*(tion|ment|ness|ity|ance|ence|ship)$", re.IGNORECASE)
 
     for token in doc:
+        # Skip if token is in a title or heading
+        if TITLE_UTILS_AVAILABLE and is_title_or_heading(token.sent.text.strip(), content):
+            continue
+            
         if token.pos_ == "NOUN" and nominalization_pattern.match(token.text):
             suggestions.append(f"Consider replacing nominalization '{token.text}' with a verb form in sentence: '{token.sent.text}'")
     

@@ -11,6 +11,12 @@ except ImportError:
     import logging
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
+try:
+    from .title_utils import is_title_or_heading
+    TITLE_UTILS_AVAILABLE = True
+except ImportError:
+    TITLE_UTILS_AVAILABLE = False
+
 # Load spaCy model
 nlp = spacy.load("en_core_web_sm")
 
@@ -31,6 +37,10 @@ def check(content):
     # Sentence length checks
     # ------------------------------
     for sent in doc.sents:
+        # Skip titles and headings for readability checks
+        if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
+            continue
+            
         word_count = len([t for t in sent if t.is_alpha])
         if word_count > SENTENCE_LENGTH_THRESHOLD:
             suggestions.append(
@@ -40,17 +50,30 @@ def check(content):
     # ------------------------------
     # Textstat readability checks
     # ------------------------------
-    flesch = textstat.flesch_reading_ease(text_content)
-    grade = textstat.flesch_kincaid_grade(text_content)
+    # Filter out titles from readability calculations
+    content_text_only = ""
+    if TITLE_UTILS_AVAILABLE:
+        for sent in doc.sents:
+            # Only include non-title sentences in readability calculation
+            if not is_title_or_heading(sent.text.strip(), content):
+                content_text_only += sent.text + " "
+    else:
+        content_text_only = text_content
+    
+    # Only calculate readability if we have content (not just titles)
+    if content_text_only.strip():
+        flesch = textstat.flesch_reading_ease(content_text_only)
+        grade = textstat.flesch_kincaid_grade(content_text_only)
 
-    if flesch < FLESCH_READING_EASE_THRESHOLD:
-        suggestions.append(
-            f"Low readability (Flesch score: {flesch}). Simplify language."
-        )
-    if grade > GRADE_LEVEL_THRESHOLD:
-        suggestions.append(
-            f"High grade level ({grade}). Aim for Grade {GRADE_LEVEL_THRESHOLD} or below."
-        )
+        # Flesch readability check removed per user request
+        # if flesch < FLESCH_READING_EASE_THRESHOLD:
+        #     suggestions.append(
+        #         f"Low readability (Flesch score: {flesch}). Simplify language."
+        #     )
+        if grade > GRADE_LEVEL_THRESHOLD:
+            suggestions.append(
+                f"High grade level ({grade}). Aim for Grade {GRADE_LEVEL_THRESHOLD} or below."
+            )
 
     # ------------------------------
     # Domain-specific readability checks via RAG

@@ -11,6 +11,12 @@ except ImportError:
     import logging
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
+try:
+    from .title_utils import is_title_or_heading
+    TITLE_UTILS_AVAILABLE = True
+except ImportError:
+    TITLE_UTILS_AVAILABLE = False
+
 # Load spaCy English model (make sure: python -m spacy download en_core_web_sm)
 nlp = spacy.load("en_core_web_sm")
 
@@ -29,22 +35,28 @@ def check(content):
     if re.search(r"\s{2,}", text_content):
         suggestions.append("Avoid using multiple consecutive spaces.")
 
-    # Example: Double punctuation
-    if re.search(r"[.!?]{2,}", text_content):
-        suggestions.append("Avoid repeating punctuation (e.g., '!!' or '??').")
+    # Double punctuation check removed per user request
+    # if re.search(r"[.!?]{2,}", text_content):
+    #     suggestions.append("Avoid repeating punctuation (e.g., '!!' or '??').")
 
     # ------------------------------
     # spaCy-based grammar checks
     # ------------------------------
     for sent in doc.sents:
+        # Skip titles and headings for grammar checks
+        if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
+            continue
+            
         # Example 1: Subject–verb agreement (singular/plural mismatch)
         for token in sent:
             if token.tag_ == "VBZ" and token.head.tag_ == "NNS":
                 suggestions.append(f"Check subject–verb agreement: '{sent.text.strip()}'")
 
-        # Example 2: Sentence starts with lowercase
+        # Example 2: Sentence starts with lowercase (skip markdown info blocks)
         if sent.text[0].islower():
-            suggestions.append(f"Start sentences with a capital letter: '{sent.text.strip()}'")
+            # Skip markdown info/note syntax like: info "NOTICE", warning "TEXT", etc.
+            if not re.match(r'^\s*(info|warning|note|tip|caution)\s*"', sent.text.strip(), re.IGNORECASE):
+                suggestions.append(f"Start sentences with a capital letter: '{sent.text.strip()}'")
 
         # Example 3: Detect overly long sentences
         if len(sent.text.split()) > 30:
