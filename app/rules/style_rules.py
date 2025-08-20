@@ -79,10 +79,6 @@ def check(content):
         if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
             continue
             
-        # Example 1: Long, wordy sentences
-        if len(sent.text.split()) > 25:
-            suggestions.append(f"Consider simplifying this sentence: '{sent.text.strip()}'")
-
         # Example 2: Adverbs ending with -ly (may weaken writing)
         for token in sent:
             if token.text.endswith("ly") and token.pos_ == "ADV":

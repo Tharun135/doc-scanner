@@ -58,10 +58,6 @@ def check(content):
             if not re.match(r'^\s*(info|warning|note|tip|caution)\s*"', sent.text.strip(), re.IGNORECASE):
                 suggestions.append(f"Start sentences with a capital letter: '{sent.text.strip()}'")
 
-        # Example 3: Detect overly long sentences
-        if len(sent.text.split()) > 30:
-            suggestions.append(f"Consider breaking this long sentence: '{sent.text.strip()}'")
-
     # ------------------------------
     # RAG-based contextual checks (if available)
     # ------------------------------
