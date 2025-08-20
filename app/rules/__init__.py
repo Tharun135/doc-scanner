@@ -5,7 +5,6 @@ from app.rules.readability_rules import check as check_readability_rules
 from app.rules.terminology_rules import check as check_terminology_rules
 from app.rules.consistency_rules import check as check_consistency_rules
 from app.rules.long_sentence import check as check_long_sentence
-from app.rules.nominalizations import check as check_nominalizations
 from app.rules.vague_terms import check as check_vague_terms
 
 rule_functions = [
@@ -16,7 +15,6 @@ rule_functions = [
     check_terminology_rules,
     check_consistency_rules,
     check_long_sentence,
-    check_nominalizations,
     check_vague_terms,
 ]
 
