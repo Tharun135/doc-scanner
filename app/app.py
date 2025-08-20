@@ -9,10 +9,17 @@ from bs4 import BeautifulSoup
 import logging
 import importlib
 import sys
-import spacy
 import textstat
 import time
 from dataclasses import asdict
+
+# Try to import spacy but handle import errors gracefully
+try:
+    import spacy
+    SPACY_IMPORT_SUCCESS = True
+except ImportError:
+    SPACY_IMPORT_SUCCESS = False
+    spacy = None
 
 # Load environment variables from .env file
 try:
@@ -33,12 +40,28 @@ logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug 
 logger = logging.getLogger(__name__)
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-try:
-    nlp = spacy.load("en_core_web_sm")
-    SPACY_AVAILABLE = True
-    logger.info("spaCy model loaded successfully")
-except Exception as e:
-    logger.warning(f"spaCy model not available: {e}")
+if SPACY_IMPORT_SUCCESS:
+    try:
+        # Try to load with reduced memory footprint
+        nlp = spacy.load("en_core_web_sm", disable=["ner", "textcat"])
+        SPACY_AVAILABLE = True
+        logger.info("spaCy model loaded successfully with reduced components")
+    except MemoryError as e:
+        logger.warning(f"spaCy model loading failed due to memory constraints: {e}")
+        logger.warning("Running without spaCy - sentence splitting will use basic methods")
+        nlp = None
+        SPACY_AVAILABLE = False
+    except ImportError as e:
+        logger.warning(f"spaCy not available: {e}")
+        nlp = None
+        SPACY_AVAILABLE = False
+    except Exception as e:
+        logger.warning(f"spaCy model not available: {e}")
+        logger.warning("Falling back to basic sentence processing")
+        nlp = None
+        SPACY_AVAILABLE = False
+else:
+    logger.warning("spaCy package not installed - using basic sentence processing")
     nlp = None
     SPACY_AVAILABLE = False
 

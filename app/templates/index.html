@@ -236,15 +236,273 @@
         #loadingOverlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(18,28,58,0.85);
+    background: rgba(18,28,58,0.95);
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
 }
+
+.progress-container {
+    text-align: center;
+    color: #FFD700;
+    max-width: 500px;
+    width: 90%;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Completion celebration particles */
+.celebration-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #FFD700;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle-float 2s ease-out forwards;
+}
+
+@keyframes particle-float {
+    0% {
+        opacity: 1;
+        transform: translateY(0) translateX(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-100px) translateX(var(--random-x, 0)) scale(0);
+    }
+}
+
+.progress-header {
+    margin-bottom: 2rem;
+}
+
+.progress-title {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, #FFD700, #FFA500);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.progress-subtitle {
+    font-size: 1rem;
+    opacity: 0.8;
+    margin-bottom: 1rem;
+}
+
+.progress-percentage {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: #FFD700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin: 1.5rem 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #FFD700, #FFA500, #FF6347);
+    border-radius: 4px;
+    transition: width 0.8s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+.stage-info {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.stage-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    animation: pulse 2s infinite;
+}
+
+.stage-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    color: #FFD700;
+}
+
+.stage-description {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    line-height: 1.4;
+}
+
+.stage-list {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+}
+
+.stage-item {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem;
+    position: relative;
+}
+
+.stage-item.completed {
+    color: #4CAF50;
+}
+
+.stage-item.active {
+    color: #FFD700;
+    transform: scale(1.1);
+}
+
+.stage-item.pending {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.stage-item i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.stage-item.active i {
+    animation: bounce 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.eta-info {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    opacity: 0.6;
+}
+
 .spinner-container {
     text-align: center;
     color: #FFD700;
+}
+
+/* Mobile Responsiveness for Progress Loader */
+@media (max-width: 768px) {
+    .progress-container {
+        max-width: 90%;
+        padding: 1.5rem;
+    }
+    
+    .progress-title {
+        font-size: 1.5rem;
+    }
+    
+    .progress-percentage {
+        font-size: 2rem;
+    }
+    
+    .stage-list {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .stage-item {
+        flex: none;
+        min-width: calc(20% - 0.4rem);
+    }
+    
+    .stage-item i {
+        font-size: 1.2rem;
+    }
+    
+    .stage-item div {
+        font-size: 0.65rem !important;
+    }
+    
+    .stage-info {
+        padding: 0.8rem;
+    }
+    
+    .stage-icon {
+        font-size: 1.5rem;
+    }
+    
+    .stage-name {
+        font-size: 1rem;
+    }
+    
+    .stage-description {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .progress-container {
+        padding: 1rem;
+    }
+    
+    .progress-title {
+        font-size: 1.3rem;
+    }
+    
+    .progress-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .stage-list {
+        margin: 0.5rem 0;
+    }
+    
+    .stage-item {
+        min-width: calc(33.33% - 0.3rem);
+    }
 }
 
 /* AI Enhancement Indicators */
@@ -960,6 +1218,149 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
+        // Progress Control Functions
+        const progressStages = [
+            {
+                name: "Uploading Document",
+                description: "Receiving and validating your document...",
+                icon: "fas fa-upload",
+                percentage: 10
+            },
+            {
+                name: "Parsing Content",
+                description: "Extracting text from PDF, DOCX, or Markdown...",
+                icon: "fas fa-file-alt",
+                percentage: 30
+            },
+            {
+                name: "Breaking into Sentences",
+                description: "Identifying sentence boundaries and structure...",
+                icon: "fas fa-cut",
+                percentage: 50
+            },
+            {
+                name: "Analyzing with Rules",
+                description: "Applying grammar, style, and readability rules...",
+                icon: "fas fa-search",
+                percentage: 80
+            },
+            {
+                name: "Generating Report",
+                description: "Compiling insights and quality metrics...",
+                icon: "fas fa-chart-line",
+                percentage: 100
+            }
+        ];
+
+        let currentStage = 0;
+        let progressInterval;
+        let startTime;
+
+        function showProgressLoader() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            currentStage = 0;
+            startTime = Date.now();
+            updateProgress(0);
+            startProgressSimulation();
+        }
+
+        function hideProgressLoader() {
+            clearInterval(progressInterval);
+            document.getElementById('loadingOverlay').style.display = 'none';
+            resetProgress();
+        }
+
+        function updateProgress(stageIndex) {
+            if (stageIndex >= progressStages.length) return;
+            
+            const stage = progressStages[stageIndex];
+            currentStage = stageIndex;
+            
+            // Update percentage
+            document.getElementById('progressPercentage').textContent = stage.percentage + '%';
+            
+            // Update progress bar
+            document.getElementById('progressBar').style.width = stage.percentage + '%';
+            
+            // Update stage info
+            document.getElementById('stageIcon').innerHTML = `<i class="${stage.icon}"></i>`;
+            document.getElementById('stageName').textContent = stage.name;
+            document.getElementById('stageDescription').textContent = stage.description;
+            
+            // Update stage list
+            const stageItems = document.querySelectorAll('.stage-item');
+            stageItems.forEach((item, index) => {
+                item.classList.remove('completed', 'active', 'pending');
+                if (index < stageIndex) {
+                    item.classList.add('completed');
+                } else if (index === stageIndex) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.add('pending');
+                }
+            });
+            
+            // Update ETA
+            updateETA();
+        }
+
+        function updateETA() {
+            const elapsed = Date.now() - startTime;
+            const currentPercent = progressStages[currentStage].percentage;
+            
+            if (currentPercent > 0) {
+                const estimatedTotal = (elapsed / currentPercent) * 100;
+                const remaining = Math.max(0, estimatedTotal - elapsed);
+                
+                if (remaining > 0) {
+                    const seconds = Math.ceil(remaining / 1000);
+                    let etaText;
+                    if (seconds < 60) {
+                        etaText = `${seconds} seconds`;
+                    } else {
+                        const minutes = Math.floor(seconds / 60);
+                        const remainingSeconds = seconds % 60;
+                        etaText = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+                    }
+                    document.getElementById('etaTime').textContent = etaText;
+                } else {
+                    document.getElementById('etaTime').textContent = 'Almost done...';
+                }
+            } else {
+                document.getElementById('etaTime').textContent = 'Calculating...';
+            }
+        }
+
+        function startProgressSimulation() {
+            let stageIndex = 0;
+            const stageDurations = [400, 800, 1500, 10000, 100]; // milliseconds for each stage
+            
+            function moveToNextStage() {
+                if (stageIndex < progressStages.length) {
+                    updateProgress(stageIndex);
+                    stageIndex++;
+                    
+                    if (stageIndex < progressStages.length) {
+                        setTimeout(moveToNextStage, stageDurations[stageIndex - 1]);
+                    }
+                }
+            }
+            
+            moveToNextStage();
+        }
+
+        function resetProgress() {
+            currentStage = 0;
+            document.getElementById('progressPercentage').textContent = '0%';
+            document.getElementById('progressBar').style.width = '0%';
+            
+            const stageItems = document.querySelectorAll('.stage-item');
+            stageItems.forEach(item => {
+                item.classList.remove('completed', 'active');
+                item.classList.add('pending');
+            });
+        }
+
         // Form submission
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -969,8 +1370,8 @@
                 return;
             }
 
-            // Show spinner
-            document.getElementById('loadingOverlay').style.display = 'flex';
+            // Show progress loader
+            showProgressLoader();
 
             const submitBtn = uploadForm.querySelector('button[type="submit"]');
             const originalBtnContent = submitBtn.innerHTML;
@@ -989,8 +1390,8 @@
                 console.error('Upload error:', error);
                 alert('An error occurred during upload: ' + error.message);
             } finally {
-                // Hide spinner
-                document.getElementById('loadingOverlay').style.display = 'none';
+                // Hide progress loader
+                hideProgressLoader();
                 submitBtn.innerHTML = originalBtnContent;
                 submitBtn.disabled = false;
             }
@@ -2887,9 +3288,52 @@
         }
     </script>
     <div id="loadingOverlay" style="display:none;">
-      <div class="spinner-container">
-        <i class="fas fa-spinner fa-spin fa-5x"></i>
-        <div style="margin-top:20px;font-size:1.5rem;">Analyzing, please wait...</div>
+      <div class="progress-container">
+        <div class="progress-header">
+          <div class="progress-title">Document Analysis</div>
+          <div class="progress-subtitle">Processing your document with AI-powered insights</div>
+        </div>
+        
+        <div class="progress-percentage" id="progressPercentage">0%</div>
+        
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+        
+        <ul class="stage-list" id="stageList">
+          <li class="stage-item pending" id="stage-0">
+            <i class="fas fa-upload"></i>
+            <div style="font-size: 0.75rem;">Upload</div>
+          </li>
+          <li class="stage-item pending" id="stage-1">
+            <i class="fas fa-file-alt"></i>
+            <div style="font-size: 0.75rem;">Parse</div>
+          </li>
+          <li class="stage-item pending" id="stage-2">
+            <i class="fas fa-cut"></i>
+            <div style="font-size: 0.75rem;">Extract</div>
+          </li>
+          <li class="stage-item pending" id="stage-3">
+            <i class="fas fa-search"></i>
+            <div style="font-size: 0.75rem;">Analyze</div>
+          </li>
+          <li class="stage-item pending" id="stage-4">
+            <i class="fas fa-chart-line"></i>
+            <div style="font-size: 0.75rem;">Report</div>
+          </li>
+        </ul>
+        
+        <div class="stage-info">
+          <div class="stage-icon" id="stageIcon">
+            <i class="fas fa-upload"></i>
+          </div>
+          <div class="stage-name" id="stageName">Uploading Document</div>
+          <div class="stage-description" id="stageDescription">Receiving and validating your document...</div>
+        </div>
+        
+        <div class="eta-info" id="etaInfo">
+          Estimated time remaining: <span id="etaTime">Calculating...</span>
+        </div>
       </div>
     </div>
     <div id="suggestionModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
