@@ -8,6 +8,7 @@ try:
     RAG_HELPER_AVAILABLE = True
 except ImportError:
     RAG_HELPER_AVAILABLE = False
+    print("⚠️ RAG rule helper not available - using standard grammar rules only")
     import logging
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 

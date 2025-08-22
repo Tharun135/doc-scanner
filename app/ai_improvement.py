@@ -24,7 +24,7 @@ except ImportError:
 
 # Import RAG system (now the primary AI provider)
 try:
-    from scripts.rag_system_debug import get_rag_suggestion
+    from scripts.rag_system import get_rag_suggestion
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False

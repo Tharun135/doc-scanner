@@ -15,15 +15,15 @@ try:
     rag_system = DocScannerOllamaRAG()
     logging.info(f"RAG system initialized. Status: {rag_system.is_initialized}")
     
-    def get_rag_suggestion(issue: str, sentence: str, writing_goals: List[str] = None, document_type: str = "general") -> Dict[str, Any]:
+    def get_rag_suggestion(feedback_text: str, sentence_context: str, document_type: str = "general", document_content: str = "") -> Dict[str, Any]:
         """
         Get an AI suggestion from the RAG system.
         
         Args:
-            issue: The writing issue/feedback
-            sentence: The original sentence
-            writing_goals: List of writing goals (e.g., ['clarity', 'conciseness'])
+            feedback_text: The writing issue/feedback
+            sentence_context: The original sentence
             document_type: Type of document being processed
+            document_content: Full document content for context
             
         Returns:
             Dict containing suggestion, confidence, method, and sources
@@ -32,12 +32,12 @@ try:
             import threading
             import queue
             
-            logging.info(f"RAG suggestion request: issue='{issue}', sentence='{sentence}', rag_initialized={rag_system.is_initialized}")
+            logging.info(f"RAG suggestion request: feedback='{feedback_text}', sentence='{sentence_context}', rag_initialized={rag_system.is_initialized}")
             
             if not rag_system or not rag_system.is_initialized:
                 logging.warning("RAG system not initialized, falling back to smart suggestions")
                 return {
-                    'suggestion': f"Consider revising: {sentence}",
+                    'suggestion': f"Consider revising: {sentence_context}",
                     'confidence': 'medium', 
                     'method': 'smart_fallback',
                     'sources': []
@@ -48,9 +48,10 @@ try:
                 try:
                     logging.info("Calling RAG system...")
                     result = rag_system.get_rag_suggestion(
-                        feedback_text=issue,
-                        sentence_context=sentence,
-                        document_type=document_type
+                        feedback_text=feedback_text,
+                        sentence_context=sentence_context,
+                        document_type=document_type,
+                        document_content=document_content
                     )
                     return result
                 except Exception as e:
@@ -74,7 +75,7 @@ try:
             except queue.Empty:
                 logging.error("RAG suggestion timed out after 15 seconds")
                 return {
-                    'suggestion': f"Consider revising for better clarity: {sentence}",
+                    'suggestion': f"Consider revising for better clarity: {sentence_context}",
                     'confidence': 'low',
                     'method': 'timeout_fallback',
                     'sources': []
@@ -91,27 +92,16 @@ try:
                 # Fallback if RAG doesn't return a valid response
                 logging.warning("RAG returned no valid result")
                 return {
-                    'suggestion': f"Consider improving clarity: {sentence}",
+                    'suggestion': f"Consider improving clarity: {sentence_context}",
                     'confidence': 'medium',
                     'method': 'smart_fallback',
                     'sources': []
                 }
                 
         except TimeoutError:
-            signal.alarm(0)  # Cancel timeout
             logging.error("RAG suggestion timed out after 15 seconds")
             return {
-                'suggestion': f"Consider revising for better clarity: {sentence}",
-                'confidence': 'low',
-                'method': 'timeout_fallback',
-                'sources': []
-            }
-                
-        except TimeoutError:
-            signal.alarm(0)  # Cancel timeout
-            logging.error("RAG suggestion timed out after 15 seconds")
-            return {
-                'suggestion': f"Consider revising for better clarity: {sentence}",
+                'suggestion': f"Consider revising for better clarity: {sentence_context}",
                 'confidence': 'low',
                 'method': 'timeout_fallback',
                 'sources': []
@@ -120,7 +110,7 @@ try:
         except Exception as e:
             logging.error(f"RAG suggestion error: {e}")
             return {
-                'suggestion': f"Review for improvement: {sentence}",
+                'suggestion': f"Review for improvement: {sentence_context}",
                 'confidence': 'low',
                 'method': 'error_fallback',
                 'sources': []
@@ -132,10 +122,10 @@ except ImportError as e:
     RAG_SYSTEM_AVAILABLE = False
     logging.warning(f"RAG system not available: {e}")
     
-    def get_rag_suggestion(issue: str, sentence: str, writing_goals: List[str] = None, document_type: str = "general") -> Dict[str, Any]:
+    def get_rag_suggestion(feedback_text: str, sentence_context: str, document_type: str = "general", document_content: str = "") -> Dict[str, Any]:
         """Fallback function when RAG is not available"""
         return {
-            'suggestion': f"Consider revising for better clarity: {sentence}",
+            'suggestion': f"Consider revising for better clarity: {sentence_context}",
             'confidence': 'low',
             'method': 'fallback_unavailable',
             'sources': []

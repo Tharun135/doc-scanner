@@ -237,16 +237,11 @@ class DocScannerOllamaRAG:
         
         try:
             # Create focused query for writing improvement
-            query = f"""
-            Fix this writing issue: {feedback_text}
-            
-            Original sentence: "{sentence_context}"
-            Document type: {document_type}
-            
-            Provide a complete rewrite that fixes the issue. 
-            Make it clear, direct, and appropriate for {document_type} writing.
-            Give only the improved sentence, no explanation needed.
-            """
+            query = f"""Rewrite this sentence to fix: {feedback_text}
+
+Original: {sentence_context}
+
+Rewrite:"""
             
             # Get RAG response
             response = self.query_engine.query(query)
@@ -276,27 +271,93 @@ class DocScannerOllamaRAG:
     def _clean_suggestion(self, raw_suggestion: str, original_sentence: str) -> str:
         """Clean and format the RAG suggestion"""
         
-        # Remove common prefixes
-        prefixes_to_remove = [
+        suggestion = raw_suggestion.strip()
+        
+        # Remove common verbose prefixes from TinyLLaMA
+        verbose_prefixes = [
+            "In response to the given context information and not prior knowledge",
             "Here's a rewritten version:",
+            "Here is a revised version:",
             "Improved sentence:",
             "Better version:",
             "Rewrite:",
-            "Fixed version:"
+            "Fixed version:",
+            "Here's the rewrite:",
+            "The rewritten sentence:",
+            "A better version would be:",
         ]
         
-        suggestion = raw_suggestion
-        for prefix in prefixes_to_remove:
+        for prefix in verbose_prefixes:
             if suggestion.lower().startswith(prefix.lower()):
                 suggestion = suggestion[len(prefix):].strip()
+                break
+        
+        # Remove trailing explanations after colons or periods
+        if ':' in suggestion:
+            # If there's a colon, take everything after it as the main suggestion
+            parts = suggestion.split(':', 1)
+            if len(parts) > 1:
+                suggestion = parts[1].strip()
+        
+        # Look for actual sentence improvements in quotes
+        import re
+        quoted_match = re.search(r'"([^"]*)"', suggestion)
+        if quoted_match:
+            quoted_text = quoted_match.group(1).strip()
+            # Use quoted text if it's different from original and reasonable length
+            if (quoted_text.lower() != original_sentence.lower() and 
+                10 < len(quoted_text) < 300 and
+                not quoted_text.lower().startswith('date and time picker')):  # Avoid exact matches
+                suggestion = quoted_text
+        
+        # Try to extract the main sentence if it starts with common patterns
+        sentence_patterns = [
+            r'^Instructions?:\s*(.+)',
+            r'^Rewrite:\s*(.+)',
+            r'^Better:\s*(.+)',
+            r'^Fixed:\s*(.+)',
+        ]
+        
+        for pattern in sentence_patterns:
+            match = re.search(pattern, suggestion, re.IGNORECASE)
+            if match:
+                potential_sentence = match.group(1).strip()
+                if len(potential_sentence) > 10:
+                    suggestion = potential_sentence
+                    break
+        
+        # Remove explanatory text after the main suggestion
+        # Look for common patterns that indicate explanations
+        explanation_patterns = [
+            r'\.\s+(This|The|It|That)',
+            r'\.\s+(Instead|Rather|Better)',
+            r'\n\n',
+            r'Question:',
+            r'Explanation:',
+            r'Note:',
+        ]
+        
+        for pattern in explanation_patterns:
+            match = re.search(pattern, suggestion, re.IGNORECASE)
+            if match:
+                suggestion = suggestion[:match.start()].strip()
+                if suggestion.endswith('.'):
+                    break
+        
+        # Clean up remaining artifacts
+        suggestion = suggestion.strip(' ."')
         
         # If suggestion is too similar to original, provide a generic improvement
-        if suggestion.lower().strip() == original_sentence.lower().strip():
+        if (suggestion.lower().strip() == original_sentence.lower().strip() or
+            len(suggestion.strip()) < 10):
             suggestion = "Consider rewriting this sentence for better clarity and directness."
         
         # Ensure it's not too long
         if len(suggestion) > 200:
-            suggestion = suggestion[:200] + "..."
+            suggestion = suggestion[:200].strip()
+            # Try to end at a complete word
+            if ' ' in suggestion:
+                suggestion = ' '.join(suggestion.split(' ')[:-1])
         
         return suggestion
     

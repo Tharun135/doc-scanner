@@ -20,7 +20,10 @@ try:
     
     # Try DocScanner Ollama RAG system first (production-ready)
     try:
-        from docscanner_ollama_rag import get_rag_suggestion
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
+        from scripts.docscanner_ollama_rag import get_rag_suggestion
         RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
         RAG_TYPE = "ollama_production"
         logging.info("Using DocScanner Ollama RAG system (Local AI)")
