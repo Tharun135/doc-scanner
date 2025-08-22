@@ -5,6 +5,7 @@ from app.rules.terminology_rules import check as check_terminology_rules
 from app.rules.consistency_rules import check as check_consistency_rules
 from app.rules.long_sentence import check as check_long_sentence
 from app.rules.vague_terms import check as check_vague_terms
+from app.rules.verb_tense import check_verb_tense
 
 rule_functions = [
     check_grammar_rules,
@@ -14,6 +15,7 @@ rule_functions = [
     check_consistency_rules,
     check_long_sentence,
     check_vague_terms,
+    check_verb_tense,
 ]
 
 __all__ = ['rule_functions']

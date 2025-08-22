@@ -31,9 +31,7 @@ def check(content):
     # ------------------------------
     # Regex-based checks
     # ------------------------------
-    # Example: Multiple spaces
-    if re.search(r"\s{2,}", text_content):
-        suggestions.append("Avoid using multiple consecutive spaces.")
+    # Multiple consecutive spaces rule removed per user request
 
     # Double punctuation check removed per user request
     # if re.search(r"[.!?]{2,}", text_content):

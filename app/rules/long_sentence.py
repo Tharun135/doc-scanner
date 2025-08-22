@@ -25,10 +25,19 @@ def check(content):
     text_content = soup.get_text()
     doc = nlp(text_content)
 
-    # Flag long sentences (>25 words) - exclude titles
+    # Flag long sentences (>25 words) - exclude titles and markdown tables
     for sent in doc.sents:
         # Skip if this appears to be a title or heading
         if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
+            continue
+            
+        # Skip markdown table separator rows (| --- | --- | etc.)
+        sent_text = sent.text.strip()
+        if re.match(r'^\|\s*---.*\|\s*$', sent_text) or '| --- |' in sent_text:
+            continue
+            
+        # Skip markdown table rows (containing multiple | characters)
+        if sent_text.count('|') >= 3 and ('| --- |' in sent_text or re.match(r'^\|.*\|.*\|', sent_text)):
             continue
             
         if len(sent) > 25:

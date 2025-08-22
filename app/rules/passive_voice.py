@@ -30,12 +30,34 @@ def check(content):
     doc = nlp(text_content)
 
     # Detect passive voice: look for "auxpass" dependencies
-    for token in doc:
+    # Pre-process content to remove admonition lines entirely
+    lines = text_content.split('\n')
+    filtered_lines = []
+    
+    for line in lines:
+        # Skip lines that are markdown admonitions
+        if re.match(r'^\s*!!!\s+\w+(?:\s+"[^"]*")?\s*.*$', line, re.IGNORECASE):
+            continue
+        filtered_lines.append(line)
+    
+    # Re-process the filtered content with spaCy
+    filtered_content = '\n'.join(filtered_lines)
+    if not filtered_content.strip():
+        return suggestions
+        
+    filtered_doc = nlp(filtered_content)
+    
+    for token in filtered_doc:
+        sentence_text = token.sent.text.strip()
+        
         # Skip if token is in a title or heading
-        if TITLE_UTILS_AVAILABLE and is_title_or_heading(token.sent.text.strip(), content):
+        if TITLE_UTILS_AVAILABLE and is_title_or_heading(sentence_text, content):
             continue
             
         if token.dep_ == "auxpass":
-            suggestions.append(f"Avoid passive voice in sentence: '{token.sent.text}'")
+            # Avoid duplicate suggestions for the same sentence
+            suggestion = f"Avoid passive voice in sentence: '{sentence_text}'"
+            if suggestion not in suggestions:
+                suggestions.append(suggestion)
     
     return suggestions
