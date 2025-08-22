@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AI Suggestion</title>
+</head>
+<body>
+    <h1>Test AI Suggestion</h1>
+    <button onclick="testAI()">Test AI Suggestion</button>
+    <div id="result"></div>
+
+    <script>
+    async function testAI() {
+        console.log('Making AI suggestion request...');
+        
+        const data = {
+            feedback: 'passive voice',
+            sentence: 'This is a passive voice sentence that was written.',
+            document_type: 'general',
+            option_number: 1
+        };
+        
+        try {
+            const response = await fetch('/ai_suggestion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            console.log('AI suggestion result:', result);
+            document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('result').innerHTML = 'Error: ' + error.message;
+        }
+    }
+    </script>
+</body>
+</html>

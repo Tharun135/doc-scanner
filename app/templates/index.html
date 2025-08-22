@@ -2075,7 +2075,14 @@
                 </div>
                 
                 <div class="mb-3">
-                    <div class="text-light mb-2"><strong>AI Suggestion:</strong></div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="text-light"><strong>AI Suggestion:</strong></div>
+                        <button class="btn btn-outline-info btn-sm regenerate-btn" 
+                                onclick="regenerateAISuggestion(${sentenceIndex}, \`${feedback.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, \`${sentence.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, '${feedbackKey}')"
+                                title="Get a different suggestion">
+                            <i class="fas fa-sync-alt"></i> Regenerate
+                        </button>
+                    </div>
                     <div class="suggestion-text bg-light text-dark p-3 rounded">
                         ${formatAISuggestion(aiSuggestion.suggestion)}
                     </div>
@@ -2228,6 +2235,63 @@
                 console.error('❌ Error in showAIFeedback:', error);
                 console.error('Error stack:', error.stack);
                 showErrorToast('Error getting AI suggestion: ' + error.message);
+            }
+        }
+        
+        // Function to regenerate AI suggestions
+        let currentOptionNumber = 1; // Track current option number
+        
+        async function regenerateAISuggestion(sentenceIndex, feedback, sentence, feedbackKey) {
+            try {
+                console.log('=== REGENERATE AI SUGGESTION ===');
+                console.log('Parameters:', { sentenceIndex, feedback, sentence, feedbackKey });
+                
+                // Increment option number for next suggestion
+                currentOptionNumber = currentOptionNumber + 1;
+                if (currentOptionNumber > 3) currentOptionNumber = 1; // Cycle back to option 1
+                
+                const decodedFeedback = decodeURIComponent(feedback);
+                const decodedSentence = decodeURIComponent(sentence);
+                
+                console.log('Getting option number:', currentOptionNumber);
+                const loadingToast = showLoadingToast(`Generating alternative suggestion (Option ${currentOptionNumber})...`);
+                
+                // Get AI suggestion with option number
+                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, currentOptionNumber);
+                
+                // Hide loading
+                hideLoadingToast(loadingToast);
+                
+                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion && aiSuggestion.suggestion.trim()) {
+                    console.log('✅ Regenerated AI suggestion success');
+                    
+                    // Find and update the existing AI feedback item
+                    const existingItem = document.querySelector(`[data-feedback-key="${feedbackKey}"]`);
+                    if (existingItem) {
+                        // Update the suggestion content in the existing item
+                        const suggestionDiv = existingItem.querySelector('.suggestion-text');
+                        if (suggestionDiv) {
+                            suggestionDiv.innerHTML = formatAISuggestion(aiSuggestion.suggestion);
+                        }
+                        
+                        // Update stored data
+                        if (aiFeedbackData[feedbackKey]) {
+                            aiFeedbackData[feedbackKey].aiSuggestion = aiSuggestion;
+                        }
+                        
+                        // Highlight the updated feedback
+                        highlightAIFeedback(sentenceIndex, decodedFeedback);
+                        
+                        showSuccessToast(`Generated alternative suggestion (Option ${currentOptionNumber})`);
+                    }
+                } else {
+                    console.error('❌ Regenerate AI suggestion failed - invalid response');
+                    showErrorToast('Failed to generate alternative suggestion. Please try again.');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error in regenerateAISuggestion:', error);
+                showErrorToast('Error regenerating AI suggestion: ' + error.message);
             }
         }
         
@@ -2863,7 +2927,7 @@
             }
         }
 
-        async function getAISuggestion(feedback, sentence) {
+        async function getAISuggestion(feedback, sentence, optionNumber = 1) {
             try {
                 // Safe document type retrieval - fallback to 'technical' if element doesn't exist
                 let documentType = 'technical';
@@ -2923,7 +2987,8 @@
                     feedback: coreIssue,
                     sentence: cleanSentence,
                     document_type: documentType,
-                    writing_goals: selectedWritingGoals || ['clarity', 'conciseness']
+                    writing_goals: selectedWritingGoals || ['clarity', 'conciseness'],
+                    option_number: optionNumber
                 };
                 
                 console.log('Request payload:', requestData);

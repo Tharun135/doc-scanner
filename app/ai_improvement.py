@@ -24,7 +24,7 @@ except ImportError:
 
 # Import RAG system (now the primary AI provider)
 try:
-    from scripts.rag_system import get_rag_suggestion
+    from scripts.rag_system_debug import get_rag_suggestion
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
@@ -45,10 +45,13 @@ class AISuggestionEngine:
     def generate_contextual_suggestion(self, feedback_text: str, sentence_context: str = "",
                                      document_type: str = "general", 
                                      writing_goals: List[str] = None,
-                                     document_content: str = "") -> Dict[str, Any]:
+                                     document_content: str = "", option_number: int = 1) -> Dict[str, Any]:
         """
         Generate AI suggestion using local models and RAG.
         Smart fallbacks when AI is unavailable.
+        
+        Args:
+            option_number: Which option to generate (1, 2, 3, etc.) for regenerate functionality
         
         Returns:
             Dict containing suggestion, confidence, and metadata
@@ -62,24 +65,27 @@ class AISuggestionEngine:
             document_content = ""
             
         try:
+            logger.info(f"🔧 CONTEXTUAL SUGGESTION DEBUG: feedback='{feedback_text[:50]}', method_check_start")
+            
             # Special case: For long sentences, use our enhanced rule-based splitting
             # This ensures we get the user's preferred sentence structure
             if ("long sentence" in feedback_text.lower() or "sentence too long" in feedback_text.lower()) and sentence_context:
-                logger.info("Using enhanced rule-based splitting for long sentence")
-                return self.generate_minimal_fallback(feedback_text, sentence_context)
+                logger.info("🔧 BYPASS: Using enhanced rule-based splitting for long sentence")
+                return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
             
             # Primary method: Use RAG for other types of suggestions
             if self.rag_available:
-                logger.info("Using RAG for solution generation")
+                logger.info("🔧 RAG AVAILABLE: Using RAG for solution generation")
                 rag_result = get_rag_suggestion(
                     feedback_text=feedback_text,
                     sentence_context=sentence_context,
                     document_type=document_type,
                     document_content=document_content
                 )
+                logger.info(f"🔧 RAG RESULT: received={bool(rag_result)}, content={str(rag_result)[:100] if rag_result else 'None'}")
                 
                 if rag_result:
-                    logger.info("RAG suggestion generated successfully")
+                    logger.info("🔧 RAG SUCCESS: RAG suggestion generated successfully")
                     return {
                         "suggestion": rag_result["suggestion"],
                         "ai_answer": rag_result.get("ai_answer", ""),
@@ -95,24 +101,31 @@ class AISuggestionEngine:
                         }
                     }
                 else:
-                    logger.warning("RAG returned no result, using minimal fallback")
+                    logger.info("🔧 RAG FAILED: RAG returned no result, using minimal fallback")
             else:
-                logger.warning("RAG not available, using minimal fallback")
+                logger.info("🔧 RAG UNAVAILABLE: RAG not available, using minimal fallback")
             
             # Minimal fallback: Basic response when AI is unavailable
-            return self.generate_minimal_fallback(feedback_text, sentence_context)
+            logger.info("🔧 CALLING FALLBACK: About to call generate_minimal_fallback")
+            return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
             
         except Exception as e:
-            logger.error(f"AI suggestion failed: {str(e)}")
+            logger.error(f"🔧 EXCEPTION: AI suggestion failed: {str(e)}")
+            logger.error(f"🔧 EXCEPTION TYPE: {type(e).__name__}")
+            logger.error(f"🔧 EXCEPTION ARGS: {e.args}")
+            import traceback
+            logger.error(f"🔧 FULL TRACEBACK: {traceback.format_exc()}")
             # Fall back to minimal response
-            return self.generate_minimal_fallback(feedback_text, sentence_context)
+            return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
     
     def generate_minimal_fallback(self, feedback_text: str, 
-                                sentence_context: str = "") -> Dict[str, Any]:
+                                sentence_context: str = "", option_number: int = 1) -> Dict[str, Any]:
         """
         Generate intelligent fallback when AI is unavailable.
         Provides complete sentence rewrites using rule-based logic.
         """
+        logger.info(f"🔧 FALLBACK CALLED: feedback='{feedback_text[:30]}', context='{sentence_context[:30]}', option={option_number}")
+        
         # Safety checks for None inputs
         if feedback_text is None:
             feedback_text = "general improvement needed"
@@ -121,7 +134,7 @@ class AISuggestionEngine:
             
         if sentence_context and sentence_context.strip():
             # Generate complete sentence rewrites based on common issues
-            suggestion = self._generate_sentence_rewrite(feedback_text, sentence_context)
+            suggestion = self._generate_sentence_rewrite(feedback_text, sentence_context, option_number)
         else:
             suggestion = f"Writing issue detected: {feedback_text}. Please review and improve this text for clarity, grammar, and style."
         
@@ -137,7 +150,7 @@ class AISuggestionEngine:
             "note": "Using smart fallback - AI unavailable"
         }
     
-    def _generate_sentence_rewrite(self, feedback_text: str, sentence_context: str) -> str:
+    def _generate_sentence_rewrite(self, feedback_text: str, sentence_context: str, option_number: int = 1) -> str:
         """Generate complete sentence rewrites using rule-based logic."""
         # Safety check for None inputs
         if feedback_text is None:
@@ -168,42 +181,31 @@ class AISuggestionEngine:
                 sentence_context.replace("You may", "You can").replace("you may", "you can"),
                 sentence_context.replace("You may now", "To").replace("you may now", "to")
             ]
-        # Long sentence fixes - special formatting for user's preferred structure
+        # Long sentence fixes - return different options based on option_number
         elif "long" in feedback_lower or "sentence too long" in feedback_lower:
             split_sentences = self._split_long_sentence(sentence_context)
             
-            # Format as user requested: OPTION 1 has sentence 1: ..., sentence 2: ...
-            options = []
-            
             if len(split_sentences) >= 2:
-                # OPTION 1: Use first two sentences
-                options.append(f"OPTION 1 has sentence 1: {split_sentences[0].rstrip('.')}, sentence 2: {split_sentences[1].rstrip('.')}")
-                
-                # OPTION 2: Alternative combination or different split
-                if len(split_sentences) >= 3:
-                    # Use different sentence combinations
-                    options.append(f"OPTION 2 has sentence 1: {split_sentences[1].rstrip('.')}, sentence 2: {split_sentences[2].rstrip('.')}")
-                else:
-                    # Create alternative version of the same split
+                if option_number == 1:
+                    # First option: Use first two sentences
+                    suggestion = f"Sentence 1: {split_sentences[0].rstrip('.')}. Sentence 2: {split_sentences[1].rstrip('.')}."
+                elif option_number == 2 and len(split_sentences) >= 3:
+                    # Second option: Use different sentence combinations
+                    suggestion = f"Sentence 1: {split_sentences[1].rstrip('.')}. Sentence 2: {split_sentences[2].rstrip('.')}."
+                elif option_number == 2:
+                    # Alternative version of the same split
                     alt_sentence1 = split_sentences[0].replace("You can configure", "Configure").replace("This allows", "This enables")
                     alt_sentence2 = split_sentences[1].replace("This allows", "It allows").replace("This enables", "It enables")
-                    options.append(f"OPTION 2 has sentence 1: {alt_sentence1.rstrip('.')}, sentence 2: {alt_sentence2.rstrip('.')}")
-                
-                # OPTION 3: Combined version or third alternative
-                if len(split_sentences) >= 3:
-                    combined = f"{split_sentences[0].rstrip('.')} and {split_sentences[1].lower().rstrip('.')}"
-                    options.append(f"OPTION 3: {combined}")
+                    suggestion = f"Sentence 1: {alt_sentence1.rstrip('.')}. Sentence 2: {alt_sentence2.rstrip('.')}."
                 else:
-                    # Create a combined version from the two main sentences
-                    combined = f"{split_sentences[0].rstrip('.')} and {split_sentences[1].lower().rstrip('.')}"
-                    options.append(f"OPTION 3: {combined}")
+                    # Third option: Combined version
+                    suggestion = f"{split_sentences[0].rstrip('.')} and {split_sentences[1].lower().rstrip('.')}."
             else:
                 # Fallback if split didn't work properly
-                options.append(f"OPTION 1 has sentence 1: {sentence_context.rstrip('.')}")
-                options.append(f"OPTION 2 has sentence 1: Consider breaking this sentence into shorter parts")
+                suggestion = f"Consider breaking this sentence into shorter parts: {sentence_context.rstrip('.')}"
             
             why_text = f"WHY: Addresses {feedback_text.lower()} for better technical writing."
-            return "\n".join(options) + f"\n{why_text}"
+            return f"{suggestion}\n{why_text}"
         else:
             # Generic improvements
             rewrites = [
@@ -222,18 +224,17 @@ class AISuggestionEngine:
                 f"Consider alternatives for: {sentence_context}"
             ]
         
-        # Format as options (for non-long sentence cases)
-        options = []
-        for i, rewrite in enumerate(valid_rewrites[:3], 1):
-            options.append(f"OPTION {i}: {rewrite.strip()}")
+        # Select only one option based on option_number
+        selected_index = min(option_number - 1, len(valid_rewrites) - 1)
+        selected_rewrite = valid_rewrites[selected_index] if valid_rewrites else f"Review and improve this text based on: {feedback_text}"
         
         why_text = f"WHY: Addresses {feedback_text.lower()} for better technical writing."
         
-        final_suggestion = "\n".join(options) + f"\n{why_text}"
+        final_suggestion = f"{selected_rewrite.strip()}\n{why_text}"
         
         # Safety check: ensure we never return empty suggestions
         if not final_suggestion or not final_suggestion.strip():
-            final_suggestion = f"OPTION 1: Review and improve this text based on: {feedback_text}\nWHY: Addressing the identified writing issue for better clarity."
+            final_suggestion = f"Review and improve this text based on: {feedback_text}\nWHY: Addressing the identified writing issue for better clarity."
         
         return final_suggestion
     
@@ -584,12 +585,14 @@ class AISuggestionEngine:
         ]
 
 # Global instance for easy use
+print("🔧 INIT: About to initialize AISuggestionEngine")
 ai_engine = AISuggestionEngine()
+print("🔧 INIT: AISuggestionEngine initialized successfully")
 
 def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
                              document_type: str = "general", 
                              writing_goals: List[str] = None,
-                             document_content: str = "") -> Dict[str, Any]:
+                             document_content: str = "", option_number: int = 1) -> Dict[str, Any]:
     """
     Convenience function to get AI-enhanced suggestions.
     
@@ -603,6 +606,8 @@ def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
     Returns:
         Dictionary with suggestion and metadata
     """
+    print(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
+    logger.info(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
     return ai_engine.generate_contextual_suggestion(
-        feedback_text, sentence_context, document_type, writing_goals, document_content
+        feedback_text, sentence_context, document_type, writing_goals, document_content, option_number
     )

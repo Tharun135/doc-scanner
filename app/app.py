@@ -609,7 +609,12 @@ def get_feedbacks():
 def ai_suggestion():
     global current_document_content  # Access global variable
     
+    print("🔧 ENDPOINT: AI suggestion endpoint called")
+    logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
+    
     from .ai_improvement import get_enhanced_ai_suggestion
+    print("🔧 ENDPOINT: Successfully imported get_enhanced_ai_suggestion")
+    logger.info("🔧 ENDPOINT: Successfully imported get_enhanced_ai_suggestion")
     from .performance_monitor import track_suggestion, learning_system
     import uuid
     import time
@@ -619,6 +624,7 @@ def ai_suggestion():
     sentence_context = data.get('sentence', '')
     document_type = data.get('document_type', 'general')
     writing_goals = data.get('writing_goals', ['clarity', 'conciseness'])
+    option_number = data.get('option_number', 1)  # Default to option 1
     
     logger.info(f"AI suggestion request: feedback='{feedback_text[:50]}...', sentence='{sentence_context[:50]}...'")
     
@@ -650,13 +656,17 @@ def ai_suggestion():
         
         # Use enhanced AI suggestion system with RAG
         logger.info("Getting enhanced AI suggestion with RAG context...")
+        print("🔧 ENDPOINT: About to call get_enhanced_ai_suggestion")
         result = get_enhanced_ai_suggestion(
             feedback_text=feedback_text,
             sentence_context=sentence_context,
             document_type=document_type,
             writing_goals=writing_goals,
-            document_content=current_document_content  # Pass document content for RAG
+            document_content=current_document_content,  # Pass document content for RAG
+            option_number=option_number  # Pass option number for regenerate functionality
         )
+        print(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: method={result.get('method', 'unknown')}")
+        logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: method={result.get('method', 'unknown')}")
         
         # Validate result structure
         if not result or not isinstance(result, dict):
