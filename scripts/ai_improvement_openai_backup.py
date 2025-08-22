@@ -827,7 +827,7 @@ Now provide your suggestion for the current issue:"""
                 "confidence": combined_confidence,
                 "method": f"{primary_result.get('method', 'unknown')}_with_rag",
                 "primary_method": primary_result.get("method", "unknown"),
-                "rag_method": rag_result.get("method", "gemini_rag"),
+                "rag_method": rag_result.get("method", "local_rag"),
                 "context_used": context_used,
                 "sources": rag_result.get("sources", [])
             }

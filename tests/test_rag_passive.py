@@ -37,7 +37,7 @@ def test_passive_voice_rag():
             print(f"Method: {result.get('method', 'unknown')}")
             print(f"Confidence: {result.get('confidence', 'unknown')}")
             print(f"Suggestion: {result.get('suggestion', 'No suggestion')}")
-            print(f"Gemini Answer: {result.get('gemini_answer', 'No answer')}")
+            print(f"AI Answer: {result.get('ai_answer', 'No answer')}")
         else:
             print("❌ RAG system returned None")
             

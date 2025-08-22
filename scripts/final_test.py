@@ -42,7 +42,7 @@ def test_enhanced_ai():
         
         # Analyze which system was used
         method = result.get('method', 'unknown')
-        if method == 'gemini_rag':
+        if method == 'local_rag':
             print("\n🎯 SUCCESS: RAG system is working!")
         elif method == 'smart_fallback':
             print("\n⚠️  FALLBACK: Using rule-based system (RAG may have failed)")

@@ -26,27 +26,19 @@ except ImportError:
     print("❌ python-dotenv missing")
 
 try:
-    import google.generativeai
-    print("✅ google-generativeai available")
-except ImportError:
-    print("❌ google-generativeai missing")
+    import subprocess
+    result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
+    if result.returncode == 0:
+        print("✅ Ollama available")
+        print(f"Available models: {len(result.stdout.strip().split('\\n')[1:])} models")
+    else:
+        print("❌ Ollama not available or no models installed")
+except Exception:
+    print("❌ Ollama not available")
 
-try:
-    import langchain_google_genai
-    print("✅ langchain-google-genai available")
-except ImportError:
-    print("❌ langchain-google-genai missing")
-
-# Step 3: Check environment
+# Step 3: Check environment (no API keys needed for local AI)
 print("\n🔑 Environment Configuration:")
-from dotenv import load_dotenv
-load_dotenv()
-
-api_key = os.getenv('GOOGLE_API_KEY')
-if api_key:
-    print(f"✅ Google API key configured (length: {len(api_key)})")
-else:
-    print("❌ Google API key not found")
+print("✅ Local AI setup - no API keys required")
 
 # Step 4: Test passive voice rule
 print("\n🧪 Testing Passive Voice Rule:")
@@ -58,7 +50,7 @@ try:
     for i, result in enumerate(results):
         print(f"  {i+1}. {result}")
         # Check for RAG indicators
-        if any(keyword in str(result).lower() for keyword in ['rag', 'gemini', 'enhanced']):
+        if any(keyword in str(result).lower() for keyword in ['rag', 'local', 'enhanced']):
             print("     🟢 RAG-enhanced suggestion!")
         elif any(keyword in str(result).lower() for keyword in ['fallback', 'legacy']):
             print("     🟡 Using fallback method")

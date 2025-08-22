@@ -1,17 +1,12 @@
 """
-Google Gemini AI suggestion system for intelligent writing recommendations.
-This module provides context-aware suggestions using Google Gemini + LangChain RAG.
+AI suggestion system for intelligent writing recommendations.
+This module provides context-aware suggestions using local models and rule-based fallbacks.
 
 Features:
-- Real Google Gemini AI for intelligent responses
+- Local AI models for intelligent responses
 - Context-aware writing analysis
 - Natural language explanations
-- Minimal fallbacks when API unavailable
-
-Setup:
-1. Get API key from: https://makersuite.google.com/app/apikey
-2. Add to .env file: GOOGLE_API_KEY=your_key_here
-3. Run test: python test_gemini_integration.py
+- Smart fallbacks when AI unavailable
 """
 
 import json
@@ -29,7 +24,7 @@ except ImportError:
 
 # Import RAG system (now the primary AI provider)
 try:
-    from .rag_system import get_rag_suggestion
+    from scripts.rag_system import get_rag_suggestion
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
@@ -37,23 +32,23 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-class GeminiAISuggestionEngine:
+class AISuggestionEngine:
     """
-    AI suggestion engine using Google Gemini + LangChain RAG primarily.
-    Minimal fallbacks only when Gemini is unavailable.
+    AI suggestion engine using local models and RAG.
+    Smart fallbacks when AI is unavailable.
     """
     
     def __init__(self):
         self.rag_available = RAG_AVAILABLE
-        logger.info(f"Gemini AI Suggestion Engine initialized. RAG available: {self.rag_available}")
+        logger.info(f"AI Suggestion Engine initialized. RAG available: {self.rag_available}")
         
     def generate_contextual_suggestion(self, feedback_text: str, sentence_context: str = "",
                                      document_type: str = "general", 
                                      writing_goals: List[str] = None,
                                      document_content: str = "") -> Dict[str, Any]:
         """
-        Generate AI suggestion using Gemini + RAG primarily.
-        Minimal fallbacks only when Gemini is unavailable.
+        Generate AI suggestion using local models and RAG.
+        Smart fallbacks when AI is unavailable.
         
         Returns:
             Dict containing suggestion, confidence, and metadata
@@ -73,9 +68,9 @@ class GeminiAISuggestionEngine:
                 logger.info("Using enhanced rule-based splitting for long sentence")
                 return self.generate_minimal_fallback(feedback_text, sentence_context)
             
-            # Primary method: Use Gemini RAG for other types of suggestions
+            # Primary method: Use RAG for other types of suggestions
             if self.rag_available:
-                logger.info("Using Gemini RAG for solution generation")
+                logger.info("Using RAG for solution generation")
                 rag_result = get_rag_suggestion(
                     feedback_text=feedback_text,
                     sentence_context=sentence_context,
@@ -84,38 +79,38 @@ class GeminiAISuggestionEngine:
                 )
                 
                 if rag_result:
-                    logger.info("Gemini RAG suggestion generated successfully")
+                    logger.info("RAG suggestion generated successfully")
                     return {
                         "suggestion": rag_result["suggestion"],
-                        "gemini_answer": rag_result.get("gemini_answer", ""),
+                        "ai_answer": rag_result.get("ai_answer", ""),
                         "confidence": rag_result.get("confidence", "high"),
-                        "method": "gemini_rag",
+                        "method": "local_rag",
                         "sources": rag_result.get("sources", []),
                         "context_used": {
                             **rag_result.get("context_used", {}),
                             "document_type": document_type,
                             "writing_goals": writing_goals,
-                            "primary_ai": "gemini",
+                            "primary_ai": "local",
                             "issue_detection": "rule_based"
                         }
                     }
                 else:
-                    logger.warning("Gemini RAG returned no result, using minimal fallback")
+                    logger.warning("RAG returned no result, using minimal fallback")
             else:
-                logger.warning("Gemini RAG not available, using minimal fallback")
+                logger.warning("RAG not available, using minimal fallback")
             
-            # Minimal fallback: Basic response when Gemini is unavailable
+            # Minimal fallback: Basic response when AI is unavailable
             return self.generate_minimal_fallback(feedback_text, sentence_context)
             
         except Exception as e:
-            logger.error(f"Gemini suggestion failed: {str(e)}")
+            logger.error(f"AI suggestion failed: {str(e)}")
             # Fall back to minimal response
             return self.generate_minimal_fallback(feedback_text, sentence_context)
     
     def generate_minimal_fallback(self, feedback_text: str, 
                                 sentence_context: str = "") -> Dict[str, Any]:
         """
-        Generate intelligent fallback when Gemini is unavailable.
+        Generate intelligent fallback when AI is unavailable.
         Provides complete sentence rewrites using rule-based logic.
         """
         # Safety checks for None inputs
@@ -136,10 +131,10 @@ class GeminiAISuggestionEngine:
         
         return {
             "suggestion": suggestion,
-            "gemini_answer": f"Review the text and address: {feedback_text}",
+            "ai_answer": f"Review the text and address: {feedback_text}",
             "confidence": "medium",
             "method": "smart_fallback",
-            "note": "Using smart fallback - Gemini quota exceeded or unavailable"
+            "note": "Using smart fallback - AI unavailable"
         }
     
     def _generate_sentence_rewrite(self, feedback_text: str, sentence_context: str) -> str:
@@ -589,14 +584,14 @@ class GeminiAISuggestionEngine:
         ]
 
 # Global instance for easy use
-ai_engine = GeminiAISuggestionEngine()
+ai_engine = AISuggestionEngine()
 
 def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
                              document_type: str = "general", 
                              writing_goals: List[str] = None,
                              document_content: str = "") -> Dict[str, Any]:
     """
-    Convenience function to get Gemini-enhanced AI suggestions.
+    Convenience function to get AI-enhanced suggestions.
     
     Args:
         feedback_text: The feedback or issue identified by rules

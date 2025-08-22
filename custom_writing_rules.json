@@ -1,0 +1,36 @@
+[
+  {
+    "text": "Use 'you' instead of 'the user' for direct communication. This makes instructions more personal and engaging.",
+    "category": "technical_writing",
+    "examples": [
+      "Click the button",
+      "Enter your password",
+      "Select your preferred option"
+    ]
+  },
+  {
+    "text": "Avoid hedging language like 'might', 'perhaps', 'possibly' in technical documentation. Be definitive and clear.",
+    "category": "clarity",
+    "examples": [
+      "The system will restart",
+      "This method returns",
+      "Click Save to continue"
+    ]
+  },
+  {
+    "text": "Use parallel structure in lists and sequences. Keep verb forms consistent throughout instructions.",
+    "category": "consistency",
+    "examples": [
+      "Save, edit, and publish",
+      "Configure settings, test connections, deploy changes"
+    ]
+  },
+  {
+    "text": "Write error messages that explain what happened and what to do next. Avoid technical jargon.",
+    "category": "error_handling",
+    "examples": [
+      "File not found. Check the file path and try again.",
+      "Connection failed. Verify your network settings."
+    ]
+  }
+]

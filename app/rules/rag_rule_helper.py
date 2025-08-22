@@ -12,16 +12,41 @@ import re
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
 RAG_ENABLED = True  # Enabled for RAG functionality
 
-# Import RAG system
+# Import RAG system - try DocScanner Ollama first, then other systems
 try:
     import sys
     import os
     sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
-    from rag_system import get_rag_suggestion
-    RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
+    
+    # Try DocScanner Ollama RAG system first (production-ready)
+    try:
+        from docscanner_ollama_rag import get_rag_suggestion
+        RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
+        RAG_TYPE = "ollama_production"
+        logging.info("Using DocScanner Ollama RAG system (Local AI)")
+    except ImportError:
+        # Try experimental Ollama RAG system
+        try:
+            from ollama_rag_system import get_rag_suggestion
+            RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
+            RAG_TYPE = "ollama_experimental"
+            logging.info("Using experimental Ollama RAG system")
+        except ImportError:
+            # Fallback to Google Gemini RAG system
+            try:
+                from rag_system import get_rag_suggestion
+                RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
+                RAG_TYPE = "gemini"
+                logging.info("Using Google Gemini RAG system")
+            except ImportError:
+                RAG_AVAILABLE = False
+                RAG_TYPE = "none"
+                logging.debug("No RAG system available")
+        
 except ImportError:
     RAG_AVAILABLE = False
-    logging.debug("RAG system not available - using fallback only")
+    RAG_TYPE = "none"
+    logging.debug("No RAG system available - using fallback only")
 
 logger = logging.getLogger(__name__)
 

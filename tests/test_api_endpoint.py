@@ -39,8 +39,8 @@ def test_api_endpoint():
                 print(f"Suggestion: {result['suggestion']}")
             if 'confidence' in result:
                 print(f"Confidence: {result['confidence']}")
-            if 'gemini_answer' in result:
-                print(f"Gemini Answer: {result['gemini_answer']}")
+            if 'ai_answer' in result:
+                print(f"AI Answer: {result['ai_answer']}")
                 
         else:
             print(f"❌ API call failed with status {response.status_code}")
