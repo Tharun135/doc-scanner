@@ -4,6 +4,7 @@ This module provides a unified interface for rules to use RAG with smart fallbac
 """
 
 import logging
+from services.enrichment import enrich_issues_with_rag
 from typing import Dict, List, Optional, Any, Union
 from bs4 import BeautifulSoup
 import html
@@ -325,6 +326,7 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
     
     return issues
 
+
 def detect_long_sentence_issues(content: str, text_content: str) -> List[Dict[str, Any]]:
     """
     Detect long sentences that may need splitting.
@@ -434,4 +436,6 @@ def detect_modal_verb_issues(content: str, text_content: str) -> List[Dict[str, 
                 "sentence": target_sentence
             })
     
+    issues = enrich_issues_with_rag(issues)
     return issues
+

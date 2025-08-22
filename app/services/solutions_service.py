@@ -2,23 +2,33 @@
 import chromadb
 from functools import lru_cache
 from typing import Optional, Dict, Any
+import os
 
-CHROMA_PATH = "./chroma_db"               # <- change to absolute path if needed
+# Make path robust regardless of where the app runs from
+ROOT = os.path.dirname(os.path.abspath(__file__))
+CHROMA_PATH = os.path.abspath(os.path.join(ROOT, "..", "chroma_db"))
 COLLECTION = "docscanner_solutions"
 
 @lru_cache(maxsize=1)
 def _get_collection():
     client = chromadb.PersistentClient(path=CHROMA_PATH)
-    return client.get_collection(COLLECTION)
+    try:
+        return client.get_collection(COLLECTION)
+    except Exception:
+        return None  # collection not found, fail gracefully
 
-def get_solution(issue_text: str, issue_type_hint: Optional[str] = None, top_k: int = 1) -> Optional[Dict[str, Any]]:
+def retrieve_solution(issue_text: str, issue_type_hint: Optional[str] = None, top_k: int = 1) -> Optional[Dict[str, Any]]:
     col = _get_collection()
+    if col is None:
+        return None  # just skip if no collection
+
     res = col.query(query_texts=[issue_text], n_results=max(3, top_k))
-    # Prefer hits matching the hint (if provided)
+
+    # Prefer hits that match issue_type if provided
     if issue_type_hint and res.get("metadatas") and res["metadatas"][0]:
         keep = [
             i for i, meta in enumerate(res["metadatas"][0])
-            if issue_type_hint.lower() in meta.get("issue_type", "").lower()
+            if issue_type_hint.lower() in (meta.get("issue_type", "")).lower()
         ]
         if keep:
             res = {
@@ -30,6 +40,7 @@ def get_solution(issue_text: str, issue_type_hint: Optional[str] = None, top_k: 
     if not res.get("documents") or not res["documents"][0]:
         return None
 
-    doc = res["documents"][0][0]           # contains Solution + Why + References (we ingested them together)
-    meta = res["metadatas"][0][0]          # {"rule_id","issue_type","explanation","reference",...}
-    return {"text": doc, "meta": meta}
+    return {
+        "text": res["documents"][0][0],
+        "meta": res["metadatas"][0][0],
+    }

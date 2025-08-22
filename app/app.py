@@ -228,25 +228,6 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
 ############################
 
 def parse_file(file):
-    def find_text_in_element(element, target):
-        if isinstance(element, str):
-            if target in element:
-                # Found in text node
-                start_idx = element.find(target)
-                end_idx = start_idx + len(target)
-                return element[start_idx:end_idx]
-        else:
-            # Check if target spans across this element
-            element_text = element.get_text()
-            if target in element_text:
-                # The target text is contained within this element
-                # Return the entire element HTML for now
-                return str(element)
-############################
-# FILE PARSING HELPERS
-############################
-
-def parse_file(file):
     filename = file.filename.lower()
     extension = os.path.splitext(filename)[1]
 
@@ -657,14 +638,24 @@ def ai_suggestion():
         # Use enhanced AI suggestion system with RAG
         logger.info("Getting enhanced AI suggestion with RAG context...")
         print("🔧 ENDPOINT: About to call get_enhanced_ai_suggestion")
+
+        # Build a minimal issue object for enrichment/rewriting
+        issue_obj = {
+            "message": feedback_text,          # rule feedback (e.g., "Avoid passive voice…")
+            "context": sentence_context,       # the original sentence
+            "issue_type": None                 # optional: can fill from rules if available
+        }
+
         result = get_enhanced_ai_suggestion(
             feedback_text=feedback_text,
             sentence_context=sentence_context,
             document_type=document_type,
             writing_goals=writing_goals,
             document_content=current_document_content,  # Pass document content for RAG
-            option_number=option_number  # Pass option number for regenerate functionality
+            option_number=option_number,                # Pass option number for regenerate functionality
+            issue=issue_obj                             # <-- NEW: pass issue dict
         )
+
         print(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: method={result.get('method', 'unknown')}")
         logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: method={result.get('method', 'unknown')}")
         
