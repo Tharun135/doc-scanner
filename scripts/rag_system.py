@@ -36,12 +36,21 @@ try:
             
             if not rag_system or not rag_system.is_initialized:
                 logging.warning("RAG system not initialized, falling back to smart suggestions")
-                return {
-                    'suggestion': f"Consider revising: {sentence_context}",
-                    'confidence': 'medium', 
-                    'method': 'smart_fallback',
-                    'sources': []
-                }
+                # Import and use the AI improvement system's smart fallbacks
+                try:
+                    from app.ai_improvement import AISuggestionEngine
+                    ai_engine = AISuggestionEngine()
+                    fallback_result = ai_engine.generate_minimal_fallback(feedback_text, sentence_context, 1)
+                    logging.info(f"Using smart AI fallback: {fallback_result.get('suggestion', '')[:50]}")
+                    return fallback_result
+                except Exception as e:
+                    logging.error(f"Smart fallback failed: {e}")
+                    return {
+                        'suggestion': f"Consider revising: {sentence_context}",
+                        'confidence': 'medium', 
+                        'method': 'smart_fallback',
+                        'sources': []
+                    }
             
             # Use threading timeout for RAG call
             def rag_call():

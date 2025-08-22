@@ -18,11 +18,26 @@ try:
 except ImportError:
     TITLE_UTILS_AVAILABLE = False
 
-# Load spaCy English model (make sure: python -m spacy download en_core_web_sm)
-nlp = spacy.load("en_core_web_sm")
+# Lazy load spaCy model to avoid Flask startup conflicts
+nlp = None
+
+def _get_nlp():
+    global nlp
+    if nlp is None:
+        try:
+            nlp = spacy.load("en_core_web_sm")
+        except OSError:
+            print("⚠️ spaCy model en_core_web_sm not found - grammar rules disabled")
+            nlp = False
+    return nlp if nlp is not False else None
 
 def check(content):
     suggestions = []
+    
+    # Lazy load spaCy model
+    nlp = _get_nlp()
+    if nlp is None:
+        return suggestions
 
     # Extract clean text (strip HTML if present)
     soup = BeautifulSoup(content, "html.parser")

@@ -20,17 +20,15 @@ try:
     
     # Try DocScanner Ollama RAG system first (production-ready)
     try:
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
-        from scripts.docscanner_ollama_rag import get_rag_suggestion
+        # Lazy import to avoid blocking Flask startup
         RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
         RAG_TYPE = "ollama_production"
-        logging.info("Using DocScanner Ollama RAG system (Local AI)")
+        logging.info("Using DocScanner Ollama RAG system (Local AI - lazy loaded)")
+        get_rag_suggestion = None  # Will be imported when needed
     except ImportError:
         # Try experimental Ollama RAG system
         try:
-            from ollama_rag_system import get_rag_suggestion
+            get_rag_suggestion = None  # Will be imported when needed
             RAG_AVAILABLE = True and RAG_ENABLED  # Respect the toggle
             RAG_TYPE = "ollama_experimental"
             logging.info("Using experimental Ollama RAG system")
@@ -146,6 +144,19 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
     text_content = html.unescape(text_content)
+    
+    # Lazy import RAG system to avoid Flask startup issues
+    global get_rag_suggestion
+    if get_rag_suggestion is None:
+        try:
+            import sys
+            import os
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts'))
+            from scripts.rag_system import get_rag_suggestion
+            logger.info(f"Lazy loaded RAG system for rule: {rule_name}")
+        except ImportError as e:
+            logger.warning(f"Failed to lazy load RAG system: {e}")
+            return []
     
     # Execute rule pattern detection (this varies by rule)
     detected_issues = []

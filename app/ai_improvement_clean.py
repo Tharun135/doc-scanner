@@ -174,15 +174,12 @@ class AISuggestionEngine:
                 sentence_context.replace("We suggest", "The recommended approach is").replace("we suggest", "the recommended approach is"),
                 sentence_context.replace("We believe", "This feature provides").replace("we believe", "this feature provides")
             ]
-        # Modal verb fixes - includes "click on" → "click" conversion
-        elif ("modal verb" in feedback_lower and "may" in feedback_lower) or "click on" in sentence_context.lower():
+        # Modal verb fixes
+        elif "modal verb" in feedback_lower and "may" in feedback_lower:
             rewrites = [
-                sentence_context.replace("You may now click on", "Click").replace("you may now click on", "click")
-                             .replace("click on the", "click the").replace("Click on the", "Click the"),
-                sentence_context.replace("You may now click on", "You can click").replace("you may now click on", "you can click")
-                             .replace("click on", "click"),
-                sentence_context.replace("You may now click on", "To proceed, click").replace("you may now click on", "to proceed, click")
-                             .replace("click on", "click")
+                sentence_context.replace("You may now click", "Click").replace("you may now click", "click"),
+                sentence_context.replace("You may", "You can").replace("you may", "you can"),
+                sentence_context.replace("You may now", "To").replace("you may now", "to")
             ]
         # Long sentence fixes - return different options based on option_number
         elif "long" in feedback_lower or "sentence too long" in feedback_lower:
@@ -263,23 +260,6 @@ class AISuggestionEngine:
             return sentence.replace("changes were made", "the team made changes")
         elif "was designed by" in sentence_lower:
             return sentence.replace("was designed by", "").strip() + " designed this"
-        elif "that is displayed in the" in sentence_lower:
-            # Handle "data that is displayed in the logbook" -> "data from the logbook"
-            import re
-            match = re.search(r'(.+?)\s+that\s+is\s+displayed\s+in\s+the\s+(\w+)', sentence, re.IGNORECASE)
-            if match:
-                data_part = match.group(1).strip()
-                location_part = match.group(2).strip()
-                # Create a more natural construction
-                return sentence.replace(f"that is displayed in the {location_part}", f"from the {location_part}")
-            else:
-                return sentence.replace("that is displayed in the", "from the")
-        elif "that is displayed" in sentence_lower:
-            # Handle "data that is displayed" -> "displayed data" or "visible data"
-            return sentence.replace("that is displayed", "that appears").replace("data that appears", "visible data")
-        elif "is displayed" in sentence_lower:
-            # Handle "information is displayed" -> "information appears"
-            return sentence.replace("is displayed", "appears")
         elif "are displayed" in sentence_lower:
             return sentence.replace("are displayed", "appear on screen").replace("The configuration options", "The system displays the configuration options")
         elif "is displayed" in sentence_lower:
@@ -442,6 +422,26 @@ class AISuggestionEngine:
         # If no good split found, return original sentence
         return [sentence]
 
+    def _fix_passive_voice(self, sentence: str) -> str:
+        """Basic passive voice to active voice conversion."""
+        # Handle common passive patterns
+        sentence_lower = sentence.lower()
+        
+        if "was reviewed by the team" in sentence_lower:
+            return sentence.replace("was reviewed by the team", "the team reviewed")
+        elif "was written by" in sentence_lower:
+            # Handle "The report was written by John" -> "John wrote the report"
+            import re
+            match = re.search(r'(.+?)\s+was\s+written\s+by\s+(.+)', sentence, re.IGNORECASE)
+            if match:
+                what = match.group(1).strip()
+                who = match.group(2).strip()
+                return f"{who} wrote {what.lower()}"
+        elif "are used by" in sentence_lower:
+            return sentence.replace("are used by", "uses").replace("These tools", "This system")
+        else:
+            return f"Use active voice: {sentence.replace(' was ', ' ').replace(' were ', ' ')}"
+
     def _alternative_active_voice(self, sentence: str) -> str:
         """Generate alternative active voice version."""
         # Remove passive constructions and make more direct
@@ -467,31 +467,33 @@ class AISuggestionEngine:
 
 
 # Initialize the AI suggestion engine
-print("🔧 INIT: About to initialize AISuggestionEngine")
 ai_engine = AISuggestionEngine()
-print("🔧 INIT: AISuggestionEngine initialized successfully")
 
 def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "", 
                              document_type: str = "general", 
                              writing_goals: List[str] = None, 
                              document_content: str = "",
                              option_number: int = 1) -> Dict[str, Any]:
-    """
-    Convenience function to get AI-enhanced suggestions.
-    
-    Args:
-        feedback_text: The feedback or issue identified by rules
-        sentence_context: The actual sentence or text
-        document_type: Type of document (technical, marketing, academic, etc.)
-        writing_goals: List of writing goals (clarity, conciseness, etc.)
-        document_content: Full document content for RAG context (optional)
-    
-    Returns:
-        Dictionary with suggestion and metadata
-    """
-    print(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
-    logger.info(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
-    return ai_engine.generate_contextual_suggestion(
-        feedback_text, sentence_context, document_type, writing_goals, document_content, option_number
-    )
+                
+                # Keep "You can" for better readability
+                if not first_part.endswith('.'):
+                    first_part += '.'
+                
+                # Make second part a complete sentence about the purpose/result
+                second_part = re.sub(r'^to\s+', '', second_part, flags=re.IGNORECASE)
+                if "consume" in second_part.lower():
+                    second_part = f"This enables {second_part.lower()}."
+                elif "for value creation" in second_part.lower():
+                    second_part = f"This configuration supports {second_part.lower()}."
+                else:
+                    second_part = f"This allows {second_part.lower()}."
+                
+                if not second_part.endswith('.'):
+                    second_part += '.'
+                    
+                return [
+                    first_part,
+                    second_part,
+                    f"Complete the configuration to enable the required functionality."
+                ]
         

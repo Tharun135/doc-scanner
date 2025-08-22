@@ -174,15 +174,12 @@ class AISuggestionEngine:
                 sentence_context.replace("We suggest", "The recommended approach is").replace("we suggest", "the recommended approach is"),
                 sentence_context.replace("We believe", "This feature provides").replace("we believe", "this feature provides")
             ]
-        # Modal verb fixes - includes "click on" → "click" conversion
-        elif ("modal verb" in feedback_lower and "may" in feedback_lower) or "click on" in sentence_context.lower():
+        # Modal verb fixes
+        elif "modal verb" in feedback_lower and "may" in feedback_lower:
             rewrites = [
-                sentence_context.replace("You may now click on", "Click").replace("you may now click on", "click")
-                             .replace("click on the", "click the").replace("Click on the", "Click the"),
-                sentence_context.replace("You may now click on", "You can click").replace("you may now click on", "you can click")
-                             .replace("click on", "click"),
-                sentence_context.replace("You may now click on", "To proceed, click").replace("you may now click on", "to proceed, click")
-                             .replace("click on", "click")
+                sentence_context.replace("You may now click", "Click").replace("you may now click", "click"),
+                sentence_context.replace("You may", "You can").replace("you may", "you can"),
+                sentence_context.replace("You may now", "To").replace("you may now", "to")
             ]
         # Long sentence fixes - return different options based on option_number
         elif "long" in feedback_lower or "sentence too long" in feedback_lower:
@@ -263,23 +260,6 @@ class AISuggestionEngine:
             return sentence.replace("changes were made", "the team made changes")
         elif "was designed by" in sentence_lower:
             return sentence.replace("was designed by", "").strip() + " designed this"
-        elif "that is displayed in the" in sentence_lower:
-            # Handle "data that is displayed in the logbook" -> "data from the logbook"
-            import re
-            match = re.search(r'(.+?)\s+that\s+is\s+displayed\s+in\s+the\s+(\w+)', sentence, re.IGNORECASE)
-            if match:
-                data_part = match.group(1).strip()
-                location_part = match.group(2).strip()
-                # Create a more natural construction
-                return sentence.replace(f"that is displayed in the {location_part}", f"from the {location_part}")
-            else:
-                return sentence.replace("that is displayed in the", "from the")
-        elif "that is displayed" in sentence_lower:
-            # Handle "data that is displayed" -> "displayed data" or "visible data"
-            return sentence.replace("that is displayed", "that appears").replace("data that appears", "visible data")
-        elif "is displayed" in sentence_lower:
-            # Handle "information is displayed" -> "information appears"
-            return sentence.replace("is displayed", "appears")
         elif "are displayed" in sentence_lower:
             return sentence.replace("are displayed", "appear on screen").replace("The configuration options", "The system displays the configuration options")
         elif "is displayed" in sentence_lower:
@@ -442,40 +422,221 @@ class AISuggestionEngine:
         # If no good split found, return original sentence
         return [sentence]
 
-    def _alternative_active_voice(self, sentence: str) -> str:
-        """Generate alternative active voice version."""
-        # Remove passive constructions and make more direct
-        result = sentence
-        if "The document was" in sentence:
-            result = sentence.replace("The document was carefully reviewed by the team", "The team carefully reviewed the document")
-        elif "several changes were made" in sentence.lower():
-            result = sentence.replace("several changes were made", "the team made several changes")
-        else:
-            # Generic active voice conversion
-            return sentence.replace("was ", "").replace("were ", "").replace("The ", "This ")
-        return result
+    def _fix_passive_voice(self, sentence: str) -> str:
+                
+                # Keep "You can" for better readability
+                if not first_part.endswith('.'):
+                    first_part += '.'
+                
+                # Make second part a complete sentence about the purpose/result
+                second_part = re.sub(r'^to\s+', '', second_part, flags=re.IGNORECASE)
+                if "consume" in second_part.lower():
+                    second_part = f"This enables {second_part.lower()}."
+                elif "for value creation" in second_part.lower():
+                    second_part = f"This configuration supports {second_part.lower()}."
+                else:
+                    second_part = f"This allows {second_part.lower()}."
+                
+                if not second_part.endswith('.'):
+                    second_part += '.'
+                    
+                return [
+                    first_part,
+                    second_part,
+                    f"Complete the configuration to enable the required functionality."
+                ]
+        
+        # Strategy 2: Look for "by using" patterns
+        # "...by using X" -> separate sentences
+        if " by using " in sentence.lower():
+            parts = re.split(r'\s+by\s+using\s+', sentence, 1, re.IGNORECASE)
+            if len(parts) == 2:
+                main_action = parts[0].strip()
+                tool_used = parts[1].strip().rstrip('.')
+                
+                # Clean up main action
+                main_action = re.sub(r'^You\s+can\s+', '', main_action, flags=re.IGNORECASE)
+                main_action = main_action.capitalize()
+                if not main_action.endswith('.'):
+                    main_action += '.'
+                    
+                # Create a sentence about the tool - fix "the the" issue
+                if tool_used.lower().startswith('the '):
+                    tool_sentence = f"Use {tool_used} for this configuration."
+                else:
+                    tool_sentence = f"Use the {tool_used} for this configuration."
+                
+                # Third option - clean alternative
+                if tool_used.lower().startswith('the '):
+                    alt_sentence = f"Access {tool_used} to complete the setup."
+                else:
+                    alt_sentence = f"Access the {tool_used} to complete the setup."
+                
+                return [
+                    main_action,
+                    tool_sentence,
+                    alt_sentence
+                ]
+        
+        # Strategy 3: Handle general "X, as Y, resulting in Z" pattern
+        if ", as " in sentence and ("resulting in" in sentence.lower() or "leading to" in sentence.lower()):
+            # Split at "as" and "resulting in"
+            parts = re.split(r',\s*as\s+', sentence, 1, re.IGNORECASE)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                rest_part = parts[1].strip()
+                
+                # Further split at "resulting in" or "leading to"
+                result_patterns = [r',?\s*resulting\s+in\s+', r',?\s*leading\s+to\s+']
+                for pattern in result_patterns:
+                    if re.search(pattern, rest_part, re.IGNORECASE):
+                        sub_parts = re.split(pattern, rest_part, 1, re.IGNORECASE)
+                        if len(sub_parts) == 2:
+                            as_part = sub_parts[0].strip().rstrip(',')
+                            result_part = sub_parts[1].strip().rstrip('.')
+                            
+                            sentence1 = f"{main_part}."
+                            sentence2 = f"{as_part.capitalize()}."
+                            sentence3 = f"This results in {result_part.lower()}."
+                            
+                            return [sentence1, sentence2, sentence3]
+        
+        # Strategy 5: Look for prepositional phrases that can be separated
+        # "Configure X in Y for Z" -> "Configure X in Y. This enables Z."
+        prep_match = re.search(r'(.+?)\s+(in\s+the\s+\w+)\s+(for\s+.+)', sentence, re.IGNORECASE)
+        if prep_match:
+            main_part = prep_match.group(1).strip()
+            location_part = prep_match.group(2).strip()
+            purpose_part = prep_match.group(3).strip().rstrip('.')
+            
+            # Clean up main part
+            main_part = re.sub(r'^You\s+can\s+', '', main_part, flags=re.IGNORECASE)
+            main_part = main_part.capitalize()
+            first_sentence = f"{main_part} {location_part}."
+            
+            # Handle purpose
+            purpose_part = re.sub(r'^for\s+', '', purpose_part, flags=re.IGNORECASE)
+            second_sentence = f"This ensures {purpose_part}."
+            
+            return [
+                first_sentence,
+                second_sentence,
+                f"Access {location_part} to configure settings for {purpose_part}."
+            ]
+        
+        # Strategy 6: Simple conjunction splitting with proper sentence completion
+        if " and " in sentence:
+            parts = sentence.split(" and ", 1)
+            if len(parts) == 2 and len(parts[1].split()) > 3:  # Ensure second part is substantial
+                first_part = parts[0].strip()
+                second_part = parts[1].strip().rstrip('.')
+                
+                # Clean up first part
+                first_part = re.sub(r'^You\s+can\s+', '', first_part, flags=re.IGNORECASE)
+                first_part = first_part.capitalize()
+                if not first_part.endswith('.'):
+                    first_part += '.'
+                
+                # Ensure second part is a complete sentence
+                if not re.match(r'^(The|This|It|They|You)', second_part, re.IGNORECASE):
+                    # Check if it's a verb phrase that needs a subject
+                    if re.match(r'^(distributes?|processes?|transforms?|stores?|handles?)', second_part, re.IGNORECASE):
+                        second_part = f"It also {second_part.lower()}"
+                    elif re.match(r'^(generates?|creates?|provides?|produces?)', second_part, re.IGNORECASE):
+                        second_part = f"It {second_part.lower()}"
+                    else:
+                        second_part = f"It also {second_part.lower()}"
+                        
+                second_part = second_part.capitalize()
+                if not second_part.endswith('.'):
+                    second_part += '.'
+                    
+                return [
+                    first_part,
+                    second_part,
+                    f"Complete both actions: {first_part.lower().rstrip('.')} and {second_part.lower().rstrip('.')}"
+                ]
+        
+        # Strategy 5: Complex sentence with multiple clauses
+        # Look for sentences with "to" infinitives that can be broken down
+        if " to " in sentence and sentence.count(" to ") >= 2:
+            # Split on the first major "to" clause
+            parts = sentence.split(" to ", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                rest_part = parts[1].strip().rstrip('.')
+                
+                # Clean main part
+                main_part = re.sub(r'^You\s+can\s+', '', main_part, flags=re.IGNORECASE)
+                main_part = main_part.capitalize()
+                if not main_part.endswith('.'):
+                    main_part += '.'
+                
+                # Create a purpose sentence
+                purpose_sentence = f"This enables {rest_part.lower()}."
+                
+                return [
+                    main_part,
+                    purpose_sentence,
+                    f"Configure the system to achieve the desired functionality."
+                ]
+        
+        # Strategy 6: Fallback - intelligent middle split with context preservation
+        words = sentence.split()
+        if len(words) > 15:
+            # Find a reasonable break point (around 1/3 to 2/3 through)
+            mid_start = len(words) // 3
+            mid_end = 2 * len(words) // 3
+            
+            # Look for good break points (after prepositions, before conjunctions)
+            break_point = mid_start
+            for i in range(mid_start, min(mid_end, len(words))):
+                if i < len(words) and words[i].lower() in ['to', 'for', 'in', 'with', 'through', 'using']:
+                    break_point = i + 1
+                    break
+            
+            first_part = ' '.join(words[:break_point]).strip()
+            second_part = ' '.join(words[break_point:]).strip()
+            
+            # Clean first part
+            first_part = re.sub(r'^You\s+can\s+', '', first_part, flags=re.IGNORECASE)
+            first_part = first_part.capitalize()
+            if not first_part.endswith('.'):
+                first_part += '.'
+                
+            # Make second part a complete sentence
+            if not re.match(r'^(The|This|It|They|You|To)', second_part, re.IGNORECASE):
+                second_part = f"This involves {second_part.lower()}"
+            second_part = second_part.capitalize()
+            if not second_part.endswith('.'):
+                second_part += '.'
+            
+            return [
+                first_part,
+                second_part,
+                f"Break the process into steps for better clarity."
+            ]
+        
+        # Ultimate fallback for shorter sentences
+        # Clean the sentence and provide alternatives
+        clean_sentence = re.sub(r'^You\s+can\s+', '', sentence, flags=re.IGNORECASE)
+        clean_sentence = clean_sentence.capitalize()
+        
+        return [
+            clean_sentence,
+            f"Simplify this sentence for better readability.",
+            f"Consider breaking this {len(sentence.split())}-word sentence into smaller parts."
+        ]
 
-    def _direct_action_voice(self, sentence: str) -> str:
-        """Convert to direct action voice."""
-        # Make sentences more direct and actionable
-        if "You should" in sentence:
-            return sentence.replace("You should", "")
-        elif "It is recommended" in sentence:
-            return sentence.replace("It is recommended that you", "").replace("It is recommended to", "")
-        else:
-            return f"Direct action: {sentence.replace('may be', 'is').replace('could be', 'is')}"
-
-
-# Initialize the AI suggestion engine
+# Global instance for easy use
 print("🔧 INIT: About to initialize AISuggestionEngine")
 ai_engine = AISuggestionEngine()
 print("🔧 INIT: AISuggestionEngine initialized successfully")
 
-def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "", 
+def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
                              document_type: str = "general", 
-                             writing_goals: List[str] = None, 
-                             document_content: str = "",
-                             option_number: int = 1) -> Dict[str, Any]:
+                             writing_goals: List[str] = None,
+                             document_content: str = "", option_number: int = 1) -> Dict[str, Any]:
     """
     Convenience function to get AI-enhanced suggestions.
     
@@ -494,4 +655,3 @@ def get_enhanced_ai_suggestion(feedback_text: str, sentence_context: str = "",
     return ai_engine.generate_contextual_suggestion(
         feedback_text, sentence_context, document_type, writing_goals, document_content, option_number
     )
-        
