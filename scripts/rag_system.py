@@ -1,141 +1,71 @@
-"""
-RAG System Interface for DocScanner AI
-Provides the get_rag_suggestion function expected by the AI improvement system.
+# scripts/rag_system.py
+from typing import List, Dict, Any, Optional
+import json
+import httpx
+
+OLLAMA_URL = "http://localhost:11434/api/chat"
+MODEL = "tinyllama:latest"   # you already fallback to this in logs
+
+def _build_present_prompt(feedback_text: str, original_sentence: str, hits: List[Dict[str,Any]]) -> str:
+    # compress context for the model; keep it short
+    bullets = []
+    for h in hits[:3]:
+        meta = h.get("metadata", {})
+        rule_id = meta.get("rule_id") or meta.get("id") or "unknown"
+        sol = (meta.get("solution") or meta.get("solution_text") or h.get("document") or "").strip()
+        exp = (meta.get("explanation") or "").strip()
+        if sol:
+            bullets.append(f"- [{rule_id}] Solution: {sol}\n  Why: {exp}")
+    bullets_text = "\n".join(bullets) if bullets else "- (no solution text found)"
+
+    return f"""You are a technical writing assistant.
+Issue: {feedback_text}
+Original: {original_sentence}
+
+From the solution library (top hits):
+{bullets_text}
+
+Write a concise answer in JSON with fields:
+- solution_text: short, clear guidance (1–2 sentences).
+- proposed_rewrite: rewrite the Original sentence to FIX the issue (active voice and concise).
+- sources: array of source rule_ids you used.
+
+Rules:
+- Be specific, not generic.
+- If the issue is adverb use, remove or relocate weak adverbs.
+- If passive voice, convert to active or imperative.
+- Do not say "no exact solution".
+- Keep output JSON only.
 """
 
-import logging
-from typing import Dict, List, Optional, Any
-
-# Import the actual RAG implementation
-try:
-    from scripts.docscanner_ollama_rag import DocScannerOllamaRAG
-    RAG_SYSTEM_AVAILABLE = True
-    
-    # Initialize the RAG system
-    rag_system = DocScannerOllamaRAG()
-    logging.info(f"RAG system initialized. Status: {rag_system.is_initialized}")
-    
-    def get_rag_suggestion(feedback_text: str, sentence_context: str, document_type: str = "general", document_content: str = "") -> Dict[str, Any]:
-        """
-        Get an AI suggestion from the RAG system.
-        
-        Args:
-            feedback_text: The writing issue/feedback
-            sentence_context: The original sentence
-            document_type: Type of document being processed
-            document_content: Full document content for context
-            
-        Returns:
-            Dict containing suggestion, confidence, method, and sources
-        """
-        try:
-            import threading
-            import queue
-            
-            logging.info(f"RAG suggestion request: feedback='{feedback_text}', sentence='{sentence_context}', rag_initialized={rag_system.is_initialized}")
-            
-            if not rag_system or not rag_system.is_initialized:
-                logging.warning("RAG system not initialized, falling back to smart suggestions")
-                # Import and use the AI improvement system's smart fallbacks
-                try:
-                    from app.ai_improvement import AISuggestionEngine
-                    ai_engine = AISuggestionEngine()
-                    fallback_result = ai_engine.generate_minimal_fallback(feedback_text, sentence_context, 1)
-                    logging.info(f"Using smart AI fallback: {fallback_result.get('suggestion', '')[:50]}")
-                    return fallback_result
-                except Exception as e:
-                    logging.error(f"Smart fallback failed: {e}")
-                    return {
-                        'suggestion': f"Consider revising: {sentence_context}",
-                        'confidence': 'medium', 
-                        'method': 'smart_fallback',
-                        'sources': []
-                    }
-            
-            # Use threading timeout for RAG call
-            def rag_call():
-                try:
-                    logging.info("Calling RAG system...")
-                    result = rag_system.get_rag_suggestion(
-                        feedback_text=feedback_text,
-                        sentence_context=sentence_context,
-                        document_type=document_type,
-                        document_content=document_content
-                    )
-                    return result
-                except Exception as e:
-                    logging.error(f"RAG call failed: {e}")
-                    return None
-            
-            result_queue = queue.Queue()
-            
-            def worker():
-                result = rag_call()
-                result_queue.put(result)
-            
-            # Start RAG call in separate thread with timeout
-            thread = threading.Thread(target=worker)
-            thread.daemon = True
-            thread.start()
-            
-            try:
-                result = result_queue.get(timeout=15)  # 15 second timeout
-                logging.info("RAG system call completed")
-            except queue.Empty:
-                logging.error("RAG suggestion timed out after 15 seconds")
-                return {
-                    'suggestion': f"Consider revising for better clarity: {sentence_context}",
-                    'confidence': 'low',
-                    'method': 'timeout_fallback',
-                    'sources': []
-                }
-            
-            if result and result.get('suggestion'):
-                return {
-                    'suggestion': result['suggestion'],
-                    'confidence': result.get('confidence', 'medium'),
-                    'method': 'ollama_rag',
-                    'sources': result.get('sources', [])
-                }
-            else:
-                # Fallback if RAG doesn't return a valid response
-                logging.warning("RAG returned no valid result")
-                return {
-                    'suggestion': f"Consider improving clarity: {sentence_context}",
-                    'confidence': 'medium',
-                    'method': 'smart_fallback',
-                    'sources': []
-                }
-                
-        except TimeoutError:
-            logging.error("RAG suggestion timed out after 15 seconds")
-            return {
-                'suggestion': f"Consider revising for better clarity: {sentence_context}",
-                'confidence': 'low',
-                'method': 'timeout_fallback',
-                'sources': []
-            }
-                
-        except Exception as e:
-            logging.error(f"RAG suggestion error: {e}")
-            return {
-                'suggestion': f"Review for improvement: {sentence_context}",
-                'confidence': 'low',
-                'method': 'error_fallback',
-                'sources': []
-            }
-    
-    logging.info("RAG system interface loaded successfully")
-    
-except ImportError as e:
-    RAG_SYSTEM_AVAILABLE = False
-    logging.warning(f"RAG system not available: {e}")
-    
-    def get_rag_suggestion(feedback_text: str, sentence_context: str, document_type: str = "general", document_content: str = "") -> Dict[str, Any]:
-        """Fallback function when RAG is not available"""
+def present_solution(feedback_text: str, original_sentence: str, hits: List[Dict[str,Any]]) -> Dict[str,Any]:
+    prompt = _build_present_prompt(feedback_text, original_sentence, hits)
+    try:
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.post(OLLAMA_URL, json={
+                "model": MODEL,
+                "messages": [
+                    {"role": "system", "content": "You output JSON only."},
+                    {"role": "user", "content": prompt},
+                ],
+                "stream": False
+            })
+        resp.raise_for_status()
+        content = resp.json().get("message", {}).get("content", "")
+        # Best-effort JSON parse
+        data = json.loads(content)
+        # basic shape
         return {
-            'suggestion': f"Consider revising for better clarity: {sentence_context}",
-            'confidence': 'low',
-            'method': 'fallback_unavailable',
-            'sources': []
+            "solution_text": data.get("solution_text") or "",
+            "proposed_rewrite": data.get("proposed_rewrite") or "",
+            "sources": data.get("sources") or [h.get("metadata",{}).get("rule_id") for h in hits[:3] if h.get("metadata")]
+        }
+    except Exception:
+        # graceful fallback: stitch from top hit
+        top = hits[0] if hits else {}
+        meta = top.get("metadata", {})
+        return {
+            "solution_text": meta.get("solution") or meta.get("solution_text") or "",
+            "proposed_rewrite": "",
+            "sources": [meta.get("rule_id")] if meta.get("rule_id") else []
         }

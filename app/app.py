@@ -588,27 +588,31 @@ def get_feedbacks():
 
 @main.route('/ai_suggestion', methods=['POST'])
 def ai_suggestion():
-    global current_document_content  # Access global variable
-    
+    """
+    Returns an AI-powered suggestion for a single sentence:
+    - Prefers vector-DB solutions (polished by LLM) when available
+    - Falls back to deterministic rewrite only if retrieval/LLM fail
+    - Always returns a concrete rewrite + short guidance + sources
+    """
+    global current_document_content
+
     print("🔧 ENDPOINT: AI suggestion endpoint called")
     logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
-    
+
     from .ai_improvement import get_enhanced_ai_suggestion
-    print("🔧 ENDPOINT: Successfully imported get_enhanced_ai_suggestion")
-    logger.info("🔧 ENDPOINT: Successfully imported get_enhanced_ai_suggestion")
     from .performance_monitor import track_suggestion, learning_system
-    import uuid
-    import time
-    
-    data = request.get_json()
-    feedback_text = data.get('feedback')
-    sentence_context = data.get('sentence', '')
-    document_type = data.get('document_type', 'general')
-    writing_goals = data.get('writing_goals', ['clarity', 'conciseness'])
-    option_number = data.get('option_number', 1)  # Default to option 1
-    
-    logger.info(f"AI suggestion request: feedback='{feedback_text[:50]}...', sentence='{sentence_context[:50]}...'")
-    
+    import uuid, time
+
+    data = request.get_json() or {}
+    feedback_text   = data.get('feedback')
+    sentence_context = data.get('sentence', '') or ''
+    document_type   = data.get('document_type', 'general')
+    writing_goals   = data.get('writing_goals', ['clarity', 'conciseness'])
+    option_number   = data.get('option_number', 1)
+
+    logger.info(f"AI suggestion request: feedback='{(feedback_text or '')[:50]}...', "
+                f"sentence='{sentence_context[:50]}...'")
+
     if not feedback_text:
         logger.error("No feedback provided in AI suggestion request")
         return jsonify({"error": "No feedback provided"}), 400
@@ -617,89 +621,130 @@ def ai_suggestion():
     start_time = time.time()
 
     try:
-        # First try learned suggestions from user feedback
+        # 1) Check if we have a learned pattern from prior feedback
         learned_suggestion = learning_system.get_learned_suggestion(feedback_text, sentence_context)
-        
         if learned_suggestion:
             response_time = time.time() - start_time
-            track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                           document_type, "learned_pattern", response_time)
-            
-            logger.info(f"Using learned pattern suggestion for: {feedback_text[:30]}...")
+            track_suggestion(suggestion_id, feedback_text, sentence_context,
+                             document_type, "learned_pattern", response_time)
+            logger.info("Using learned pattern suggestion.")
             return jsonify({
-                "suggestion": learned_suggestion,
-                "ai_answer": "Using learned pattern from previous user feedback.",
+                "suggestion": learned_suggestion,                # concrete rewrite
+                "ai_answer": "Using learned pattern.",           # short guidance
                 "confidence": "high",
                 "method": "learned_pattern",
                 "suggestion_id": suggestion_id,
-                "note": "Generated using learned patterns from user feedback"
+                "sources": [],                                    # none for learned
+                "context_used": {"document_type": document_type,
+                                 "writing_goals": writing_goals},
+                "note": "Generated from learned user feedback"
             })
-        
-        # Use enhanced AI suggestion system with RAG
-        logger.info("Getting enhanced AI suggestion with RAG context...")
-        print("🔧 ENDPOINT: About to call get_enhanced_ai_suggestion")
 
-        # Build a minimal issue object for enrichment/rewriting
+        # 2) Primary path: build minimal issue object so enrichment can do RAG
         issue_obj = {
-            "message": feedback_text,          # rule feedback (e.g., "Avoid passive voice…")
-            "context": sentence_context,       # the original sentence
-            "issue_type": None                 # optional: can fill from rules if available
+            "message": feedback_text,           # rule feedback, e.g., "Avoid passive voice…"
+            "context": sentence_context,        # original sentence
+            "issue_type": data.get('issue_type')  # pass through if frontend sends it
         }
 
+        logger.info("Getting enhanced AI suggestion with RAG context...")
         result = get_enhanced_ai_suggestion(
             feedback_text=feedback_text,
             sentence_context=sentence_context,
             document_type=document_type,
             writing_goals=writing_goals,
-            document_content=current_document_content,  # Pass document content for RAG
-            option_number=option_number,                # Pass option number for regenerate functionality
-            issue=issue_obj                             # <-- NEW: pass issue dict
+            document_content=current_document_content,
+            option_number=option_number,
+            issue=issue_obj,                    # <-- critical for RAG enrichment
         )
 
-        print(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: method={result.get('method', 'unknown')}")
-        logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: method={result.get('method', 'unknown')}")
-        
-        # Validate result structure
-        if not result or not isinstance(result, dict):
+        logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: "
+                    f"method={result.get('method', 'unknown')}")
+
+        # 3) Validate structure
+        if not isinstance(result, dict):
             raise ValueError(f"Invalid result structure: {type(result)}")
-            
-        if 'suggestion' not in result:
-            raise ValueError(f"Missing 'suggestion' in result: {list(result.keys())}")
-            
-        if not result['suggestion'] or not str(result['suggestion']).strip():
-            raise ValueError("Empty or whitespace-only suggestion returned")
-        
+
+        # Prefer enriched rewrite; never echo placeholder text
+        suggestion = (
+            result.get("suggestion")
+            or result.get("proposed_rewrite")
+            or ""
+        ).strip()
+
+        ai_answer = (
+            result.get("ai_answer")
+            or result.get("solution_text")
+            or ""
+        ).strip()
+
+        # As a last safety net, if suggestion is empty, derive a deterministic one
+        if not suggestion:
+            logger.warning("Empty suggestion from RAG; using deterministic fallback.")
+            from .ai_improvement import AISuggestionEngine
+            # Use a lightweight engine instance for fallback rewrite
+            fallback_engine = AISuggestionEngine()
+            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+            suggestion = (fallback.get("suggestion") or "").strip()
+            ai_answer = ai_answer or "Deterministic fallback rewrite."
+
+        # Guard against “No exact solution…” leaking through
+        if "no exact solution" in suggestion.lower():
+            from .ai_improvement import AISuggestionEngine
+            fallback_engine = AISuggestionEngine()
+            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+            suggestion = (fallback.get("suggestion") or "").strip()
+            if not ai_answer:
+                ai_answer = "Applied deterministic rewrite to resolve the issue."
+
+        # 4) Build response
         response_time = time.time() - start_time
-        track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                        document_type, result.get("method", "unknown"), response_time)
-        
-        logger.info(f"AI suggestion successful using method: {result.get('method', 'unknown')}")
+        track_suggestion(suggestion_id, feedback_text, sentence_context,
+                         document_type, result.get("method", "rag_rewrite"), response_time)
+
         return jsonify({
-            "suggestion": result["suggestion"],
-            "ai_answer": result.get("ai_answer", ""),
-            "confidence": result.get("confidence", "medium"),
-            "method": result.get("method", "unknown"),
+            # ✅ Concrete rewrite to show in the “AI Suggestion” box
+            "suggestion": suggestion,
+
+            # ✅ Polished guidance from LLM presenter (or explanation from KB)
+            "ai_answer": ai_answer,
+
+            "confidence": result.get("confidence", "high" if suggestion else "medium"),
+            "method": result.get("method", "rag_rewrite"),
             "suggestion_id": suggestion_id,
-            "context_used": result.get("context_used", {}),
+
+            # ✅ Sources for UI to render rule IDs / refs
             "sources": result.get("sources", []),
-            "note": f"Generated using {result.get('method', 'unknown')} approach"
+
+            # Optional context/debug info for telemetry
+            "context_used": result.get("context_used", {
+                "document_type": document_type,
+                "writing_goals": writing_goals,
+                "primary_ai": "local",
+                "issue_detection": "rule_based"
+            }),
+            "note": f"Generated using {result.get('method', 'rag_rewrite')}"
         })
-        
+
     except Exception as e:
-        logger.error(f"AI suggestion error: {str(e)}")
+        logger.error(f"AI suggestion error: {str(e)}", exc_info=True)
         response_time = time.time() - start_time
-        
-        # Final fallback
-        suggestion = generate_smart_suggestion(feedback_text)
-        track_suggestion(suggestion_id, feedback_text, sentence_context, 
-                        document_type, "basic_fallback", response_time)
-        
+
+        # Final fallback: generic but useful rewrite
+        from .ai_improvement import AISuggestionEngine
+        fallback_engine = AISuggestionEngine()
+        fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+
+        track_suggestion(suggestion_id, feedback_text, sentence_context,
+                         document_type, "basic_fallback", response_time)
+
         return jsonify({
-            "suggestion": suggestion, 
+            "suggestion": fallback.get("suggestion", "Review and revise for clarity."),
             "ai_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
             "confidence": "low",
             "method": "basic_fallback",
             "suggestion_id": suggestion_id,
+            "sources": [],
             "note": "Using basic fallback suggestions"
         })
 

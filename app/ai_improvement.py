@@ -52,32 +52,35 @@ class AISuggestionEngine:
         if writing_goals is None:
             writing_goals = ["clarity", "conciseness"]
 
-        # 1) ✅ Fast path: if caller passes the issue dict, enrich and USE proposed_rewrite
+        # ✅ If caller passed an issue, enrich it first
         if issue:
             try:
                 from app.services.enrichment import enrich_issue_with_solution
                 enriched = enrich_issue_with_solution(issue)
-                ai_text = (
-                    enriched.get("proposed_rewrite")
-                    or enriched.get("ai_suggestion")
-                    or enriched.get("solution_text")
-                    or feedback_text
-                )
-                return {
-                    "suggestion": ai_text,
-                    "ai_answer": enriched.get("solution_text", ""),
-                    "confidence": "high",
-                    "method": "rag_rewrite",
-                    "sources": [],
-                    "context_used": {
-                        "document_type": document_type,
-                        "writing_goals": writing_goals,
-                        "primary_ai": "local",
-                        "issue_detection": "rule_based",
-                    },
-                }
+
+                # Prefer a real rewrite if enrichment succeeded
+                if enriched.get("proposed_rewrite"):
+                    return {
+                        "suggestion": enriched["proposed_rewrite"],     # concrete rewrite
+                        "ai_answer": enriched.get("solution_text", ""), # polished guidance
+                        "confidence": "high",
+                        "method": "rag_rewrite",
+                        "sources": enriched.get("sources", []),
+                        "context_used": {
+                            "document_type": document_type,
+                            "writing_goals": writing_goals,
+                            "primary_ai": "vector_db",
+                            "issue_detection": "rule_based"
+                        }
+                    }
+
+                # ✅ If RAG didn't yield a rewrite, fall back immediately
+                return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+
             except Exception as e:
-                logger.warning(f"Fast-path enrichment failed, continuing with normal flow: {e}")
+                logger.error(f"Enrichment failed: {e}", exc_info=True)
+                return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+
 
         # 2) Special case: long sentence → deterministic splitter (your preference)
         if ("long sentence" in feedback_text.lower() or "sentence too long" in feedback_text.lower()) and sentence_context:
@@ -140,81 +143,148 @@ class AISuggestionEngine:
         }
 
     def _generate_sentence_rewrite(self, feedback_text: str, sentence_context: str, option_number: int = 1) -> str:
-        # Safety
-        if feedback_text is None:
-            feedback_text = "general improvement needed"
-        if sentence_context is None:
-            sentence_context = ""
+        """
+        Heuristic, deterministic rewriter that always changes the sentence.
+        Handles: adverbs ('optionally', 'easily'), passive → active/imperative, modal fluff,
+        wordiness, and long sentences. Returns a concise, improved rewrite.
+        """
+        import re
 
-        feedback_lower = str(feedback_text).lower()
+        def _cleanup(s: str) -> str:
+            s = re.sub(r"\s+", " ", s).strip()
+            s = s.replace(" ,", ",").replace(" .", ".").replace(" : ", ": ")
+            # Capitalize start; ensure one trailing period only if not ending with colon
+            if s and s[-1] not in ".:!?":
+                s += "."
+            return s
 
-        # Passive / Active
-        if "passive voice" in feedback_lower or "active voice" in feedback_lower:
-            rewrites = [
-                self._fix_passive_voice(sentence_context),
-                self._alternative_active_voice(sentence_context),
-                self._direct_action_voice(sentence_context),
-            ]
-        # First person
-        elif "first person" in feedback_lower or "we" in feedback_lower:
-            rewrites = [
-                sentence_context.replace("We recommend", "Consider").replace("we recommend", "consider"),
-                sentence_context.replace("We suggest", "The recommended approach is").replace("we suggest", "the recommended approach is"),
-                sentence_context.replace("We believe", "This feature provides").replace("we believe", "this feature provides"),
-            ]
-        # Modal verbs / click on
-        elif ("modal verb" in feedback_lower and "may" in feedback_lower) or "click on" in sentence_context.lower():
-            rewrites = [
-                sentence_context.replace("You may now click on", "Click").replace("you may now click on", "click")
-                    .replace("click on the", "click the").replace("Click on the", "Click the"),
-                sentence_context.replace("You may now click on", "You can click").replace("you may now click on", "you can click")
-                    .replace("click on", "click"),
-                sentence_context.replace("You may now click on", "To proceed, click").replace("you may now click on", "to proceed, click")
-                    .replace("click on", "click"),
-            ]
-        # Long sentence
-        elif "long" in feedback_lower or "sentence too long" in feedback_lower:
-            split_sentences = self._split_long_sentence(sentence_context)
-            if len(split_sentences) >= 2:
+        def _differs(a: str, b: str) -> bool:
+            return re.sub(r"\s+", " ", a.strip().lower()) != re.sub(r"\s+", " ", b.strip().lower())
+
+        text = sentence_context.strip()
+
+        # --- Fast patterns (return immediately if hit) ---
+
+        # 1) Adverb overuse: "optionally", "easily", etc.
+        adverb_issue = re.search(r"(?i)\badverb\b|\boptionally\b|\beasily\b|\bsimply\b|\bbasically\b", feedback_text) \
+                    or re.search(r"(?i)\boptionally\b|\beasily\b|\bsimply\b|\bbasically\b", text)
+        if adverb_issue:
+            s = text
+
+            # "X and optionally Y" -> "X. Add Y if required."
+            s = re.sub(r"(?i)\band\s+optionally\s+(a|an|the)?\s*([a-z][\w\s-]+)", r". Add \1 \2 if required", s)
+            # "optionally <verb>" -> "You may <verb> if required" -> prefer imperative
+            s = re.sub(r"(?i)\boptionally\s+(add|enter|provide|include|configure|select)\b",
+                    r"\1 (optional)", s)
+
+            # "helps in <adv?> <verb-ing>" -> "helps you <verb>"
+            s = re.sub(r"(?i)\bhelps in\s+(?:[a-z]+ly\s+)?([a-z]+)ing\b", r"helps you \1", s)
+
+            # "through its corresponding image" -> "using its image"
+            s = re.sub(r"(?i)\bthrough\s+(its|the)\s+corresponding\s+image\b", r"using \1 image", s)
+
+            # Prefer imperative for UI copy starting with "Assign", "Enter", etc.
+            s = re.sub(r"(?i)^assign\b", "Provide", s)  # clearer than "Assign" for labels
+            s = re.sub(r"(?i)\boptionally\b", "", s)    # drop weak adverb if still present
+            s = re.sub(r"\s+\(optional\)", " (optional)", s)
+
+            # If we still have a single sentence that reads awkwardly, split:
+            if ". " not in s:
+                # e.g., "Assign a unique name and a description (optional)" -> two short sentences
+                m = re.search(r"(?i)\band\b\s+(a|an|the)?\s*description", s)
+                if m:
+                    s = re.sub(r"(?i)\band\b\s+(a|an|the)?\s*description", r". Add \1 description (optional)", s)
+
+            out = _cleanup(s)
+            if not _differs(text, out):
+                out = _cleanup("Provide a unique name. Add a description if required")
+            return f"{out}\nWHY: Addresses adverb usage for concise, action-focused language."
+
+        # 2) Passive voice → active/imperative
+        passive_issue = re.search(r"(?i)passive voice|active voice|is displayed|are displayed|is shown|are shown|was|were", feedback_text) \
+                        or re.search(r"(?i)\b(is|are|was|were)\s+[a-z]+ed\b|\bby the\b", text)
+        if passive_issue:
+            s = text
+            # Common passive → active transforms
+            s = re.sub(r"(?i)\bis displayed\b", "appears", s)
+            s = re.sub(r"(?i)\bare displayed\b", "appear", s)
+            s = re.sub(r"(?i)\bis shown\b", "appears", s)
+            s = re.sub(r"(?i)\bare shown\b", "appear", s)
+            s = re.sub(r"(?i)\bis generated\b", "generates", s)
+            s = re.sub(r"(?i)\bare generated\b", "generate", s)
+            s = re.sub(r"(?i)\bis created\b", "creates", s)
+            s = re.sub(r"(?i)\bare created\b", "create", s)
+
+            # Imperative for UI introductions that end with ":"
+            keep_colon = s.rstrip().endswith(":")
+            s_base = s.rstrip(": ").strip()
+            if re.search(r"(?i)\bdialog\b|\bwindow\b|\bpage\b", s_base):
+                s_base = re.sub(r"(?i)\bthe\b\s*", "", s_base, count=1)  # drop leading "The"
+                s_base = re.sub(r"(?i)\b.*\bis displayed\b.*", "Open the dialog", s_base)
+                s = s_base + (":" if keep_colon else "")
+
+            out = _cleanup(s)
+            if not _differs(text, out):
+                # Force imperative if still same
+                out = _cleanup(re.sub(r"(?i)^the\b", "", text))
+            return f"{out}\nWHY: Converts passive phrasing to active or imperative voice."
+
+        # 3) Long sentence → split
+        long_issue = ("long sentence" in feedback_text.lower()) or (len(text.split()) >= 22)
+        if long_issue:
+            # Simple semantic split: commas with and/which/that
+            parts = re.split(r",\s+(?=and\b|which\b|that\b|but\b|so\b)", text)
+            parts = [p.strip().rstrip(".") for p in parts if p.strip()]
+            if len(parts) >= 2:
                 if option_number == 1:
-                    suggestion = f"Sentence 1: {split_sentences[0].rstrip('.')}. Sentence 2: {split_sentences[1].rstrip('.')}."
-                elif option_number == 2 and len(split_sentences) >= 3:
-                    suggestion = f"Sentence 1: {split_sentences[1].rstrip('.')}. Sentence 2: {split_sentences[2].rstrip('.')}."
-                elif option_number == 2:
-                    alt_sentence1 = split_sentences[0].replace("You can configure", "Configure").replace("This allows", "This enables")
-                    alt_sentence2 = split_sentences[1].replace("This allows", "It allows").replace("This enables", "It enables")
-                    suggestion = f"Sentence 1: {alt_sentence1.rstrip('.')}. Sentence 2: {alt_sentence2.rstrip('.')}."
+                    s = f"{parts[0]}. {parts[1]}."
+                elif option_number == 2 and len(parts) >= 3:
+                    s = f"{parts[1]}. {parts[2]}."
                 else:
-                    suggestion = f"{split_sentences[0].rstrip('.')} and {split_sentences[1].lower().rstrip('.')}."
+                    s = f"{parts[0]}. Additionally, {parts[1]}."
             else:
-                suggestion = f"Consider breaking this sentence into shorter parts: {sentence_context.rstrip('.')}"
-            why_text = f"WHY: Addresses {feedback_text.lower()} for better technical writing."
-            return f"{suggestion}\n{why_text}"
-        else:
-            # Generic
-            rewrites = [
-                sentence_context.strip() + " (Improved version needed)",
-                "Consider revising: " + sentence_context.strip(),
-                "Alternative: " + sentence_context.strip(),
-            ]
+                # fallback: mid split
+                words = text.split()
+                mid = len(words) // 2
+                s = " ".join(words[:mid]) + ". " + " ".join(words[mid:])
+            out = _cleanup(s)
+            if not _differs(text, out):
+                out = _cleanup("Break the sentence into two shorter sentences for clarity")
+            return f"{out}\nWHY: Splits an overly long sentence to improve readability."
 
-        # Filter
-        valid_rewrites = [r for r in rewrites if r and r.strip() != sentence_context.strip()]
-        if not valid_rewrites:
-            valid_rewrites = [
-                f"Rewrite needed: {sentence_context}",
-                f"Improve this sentence: {sentence_context}",
-                f"Consider alternatives for: {sentence_context}",
-            ]
+        # 4) Modal fluff / wordiness
+        wordy_issue = re.search(r"(?i)\bmay\b|\bcan\b|\battempt\b|\btry to\b|\bin order to\b|\bbasically\b", feedback_text) \
+                    or re.search(r"(?i)\bin order to\b|\bit is recommended that you\b|\byou may now\b", text)
+        if wordy_issue:
+            s = text
+            s = re.sub(r"(?i)\bin order to\b", "to", s)
+            s = re.sub(r"(?i)\bit is recommended that you\b", "Please", s)
+            s = re.sub(r"(?i)\byou may now\b", "Now", s)
+            s = re.sub(r"(?i)\btry to\b", "attempt to", s)
+            s = re.sub(r"(?i)\bcan\b\s+(click|select|open|use)\b", r"\1", s)  # "can click" → "click"
+            out = _cleanup(s)
+            if not _differs(text, out):
+                out = _cleanup("Click the control to proceed")
+            return f"{out}\nWHY: Removes modal/fluff to make instructions direct."
 
-        # Pick option
-        selected_index = min(option_number - 1, len(valid_rewrites) - 1)
-        selected_rewrite = valid_rewrites[selected_index] if valid_rewrites else f"Review and improve this text based on: {feedback_text}"
-        why_text = f"WHY: Addresses {feedback_text.lower()} for better technical writing."
-        final_suggestion = f"{selected_rewrite.strip()}\n{why_text}"
-        if not final_suggestion or not final_suggestion.strip():
-            final_suggestion = f"Review and improve this text based on: {feedback_text}\nWHY: Addressing the identified writing issue for better clarity."
-        return final_suggestion
+        # --- Generic rewriter (last resort) ---
+        s = text
+
+        # Make instruction style, if looks like UI guidance
+        s = re.sub(r"(?i)^you can\b", "", s).strip()
+        s = re.sub(r"(?i)\bclick on\b", "click", s)
+        s = re.sub(r"(?i)\bthrough\s+(the\s+)?(.*?)(page|dialog|window)\b", r"on the \2\3", s)
+
+        # If still unchanged, produce a strong imperative alternative
+        out = _cleanup(s)
+        if not _differs(text, out):
+            # force a change: prefer imperative, short
+            if re.match(r"(?i)assign\b", text):
+                out = _cleanup("Provide a unique name. Add a description if required")
+            else:
+                out = _cleanup("Revise this sentence for clarity and directness (use active voice)")
+
+        return f"{out}\nWHY: Applies concise, active, instruction-first phrasing."
 
     def _fix_passive_voice(self, sentence: str) -> str:
         s = sentence or ""

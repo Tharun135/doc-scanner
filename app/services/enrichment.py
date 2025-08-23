@@ -1,59 +1,78 @@
 # app/services/enrichment.py
-from typing import Dict, List, Any, Optional
-from app.services.solutions_service import retrieve_solution
+from typing import Dict, Any, List, Optional
+from .solutions_service import retrieve_top_solutions
+from .rewriter import propose_rewrite_strict
 
-FALLBACK_META = {"reference": "MSTP / Microsoft Style Guide"}
-FALLBACK_TEXT = "No exact solution found in the library."
+# Small defaults as safety nets
+DEFAULT_ACTIVE_VOICE_POLICY = { "voice":"active", "mood":"declarative_or_imperative", "tense":"present" }
+DEFAULT_ADVERB_POLICY = {
+    "goal":"reduce/relocate adverbs",
+    "adverbs_to_downtone":["easily","simply","basically","clearly","quickly","actually"]
+}
 
-def _already_enriched(issues: List[Dict[str, Any]]) -> bool:
-    return bool(issues and isinstance(issues, list) and isinstance(issues[0], dict) and "solution_text" in issues[0])
+def _pick_policy(issue_msg: str, top_hit_meta: Optional[Dict[str,Any]]) -> Dict[str,Any]:
+    # Prefer policy in metadata if present
+    if top_hit_meta:
+        pol = top_hit_meta.get("rewrite_policy") or top_hit_meta.get("policy")
+        if isinstance(pol, dict): return pol
+    # Heuristic fallback by issue type
+    msg = (issue_msg or "").lower()
+    if "adverb" in msg:
+        return DEFAULT_ADVERB_POLICY
+    return DEFAULT_ACTIVE_VOICE_POLICY
 
-def _attach_fallback(issue: Dict[str, Any]) -> Dict[str, Any]:
-    issue.setdefault("solution_text", FALLBACK_TEXT)
-    issue.setdefault("solution_meta", FALLBACK_META)
-    return issue
+def enrich_issue_with_solution(issue: Dict[str,Any]) -> Dict[str,Any]:
+    """
+    Enrich an issue with:
+    - retrieval hits (top 1-3) from Chroma
+    - an LLM-presented solution text
+    - a concrete proposed_rewrite tailored to original sentence
+    """
+    issue = dict(issue)  # shallow copy
+    message = issue.get("message", "")
+    original = issue.get("context") or issue.get("sentence") or ""
+    hint = issue.get("issue_type", "") or ""
 
-def enrich_issue_with_solution(issue: Dict[str, Any]) -> Dict[str, Any]:
-    msg: str = (issue.get("message") or issue.get("detail") or "").strip()
-    hint: Optional[str] = issue.get("issue_type")
+    # 1) Retrieve from vector DB
+    hits = retrieve_top_solutions(query_text=message, issue_type_hint=hint, top_k=3)
+    issue["retrieval_hits"] = hits  # useful for debugging / sources
 
-    if not msg:
-        return _attach_fallback(issue)
-
-    res = retrieve_solution(issue_text=msg, issue_type_hint=hint)
-    if not res:
-        return _attach_fallback(issue)
-
-    meta = res["meta"]
-    issue["solution_text"] = res["text"]
-    issue["solution_meta"] = meta
-    issue.setdefault("solution_issue_type", meta.get("issue_type"))
-
-    # ---- Generate a concrete rewrite if we have the original sentence ----
+    # 2) Ask LLM to present a clean solution (if we have hits)
+    solution_text = None
     try:
-        from app.services.rewrite_service import propose_rewrite_strict
-        policy = meta.get("rewrite_policy", {
-            "voice": "active",
-            "mood": "declarative_or_imperative",
-            "tense": "present",
-            "templates": ["<agent> <base_verb> <object>."],
-            "few_shot": [],
-            "hints": []
-        })
-        original = issue.get("context") or issue.get("sentence") or ""
-        if original:
-            issue["proposed_rewrite"] = propose_rewrite_strict(
-                original=original,
-                issue_message=msg,
-                policy=policy
+        if hits:
+            from scripts.rag_system import present_solution  # you'll add this below
+            solution = present_solution(
+                feedback_text=message,
+                original_sentence=original,
+                hits=hits
             )
+            # expect: {"solution_text": "...", "proposed_rewrite": "...", "sources":[...]}
+            if isinstance(solution, dict):
+                solution_text = solution.get("solution_text")
+                if solution.get("proposed_rewrite"):
+                    issue["proposed_rewrite"] = solution["proposed_rewrite"]
+                if solution.get("sources"):
+                    issue["sources"] = solution["sources"]
     except Exception:
-        # If Ollama or the rewrite service isn't available, just skip
         pass
 
-    return issue
+    if solution_text:
+        issue["solution_text"] = solution_text
 
-def enrich_issues_with_rag(issues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    if _already_enriched(issues):
-        return issues
-    return [enrich_issue_with_solution(i) for i in issues]
+    # 3) Ensure we ALWAYS have a proposed_rewrite (policy + deterministic)
+    if not issue.get("proposed_rewrite") and original:
+        policy = _pick_policy(message, hits[0]["metadata"] if hits else None)
+        try:
+            rewrite = propose_rewrite_strict(
+                original=original,
+                issue_message=message,
+                policy=policy
+            )
+            if rewrite and rewrite.strip():
+                issue["proposed_rewrite"] = rewrite.strip()
+        except Exception:
+            # leave as-is; engine will fallback
+            pass
+
+    return issue

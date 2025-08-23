@@ -1,13 +1,11 @@
-# services/solutions_service.py
+# app/services/solutions_service.py
+from typing import List, Dict, Any, Optional
 import chromadb
 from functools import lru_cache
-from typing import Optional, Dict, Any
-import os
 
-# Make path robust regardless of where the app runs from
-ROOT = os.path.dirname(os.path.abspath(__file__))
-CHROMA_PATH = os.path.abspath(os.path.join(ROOT, "..", "chroma_db"))
+CHROMA_PATH = "./chroma_db"
 COLLECTION = "docscanner_solutions"
+MIN_SIMILARITY = 0.60     # tweak as needed
 
 @lru_cache(maxsize=1)
 def _get_collection():
@@ -15,32 +13,42 @@ def _get_collection():
     try:
         return client.get_collection(COLLECTION)
     except Exception:
-        return None  # collection not found, fail gracefully
-
-def retrieve_solution(issue_text: str, issue_type_hint: Optional[str] = None, top_k: int = 1) -> Optional[Dict[str, Any]]:
-    col = _get_collection()
-    if col is None:
-        return None  # just skip if no collection
-
-    res = col.query(query_texts=[issue_text], n_results=max(3, top_k))
-
-    # Prefer hits that match issue_type if provided
-    if issue_type_hint and res.get("metadatas") and res["metadatas"][0]:
-        keep = [
-            i for i, meta in enumerate(res["metadatas"][0])
-            if issue_type_hint.lower() in (meta.get("issue_type", "")).lower()
-        ]
-        if keep:
-            res = {
-                "ids": [[res["ids"][0][i] for i in keep]],
-                "documents": [[res["documents"][0][i] for i in keep]],
-                "metadatas": [[res["metadatas"][0][i] for i in keep]],
-            }
-
-    if not res.get("documents") or not res["documents"][0]:
         return None
 
-    return {
-        "text": res["documents"][0][0],
-        "meta": res["metadatas"][0][0],
-    }
+def _similarity_from_distance(distance: Optional[float]) -> float:
+    if distance is None:
+        return 0.0
+    # For Chroma default (L2), smaller distance = more similar.
+    # Map roughly to [0..1] similarity (simple heuristic).
+    return max(0.0, 1.0 - min(distance, 1.0))
+
+def retrieve_top_solutions(query_text: str, issue_type_hint: str = "", top_k: int = 3) -> List[Dict[str, Any]]:
+    col = _get_collection()
+    if not col or not query_text:
+        return []
+    try:
+        results = col.query(
+            query_texts=[f"{issue_type_hint} :: {query_text}".strip(" :")],
+            n_results=top_k,
+            include=["metadatas", "documents", "distances", "ids"]
+        )
+        hits = []
+        ids = results.get("ids", [[]])[0] if results.get("ids") else []
+        docs = results.get("documents", [[]])[0] if results.get("documents") else []
+        metas = results.get("metadatas", [[]])[0] if results.get("metadatas") else []
+        dists = results.get("distances", [[]])[0] if results.get("distances") else []
+        for i, mid in enumerate(ids):
+            sim = _similarity_from_distance(dists[i] if i < len(dists) else None)
+            hits.append({
+                "id": mid,
+                "similarity": sim,
+                "document": docs[i] if i < len(docs) else "",
+                "metadata": metas[i] if i < len(metas) else {},
+            })
+        # keep only strong enough hits
+        hits = [h for h in hits if h["similarity"] >= MIN_SIMILARITY]
+        # sort by similarity desc
+        hits.sort(key=lambda x: x["similarity"], reverse=True)
+        return hits
+    except Exception:
+        return []
