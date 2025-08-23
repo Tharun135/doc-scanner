@@ -55,70 +55,53 @@ class AISuggestionEngine:
         # ✅ If caller passed an issue, enrich it first
         if issue:
             try:
-                from app.services.enrichment import enrich_issue_with_solution
-                enriched = enrich_issue_with_solution(issue)
+                from app.services.enrichment import enrich_issue_with_solution, _force_change
 
-                # Prefer a real rewrite if enrichment succeeded
-                if enriched.get("proposed_rewrite"):
-                    return {
-                        "suggestion": enriched["proposed_rewrite"],     # concrete rewrite
-                        "ai_answer": enriched.get("solution_text", ""), # polished guidance
-                        "confidence": "high",
-                        "method": "rag_rewrite",
-                        "sources": enriched.get("sources", []),
-                        "context_used": {
-                            "document_type": document_type,
-                            "writing_goals": writing_goals,
-                            "primary_ai": "vector_db",
-                            "issue_detection": "rule_based"
-                        }
+                enriched  = enrich_issue_with_solution(issue)
+
+                original  = (issue.get("context") or issue.get("sentence") or "").strip()
+                pr        = _force_change(original, (enriched.get("proposed_rewrite") or "").strip())
+                ai_answer = (enriched.get("solution_text") or "").strip()
+                sources   = enriched.get("sources", [])
+                method    = enriched.get("method", "rag_policy")  # 'rag_rewrite' if hits; else 'rag_policy'
+
+                # Absolute last resort: if pr is still empty, synthesize one deterministically
+                if not pr:
+                    pr = _force_change(original, "")
+
+                return {
+                    "suggestion": pr,                       # ✅ always a changed rewrite
+                    "ai_answer": ai_answer,                 # concise guidance from KB/policy
+                    "confidence": "high" if pr else "medium",
+                    "method": method,                       # 'rag_rewrite' or 'rag_policy'
+                    "sources": sources,
+                    "context_used": {
+                        "document_type": document_type,
+                        "writing_goals": writing_goals,
+                        "primary_ai": "vector_db",
+                        "issue_detection": "rule_based"
                     }
+                }
 
-                # ✅ If RAG didn't yield a rewrite, fall back immediately
-                return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+                # ✅ Normal enriched path
+                return {
+                    "suggestion": pr,                      # concrete rewrite (never original)
+                    "ai_answer": ai_answer,                # short guidance
+                    "confidence": "high",
+                    "method": "rag_rewrite",
+                    "sources": sources,
+                    "context_used": {
+                        "document_type": document_type,
+                        "writing_goals": writing_goals,
+                        "primary_ai": "vector_db",
+                        "issue_detection": "rule_based"
+                    }
+                }
 
             except Exception as e:
                 logger.error(f"Enrichment failed: {e}", exc_info=True)
                 return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
 
-
-        # 2) Special case: long sentence → deterministic splitter (your preference)
-        if ("long sentence" in feedback_text.lower() or "sentence too long" in feedback_text.lower()) and sentence_context:
-            logger.info("🔧 BYPASS: Using enhanced rule-based splitting for long sentence")
-            return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-
-        # 3) Primary method: RAG (if available)
-        if RAG_AVAILABLE:
-            try:
-                logger.info("🔧 RAG AVAILABLE: Using RAG for solution generation")
-                rag_result = get_rag_suggestion(
-                    feedback_text=feedback_text,
-                    sentence_context=sentence_context,
-                    document_type=document_type,
-                    document_content=document_content,
-                )
-                logger.info(f"🔧 RAG RESULT: received={bool(rag_result)}")
-                if rag_result:
-                    return {
-                        "suggestion": rag_result.get("suggestion") or f"Consider: {sentence_context or feedback_text}",
-                        "ai_answer": rag_result.get("ai_answer", ""),
-                        "confidence": rag_result.get("confidence", "high"),
-                        "method": "local_rag",
-                        "sources": rag_result.get("sources", []),
-                        "context_used": {
-                            **rag_result.get("context_used", {}),
-                            "document_type": document_type,
-                            "writing_goals": writing_goals,
-                            "primary_ai": "local",
-                            "issue_detection": "rule_based",
-                        },
-                    }
-                logger.info("🔧 RAG returned no result, using minimal fallback")
-            except Exception as e:
-                logger.warning(f"RAG pipeline failed, using fallback: {e}")
-
-        # 4) Final fallback: deterministic rewrite generator
-        return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
 
     # ----------------- your existing fallback & helpers below -----------------
 

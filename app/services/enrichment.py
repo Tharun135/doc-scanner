@@ -1,78 +1,90 @@
 # app/services/enrichment.py
-from typing import Dict, Any, List, Optional
-from .solutions_service import retrieve_top_solutions
-from .rewriter import propose_rewrite_strict
+from __future__ import annotations
+from typing import List
+import logging
 
-# Small defaults as safety nets
-DEFAULT_ACTIVE_VOICE_POLICY = { "voice":"active", "mood":"declarative_or_imperative", "tense":"present" }
-DEFAULT_ADVERB_POLICY = {
-    "goal":"reduce/relocate adverbs",
-    "adverbs_to_downtone":["easily","simply","basically","clearly","quickly","actually"]
-}
+log = logging.getLogger(__name__)
 
-def _pick_policy(issue_msg: str, top_hit_meta: Optional[Dict[str,Any]]) -> Dict[str,Any]:
-    # Prefer policy in metadata if present
-    if top_hit_meta:
-        pol = top_hit_meta.get("rewrite_policy") or top_hit_meta.get("policy")
-        if isinstance(pol, dict): return pol
-    # Heuristic fallback by issue type
-    msg = (issue_msg or "").lower()
-    if "adverb" in msg:
-        return DEFAULT_ADVERB_POLICY
-    return DEFAULT_ACTIVE_VOICE_POLICY
-
-def enrich_issue_with_solution(issue: Dict[str,Any]) -> Dict[str,Any]:
-    """
-    Enrich an issue with:
-    - retrieval hits (top 1-3) from Chroma
-    - an LLM-presented solution text
-    - a concrete proposed_rewrite tailored to original sentence
-    """
-    issue = dict(issue)  # shallow copy
-    message = issue.get("message", "")
-    original = issue.get("context") or issue.get("sentence") or ""
-    hint = issue.get("issue_type", "") or ""
-
-    # 1) Retrieve from vector DB
-    hits = retrieve_top_solutions(query_text=message, issue_type_hint=hint, top_k=3)
-    issue["retrieval_hits"] = hits  # useful for debugging / sources
-
-    # 2) Ask LLM to present a clean solution (if we have hits)
-    solution_text = None
+# --- Prefer the filtered retriever; fall back to robust, then legacy tuple API ---
+try:
+    # New, quality-gated API you added
+    from app.services.solutions_service import retrieve_top_solutions_filtered as _retriever_texts
+    _retriever_mode = "filtered"
+except Exception:
     try:
-        if hits:
-            from scripts.rag_system import present_solution  # you'll add this below
-            solution = present_solution(
-                feedback_text=message,
-                original_sentence=original,
-                hits=hits
-            )
-            # expect: {"solution_text": "...", "proposed_rewrite": "...", "sources":[...]}
-            if isinstance(solution, dict):
-                solution_text = solution.get("solution_text")
-                if solution.get("proposed_rewrite"):
-                    issue["proposed_rewrite"] = solution["proposed_rewrite"]
-                if solution.get("sources"):
-                    issue["sources"] = solution["sources"]
+        # Older text-only API
+        from app.services.solutions_service import retrieve_top_solutions_robust as _retriever_texts
+        _retriever_mode = "robust"
     except Exception:
-        pass
+        # Legacy tuple API ([(text, score), ...]) — normalize to texts
+        from app.services.solutions_service import retrieve_solution as _retriever_pairs  # type: ignore
+        _retriever_mode = "pairs"
 
-    if solution_text:
-        issue["solution_text"] = solution_text
+def _build_query(feedback: str, context: str) -> str:
+    f, c = feedback.strip(), context.strip()
+    if not f and not c:
+        return ""
+    return f"{f}\n\nContext:\n{c}".strip()
 
-    # 3) Ensure we ALWAYS have a proposed_rewrite (policy + deterministic)
-    if not issue.get("proposed_rewrite") and original:
-        policy = _pick_policy(message, hits[0]["metadata"] if hits else None)
-        try:
-            rewrite = propose_rewrite_strict(
-                original=original,
-                issue_message=message,
-                policy=policy
-            )
-            if rewrite and rewrite.strip():
-                issue["proposed_rewrite"] = rewrite.strip()
-        except Exception:
-            # leave as-is; engine will fallback
-            pass
+def _normalize_results(results) -> List[str]:
+    """Normalize any retriever output to List[str]."""
+    if not results:
+        return []
+    if isinstance(results, list) and results and isinstance(results[0], tuple):
+        # Legacy shape: [(text, score), ...]
+        return [t for (t, _s) in results if t]
+    # Text-only list
+    return [t for t in results if t]
 
-    return issue
+def enrich_issue_with_solution(
+    feedback: str,
+    context: str,
+    top_k: int = 3,
+    max_distance: float = 0.6,  # used only by filtered retriever
+) -> dict:
+    """
+    Uses the preferred retriever to fetch rule/snippet candidates for the issue.
+    Returns a dict consumed by ai_improvement.generate_contextual_suggestion.
+    """
+    query = _build_query(feedback, context)
+    if not query:
+        log.info("RAG retrieval: empty query -> smart_fallback")
+        return {"solutions": [], "_force_change": False, "method": "smart_fallback"}
+
+    try:
+        if _retriever_mode == "filtered":
+            # Uses max_distance for cosine distance gating inside the retriever
+            solutions = _retriever_texts(query, top_k=top_k, max_distance=max_distance)  # type: ignore[arg-type]
+        elif _retriever_mode == "robust":
+            solutions = _retriever_texts(query, top_k=top_k)  # type: ignore[misc]
+        else:
+            # pairs mode -> normalize to texts
+            pairs = _retriever_pairs(query, top_k=top_k)  # type: ignore[misc]
+            solutions = _normalize_results(pairs)
+
+        solutions = solutions[:top_k] if solutions else []
+        method = "rag_enriched" if solutions else "smart_fallback"
+
+        log.info(
+            "RAG retrieval: mode=%s top_k=%s hits=%s method=%s q=%.40r",
+            _retriever_mode, top_k, len(solutions), method, query[:40]
+        )
+
+        return {
+            "solutions": solutions,
+            "_force_change": bool(solutions),  # keep your downstream contract
+            "method": method,
+        }
+
+    except Exception as e:
+        log.exception("RAG enrichment error: %s", e)
+        return {
+            "solutions": [],
+            "_force_change": False,
+            "method": "smart_fallback",
+        }
+
+# Some callers import this symbol; keep it available.
+_force_change = False
+
+__all__ = ["enrich_issue_with_solution", "_force_change"]

@@ -641,11 +641,28 @@ def ai_suggestion():
             })
 
         # 2) Primary path: build minimal issue object so enrichment can do RAG
+        # Try to infer issue_type if caller didn’t supply one
+        issue_type = data.get('issue_type')
+        if not issue_type:
+            m = (feedback_text or "").lower()
+            if "adverb" in m:
+                issue_type = "Adverb Overuse"
+            elif "passive" in m:
+                issue_type = "Passive Voice"
+            elif "long sentence" in m or "too long" in m:
+                issue_type = "Long Sentence"
+            elif "unclear" in m or "confusing" in m:
+                issue_type = "Clarity"
+            else:
+                issue_type = "General"
+
+        # Build issue object for enrichment/rewriting
         issue_obj = {
-            "message": feedback_text,           # rule feedback, e.g., "Avoid passive voice…"
-            "context": sentence_context,        # original sentence
-            "issue_type": data.get('issue_type')  # pass through if frontend sends it
+            "message": feedback_text,
+            "context": sentence_context,
+            "issue_type": issue_type,
         }
+
 
         logger.info("Getting enhanced AI suggestion with RAG context...")
         result = get_enhanced_ai_suggestion(
