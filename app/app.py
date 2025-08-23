@@ -651,18 +651,16 @@ def ai_suggestion():
                 issue_type = "Passive Voice"
             elif "long sentence" in m or "too long" in m:
                 issue_type = "Long Sentence"
-            elif "unclear" in m or "confusing" in m:
-                issue_type = "Clarity"
+            elif "modal" in m or "click on" in m or "may now" in m:
+                issue_type = "Modal Fluff"
             else:
                 issue_type = "General"
 
-        # Build issue object for enrichment/rewriting
         issue_obj = {
-            "message": feedback_text,
-            "context": sentence_context,
+            "message": feedback_text,        # the rule feedback text
+            "context": sentence_context,     # the original sentence
             "issue_type": issue_type,
         }
-
 
         logger.info("Getting enhanced AI suggestion with RAG context...")
         result = get_enhanced_ai_suggestion(
@@ -670,13 +668,15 @@ def ai_suggestion():
             sentence_context=sentence_context,
             document_type=document_type,
             writing_goals=writing_goals,
-            document_content=current_document_content,
+            document_content=current_document_content,  # full page text for context if needed
             option_number=option_number,
-            issue=issue_obj,                    # <-- critical for RAG enrichment
+            issue=issue_obj  # <<< IMPORTANT
         )
 
         logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: "
-                    f"method={result.get('method', 'unknown')}")
+                    f"method={result.get('method', 'unknown')}, "
+                    f"suggestion_present={bool(result.get('suggestion'))}, "
+                    f"ai_answer_present={bool(result.get('ai_answer'))}")
 
         # 3) Validate structure
         if not isinstance(result, dict):
@@ -689,12 +689,18 @@ def ai_suggestion():
             or ""
         ).strip()
 
+        logger.info(f"🔧 ENDPOINT: Extracted suggestion: '{suggestion[:100]}...' "
+                    f"(length: {len(suggestion)})")
+
         ai_answer = (
             result.get("ai_answer")
             or result.get("solution_text")
             or ""
         ).strip()
 
+        logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
+                    f"(length: {len(ai_answer)})")
+        
         # As a last safety net, if suggestion is empty, derive a deterministic one
         if not suggestion:
             logger.warning("Empty suggestion from RAG; using deterministic fallback.")
@@ -704,9 +710,13 @@ def ai_suggestion():
             fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
             suggestion = (fallback.get("suggestion") or "").strip()
             ai_answer = ai_answer or "Deterministic fallback rewrite."
+            logger.info(f"🔧 ENDPOINT: Used fallback suggestion: '{suggestion[:100]}...'")
+        else:
+            logger.info(f"🔧 ENDPOINT: Using RAG suggestion: '{suggestion[:100]}...'")
 
-        # Guard against “No exact solution…” leaking through
+        # Guard against "No exact solution…" leaking through
         if "no exact solution" in suggestion.lower():
+            logger.warning("Found 'no exact solution' in suggestion, using fallback")
             from .ai_improvement import AISuggestionEngine
             fallback_engine = AISuggestionEngine()
             fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
@@ -719,29 +729,38 @@ def ai_suggestion():
         track_suggestion(suggestion_id, feedback_text, sentence_context,
                          document_type, result.get("method", "rag_rewrite"), response_time)
 
+        # Guard against “No exact solution…” leaking through
+        if "no exact solution" in suggestion.lower():
+            from .ai_improvement import AISuggestionEngine
+            fallback_engine = AISuggestionEngine()
+            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+            suggestion = (fallback.get("suggestion") or "").strip()
+            if not ai_answer:
+                ai_answer = "Applied deterministic rewrite to resolve the issue."
+
         return jsonify({
-            # ✅ Concrete rewrite to show in the “AI Suggestion” box
-            "suggestion": suggestion,
+        # ✅ Concrete rewrite to show in the “AI Suggestion” box
+        "suggestion": suggestion,
 
-            # ✅ Polished guidance from LLM presenter (or explanation from KB)
-            "ai_answer": ai_answer,
+        # ✅ Polished guidance from LLM presenter (or explanation from KB)
+        "ai_answer": ai_answer,
 
-            "confidence": result.get("confidence", "high" if suggestion else "medium"),
-            "method": result.get("method", "rag_rewrite"),
-            "suggestion_id": suggestion_id,
+        "confidence": result.get("confidence", "high" if suggestion else "medium"),
+        "method": result.get("method", "rag_rewrite"),
+        "suggestion_id": suggestion_id,
 
-            # ✅ Sources for UI to render rule IDs / refs
-            "sources": result.get("sources", []),
+        # ✅ Sources for UI to render rule IDs / refs
+        "sources": result.get("sources", []),
 
-            # Optional context/debug info for telemetry
-            "context_used": result.get("context_used", {
-                "document_type": document_type,
-                "writing_goals": writing_goals,
-                "primary_ai": "local",
-                "issue_detection": "rule_based"
-            }),
-            "note": f"Generated using {result.get('method', 'rag_rewrite')}"
-        })
+        # Optional context/debug info for telemetry
+        "context_used": result.get("context_used", {
+            "document_type": document_type,
+            "writing_goals": writing_goals,
+            "primary_ai": "local",
+            "issue_detection": "rule_based"
+        }),
+        "note": f"Generated using {result.get('method', 'rag_rewrite')}"
+    })
 
     except Exception as e:
         logger.error(f"AI suggestion error: {str(e)}", exc_info=True)

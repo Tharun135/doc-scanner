@@ -19,11 +19,12 @@ except ImportError:
 
 # RAG availability (optional path)
 try:
-    from scripts.rag_system import get_rag_suggestion
+    from scripts.ollama_rag_system import get_rag_suggestion
     RAG_AVAILABLE = True
-except Exception:
+    logger.info("RAG system loaded successfully from ollama_rag_system")
+except Exception as e:
     RAG_AVAILABLE = False
-    logger.debug("RAG system not available - falling back to rule-based suggestions only")
+    logger.warning(f"RAG system not available - falling back to rule-based suggestions only: {e}")
 
 
 class AISuggestionEngine:

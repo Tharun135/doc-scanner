@@ -10,19 +10,16 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import json
 
-# Ollama + LlamaIndex + ChromaDB imports
+# Ollama + ChromaDB imports (removed LlamaIndex due to memory issues)
 try:
-    from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Document, Settings
-    from llama_index.vector_stores.chroma import ChromaVectorStore
-    from llama_index.llms.ollama import Ollama
-    from llama_index.embeddings.ollama import OllamaEmbedding
     import chromadb
+    import requests
     OLLAMA_AVAILABLE = True
     logging.info("Ollama RAG dependencies loaded successfully")
 except ImportError as e:
     OLLAMA_AVAILABLE = False
     logging.warning(f"Ollama RAG dependencies not available: {e}")
-    logging.info("Install with: pip install llama-index-core llama-index-llms-ollama llama-index-vector-stores-chroma chromadb")
+    logging.info("Install with: pip install chromadb requests")
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +32,8 @@ class OllamaRAGSystem:
     def __init__(self, model="phi3:mini", embed_model="mxbai-embed-large"):
         self.model = model
         self.embed_model = embed_model
-        self.llm = None
-        self.embeddings = None
         self.chroma_client = None
         self.collection = None
-        self.vector_store = None
-        self.index = None
-        self.query_engine = None
         self.is_initialized = False
         
         if OLLAMA_AVAILABLE:
@@ -50,80 +42,42 @@ class OllamaRAGSystem:
             logger.warning("Ollama RAG system disabled - dependencies not installed")
     
     def _initialize_ollama(self):
-        """Initialize Ollama LLM and embeddings."""
+        """Initialize Ollama connection and ChromaDB."""
         try:
-            # Initialize Ollama LLM
-            self.llm = Ollama(
-                model=self.model,
-                request_timeout=60.0,
-                temperature=0.1
-            )
+            # Test Ollama connection with direct API
+            import requests
+            test_response = requests.post('http://localhost:11434/api/generate', 
+                                       json={'model': self.model, 'prompt': 'test', 'stream': False},
+                                       timeout=30)
             
-            # For embeddings, try different models in order of preference
-            embedding_models = [
-                "mxbai-embed-large",  
-                "nomic-embed-text",
-                "all-minilm",
-                self.model  # Fall back to main model for embeddings
-            ]
+            if test_response.status_code != 200:
+                logger.error(f"Ollama not responding properly: {test_response.text}")
+                self.is_initialized = False
+                return
             
-            self.embeddings = None
-            for embed_model in embedding_models:
-                try:
-                    self.embeddings = OllamaEmbedding(
-                        model_name=embed_model,
-                        base_url="http://localhost:11434",
-                        ollama_additional_kwargs={"mirostat": 0}
-                    )
-                    logger.info(f"Using embedding model: {embed_model}")
-                    break
-                except Exception as e:
-                    logger.warning(f"Embedding model {embed_model} not available: {e}")
-                    continue
+            # Initialize ChromaDB with persistent storage
+            chroma_path = os.path.expanduser("./chroma_db")  # Use the database we populated
+            self.chroma_client = chromadb.PersistentClient(path=chroma_path)
             
-            # If no embedding models work, use the LLM for embeddings
-            if self.embeddings is None:
-                logger.warning("No embedding models available, using LLM for embeddings")
-                # Use a simple embedding strategy with the main model
-                self.embeddings = OllamaEmbedding(
-                    model_name=self.model,
-                    base_url="http://localhost:11434"
-                )
-            
-            # Set global settings for LlamaIndex
-            Settings.llm = self.llm
-            Settings.embed_model = self.embeddings
-            
-            # Initialize ChromaDB
-            self.chroma_client = chromadb.Client()
-            
-            # Get or create collection for DocScanner rules
+            # Get existing collection for DocScanner solutions
             try:
-                self.collection = self.chroma_client.get_collection("docscanner_rules")
-                logger.info("Using existing DocScanner rules collection")
+                self.collection = self.chroma_client.get_collection("docscanner_solutions")
+                logger.info("Using existing DocScanner solutions collection")
+                
+                # Verify collection has data
+                count = self.collection.count()
+                if count == 0:
+                    logger.warning("DocScanner solutions collection is empty")
+                else:
+                    logger.info(f"Collection has {count} documents")
+                    
             except Exception:
-                self.collection = self.chroma_client.create_collection("docscanner_rules")
-                logger.info("Created new DocScanner rules collection")
-            
-            # Create ChromaDB vector store
-            self.vector_store = ChromaVectorStore(chroma_collection=self.collection)
-            
-            # Create index from vector store
-            self.index = VectorStoreIndex.from_vector_store(
-                vector_store=self.vector_store
-            )
-            
-            # Create query engine
-            self.query_engine = self.index.as_query_engine(
-                similarity_top_k=3,
-                response_mode="compact"
-            )
+                logger.error("DocScanner solutions collection not found - run ingest_docscanner_solutions.py first")
+                self.is_initialized = False
+                return
             
             self.is_initialized = True
             logger.info(f"Ollama RAG system initialized with model: {self.model}")
-            
-            # Load writing rules into vector store
-            self._load_writing_rules()
             
         except Exception as e:
             logger.error(f"Failed to initialize Ollama RAG system: {e}")
@@ -131,85 +85,11 @@ class OllamaRAGSystem:
             logger.info(f"And model is downloaded: 'ollama pull {self.model}'")
             self.is_initialized = False
     
-    def _load_writing_rules(self):
-        """Load DocScanner writing rules into the vector database."""
-        try:
-            # Define writing rules as documents
-            rules_content = [
-                {
-                    "title": "Passive Voice Rule",
-                    "content": "Convert passive voice to active voice for clearer communication. Example: Change 'The report was written by John' to 'John wrote the report'. This makes text more direct and engaging.",
-                    "category": "voice",
-                    "examples": ["was written -> wrote", "is being developed -> we are developing"]
-                },
-                {
-                    "title": "Long Sentences Rule", 
-                    "content": "Break long sentences into shorter, clearer ones. Aim for 15-20 words per sentence for better readability. Use conjunctions and split complex ideas.",
-                    "category": "readability",
-                    "examples": ["Split at conjunctions", "Use bullet points for lists", "One idea per sentence"]
-                },
-                {
-                    "title": "Modal Verbs Rule",
-                    "content": "Replace vague modal verbs (might, could, should) with more precise language. Use definitive statements when possible.",
-                    "category": "clarity", 
-                    "examples": ["might -> will", "could -> can", "should -> must"]
-                },
-                {
-                    "title": "Weak Verbs Rule",
-                    "content": "Replace weak verbs (is, are, have) with strong action verbs. This creates more dynamic and engaging text.",
-                    "category": "engagement",
-                    "examples": ["is responsible for -> manages", "have the ability -> can", "are capable of -> can"]
-                },
-                {
-                    "title": "Technical Writing Style",
-                    "content": "Use clear, concise language for technical documentation. Prefer active voice, present tense, and user-focused instructions.",
-                    "category": "style",
-                    "examples": ["Click the button", "Enter your password", "Select the option"]
-                }
-            ]
-            
-            # Convert rules to LlamaIndex documents
-            documents = []
-            for rule in rules_content:
-                doc_text = f"Title: {rule['title']}\n"
-                doc_text += f"Category: {rule['category']}\n"
-                doc_text += f"Rule: {rule['content']}\n"
-                doc_text += f"Examples: {', '.join(rule['examples'])}"
-                
-                doc = Document(
-                    text=doc_text,
-                    metadata={
-                        "title": rule['title'],
-                        "category": rule['category'],
-                        "source": "docscanner_rules"
-                    }
-                )
-                documents.append(doc)
-            
-            # Add documents to index if we have any
-            if documents and self.index:
-                # Create a new index with documents
-                self.index = VectorStoreIndex.from_documents(
-                    documents,
-                    vector_store=self.vector_store
-                )
-                
-                # Recreate query engine
-                self.query_engine = self.index.as_query_engine(
-                    similarity_top_k=3,
-                    response_mode="compact"
-                )
-                
-                logger.info(f"Loaded {len(documents)} writing rules into vector store")
-            
-        except Exception as e:
-            logger.warning(f"Could not load writing rules: {e}")
-    
     def get_rag_suggestion(self, feedback_text: str, sentence_context: str = "",
                           document_type: str = "general", 
                           document_content: str = "") -> Optional[Dict[str, Any]]:
         """
-        Generate RAG suggestion using local Ollama LLM.
+        Generate RAG suggestion using direct Ollama API + ChromaDB.
         
         Args:
             feedback_text: Description of the writing issue
@@ -226,39 +106,71 @@ class OllamaRAGSystem:
             return None
             
         try:
-            # Create context-aware query
-            query = self._format_rag_query(
-                feedback_text, sentence_context, document_type, document_content
+            # Use direct Ollama API instead of LlamaIndex to avoid memory issues
+            import requests
+            
+            # Query ChromaDB for relevant context
+            query_text = f"{feedback_text} {sentence_context}"
+            results = self.collection.query(
+                query_texts=[query_text],
+                n_results=3
             )
             
-            # Get response from RAG system
-            response = self.query_engine.query(query)
+            if not results['documents'][0]:
+                logger.warning("No relevant documents found in ChromaDB")
+                return None
             
-            # Extract source information
+            # Build context from retrieved documents
+            context = "\n\n".join(results['documents'][0])
             sources = []
-            if hasattr(response, 'source_nodes'):
-                for node in response.source_nodes:
-                    if hasattr(node, 'metadata'):
-                        sources.append({
-                            "title": node.metadata.get('title', 'Writing Rule'),
-                            "category": node.metadata.get('category', 'general'),
-                            "score": getattr(node, 'score', 0.0)
-                        })
             
-            # Format the response
-            suggestion_text = str(response).strip()
+            # Extract metadata for sources
+            if results.get('metadatas') and results['metadatas'][0]:
+                for i, metadata in enumerate(results['metadatas'][0]):
+                    sources.append({
+                        "title": metadata.get('title', f'Rule {i+1}'),
+                        "category": metadata.get('category', 'general'),
+                        "score": results['distances'][0][i] if results.get('distances') else 0.0
+                    })
+            
+            # Create RAG prompt
+            rag_prompt = f"""You are a professional writing improvement assistant. Based on the following writing guidance, provide a specific suggestion for improving the given sentence.
+
+WRITING GUIDANCE:
+{context[:1000]}
+
+USER ISSUE: {feedback_text}
+SENTENCE: "{sentence_context}"
+DOCUMENT TYPE: {document_type}
+
+Provide a clear, actionable improvement suggestion in 1-2 sentences:"""
+
+            # Send to Ollama using direct API
+            ollama_url = "http://localhost:11434/api/generate"
+            response = requests.post(ollama_url, json={
+                'model': self.model,
+                'prompt': rag_prompt,
+                'stream': False
+            })
+            
+            if response.status_code != 200:
+                logger.error(f"Ollama API failed: {response.text}")
+                return None
+            
+            result = response.json()
+            suggestion_text = result['response'].strip()
             
             return {
                 "suggestion": suggestion_text,
                 "confidence": self._calculate_confidence(suggestion_text, sources),
-                "method": "ollama_rag",
+                "method": "ollama_rag_direct",
                 "sources": sources,
                 "model": self.model,
                 "context_used": {
                     "document_type": document_type,
                     "has_context": len(sentence_context) > 0,
                     "vector_results": len(sources),
-                    "llm": "ollama_local"
+                    "llm": "ollama_direct_api"
                 }
             }
             
