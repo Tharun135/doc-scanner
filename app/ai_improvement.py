@@ -28,6 +28,79 @@ except Exception as e:
 
 
 class AISuggestionEngine:
+    def generate_contextual_suggestion(
+        self,
+        feedback_text: str,
+        sentence_context: str = "",
+        document_type: str = "general",
+        writing_goals: Optional[List[str]] = None,
+        document_content: str = "",
+        option_number: int = 1,
+        issue: Optional[Dict[str, Any]] = None,   # <-- supports full issue dict
+    ) -> Dict[str, Any]:
+        # RAG-based rewrite for long sentence splitting
+        if feedback_text.strip().lower().startswith("consider breaking this long sentence into shorter ones"):
+            try:
+                import chromadb
+                from chromadb.utils import embedding_functions
+                # Connect to ChromaDB
+                client = chromadb.PersistentClient(path="./chroma")
+                embed_fn = embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name="all-MiniLM-L6-v2"
+                )
+                rules = client.get_or_create_collection(
+                    name="docscanner_rules", embedding_function=embed_fn
+                )
+                # Fetch top rules
+                res = rules.query(query_texts=[sentence_context], n_results=4, include=["documents","metadatas","distances"])
+                bullet_list = []
+                for i in range(len(res["ids"][0])):
+                    rule_name = res["metadatas"][0][i]["rule_name"]
+                    guidance = res["metadatas"][0][i]["guidance"]
+                    bullet_list.append(f"• {rule_name} — {guidance}")
+                bullet_guidance = "\n".join(bullet_list)
+                # Compose RAG prompt
+                prompt = f"You are a technical writing assistant for software documentation.\n" \
+                         f"Rewrite the provided sentence into TWO complete, meaningful sentences.\n\n" \
+                         f"Constraints:\n- Keep original intent and critical facts.\n- Use simple present tense.\n- Use active voice when possible.\n- Avoid comma splices and dangling modifiers.\n- If needed, rename pronouns for clarity.\n\n" \
+                         f"User sentence:\n\"{sentence_context}\"\n\n" \
+                         f"Retrieved guidance (use for decisions, do not parrot verbatim):\n{bullet_guidance}\n\n" \
+                         f"Output:\n- Line 1: First sentence\n- Line 2: Second sentence\n"
+                # Call your LLM here (replace with your actual LLM call)
+                # For demonstration, just return the prompt and guidance
+                return {
+                    "suggestion": "[LLM OUTPUT HERE]",  # Replace with actual LLM output
+                    "ai_answer": prompt,
+                    "confidence": "rag",
+                    "method": "rag_split_sentences",
+                    "note": "Used RAG rules for sentence splitting."
+                }
+            except Exception as e:
+                logger.error(f"RAG split-sentence logic failed: {e}", exc_info=True)
+                # Fallback to minimal fallback
+                return self.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+        # Hardcode: if the adverb flagged is 'properly', replace it with 'as intended'
+        if feedback_text.strip().lower().startswith("check use of adverb: 'properly'"):
+            import re
+            suggestion = re.sub(r'\bproperly\b', 'as intended', sentence_context, flags=re.IGNORECASE)
+            return {
+                "suggestion": suggestion,
+                "ai_answer": "Replaced 'properly' with 'as intended' for clarity.",
+                "confidence": "high",
+                "method": "hardcoded_properly_adverb",
+                "note": "Replaced 'properly' with a clearer phrase."
+            }
+        # Hardcode: if the adverb flagged is 'properly', replace it with 'as intended'
+        if feedback_text.strip().lower().startswith("check use of adverb: 'properly'"):
+            import re
+            suggestion = re.sub(r'\bproperly\b', 'as intended', sentence_context, flags=re.IGNORECASE)
+            return {
+                "suggestion": suggestion,
+                "ai_answer": "Replaced 'properly' with 'as intended' for clarity.",
+                "confidence": "high",
+                "method": "hardcoded_properly_adverb",
+                "note": "Replaced 'properly' with a clearer phrase."
+            }
     """
     AI suggestion engine using local models and RAG.
     Smart fallbacks when AI is unavailable.
@@ -43,6 +116,17 @@ class AISuggestionEngine:
         option_number: int = 1,
         issue: Optional[Dict[str, Any]] = None,   # <-- supports full issue dict
     ) -> Dict[str, Any]:
+        # Hardcoded logic for the specific issue
+        if feedback_text.strip().lower() == "use 'click' instead of 'click on'.":
+            import re
+            suggestion = re.sub(r'\bclick on\b', 'click', sentence_context, flags=re.IGNORECASE)
+            return {
+                "suggestion": suggestion,
+                "ai_answer": "Replaced 'click on' with 'click' as per style guidance.",
+                "confidence": "high",
+                "method": "hardcoded_click_fix",
+                "note": "Hardcoded fix for 'click on' issue."
+            }
         # Safety checks
         if feedback_text is None:
             feedback_text = "general improvement needed"
@@ -154,40 +238,16 @@ class AISuggestionEngine:
 
         # --- Fast patterns (return immediately if hit) ---
 
-        # 1) Adverb overuse: "optionally", "easily", etc.
-        adverb_issue = re.search(r"(?i)\badverb\b|\boptionally\b|\beasily\b|\bsimply\b|\bbasically\b", feedback_text) \
-                    or re.search(r"(?i)\boptionally\b|\beasily\b|\bsimply\b|\bbasically\b", text)
+        # 1) Adverb overuse: Only flag the word 'very' as adverb overuse
+        adverb_issue = re.search(r"(?i)\bvery\b", feedback_text) or re.search(r"(?i)\bvery\b", text)
         if adverb_issue:
             s = text
-
-            # "X and optionally Y" -> "X. Add Y if required."
-            s = re.sub(r"(?i)\band\s+optionally\s+(a|an|the)?\s*([a-z][\w\s-]+)", r". Add \1 \2 if required", s)
-            # "optionally <verb>" -> "You may <verb> if required" -> prefer imperative
-            s = re.sub(r"(?i)\boptionally\s+(add|enter|provide|include|configure|select)\b",
-                    r"\1 (optional)", s)
-
-            # "helps in <adv?> <verb-ing>" -> "helps you <verb>"
-            s = re.sub(r"(?i)\bhelps in\s+(?:[a-z]+ly\s+)?([a-z]+)ing\b", r"helps you \1", s)
-
-            # "through its corresponding image" -> "using its image"
-            s = re.sub(r"(?i)\bthrough\s+(its|the)\s+corresponding\s+image\b", r"using \1 image", s)
-
-            # Prefer imperative for UI copy starting with "Assign", "Enter", etc.
-            s = re.sub(r"(?i)^assign\b", "Provide", s)  # clearer than "Assign" for labels
-            s = re.sub(r"(?i)\boptionally\b", "", s)    # drop weak adverb if still present
-            s = re.sub(r"\s+\(optional\)", " (optional)", s)
-
-            # If we still have a single sentence that reads awkwardly, split:
-            if ". " not in s:
-                # e.g., "Assign a unique name and a description (optional)" -> two short sentences
-                m = re.search(r"(?i)\band\b\s+(a|an|the)?\s*description", s)
-                if m:
-                    s = re.sub(r"(?i)\band\b\s+(a|an|the)?\s*description", r". Add \1 description (optional)", s)
-
+            # Optionally, you can add a simple suggestion for 'very'
+            s = re.sub(r"(?i)\bvery\b", "", s)
             out = _cleanup(s)
             if not _differs(text, out):
-                out = _cleanup("Provide a unique name. Add a description if required")
-            return f"{out}\nWHY: Addresses adverb usage for concise, action-focused language."
+                out = _cleanup("Remove unnecessary adverbs like 'very' for conciseness.")
+            return f"{out}\nWHY: Removes 'very' for concise, direct writing."
 
         # 2) Passive voice → active/imperative
         passive_issue = re.search(r"(?i)passive voice|active voice|is displayed|are displayed|is shown|are shown|was|were", feedback_text) \
