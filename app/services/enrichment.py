@@ -27,6 +27,72 @@ def _best_similarity(hits):
     except Exception:
         return 0.0
 
+def _create_llm_powered_rewrite(feedback_text: str, sentence_context: str) -> str:
+    """Use LLM to create a polished rewrite based on feedback"""
+    try:
+        # Send direct request to Ollama without going through RAG system
+        import requests
+        
+        # Create a focused prompt for rewriting
+        prompt = f"""You are a professional technical writing assistant. Your task is to rewrite the given sentence to fix the specific writing issue.
+
+WRITING ISSUE: {feedback_text}
+ORIGINAL SENTENCE: "{sentence_context}"
+
+Instructions:
+- Provide ONLY the improved sentence, nothing else
+- Fix the specific issue mentioned in the feedback
+- Keep the meaning intact
+- Make it clear, concise, and professional
+- Use active voice when possible
+- Follow technical writing best practices
+
+REWRITTEN SENTENCE:"""
+
+        # Send to Ollama using direct API
+        ollama_url = "http://localhost:11434/api/generate"
+        response = requests.post(ollama_url, json={
+            'model': 'phi3:mini',
+            'prompt': prompt,
+            'stream': False,
+            'options': {
+                'temperature': 0.3,  # Lower temperature for more focused output
+                'top_p': 0.9,
+                'num_predict': 100   # Limit response length
+            }
+        }, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            suggestion = result['response'].strip()
+            
+            # Clean up the response (remove any extra formatting)
+            suggestion = suggestion.replace('"', '').strip()
+            if suggestion.startswith('REWRITTEN SENTENCE:'):
+                suggestion = suggestion[19:].strip()
+            if suggestion.startswith('-'):
+                suggestion = suggestion[1:].strip()
+            if suggestion.startswith('•'):
+                suggestion = suggestion[1:].strip()
+                
+            # Ensure it's different from original and not empty
+            if suggestion and suggestion.lower() != sentence_context.lower().strip() and len(suggestion) > 10:
+                logger.info(f"LLM generated suggestion: '{suggestion[:100]}...'")
+                return suggestion
+        else:
+            logger.warning(f"Ollama API returned status {response.status_code}")
+                
+    except requests.exceptions.ConnectionError:
+        logger.warning("LLM rewrite failed: Ollama not accessible (connection error)")
+    except requests.exceptions.Timeout:
+        logger.warning("LLM rewrite failed: Ollama request timed out")
+    except Exception as e:
+        logger.warning(f"LLM rewrite failed: {e}")
+    
+    # If LLM fails, return None to trigger deterministic fallback
+    return None
+
+
 def _create_deterministic_rewrite(feedback_text: str, sentence_context: str) -> str:
     """Create a deterministic rewrite based on feedback patterns"""
     import re
@@ -37,14 +103,29 @@ def _create_deterministic_rewrite(feedback_text: str, sentence_context: str) -> 
     
     feedback_lower = feedback_text.lower()
     
-    # Passive voice patterns - more comprehensive
-    if "passive voice" in feedback_lower or re.search(r'\b(is|are|was|were)\s+\w+ed\b', text):
+    # Passive voice patterns - more comprehensive  
+    if "passive voice" in feedback_lower or re.search(r'\b(is|are|was|were)\s+.*\b\w+ed\b', text) or re.search(r'\b(has|have)\s+been\s+\w+', text):
         # Convert passive constructions to active
         text = re.sub(r'\b(is|are)\s+displayed\b', 'appears', text, flags=re.IGNORECASE)
         text = re.sub(r'\b(is|are)\s+shown\b', 'appears', text, flags=re.IGNORECASE)
         text = re.sub(r'\b(is|are)\s+generated\b', 'generates', text, flags=re.IGNORECASE)
         text = re.sub(r'\b(was|were)\s+created\b', 'created', text, flags=re.IGNORECASE)
         text = re.sub(r'\b(is|are)\s+configured\b', 'configures', text, flags=re.IGNORECASE)
+        
+        # Handle "has/have been + past participle" (present perfect passive)
+        text = re.sub(r'\bhas been created\b', 'exists', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhave been created\b', 'exist', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhas already been created\b', 'already exists', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhave already been created\b', 'already exist', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhas been configured\b', 'is configured', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhave been configured\b', 'are configured', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhas been defined\b', 'exists', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bhave been defined\b', 'exist', text, flags=re.IGNORECASE)
+        
+        # Handle "are only defined" pattern
+        text = re.sub(r'\b(.*?)\s+(are|is)\s+(only\s+)?defined\b', r'The system defines \1 \3', text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(.*?)\s+(are|is)\s+(only\s+)?provided\b', r'The system provides \1 \3', text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(.*?)\s+(are|is)\s+(only\s+)?supported\b', r'The system supports \1 \3', text, flags=re.IGNORECASE)
         
         # More complex passive patterns
         if 'by the' in text.lower():
@@ -223,9 +304,13 @@ def enrich_issue_with_solution(issue: dict) -> dict:
             if rag_result and rag_result.get("method") == "ollama_rag_direct":
                 # Use the RAG suggestion
                 issue["solution_text"] = rag_result.get("suggestion", "").strip()
-                issue["proposed_rewrite"] = _create_deterministic_rewrite(feedback_text, sentence_context)
+                
+                # Try LLM-powered rewrite first, then deterministic fallback
+                llm_rewrite = _create_llm_powered_rewrite(feedback_text, sentence_context)
+                issue["proposed_rewrite"] = llm_rewrite or _create_deterministic_rewrite(feedback_text, sentence_context)
+                
                 issue["sources"] = rag_result.get("sources", [])
-                issue["method"] = "rag_rewrite"
+                issue["method"] = "rag_rewrite" if llm_rewrite else "rag_fallback"
                 
                 logger.info("[ENRICH] Using Ollama RAG result: method=%s, suggestion_length=%d", 
                            rag_result.get("method"), len(issue["solution_text"]))
@@ -237,11 +322,15 @@ def enrich_issue_with_solution(issue: dict) -> dict:
     # FALLBACK: Original ChromaDB approach
     col = _get_collection()
     if col is None:
-        logger.info("[ENRICH] No Chroma collection available; using smart fallback.")
+        logger.info("[ENRICH] No Chroma collection available; using LLM-powered fallback.")
         issue["solution_text"] = f"Review and improve this text to address: {issue.get('message', 'writing issue')}"
-        issue["proposed_rewrite"] = _create_deterministic_rewrite(issue.get('message', ''), issue.get('context', ''))
+        
+        # Try LLM-powered rewrite first, then deterministic fallback
+        llm_rewrite = _create_llm_powered_rewrite(issue.get('message', ''), issue.get('context', ''))
+        issue["proposed_rewrite"] = llm_rewrite or _create_deterministic_rewrite(issue.get('message', ''), issue.get('context', ''))
+        
         issue["sources"] = []
-        issue["method"] = "smart_fallback"
+        issue["method"] = "llm_fallback" if llm_rewrite else "smart_fallback"
         return issue
 
     query_text = (issue.get("context") or issue.get("message") or "").strip()
@@ -287,14 +376,27 @@ def enrich_issue_with_solution(issue: dict) -> dict:
         if m:
             pr = m.group(1).strip()
 
-    # Force it to differ from original
-    pr = _force_change(original, pr)
+    # Try LLM-powered rewrite first, then use deterministic patterns if needed
+    llm_rewrite = _create_llm_powered_rewrite(issue.get("message", ""), original)
+    if llm_rewrite:
+        pr = llm_rewrite
+        method_suffix = "_llm"
+    else:
+        # Use our improved deterministic rewrite instead of just _force_change
+        deterministic_rewrite = _create_deterministic_rewrite(issue.get("message", ""), original)
+        if deterministic_rewrite and deterministic_rewrite != original:
+            pr = deterministic_rewrite
+            method_suffix = "_deterministic"
+        else:
+            # Last resort: use _force_change only if deterministic patterns failed
+            pr = _force_change(original, pr)
+            method_suffix = "_fallback"
 
     # Attach back
     issue["solution_text"] = guidance.strip()
     issue["proposed_rewrite"] = pr.strip()
     issue["sources"] = [{"rule_id": rule_hint, "similarity": round(_best_similarity(hits), 3), "preview": _first_hit_text(hits)}]
-    issue["method"] = "chromadb_fallback"
+    issue["method"] = "chromadb" + method_suffix
 
     logger.info(
         "[ENRICH] type=%s sim=%.2f rewrite='%s' method=%s",
