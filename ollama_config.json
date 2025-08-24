@@ -1,0 +1,43 @@
+{
+  "ollama_config": {
+    "api_url": "http://localhost:11434/api/generate",
+    "models": {
+      "fast": "tinyllama:latest",
+      "balanced": "phi3:mini", 
+      "quality": "llama3:8b"
+    },
+    "timeouts": {
+      "quick": 5,
+      "standard": 10,
+      "high": 15,
+      "maximum": 20
+    },
+    "generation_options": {
+      "quick": {
+        "temperature": 0.1,
+        "top_p": 0.8,
+        "num_predict": 80,
+        "num_ctx": 1024
+      },
+      "standard": {
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "num_predict": 150,
+        "num_ctx": 2048,
+        "repeat_penalty": 1.1
+      },
+      "high": {
+        "temperature": 0.3,
+        "top_p": 0.9,
+        "num_predict": 200,
+        "num_ctx": 3072,
+        "repeat_penalty": 1.1
+      }
+    },
+    "fallback_strategy": {
+      "enabled": true,
+      "progressive_timeout": true,
+      "retry_with_faster_model": true
+    }
+  }
+}

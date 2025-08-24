@@ -1,0 +1,351 @@
+[
+  {
+    "rule_id": "RAG-passive_voice_comprehensive",
+    "title": "Convert Passive Voice to Active Voice",
+    "explanation": "Transform passive voice constructions to active voice for clearer, more direct communication.",
+    "why": "Active voice makes writing more direct, engaging, and easier to understand. It clearly identifies who performs the action.",
+    "examples": {
+      "bad": [
+        "The report was written by John",
+        "Mistakes were made during the process",
+        "The system will be updated by the team",
+        "Data is being processed by the algorithm",
+        "The configuration has been completed by the user"
+      ],
+      "good": [
+        "John wrote the report",
+        "We made mistakes during the process",
+        "The team will update the system",
+        "The algorithm is processing data",
+        "The user completed the configuration"
+      ]
+    },
+    "solution": "Identify the agent performing the action and make it the subject. Change 'was/were + past participle' to 'subject + active verb'.",
+    "rewrite_policy": {
+      "patterns": [
+        "\\b(is|are|was|were)\\s+\\w+ed\\b",
+        "\\b(has|have)\\s+been\\s+\\w+",
+        "\\bwill be\\s+\\w+ed\\b"
+      ],
+      "transforms": {
+        "was written by": "wrote",
+        "were created by": "created",
+        "is processed by": "processes",
+        "will be updated by": "will update"
+      }
+    },
+    "context_triggers": [
+      "passive voice",
+      "active voice",
+      "was written",
+      "were created",
+      "is processed"
+    ]
+  },
+  {
+    "rule_id": "RAG-adverbs_comprehensive",
+    "title": "Remove Unnecessary Adverbs",
+    "explanation": "Eliminate weak adverbs that don't add meaningful information and make writing less confident.",
+    "why": "Overusing adverbs weakens writing. Strong verbs and precise language are more effective than verb + adverb combinations.",
+    "examples": {
+      "bad": [
+        "Simply click the button to easily configure the settings",
+        "The system automatically processes data very efficiently",
+        "You can quickly and easily complete the task",
+        "The application runs really smoothly and basically works perfectly"
+      ],
+      "good": [
+        "Click the button to configure the settings",
+        "The system processes data efficiently",
+        "You can complete the task",
+        "The application runs smoothly and works perfectly"
+      ]
+    },
+    "solution": "Remove weak adverbs (easily, simply, basically, really, very, quite) and strengthen the main verb instead.",
+    "rewrite_policy": {
+      "remove_adverbs": [
+        "easily",
+        "simply",
+        "basically",
+        "really",
+        "very",
+        "quite",
+        "rather",
+        "somewhat",
+        "pretty much"
+      ],
+      "strengthen_verbs": {
+        "go quickly": "rush",
+        "work efficiently": "optimize",
+        "look carefully": "examine"
+      }
+    },
+    "context_triggers": [
+      "adverb",
+      "easily",
+      "simply",
+      "basically",
+      "really",
+      "very",
+      "quite"
+    ]
+  },
+  {
+    "rule_id": "RAG-long_sentences_comprehensive",
+    "title": "Break Up Long Sentences",
+    "explanation": "Split overly long sentences with multiple clauses into shorter, clearer sentences for better readability.",
+    "why": "Long sentences overwhelm readers and make information harder to process. Short sentences improve comprehension.",
+    "examples": {
+      "bad": [
+        "When you configure the system settings, which include database connections, user permissions, and security protocols, you must ensure that all components are properly validated and tested before deployment.",
+        "The application starts, then loads configuration, then connects to database, and displays interface while processing user input and generating reports."
+      ],
+      "good": [
+        "When you configure the system settings, ensure all components are properly validated and tested. System settings include database connections, user permissions, and security protocols.",
+        "The application starts and loads the configuration. It then connects to the database and displays the interface. Meanwhile, it processes user input and generates reports."
+      ]
+    },
+    "solution": "Break sentences at natural pause points. Use periods, not just commas. Aim for 15-20 words per sentence.",
+    "rewrite_policy": {
+      "max_words": 25,
+      "break_patterns": [
+        ", and ",
+        ", which ",
+        ", while ",
+        ", then "
+      ],
+      "connectors": [
+        "Then",
+        "Next",
+        "Meanwhile",
+        "Additionally",
+        "However"
+      ]
+    },
+    "context_triggers": [
+      "long sentence",
+      "run-on sentence",
+      "break up sentence",
+      "sentence length",
+      "multiple clauses"
+    ]
+  },
+  {
+    "rule_id": "RAG-subject_verb_agreement_comprehensive",
+    "title": "Fix Subject-Verb Agreement Errors",
+    "explanation": "Ensure subjects and verbs agree in number (singular subjects with singular verbs, plural subjects with plural verbs).",
+    "why": "Subject-verb disagreement is grammatically incorrect and looks unprofessional in technical writing.",
+    "examples": {
+      "bad": [
+        "The list of items are complete",
+        "Each of the files have been updated",
+        "The data is ready but the reports is not",
+        "Neither the user nor the system are working"
+      ],
+      "good": [
+        "The list of items is complete",
+        "Each of the files has been updated",
+        "The data is ready but the reports are not",
+        "Neither the user nor the system is working"
+      ]
+    },
+    "solution": "Match singular subjects with singular verbs, plural subjects with plural verbs. Pay attention to collective nouns and compound subjects.",
+    "rewrite_policy": {
+      "singular_subjects": [
+        "each",
+        "every",
+        "neither",
+        "either",
+        "list",
+        "group",
+        "team"
+      ],
+      "plural_subjects": [
+        "data",
+        "criteria",
+        "phenomena"
+      ],
+      "agreement_rules": {
+        "each.*are": "each.*is",
+        "list.*are": "list.*is",
+        "neither.*are": "neither.*is"
+      }
+    },
+    "context_triggers": [
+      "subject verb agreement",
+      "verb agreement",
+      "singular plural",
+      "grammar error"
+    ]
+  },
+  {
+    "rule_id": "RAG-capitalization_comprehensive",
+    "title": "Fix Capitalization Issues",
+    "explanation": "Use proper capitalization: sentence case for text, preserve acronyms, avoid ALL CAPS for emphasis.",
+    "why": "Proper capitalization looks professional. ALL CAPS appears as shouting and is harder to read.",
+    "examples": {
+      "bad": [
+        "CLICK THE BUTTON TO CONTINUE",
+        "the system will start automatically",
+        "Use the API key to ACCESS the database",
+        "IMPORTANT: save your work before closing"
+      ],
+      "good": [
+        "Click the button to continue",
+        "The system will start automatically",
+        "Use the API key to access the database",
+        "Important: Save your work before closing"
+      ]
+    },
+    "solution": "Start sentences with capital letters. Use sentence case for most text. Preserve technical acronyms like API, URL, HTML.",
+    "rewrite_policy": {
+      "preserve_acronyms": [
+        "API",
+        "URL",
+        "HTML",
+        "CSS",
+        "JSON",
+        "XML",
+        "SQL",
+        "HTTP"
+      ],
+      "sentence_case_words": [
+        "click",
+        "select",
+        "configure",
+        "important",
+        "note",
+        "warning"
+      ],
+      "fix_patterns": {
+        "CLICK": "Click",
+        "SELECT": "Select",
+        "IMPORTANT": "Important"
+      }
+    },
+    "context_triggers": [
+      "capitalization",
+      "all caps",
+      "capital letter",
+      "sentence case",
+      "shouting"
+    ]
+  },
+  {
+    "rule_id": "RAG-vague_terms_comprehensive",
+    "title": "Replace Vague Terms with Specific Language",
+    "explanation": "Replace vague, non-specific terms with precise, concrete language that provides clear information.",
+    "why": "Vague terms confuse readers and don't provide actionable information. Specific language improves understanding.",
+    "examples": {
+      "bad": [
+        "The system has some issues with performance",
+        "There are various options available",
+        "The process takes a while to complete",
+        "You might experience certain problems"
+      ],
+      "good": [
+        "The system responds slowly to user clicks",
+        "Three configuration options are available",
+        "The process takes 5-10 minutes to complete",
+        "You might experience connection timeout errors"
+      ]
+    },
+    "solution": "Replace vague terms (some, various, certain, things, stuff) with specific quantities, names, or descriptions.",
+    "rewrite_policy": {
+      "vague_terms": [
+        "some",
+        "various",
+        "certain",
+        "things",
+        "stuff",
+        "issues",
+        "problems",
+        "while",
+        "might"
+      ],
+      "specific_replacements": {
+        "some issues": "specific error messages",
+        "various options": "three options",
+        "takes a while": "takes 5 minutes",
+        "certain problems": "connection errors"
+      }
+    },
+    "context_triggers": [
+      "vague terms",
+      "specific language",
+      "unclear",
+      "ambiguous",
+      "imprecise"
+    ]
+  },
+  {
+    "rule_id": "RAG-terminology_consistency_comprehensive",
+    "title": "Use Consistent Technical Terminology",
+    "explanation": "Maintain consistent terminology throughout documentation. Define abbreviations on first use.",
+    "why": "Consistent terminology reduces confusion and creates professional, trustworthy documentation.",
+    "examples": {
+      "bad": [
+        "Login to the system, then log in to the database, and sign in to the admin panel",
+        "Use the API, then the Application Programming Interface, then the programming interface",
+        "Click the webpage link, then the web page button, then the website option"
+      ],
+      "good": [
+        "Log in to the system, then log in to the database, and log in to the admin panel",
+        "Use the Application Programming Interface (API) throughout the system",
+        "Click the web page link, then the web page button, then the web page option"
+      ]
+    },
+    "solution": "Choose one term and use it consistently. Define abbreviations: 'Application Programming Interface (API)' on first use, then 'API'.",
+    "rewrite_policy": {
+      "consistent_terms": {
+        "login|log in|sign in": "log in",
+        "webpage|web page|website": "web page",
+        "email|e-mail": "email",
+        "setup|set up": "set up"
+      },
+      "abbreviation_format": "Full Term (ABBREV)"
+    },
+    "context_triggers": [
+      "terminology",
+      "consistency",
+      "abbreviation",
+      "acronym",
+      "technical terms"
+    ]
+  },
+  {
+    "rule_id": "RAG-verb_tense_comprehensive",
+    "title": "Maintain Consistent Verb Tense",
+    "explanation": "Use consistent verb tenses throughout instructions and procedures for clarity and professionalism.",
+    "why": "Inconsistent tenses confuse readers about when actions occur and make writing appear careless.",
+    "examples": {
+      "bad": [
+        "First you click Save, then you had to wait for confirmation",
+        "Configure the settings, then you checked the results",
+        "The system will start, then it processed the data"
+      ],
+      "good": [
+        "First click Save, then wait for confirmation",
+        "Configure the settings, then check the results",
+        "The system starts, then processes the data"
+      ]
+    },
+    "solution": "Use consistent tense throughout instructions. Prefer present tense or imperative mood for procedures.",
+    "rewrite_policy": {
+      "preferred_tense": "imperative",
+      "instruction_patterns": {
+        "you click": "click",
+        "you will click": "click",
+        "you should click": "click",
+        "you had to": "you need to"
+      }
+    },
+    "context_triggers": [
+      "verb tense",
+      "tense consistency",
+      "imperative",
+      "instructions",
+      "procedures"
+    ]
+  }
+]

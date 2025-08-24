@@ -1,0 +1,137 @@
+[
+  {
+    "rule_id": "MOD-adverb_overuse",
+    "title": "Avoid Unnecessary Adverbs",
+    "explanation": "Remove weak adverbs like 'easily', 'simply', 'basically', 'manually', 'automatically', 'actually', 'really' that add no value.",
+    "why": "Adverbs often weaken writing and make instructions seem uncertain. Direct language is clearer.",
+    "examples": {
+      "bad": ["You can easily configure the settings", "Simply click the button", "To manually input data"],
+      "good": ["Configure the settings", "Click the button", "To input data"]
+    },
+    "rewrite_policy": {
+      "adverbs": ["easily", "simply", "basically", "manually", "automatically", "actually", "really", "generally", "typically", "optionally"]
+    },
+    "solution": "Remove unnecessary adverbs (like 'easily', 'simply', 'basically', 'manually', 'automatically') to make writing more direct and confident."
+  },
+  {
+    "rule_id": "MOD-modal_verbs",
+    "title": "Avoid Weak Modal Verbs",
+    "explanation": "Replace 'can', 'may', 'should', 'will' with direct imperative language in instructions.",
+    "why": "Modal verbs create uncertainty in technical instructions. Users need clear, definitive guidance.",
+    "examples": {
+      "bad": ["You should click Save", "You can now proceed", "You may select options", "You will be able to see"],
+      "good": ["Click Save", "Proceed to next step", "Select your options", "You can see"]
+    },
+    "solution": "Use direct language instead of modal verbs for clearer instructions."
+  },
+  {
+    "rule_id": "MOD-ui_interactions", 
+    "title": "Simplify UI Interaction Language",
+    "explanation": "Use 'click' instead of 'click on', 'select' instead of 'select on'. Remove unnecessary prepositions.",
+    "why": "Shorter, more direct language reduces cognitive load and sounds more natural.",
+    "examples": {
+      "bad": ["Click on the button", "Select on the option", "Choose from the menu"],
+      "good": ["Click the button", "Select the option", "Choose the menu option"]
+    },
+    "solution": "Simplify UI interaction language by removing unnecessary prepositions."
+  },
+  {
+    "rule_id": "MOD-capitalization",
+    "title": "Fix Inconsistent Capitalization", 
+    "explanation": "Avoid ALL CAPS for emphasis. Use sentence case for UI elements unless they appear in ALL CAPS in the interface.",
+    "why": "ALL CAPS appears like shouting and reduces readability. Consistent capitalization improves professionalism.",
+    "examples": {
+      "bad": ["CLICK the SAVE button", "SELECT ALL items", "IMPORTANT: Read this"],
+      "good": ["Click the Save button", "Select all items", "Important: Read this"]
+    },
+    "solution": "Use consistent capitalization following sentence case rules."
+  },
+  {
+    "rule_id": "MOD-hedging_language",
+    "title": "Eliminate Hedging Language",
+    "explanation": "Remove uncertain language like 'might', 'perhaps', 'possibly', 'maybe', 'kind of', 'sort of'.",
+    "why": "Technical documentation needs to be definitive and confident. Hedging creates doubt.",
+    "examples": {
+      "bad": ["The system might restart", "This perhaps works better", "You can maybe try this"],
+      "good": ["The system restarts", "This works better", "Try this approach"]
+    },
+    "solution": "Replace hedging language with definitive, confident statements."
+  },
+  {
+    "rule_id": "MOD-filler_words",
+    "title": "Remove Filler Words",
+    "explanation": "Eliminate words like 'just', 'really', 'very', 'quite', 'rather', 'somewhat', 'pretty much'.",
+    "why": "Filler words add no meaning and make writing verbose. Every word should add value.",
+    "examples": {
+      "bad": ["Just click the button", "It's really important", "Very useful feature", "Quite difficult"],
+      "good": ["Click the button", "This is important", "Useful feature", "Difficult"]
+    },
+    "solution": "Remove filler words that add no meaning to make writing more concise."
+  },
+  {
+    "rule_id": "MOD-redundancy",
+    "title": "Eliminate Redundant Phrases",
+    "explanation": "Remove phrases like 'in order to' (use 'to'), 'due to the fact that' (use 'because'), 'at this point in time' (use 'now').",
+    "why": "Concise writing is clearer and faster to read. Redundant phrases waste the reader's time.",
+    "examples": {
+      "bad": ["In order to save the file", "Due to the fact that it's broken", "At this point in time"],
+      "good": ["To save the file", "Because it's broken", "Now"]
+    },
+    "solution": "Replace redundant phrases with concise alternatives."
+  },
+  {
+    "rule_id": "MOD-second_person",
+    "title": "Use Direct Address",
+    "explanation": "Use 'you' instead of 'the user', 'one', 'users', or 'people' in instructions.",
+    "why": "Direct address makes instructions more personal and engaging. It's clearer who should act.",
+    "examples": {
+      "bad": ["The user should click Save", "Users can configure settings", "One must ensure data accuracy"],
+      "good": ["Click Save", "You can configure settings", "Ensure data accuracy"]
+    },
+    "solution": "Use direct address ('you') instead of third-person references."
+  },
+  {
+    "rule_id": "MOD-jargon_simplification",
+    "title": "Simplify Technical Jargon",
+    "explanation": "Replace complex technical terms with simpler alternatives when possible, or explain them on first use.",
+    "why": "Accessible language serves a broader audience and reduces cognitive load.",
+    "examples": {
+      "bad": ["Initialize the configuration parameters", "Instantiate the object instance", "Utilize the functionality"],
+      "good": ["Set up the configuration", "Create the object", "Use the feature"]
+    },
+    "solution": "Replace complex jargon with simpler, more accessible language."
+  },
+  {
+    "rule_id": "MOD-parallel_structure",
+    "title": "Maintain Parallel Structure",
+    "explanation": "Keep consistent verb forms in lists and sequences. All items should follow the same grammatical pattern.",
+    "why": "Parallel structure improves readability and flow. It makes lists easier to scan and understand.",
+    "examples": {
+      "bad": ["Save the file, editing content, and publication", "Configure settings, test connections, deployment"],
+      "good": ["Save the file, edit content, and publish", "Configure settings, test connections, and deploy"]
+    },
+    "solution": "Maintain parallel structure in lists by using consistent verb forms."
+  },
+  {
+    "rule_id": "MOD-preposition_cleanup",
+    "title": "Simplify Prepositional Phrases", 
+    "explanation": "Remove unnecessary prepositions like 'of', 'on', 'for' when they don't add meaning.",
+    "why": "Reduces wordiness and improves clarity. Simpler phrases are easier to parse.",
+    "examples": {
+      "bad": ["The process of configuration", "The act of clicking", "For the purpose of testing"],
+      "good": ["Configuration process", "Clicking", "To test"]
+    },
+    "solution": "Simplify by removing unnecessary prepositions and prepositional phrases."
+  },
+  {
+    "rule_id": "MOD-error_messages",
+    "title": "Write Helpful Error Messages",
+    "explanation": "Error messages should explain what happened and what to do next. Avoid technical error codes without explanation.",
+    "why": "Users need actionable guidance when things go wrong. Cryptic errors frustrate users.",
+    "examples": {
+      "bad": ["Error 404", "Invalid input", "Process failed", "Null pointer exception"],
+      "good": ["Page not found. Check the URL and try again.", "Enter a valid email address.", "Upload failed. Check file size and try again.", "Required field is empty. Please fill in all required information."]
+    },
+    "solution": "Write error messages that explain the problem and provide clear next steps."
+  }
+]

@@ -70,11 +70,20 @@ def ai_suggestion():
         engine = load_ai_engine()
         if engine:
             logger.info("🔧 Using AI engine")
+            
+            # Create issue object to trigger RAG enrichment
+            issue = {
+                'message': feedback_text,
+                'context': sentence_context,
+                'issue_type': 'Writing Issue'  # Generic type, could be inferred
+            }
+            
             result = engine.generate_contextual_suggestion(
                 feedback_text=feedback_text,
                 sentence_context=sentence_context,
                 document_type=document_type,
-                option_number=option_number
+                option_number=option_number,
+                issue=issue  # Pass issue to trigger RAG enrichment
             )
             logger.info(f"🔧 AI engine result: method={result.get('method')}")
             return jsonify(result)

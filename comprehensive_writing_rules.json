@@ -1,0 +1,196 @@
+[
+  {
+    "rule_id": "MOD-double_negatives",
+    "title": "Eliminate Double Negatives",
+    "explanation": "Replace double negatives with positive statements for clarity. Double negatives are confusing and unprofessional.",
+    "why": "Double negatives make sentences harder to parse and can be misunderstood. Clear, positive language is more professional.",
+    "examples": {
+      "bad": ["You don't need no additional software", "We can't not proceed without approval", "There isn't nothing to configure"],
+      "good": ["You need no additional software", "We must proceed with approval", "There is nothing to configure"]
+    },
+    "solution": "Replace double negatives with clear, positive statements.",
+    "rewrite_policy": {
+      "patterns": ["don't.*no", "can't.*not", "isn't.*nothing", "haven't.*no"],
+      "replacements": ["need no", "must", "is nothing", "have no"]
+    }
+  },
+  {
+    "rule_id": "MOD-comma_splices",
+    "title": "Fix Comma Splices",
+    "explanation": "Don't join two complete sentences with just a comma. Use a semicolon, period, or conjunction.",
+    "why": "Comma splices are grammatically incorrect and can confuse readers about sentence boundaries.",
+    "examples": {
+      "bad": ["The system is running, it's working fine", "Click Save, the file will be stored", "The process completes, you can continue"],
+      "good": ["The system is running and working fine", "Click Save. The file will be stored", "The process completes; you can continue"]
+    },
+    "solution": "Fix comma splices by using proper punctuation or conjunctions.",
+    "rewrite_policy": {
+      "pattern": ",\\s+[a-z]",
+      "fix_type": "comma_splice"
+    }
+  },
+  {
+    "rule_id": "MOD-dangling_modifiers",
+    "title": "Fix Dangling Modifiers",
+    "explanation": "Ensure modifying phrases clearly connect to the word they're meant to modify.",
+    "why": "Dangling modifiers create confusion about what is being modified, leading to unclear or unintentionally funny sentences.",
+    "examples": {
+      "bad": ["Walking to the store, the rain started", "After configuring the system, the error disappeared", "To save time, shortcuts are recommended"],
+      "good": ["While I was walking to the store, the rain started", "After you configure the system, the error disappears", "To save time, use shortcuts"]
+    },
+    "solution": "Rewrite sentences to clearly connect modifying phrases to their intended subjects."
+  },
+  {
+    "rule_id": "MOD-split_infinitives",
+    "title": "Avoid Split Infinitives",
+    "explanation": "Keep 'to' and the verb together in infinitives, unless splitting improves clarity.",
+    "why": "Split infinitives can be awkward and are considered poor style in formal writing.",
+    "examples": {
+      "bad": ["to carefully review", "to quickly configure", "to properly initialize"],
+      "good": ["to review carefully", "to configure quickly", "to initialize properly"]
+    },
+    "solution": "Move adverbs outside the infinitive construction."
+  },
+  {
+    "rule_id": "MOD-subject_verb_agreement",
+    "title": "Fix Subject-Verb Agreement",
+    "explanation": "Ensure subjects and verbs agree in number (singular/plural).",
+    "why": "Subject-verb disagreement is grammatically incorrect and looks unprofessional.",
+    "examples": {
+      "bad": ["The list of items are complete", "Each of the files have been updated", "The data is ready but the reports is not"],
+      "good": ["The list of items is complete", "Each of the files has been updated", "The data is ready but the reports are not"]
+    },
+    "solution": "Match singular subjects with singular verbs, plural subjects with plural verbs."
+  },
+  {
+    "rule_id": "MOD-run_on_sentences",
+    "title": "Break Up Run-on Sentences",
+    "explanation": "Split overly long sentences with multiple clauses into shorter, clearer sentences.",
+    "why": "Run-on sentences are hard to follow and can overwhelm readers with too much information.",
+    "examples": {
+      "bad": ["The application starts then loads configuration then connects to database and displays interface"],
+      "good": ["The application starts and loads the configuration. It then connects to the database and displays the interface."]
+    },
+    "solution": "Break long sentences at natural pause points. Use periods, not just commas."
+  },
+  {
+    "rule_id": "MOD-misplaced_modifiers",
+    "title": "Fix Misplaced Modifiers",
+    "explanation": "Place modifying words and phrases close to what they modify.",
+    "why": "Misplaced modifiers can change the meaning of sentences or make them confusing.",
+    "examples": {
+      "bad": ["Only available in premium version, users can access this feature", "Running slowly, the user noticed the system"],
+      "good": ["This feature is available only in the premium version", "The user noticed the system running slowly"]
+    },
+    "solution": "Move modifiers next to the words they're meant to modify."
+  },
+  {
+    "rule_id": "MOD-tense_consistency",
+    "title": "Maintain Consistent Verb Tense",
+    "explanation": "Use consistent verb tenses throughout instructions and procedures.",
+    "why": "Inconsistent tenses confuse readers about when actions occur and appear unprofessional.",
+    "examples": {
+      "bad": ["First you click Save, then you had to wait", "Configure the settings, then you checked the results"],
+      "good": ["First click Save, then wait for confirmation", "Configure the settings, then check the results"]
+    },
+    "solution": "Use consistent tense throughout instructions. Prefer present tense or imperative mood."
+  },
+  {
+    "rule_id": "MOD-weak_transitions",
+    "title": "Improve Weak Transitions",
+    "explanation": "Connect related sentences with clear transition words or phrases.",
+    "why": "Poor transitions make writing feel choppy and disconnected. Good transitions improve flow.",
+    "examples": {
+      "bad": ["Configure the settings. The system will restart.", "Save your work. Close the application."],
+      "good": ["Configure the settings. After saving, the system will restart.", "Save your work before closing the application."]
+    },
+    "solution": "Add transitional words and phrases to connect related ideas smoothly."
+  },
+  {
+    "rule_id": "MOD-apostrophe_errors",
+    "title": "Fix Apostrophe Usage",
+    "explanation": "Use apostrophes correctly for possession and contractions, not for plurals.",
+    "why": "Incorrect apostrophe usage looks unprofessional and can confuse readers.",
+    "examples": {
+      "bad": ["The API's are working", "Multiple URL's need updates", "The 1990's technology"],
+      "good": ["The APIs are working", "Multiple URLs need updates", "The 1990s technology"]
+    },
+    "solution": "Remove apostrophes from plural nouns. Use apostrophes only for possession and contractions."
+  },
+  {
+    "rule_id": "MOD-unclear_pronouns",
+    "title": "Clarify Unclear Pronoun References",
+    "explanation": "Make sure pronouns clearly refer to specific nouns. Replace ambiguous pronouns with specific nouns.",
+    "why": "Unclear pronoun references confuse readers about what is being discussed.",
+    "examples": {
+      "bad": ["When you save the file, it will update it automatically", "The system and database are connected, but it needs updating"],
+      "good": ["When you save the file, the system will update the content automatically", "The system and database are connected, but the database needs updating"]
+    },
+    "solution": "Replace ambiguous pronouns with specific nouns for clarity."
+  },
+  {
+    "rule_id": "MOD-wordiness_reduction",
+    "title": "Reduce Wordy Phrases",
+    "explanation": "Replace wordy phrases with concise alternatives. Remove unnecessary words.",
+    "why": "Wordy writing wastes readers' time and can obscure the main message.",
+    "examples": {
+      "bad": ["Due to the fact that", "In the event that", "At this point in time", "For the purpose of"],
+      "good": ["Because", "If", "Now", "To"]
+    },
+    "solution": "Replace wordy phrases with shorter, clearer alternatives.",
+    "rewrite_policy": {
+      "wordy_phrases": {
+        "due to the fact that": "because",
+        "in the event that": "if", 
+        "at this point in time": "now",
+        "for the purpose of": "to",
+        "in order to": "to",
+        "with regard to": "about",
+        "as a result of": "because of"
+      }
+    }
+  },
+  {
+    "rule_id": "MOD-mixed_metaphors",
+    "title": "Avoid Mixed Metaphors",
+    "explanation": "Don't combine incompatible metaphors in the same sentence or paragraph.",
+    "why": "Mixed metaphors are confusing and can make writing seem illogical or careless.",
+    "examples": {
+      "bad": ["Don't burn bridges until you come to them", "We'll cross that bridge when we burn it", "It's not rocket surgery"],
+      "good": ["Don't burn bridges behind you", "We'll cross that bridge when we come to it", "It's not rocket science"]
+    },
+    "solution": "Use one consistent metaphor or avoid metaphors in technical writing."
+  },
+  {
+    "rule_id": "MOD-redundant_phrases",
+    "title": "Remove Redundant Phrases", 
+    "explanation": "Eliminate phrases that repeat the same meaning unnecessarily.",
+    "why": "Redundant phrases waste words and can annoy readers with unnecessary repetition.",
+    "examples": {
+      "bad": ["Repeat again", "Do it over once more", "Final conclusion", "Past history", "Future plans"],
+      "good": ["Repeat", "Do it again", "Conclusion", "History", "Plans"]
+    },
+    "solution": "Remove redundant words that don't add meaning.",
+    "rewrite_policy": {
+      "redundant_pairs": {
+        "repeat again": "repeat",
+        "final conclusion": "conclusion", 
+        "past history": "history",
+        "future plans": "plans",
+        "end result": "result",
+        "close proximity": "proximity"
+      }
+    }
+  },
+  {
+    "rule_id": "MOD-technical_simplification",
+    "title": "Simplify Technical Language",
+    "explanation": "Replace complex technical terms with simpler alternatives when possible. Define technical terms on first use.",
+    "why": "Overly technical language can alienate readers and make content inaccessible.",
+    "examples": {
+      "bad": ["Initialize the TCP/IP stack configuration parameters", "Instantiate the object instance", "Utilize the functionality"],
+      "good": ["Set up the network configuration", "Create the object", "Use the feature"]
+    },
+    "solution": "Use plain language alternatives to technical jargon when possible."
+  }
+]
