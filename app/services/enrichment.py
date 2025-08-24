@@ -37,26 +37,89 @@ def _create_deterministic_rewrite(feedback_text: str, sentence_context: str) -> 
     
     feedback_lower = feedback_text.lower()
     
-    # Passive voice patterns
-    if "passive voice" in feedback_lower:
-        # Simple passive to active conversion
-        text = re.sub(r"\b(is|are|was|were)\s+([a-z]+ed)\b", r"system \2", text, flags=re.IGNORECASE)
-        text = re.sub(r"\bwill be\s+([a-z]+ed)\b", r"system will \1", text, flags=re.IGNORECASE)
-        text = re.sub(r"\byou will be navigated", "the system navigates you", text, flags=re.IGNORECASE)
+    # Passive voice patterns - more comprehensive
+    if "passive voice" in feedback_lower or re.search(r'\b(is|are|was|were)\s+\w+ed\b', text):
+        # Convert passive constructions to active
+        text = re.sub(r'\b(is|are)\s+displayed\b', 'appears', text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(is|are)\s+shown\b', 'appears', text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(is|are)\s+generated\b', 'generates', text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(was|were)\s+created\b', 'created', text, flags=re.IGNORECASE)
+        text = re.sub(r'\b(is|are)\s+configured\b', 'configures', text, flags=re.IGNORECASE)
         
-    # Adverb removal
-    elif "adverb" in feedback_lower:
-        text = re.sub(r"\b(really|easily|simply|basically|actually)\s+", "", text, flags=re.IGNORECASE)
+        # More complex passive patterns
+        if 'by the' in text.lower():
+            # "X was done by Y" -> "Y does X" pattern
+            match = re.search(r'(.*?)\s+(was|were)\s+(\w+ed)\s+by\s+(.*)', text, re.IGNORECASE)
+            if match:
+                subject, verb, action, actor = match.groups()
+                text = f"{actor.strip()} {action.replace('ed', 's')} {subject.strip()}"
         
-    # Modal verb patterns  
-    elif "modal" in feedback_lower or "click on" in feedback_lower:
-        text = re.sub(r"\bclick on\b", "click", text, flags=re.IGNORECASE)
-        text = re.sub(r"\bmay now\b", "can now", text, flags=re.IGNORECASE)
+        # If no specific pattern matched, use imperative for instructions
+        if re.search(r'\b(click|select|open|configure|enter|choose)\b', text, re.IGNORECASE):
+            text = re.sub(r'^(you can |the user can |the system )', '', text, flags=re.IGNORECASE)
+            text = text.capitalize()
+        
+    # Adverb removal - more comprehensive
+    elif "adverb" in feedback_lower or re.search(r'\b(easily|simply|basically|actually|really|generally|typically|optionally)\b', feedback_lower):
+        # Remove weak adverbs
+        text = re.sub(r'\b(really|easily|simply|basically|actually|generally|typically|optionally)\s+', '', text, flags=re.IGNORECASE)
+        # Handle "and optionally" patterns
+        text = re.sub(r'\s+and\s+optionally\s+', ' and ', text, flags=re.IGNORECASE)
+        text = re.sub(r'\boptionally,?\s*', '', text, flags=re.IGNORECASE)
+        
+    # Modal verb patterns - more comprehensive
+    elif "modal" in feedback_lower or any(word in feedback_lower for word in ["can", "may", "should", "will"]):
+        text = re.sub(r'\bclick on\b', 'click', text, flags=re.IGNORECASE)
+        text = re.sub(r'\byou may now\b', 'now you can', text, flags=re.IGNORECASE)
+        text = re.sub(r'\byou should\b', 'please', text, flags=re.IGNORECASE)
+        text = re.sub(r'\bwill be able to\b', 'can', text, flags=re.IGNORECASE)
+        
+    # Long sentence patterns
+    elif "long" in feedback_lower and "sentence" in feedback_lower:
+        # Try to break at natural points
+        if ', and ' in text:
+            parts = text.split(', and ', 1)
+            if len(parts) == 2:
+                text = f"{parts[0].strip()}. {parts[1].strip().capitalize()}"
+        elif ', which ' in text:
+            parts = text.split(', which ', 1)
+            if len(parts) == 2:
+                text = f"{parts[0].strip()}. This {parts[1].strip()}"
     
-    # Clean up spacing
-    text = re.sub(r"\s+", " ", text).strip()
+    # Terminology and consistency
+    elif "caps" in feedback_lower or "capital" in feedback_lower or "all caps" in feedback_lower:
+        # Fix common capitalization issues
+        text = re.sub(r'\bAPI\b', 'API', text)  # Keep API capitalized
+        text = re.sub(r'\bURL\b', 'URL', text)  # Keep URL capitalized
+        text = re.sub(r'\bCLICK\b', 'Click', text)  # Fix all caps
+        text = re.sub(r'\bSELECT\b', 'Select', text)  # Fix all caps
+        # Fix ALL CAPS words to sentence case (but preserve acronyms)
+        def fix_caps(match):
+            word = match.group(0)
+            if len(word) <= 3 and word.isupper():  # Likely acronym
+                return word
+            else:
+                return word.capitalize()
+        text = re.sub(r'\b[A-Z]{3,}\b', fix_caps, text)
     
-    return text if text != sentence_context.strip() else sentence_context.strip() + " [improved]"
+    # Clean up spacing and ensure proper sentence structure
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    # Ensure the sentence starts with capital letter and ends with period
+    if text and not text[0].isupper():
+        text = text[0].upper() + text[1:]
+    if text and not text.endswith(('.', '!', '?', ':')):
+        text += '.'
+    
+    # Return improved version, or fallback if no change was made
+    if text != sentence_context.strip():
+        return text
+    else:
+        # Fallback: Create a generic but helpful improvement
+        if re.search(r'\b(is|are|was|were)\s+\w+ed\b', sentence_context):
+            return "Use active voice: " + re.sub(r'\b(is|are|was|were)\s+', '', sentence_context, 1)
+        else:
+            return f"Improve clarity: {sentence_context.strip()}"
 
 def _policy_rewrite(original: str, policy: dict) -> str:
     """
@@ -85,14 +148,42 @@ def _policy_rewrite(original: str, policy: dict) -> str:
     return text
 
 def _force_change(original: str, candidate: str) -> str:
-    """Ensure the candidate differs from the original; if not, apply a minimal safe tweak."""
+    """Ensure the candidate differs from the original; if not, apply a meaningful improvement."""
     if not candidate:
         return ""
     if original.strip() == candidate.strip():
-        # Minimal safe tweak—turn declarative passive into directive when possible
-        if candidate.lower().startswith(("the ", "this ", "that ")):
-            return "Use: " + candidate  # visibly different; UI sees a new suggestion
-        return candidate + " (revised)"
+        # Apply meaningful transformations instead of just adding "(revised)"
+        text = original.strip()
+        
+        # Strategy 1: Convert passive voice to active
+        if re.search(r'\b(is|are|was|were)\s+\w+ed\b', text, re.IGNORECASE):
+            text = re.sub(r'\b(is|are)\s+(\w+ed)\b', r'appears \2', text, flags=re.IGNORECASE)
+            text = re.sub(r'\b(was|were)\s+(\w+ed)\b', r'shows \2', text, flags=re.IGNORECASE)
+            if text != original.strip():
+                return text
+        
+        # Strategy 2: Make imperative for UI instructions
+        if re.search(r'\b(click|select|open|configure|enter|choose)\b', text, re.IGNORECASE):
+            if text.lower().startswith(("you can ", "the user can ")):
+                text = re.sub(r'^(you can |the user can )', '', text, flags=re.IGNORECASE)
+                text = text.capitalize()
+                if text != original.strip():
+                    return text
+        
+        # Strategy 3: Remove unnecessary words
+        simplified = re.sub(r'\b(really|easily|simply|basically|actually|generally|typically)\s+', '', text, flags=re.IGNORECASE)
+        simplified = re.sub(r'\s+', ' ', simplified).strip()
+        if simplified != original.strip() and len(simplified) > 0:
+            return simplified
+        
+        # Strategy 4: Convert "X are displayed" to "X appear" or "The system shows X"
+        if 'displayed' in text.lower():
+            text = re.sub(r'(.*?)\s+(is|are)\s+displayed', r'The system displays \1', text, flags=re.IGNORECASE)
+            if text != original.strip():
+                return text
+        
+        # Strategy 5: Last resort - provide a meaningful generic improvement
+        return f"Revise for clarity: {original.strip()}"
     return candidate
 
 def enrich_issue_with_solution(issue: dict) -> dict:

@@ -61,14 +61,19 @@ class AISuggestionEngine:
                 enriched  = enrich_issue_with_solution(issue)
 
                 original  = (issue.get("context") or issue.get("sentence") or "").strip()
-                pr        = _force_change(original, (enriched.get("proposed_rewrite") or "").strip())
+                pr_raw    = (enriched.get("proposed_rewrite") or "").strip()
                 ai_answer = (enriched.get("solution_text") or "").strip()
                 sources   = enriched.get("sources", [])
                 method    = enriched.get("method", "rag_policy")  # 'rag_rewrite' if hits; else 'rag_policy'
 
-                # Absolute last resort: if pr is still empty, synthesize one deterministically
-                if not pr:
-                    pr = _force_change(original, "")
+                # Only force change if we have a meaningful candidate
+                if pr_raw and pr_raw != original:
+                    pr = pr_raw
+                elif pr_raw:  # pr_raw exists but equals original
+                    pr = _force_change(original, pr_raw)
+                else:
+                    # Generate a meaningful fallback using the feedback
+                    pr = self._generate_sentence_rewrite(feedback_text, original, option_number)
 
                 return {
                     "suggestion": pr,                       # ✅ always a changed rewrite
