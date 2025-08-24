@@ -51,7 +51,7 @@ def ingest_jsonl_file(jsonl_path):
         metadatas.append(meta)
 
 # Ingest both files (or just one if you want)
-for jsonl_file in ["rules_split_sentences.jsonl", "rules_passive_voice.jsonl", "rule_check_adverb.jsonl"]:
+for jsonl_file in ["rules_split_sentences.jsonl", "rules_passive_voice.jsonl", "rules_adverbs.jsonl"]:
     ingest_jsonl_file(jsonl_file)
 
 # Upsert (add or update)
