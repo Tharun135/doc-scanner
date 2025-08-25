@@ -226,7 +226,7 @@ class AISuggestionEngine:
         def _cleanup(s: str) -> str:
             s = re.sub(r"\s+", " ", s).strip()
             s = s.replace(" ,", ",").replace(" .", ".").replace(" : ", ": ")
-            # Capitalize start; ensure one trailing period only if not ending with colon
+            # Ensure one trailing period only if not ending with colon
             if s and s[-1] not in ".:!?":
                 s += "."
             return s
