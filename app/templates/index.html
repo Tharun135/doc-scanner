@@ -1026,21 +1026,37 @@
                             <h4>Document Content</h4>
                         </div>
                         <div class="feedback-section">
-                            <!-- Tab Container -->
+                            <!-- Tab Container for multi-scope findings -->
                             <div class="tab-container">
                                 <div class="tab-header">
-                                    <button class="tab-button active" onclick="switchTab('feedback')">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        Issues
+                                    <button class="tab-button active" onclick="switchTab('sentence-findings')">
+                                        <i class="fas fa-font me-1"></i>
+                                        Sentence
+                                    </button>
+                                    <button class="tab-button" onclick="switchTab('paragraph-findings')">
+                                        <i class="fas fa-paragraph me-1"></i>
+                                        Paragraph
+                                    </button>
+                                    <button class="tab-button" onclick="switchTab('document-findings')">
+                                        <i class="fas fa-file-alt me-1"></i>
+                                        Document
                                     </button>
                                     <button class="tab-button" onclick="switchTab('ai-feedback')">
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
                                 </div>
-                                <div class="tab-content active" id="feedbackContent">
-                                    <h5 class="mb-3">Document Issues</h5>
-                                    <!-- Feedback content will be populated here -->
+                                <div class="tab-content active" id="sentence-findings">
+                                    <h5 class="mb-3">Sentence Findings</h5>
+                                    <div id="feedbackContent"></div>
+                                </div>
+                                <div class="tab-content" id="paragraph-findings">
+                                    <h5 class="mb-3">Paragraph Findings</h5>
+                                    <div id="paragraphFeedbackContent"></div>
+                                </div>
+                                <div class="tab-content" id="document-findings">
+                                    <h5 class="mb-3">Document Findings</h5>
+                                    <div id="documentFeedbackContent"></div>
                                 </div>
                                 <div class="tab-content" id="aiFeedbackContent">
                                     <h5 class="mb-3">AI-Powered Suggestions</h5>
@@ -2018,21 +2034,23 @@
             }
         });
         
-        // Tab switching functionality
+        // Tab switching functionality (multi-scope)
         function switchTab(tabName) {
             // Update tab buttons
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            
-            if (tabName === 'feedback') {
-                document.getElementById('feedbackContent').classList.add('active');
+            if (tabName === 'sentence-findings') {
+                document.getElementById('sentence-findings').classList.add('active');
+            } else if (tabName === 'paragraph-findings') {
+                document.getElementById('paragraph-findings').classList.add('active');
+            } else if (tabName === 'document-findings') {
+                document.getElementById('document-findings').classList.add('active');
             } else if (tabName === 'ai-feedback') {
                 document.getElementById('aiFeedbackContent').classList.add('active');
             }
@@ -3062,19 +3080,23 @@
             }, 3000);
         }
 
-        // Enhanced content rendering with sentence highlighting
-        function renderContent(content, sentences) {
+        // Enhanced content rendering with sentence, paragraph, and document findings
+        function renderContent(content, sentences, findings = null) {
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
+            const paragraphFeedbackContent = document.getElementById('paragraphFeedbackContent');
+            const documentFeedbackContent = document.getElementById('documentFeedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
-            
+
             // Update dashboard metrics
             updateDocumentMetrics(content, sentences);
-            
+
             // Clear previous content
             documentContent.innerHTML = '<h4>Document Content</h4>';
-            feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
-            
+            feedbackContent.innerHTML = '';
+            paragraphFeedbackContent.innerHTML = '';
+            documentFeedbackContent.innerHTML = '';
+
             // Reset AI feedback tab
             aiFeedbackContent.innerHTML = `
                 <h5 class="mb-3">AI-Powered Suggestions</h5>
@@ -3083,62 +3105,37 @@
                     <p>Click the AI icon next to any issue to get intelligent suggestions</p>
                 </div>
             `;
-            
+
             // Clear AI feedback data
             aiFeedbackData = {};
-            
-            console.log('Processing sentences:', sentences.length);
-            console.log('Sentences data:', sentences);
-            
+
             // Create enhanced HTML content with highlighted sentences
             const originalContentDiv = document.createElement('div');
             originalContentDiv.className = 'original-content mt-3';
-            
-            // Process the HTML content to add sentence highlighting
             const enhancedContent = addSentenceHighlighting(content, sentences);
             originalContentDiv.innerHTML = enhancedContent;
-            
-            // Store sentences for reference
             window.currentSentences = sentences;
-            
-            // Add the enhanced content to document
             documentContent.appendChild(originalContentDiv);
-            
-            // Add click handlers to the newly created sentence spans
-            setTimeout(() => {
-                addContentSentenceHandlers();
-            }, 100);
-            
-            // Process sentences with AI enhancement - in document order
+            setTimeout(() => { addContentSentenceHandlers(); }, 100);
+
+            // Render sentence-level findings (default)
             let feedbackCount = 0;
             const feedbackPromises = [];
-            
-            // Collect all feedback rendering promises to maintain order
             sentences.forEach((sentenceData, index) => {
-                console.log(`Sentence ${index}:`, sentenceData);
                 if (sentenceData.feedback && sentenceData.feedback.length > 0) {
                     feedbackCount++;
-                    console.log(`Rendering feedback for sentence ${index}:`, sentenceData.feedback);
-                    // Store the promise with the index to maintain order
                     feedbackPromises.push({
                         index: index,
                         promise: renderFeedbackWithAI(sentenceData.feedback, sentenceData.sentence, index)
                     });
                 }
             });
-            
-            // Wait for all feedback to be rendered in order
             if (feedbackPromises.length > 0) {
-                // Process feedback in sequential order
                 feedbackPromises.sort((a, b) => a.index - b.index);
-                
-                // Execute promises sequentially to maintain order
                 feedbackPromises.reduce((prevPromise, current) => {
                     return prevPromise.then(() => current.promise);
                 }, Promise.resolve());
             }
-            
-            // If no feedback found, show a message
             if (feedbackCount === 0) {
                 const noIssuesDiv = document.createElement('div');
                 noIssuesDiv.className = 'alert alert-success mt-3';
@@ -3146,37 +3143,45 @@
                     <div class="d-flex align-items-center">
                         <i class="fas fa-check-circle me-2"></i>
                         <div>
-                            <strong>Great work!</strong> No issues detected in your document.
-                            <br><small>The AI analysis found your writing to be clear and well-structured.</small>
+                            <strong>Great work!</strong> No sentence-level issues detected.
                         </div>
                     </div>
                 `;
                 feedbackContent.appendChild(noIssuesDiv);
-                
-                // Show document quality summary
-                const qualitySummary = document.createElement('div');
-                qualitySummary.className = 'card mt-3';
-                qualitySummary.style.background = 'rgba(255, 255, 255, 0.1)';
-                qualitySummary.innerHTML = `
-                    <div class="card-header">
-                        <h6><i class="fas fa-chart-line"></i> Document Quality Summary</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <small>Total Sentences:</small>
-                                <div class="h5">${sentences.length}</div>
-                            </div>
-                            <div class="col-6">
-                                <small>Quality Score:</small>
-                                <div class="h5">✅ Excellent</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                feedbackContent.appendChild(qualitySummary);
             }
-            
+
+            // Render paragraph-level findings
+            let paragraphFindings = (findings && findings.paragraphs) ? findings.paragraphs : (window.lastFindings ? window.lastFindings.paragraphs : []);
+            if (paragraphFindings && paragraphFindings.length > 0) {
+                paragraphFindings.forEach((item, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'feedback-item p-3 mb-2 border-start';
+                    div.innerHTML = `<strong>Type:</strong> ${item.type || ''}<br><strong>Text:</strong> ${escapeHtml(item.text || item.context || '')}`;
+                    paragraphFeedbackContent.appendChild(div);
+                });
+            } else {
+                const noParaDiv = document.createElement('div');
+                noParaDiv.className = 'alert alert-success mt-3';
+                noParaDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-check-circle me-2"></i><div><strong>No paragraph-level issues detected.</strong></div></div>`;
+                paragraphFeedbackContent.appendChild(noParaDiv);
+            }
+
+            // Render document-level findings
+            let docFindings = (findings && findings.doc) ? findings.doc : (window.lastFindings ? window.lastFindings.doc : []);
+            if (docFindings && docFindings.length > 0) {
+                docFindings.forEach((item, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'feedback-item p-3 mb-2 border-start';
+                    div.innerHTML = `<strong>Type:</strong> ${item.type || ''}<br><strong>Details:</strong> ${escapeHtml(JSON.stringify(item))}`;
+                    documentFeedbackContent.appendChild(div);
+                });
+            } else {
+                const noDocDiv = document.createElement('div');
+                noDocDiv.className = 'alert alert-success mt-3';
+                noDocDiv.innerHTML = `<div class="d-flex align-items-center"><i class="fas fa-check-circle me-2"></i><div><strong>No document-level issues detected.</strong></div></div>`;
+                documentFeedbackContent.appendChild(noDocDiv);
+            }
+
             // Update smart insights based on document analysis
             updateSmartInsightsFromDocument(sentences);
         }

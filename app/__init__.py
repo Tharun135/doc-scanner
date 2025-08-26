@@ -52,7 +52,11 @@ def create_app():
         
         @minimal_agent_bp.route('/analyze', methods=['POST'])
         def analyze_document():
-            return jsonify({"message": "Analysis complete", "issues": []})
+            from paragraph_document_analysis_template import analyze_document as analyze_doc
+            data = request.get_json(force=True)
+            doc_text = data.get('text', '')
+            findings = analyze_doc(doc_text)
+            return jsonify({"message": "Analysis complete", "findings": findings})
             
         app.register_blueprint(minimal_agent_bp)
         print("✅ Minimal agent endpoints created!")

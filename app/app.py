@@ -463,70 +463,36 @@ def upload_file():
         if progress_tracker and room_id:
             progress_tracker.update_stage(room_id, 2, "Identifying sentence boundaries and structure...")
         
-        # Store the original HTML content for highlighting
-        # Extract sentences that preserve HTML structure while also having plain text for analysis
-        sentences = extract_sentences_with_html_preservation(html_content)
-        
+
         # Use BeautifulSoup to extract plain text for RAG context
         soup = BeautifulSoup(html_content, "html.parser")
         plain_text = soup.get_text(separator="\n")
-        
-        # Store the document content for RAG context
         current_document_content = plain_text
 
         # Stage 4: Analyzing with Rules (80%)
         if progress_tracker and room_id:
             progress_tracker.update_stage(room_id, 3, "Applying grammar, style, and readability rules...")
-        
+
+        # --- Use new multi-level analysis ---
+        from paragraph_document_analysis_template import analyze_document
+        findings = analyze_document(plain_text)
+
+        # For backward compatibility, build sentence_data for UI
         sentence_data = []
-        total_sentences = len(sentences)
-        
-        for index, sent in enumerate(sentences):
-            # Update substep progress for analysis
-            if progress_tracker and room_id and total_sentences > 0:
-                substep_progress = int(75 + (index / total_sentences) * 5)  # 75-80% range
-                progress_tracker.update_progress(room_id, substep_progress, 
-                    f"Analyzing sentence {index + 1} of {total_sentences}...")
-            
-            # Use the plain text version for analysis
-            plain_text_sentence = sent.text
-            feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
-            
-            # Add sentence index to each feedback item for UI linking
-            enhanced_feedback = []
-            for item in feedback:
-                if isinstance(item, dict):
-                    item['sentence_index'] = index
-                    enhanced_feedback.append(item)
-                else:
-                    enhanced_feedback.append({
-                        "text": plain_text_sentence,
-                        "start": 0,
-                        "end": len(plain_text_sentence),
-                        "message": str(item),
-                        "sentence_index": index
-                    })
-            
+        for idx, item in enumerate(findings.get("sentences", [])):
             sentence_data.append({
-                "sentence": plain_text_sentence,  # Plain text for analysis
-                "html_sentence": getattr(sent, 'html_fragment', plain_text_sentence),  # HTML version for highlighting
-                "sentence_index": index,
-                "feedback": enhanced_feedback,
-                "readability_scores": readability_scores,
-                "quality_score": quality_score,
-                "start": sent.start_char,
-                "end": sent.end_char
+                "sentence": item.get("text", item.get("sentence", "")),
+                "feedback": [item],
+                "sentence_index": idx
             })
 
-        total_sentences = len(sentence_data)
-        total_errors = sum(len(s['feedback']) for s in sentence_data)
-        
         # Stage 5: Generating Report (100%)
         if progress_tracker and room_id:
             progress_tracker.update_stage(room_id, 4, "Compiling insights and quality metrics...")
-        
-        quality_index = calculate_quality_index(total_sentences, total_errors)
 
+        total_sentences = len(sentence_data)
+        total_errors = sum(len(s['feedback']) for s in sentence_data)
+        quality_index = calculate_quality_index(total_sentences, total_errors)
         aggregated_report = {
             "totalSentences": total_sentences,
             "totalWords": len(plain_text.split()),
@@ -539,12 +505,13 @@ def upload_file():
             progress_tracker.complete_session(room_id, success=True, 
                 final_message=f"Analysis complete! Found {total_errors} issues in {total_sentences} sentences.")
 
-        # Return the result
+        # Return the result, including all findings
         return jsonify({
-            "content": html_content,  # For display
+            "content": html_content,
             "sentences": sentence_data,
+            "findings": findings,
             "report": aggregated_report,
-            "room_id": room_id  # Include room_id in response
+            "room_id": room_id
         })
 
     except Exception as e:
