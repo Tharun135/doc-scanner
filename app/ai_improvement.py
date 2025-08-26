@@ -254,15 +254,20 @@ class AISuggestionEngine:
                         or re.search(r"(?i)\b(is|are|was|were)\s+[a-z]+ed\b|\bby the\b", text)
         if passive_issue:
             s = text
-            # Common passive → active transforms
-            s = re.sub(r"(?i)\bis displayed\b", "appears", s)
-            s = re.sub(r"(?i)\bare displayed\b", "appear", s)
-            s = re.sub(r"(?i)\bis shown\b", "appears", s)
-            s = re.sub(r"(?i)\bare shown\b", "appear", s)
-            s = re.sub(r"(?i)\bis generated\b", "generates", s)
-            s = re.sub(r"(?i)\bare generated\b", "generate", s)
-            s = re.sub(r"(?i)\bis created\b", "creates", s)
-            s = re.sub(r"(?i)\bare created\b", "create", s)
+            # Try to convert passive to active with 'You' as subject
+            # e.g. 'The form can be downloaded' -> 'You can download the form'
+            s = re.sub(r"(?i)the ([^ ]+) can be ([a-z]+ed)", r"You can \2 the \1", s)
+            s = re.sub(r"(?i)the ([^ ]+) is ([a-z]+ed)", r"You \2 the \1", s)
+            s = re.sub(r"(?i)the ([^ ]+) was ([a-z]+ed)", r"You \2 the \1", s)
+            s = re.sub(r"(?i)the ([^ ]+) were ([a-z]+ed)", r"You \2 the \1", s)
+            s = re.sub(r"(?i)can be ([a-z]+ed) by the user", r"You can \1", s)
+            s = re.sub(r"(?i)is ([a-z]+ed) by the user", r"You \1", s)
+            s = re.sub(r"(?i)was ([a-z]+ed) by the user", r"You \1", s)
+            # Fallbacks for common passive patterns
+            s = re.sub(r"(?i)can be ([a-z]+ed)", r"You can \1", s)
+            s = re.sub(r"(?i)is ([a-z]+ed)", r"You \1", s)
+            s = re.sub(r"(?i)was ([a-z]+ed)", r"You \1", s)
+            s = re.sub(r"(?i)were ([a-z]+ed)", r"You \1", s)
 
             # Imperative for UI introductions that end with ":"
             keep_colon = s.rstrip().endswith(":")
@@ -276,7 +281,7 @@ class AISuggestionEngine:
             if not _differs(text, out):
                 # Force imperative if still same
                 out = _cleanup(re.sub(r"(?i)^the\b", "", text))
-            return f"{out}\nWHY: Converts passive phrasing to active or imperative voice."
+            return f"{out}\nWHY: Converts passive phrasing to active voice using 'You' as the subject."
 
         # 3) Long sentence → split
         long_issue = ("long sentence" in feedback_text.lower()) or (len(text.split()) >= 22)
