@@ -1027,3 +1027,184 @@ def debug_ai():
     debug_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'debug_ai_frontend.html')
     with open(debug_file_path, 'r', encoding='utf-8') as f:
         return f.read()
+
+# ============================================================================
+# REWRITER INTEGRATION - New AI-powered rewriting endpoints
+# ============================================================================
+
+@main.route('/rewrite-suggestion', methods=['POST'])
+def get_rewrite_suggestion():
+    """Enhanced endpoint that provides AI rewriting suggestions for any text."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No JSON data provided"}), 400
+        
+        text = data.get('text') or data.get('sentence', '')
+        mode = data.get('mode', 'balanced')
+        feedback = data.get('feedback', '')  # Optional feedback context
+        
+        if not text:
+            return jsonify({"success": False, "error": "No text provided"}), 400
+        
+        from .rewriter.ollama_rewriter import get_rewriter
+        rewriter = get_rewriter()
+        
+        # Determine mode based on feedback if provided
+        if feedback and mode == 'balanced':
+            feedback_lower = feedback.lower()
+            if any(term in feedback_lower for term in ['complex', 'difficult', 'hard to read']):
+                mode = 'simplicity'
+            elif any(term in feedback_lower for term in ['unclear', 'ambiguous', 'confusing']):
+                mode = 'clarity'
+        
+        result = rewriter.rewrite_sentence(text, mode)
+        
+        # Format response compatible with existing UI expectations
+        if result.get("success"):
+            rewritten_text = result.get("rewritten", text)
+            readability_scores = result.get("scores", {})
+            
+            # Calculate improvement
+            original_scores = readability_scores.get("original", {})
+            rewritten_scores = readability_scores.get("rewritten", {})
+            improvement_note = ""
+            
+            if original_scores and rewritten_scores:
+                original_ease = original_scores.get("flesch_reading_ease", 0)
+                rewritten_ease = rewritten_scores.get("flesch_reading_ease", 0)
+                improvement = rewritten_ease - original_ease
+                
+                if improvement > 5:
+                    improvement_note = f" (Readability improved by {improvement:.1f} points)"
+                elif improvement < -5:
+                    improvement_note = f" (Note: Readability decreased by {abs(improvement):.1f} points)"
+            
+            return jsonify({
+                "suggestion": rewritten_text,
+                "ai_answer": f"AI-enhanced rewrite using {mode} mode{improvement_note}",
+                "confidence": "high",
+                "method": "ollama_rewriter",
+                "rewriting": {
+                    "available": True,
+                    "mode_used": mode,
+                    "readability_scores": readability_scores
+                },
+                "sources": [{
+                    "rule_id": "rewriter_v1",
+                    "title": f"AI Rewriting ({mode} mode)",
+                    "similarity": 0.95
+                }]
+            })
+        else:
+            logger.error(f"Rewriting failed: {result.get('error', 'Unknown error')}")
+            return jsonify({
+                "success": False,
+                "error": result.get("error", "Rewriting failed"),
+                "suggestion": text,  # Return original text
+                "ai_answer": "Rewriting service temporarily unavailable"
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in rewrite suggestion endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "suggestion": data.get('text', '') if 'data' in locals() else '',
+            "ai_answer": "Error occurred during rewriting"
+        })
+
+@main.route('/document-rewrite', methods=['POST'])
+def rewrite_full_document():
+    """Endpoint to rewrite entire document content."""
+    global current_document_content
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No JSON data provided"}), 400
+        
+        content = data.get('content', current_document_content)
+        mode = data.get('mode', 'balanced')
+        
+        if not content:
+            return jsonify({"success": False, "error": "No content available for rewriting"}), 400
+        
+        from .rewriter.ollama_rewriter import get_rewriter
+        rewriter = get_rewriter()
+        
+        result = rewriter.rewrite_document(content, mode)
+        
+        if result.get("success"):
+            return jsonify({
+                "success": True,
+                "original_content": content,
+                "rewritten_content": result.get("rewritten_text", content),
+                "improvements": result.get("improvements", {}),
+                "readability_scores": result.get("scores", {}),
+                "metadata": result.get("metadata", {}),
+                "mode": mode
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": result.get("error", "Document rewriting failed"),
+                "original_content": content,
+                "rewritten_content": content
+            })
+            
+    except Exception as e:
+        logger.error(f"Error in document rewrite endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })
+
+@main.route('/readability-analysis', methods=['POST'])
+def get_readability_analysis():
+    """Endpoint for detailed readability analysis."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "No JSON data provided"}), 400
+        
+        text = data.get('text', '')
+        if not text:
+            return jsonify({"success": False, "error": "No text provided"}), 400
+        
+        from .rewriter.ollama_rewriter import get_rewriter
+        rewriter = get_rewriter()
+        
+        scores = rewriter.calculate_readability(text)
+        
+        # Generate recommendations
+        recommendations = []
+        flesch_ease = scores.get("flesch_reading_ease", 50)
+        flesch_grade = scores.get("flesch_kincaid_grade", 10)
+        
+        if flesch_ease < 30:
+            recommendations.append("Consider simplifying complex sentences")
+        if flesch_ease < 50:
+            recommendations.append("Try using shorter sentences and simpler words")  
+        if flesch_grade > 12:
+            recommendations.append("Content may be too complex for general audience")
+        if flesch_grade > 16:
+            recommendations.append("Consider breaking down technical concepts")
+        
+        if not recommendations:
+            recommendations.append("Readability is within acceptable range")
+        
+        return jsonify({
+            "success": True,
+            "text_length": len(text),
+            "word_count": len(text.split()),
+            "scores": scores,
+            "recommendations": recommendations
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in readability analysis endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        })

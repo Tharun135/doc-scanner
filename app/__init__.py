@@ -15,6 +15,14 @@ def create_app():
     from .app import main as main_blueprint
     app.register_blueprint(main_blueprint)
     
+    # Register rewriter blueprint for AI-powered document rewriting
+    try:
+        from .rewriter_routes import rewriter_bp
+        app.register_blueprint(rewriter_bp)
+        print("✅ Rewriter blueprint loaded successfully!")
+    except ImportError as e:
+        print(f"Warning: Could not import rewriter blueprint: {e}")
+    
     # Add SocketIO event handlers
     @socketio.on('connect')
     def handle_connect():

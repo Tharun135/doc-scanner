@@ -885,6 +885,120 @@
             border-color: var(--secondary-color);
             background: rgba(42, 155, 170, 0.2);
         }
+
+        /* Rewriter Styles */
+        .rewriter-controls {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .document-version {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            height: 400px;
+            overflow-y: auto;
+        }
+
+        .document-version.original {
+            border-left: 3px solid #6c757d;
+        }
+
+        .document-version.rewritten {
+            border-left: 3px solid #28a745;
+        }
+
+        .version-content {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .readability-metric {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 0.75rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .readability-score {
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .readability-score.excellent { color: #28a745; }
+        .readability-score.good { color: #17a2b8; }
+        .readability-score.fair { color: #ffc107; }
+        .readability-score.poor { color: #dc3545; }
+
+        .sentence-rewrite-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .original-sentence {
+            background: rgba(108, 117, 125, 0.2);
+            padding: 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid #6c757d;
+        }
+
+        .rewritten-sentence {
+            background: rgba(40, 167, 69, 0.2);
+            padding: 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+
+        .rewriter-loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .rewriter-loading.active {
+            display: block;
+        }
+
+        .comparison-stats {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .improvement-indicator {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 0.5rem;
+        }
+
+        .improvement-indicator.positive {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .improvement-indicator.negative {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .improvement-indicator.neutral {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -1037,6 +1151,10 @@
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
+                                    <button class="tab-button" onclick="switchTab('rewriter')">
+                                        <i class="fas fa-edit me-1"></i>
+                                        Rewrite Document
+                                    </button>
                                 </div>
                                 <div class="tab-content active" id="feedbackContent">
                                     <h5 class="mb-3">Document Issues</h5>
@@ -1047,6 +1165,138 @@
                                     <div class="text-muted text-center py-4">
                                         <i class="fas fa-robot fa-2x mb-2"></i>
                                         <p>Click the AI icon next to any issue to get intelligent suggestions</p>
+                                    </div>
+                                </div>
+                                <div class="tab-content" id="rewriterContent">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-edit me-2"></i>
+                                        Document Rewriter
+                                    </h5>
+                                    
+                                    <!-- Rewriter Controls -->
+                                    <div class="rewriter-controls mb-4">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-bold">
+                                                    <i class="fas fa-cog me-1"></i>
+                                                    Rewriting Mode:
+                                                </label>
+                                                <select class="form-select" id="rewritingMode">
+                                                    <option value="balanced">Balanced - Improve readability while maintaining style</option>
+                                                    <option value="clarity">Clarity - Maximize clarity and understanding</option>
+                                                    <option value="simplicity">Simplicity - Use simpler words and shorter sentences</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label fw-bold">
+                                                    <i class="fas fa-bullseye me-1"></i>
+                                                    Target Audience:
+                                                </label>
+                                                <select class="form-select" id="targetAudience">
+                                                    <option value="general">General audience</option>
+                                                    <option value="technical">Technical professionals</option>
+                                                    <option value="academic">Academic readers</option>
+                                                    <option value="business">Business stakeholders</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <button class="btn btn-primary me-2" onclick="rewriteDocument()">
+                                                    <i class="fas fa-magic"></i> Rewrite Entire Document
+                                                </button>
+                                                <button class="btn btn-outline-primary me-2" onclick="getReadabilityAnalysis()">
+                                                    <i class="fas fa-chart-line"></i> Analyze Readability
+                                                </button>
+                                                <button class="btn btn-outline-secondary" onclick="clearRewriterResults()">
+                                                    <i class="fas fa-trash"></i> Clear Results
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Results Container -->
+                                    <div id="rewriterResults" style="display: none;">
+                                        <!-- Readability Analysis -->
+                                        <div id="readabilityAnalysis" class="mb-4" style="display: none;">
+                                            <h6 class="mb-3">
+                                                <i class="fas fa-chart-bar me-2"></i>
+                                                Readability Analysis
+                                            </h6>
+                                            <div class="row" id="readabilityStats">
+                                                <!-- Populated by JavaScript -->
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Document Comparison -->
+                                        <div id="documentComparison" class="mb-4" style="display: none;">
+                                            <h6 class="mb-3">
+                                                <i class="fas fa-balance-scale me-2"></i>
+                                                Original vs Rewritten Document
+                                            </h6>
+                                            
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="document-version original">
+                                                        <div class="version-header">
+                                                            <h6 class="text-muted mb-2">
+                                                                <i class="fas fa-file-alt me-1"></i>
+                                                                Original Document
+                                                            </h6>
+                                                        </div>
+                                                        <div class="version-content" id="originalDocument">
+                                                            <!-- Original content -->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="document-version rewritten">
+                                                        <div class="version-header">
+                                                            <h6 class="text-success mb-2">
+                                                                <i class="fas fa-edit me-1"></i>
+                                                                Rewritten Document
+                                                            </h6>
+                                                        </div>
+                                                        <div class="version-content" id="rewrittenDocument">
+                                                            <!-- Rewritten content -->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Action Buttons -->
+                                            <div class="text-center mt-3">
+                                                <button class="btn btn-success me-2" onclick="acceptRewrittenVersion()">
+                                                    <i class="fas fa-check"></i> Accept Rewritten Version
+                                                </button>
+                                                <button class="btn btn-outline-primary me-2" onclick="downloadRewritten()">
+                                                    <i class="fas fa-download"></i> Download Rewritten
+                                                </button>
+                                                <button class="btn btn-outline-secondary" onclick="copyRewrittenToClipboard()">
+                                                    <i class="fas fa-copy"></i> Copy to Clipboard
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Individual Sentence Rewrites -->
+                                        <div id="sentenceRewrites" style="display: none;">
+                                            <h6 class="mb-3">
+                                                <i class="fas fa-list me-2"></i>
+                                                Sentence-by-Sentence Improvements
+                                            </h6>
+                                            <div id="sentenceRewritesList">
+                                                <!-- Populated by JavaScript -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Default state -->
+                                    <div id="rewriterPlaceholder" class="text-muted text-center py-4">
+                                        <i class="fas fa-edit fa-2x mb-3"></i>
+                                        <h6>Intelligent Document Rewriting</h6>
+                                        <p>Improve your document's readability and writing style using AI-powered rewriting.</p>
+                                        <p class="small">Select a rewriting mode and click "Rewrite Entire Document" to get started.</p>
                                     </div>
                                 </div>
                             </div>
@@ -2035,7 +2285,438 @@
                 document.getElementById('feedbackContent').classList.add('active');
             } else if (tabName === 'ai-feedback') {
                 document.getElementById('aiFeedbackContent').classList.add('active');
+            } else if (tabName === 'rewriter') {
+                document.getElementById('rewriterContent').classList.add('active');
             }
+        }
+        
+        // Global variables for rewriter functionality
+        let currentOriginalContent = '';
+        let currentRewrittenContent = '';
+        let currentReadabilityAnalysis = null;
+
+        // Document Rewriter Functions
+        async function rewriteDocument() {
+            try {
+                // Get current document content
+                const documentContent = document.getElementById('documentContent');
+                const originalContentDiv = documentContent.querySelector('.original-content');
+                
+                if (!originalContentDiv) {
+                    showErrorToast('No document loaded. Please analyze a document first.');
+                    return;
+                }
+
+                // Extract text content from the original document
+                const originalText = originalContentDiv.innerText || originalContentDiv.textContent || '';
+                
+                if (!originalText.trim()) {
+                    showErrorToast('Document appears to be empty. Please upload a document with content.');
+                    return;
+                }
+
+                currentOriginalContent = originalText;
+                
+                // Get rewriting parameters
+                const rewritingMode = document.getElementById('rewritingMode').value;
+                const targetAudience = document.getElementById('targetAudience').value;
+                
+                // Show loading state
+                showRewriterLoading('Rewriting document with AI...');
+                
+                // Prepare request data
+                const requestData = {
+                    content: originalText,
+                    mode: rewritingMode,
+                    audience: targetAudience,
+                    preserve_structure: true
+                };
+                
+                console.log('Rewriting document with params:', requestData);
+                
+                // Call the rewriter endpoint
+                const response = await fetch('/document-rewrite', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                hideRewriterLoading();
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Rewriter response:', result);
+                    
+                    if (result.rewritten_content) {
+                        currentRewrittenContent = result.rewritten_content;
+                        displayRewriterResults(result);
+                        showSuccessToast('Document rewritten successfully!');
+                    } else {
+                        showErrorToast('No rewritten content returned from server.');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    console.error('Rewriter API error:', errorText);
+                    showErrorToast(`Error rewriting document: ${response.status} ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                hideRewriterLoading();
+                console.error('Error in rewriteDocument:', error);
+                showErrorToast('Network error while rewriting document: ' + error.message);
+            }
+        }
+
+        async function getReadabilityAnalysis() {
+            try {
+                // Get current document content
+                const documentContent = document.getElementById('documentContent');
+                const originalContentDiv = documentContent.querySelector('.original-content');
+                
+                if (!originalContentDiv) {
+                    showErrorToast('No document loaded. Please analyze a document first.');
+                    return;
+                }
+
+                const originalText = originalContentDiv.innerText || originalContentDiv.textContent || '';
+                
+                if (!originalText.trim()) {
+                    showErrorToast('Document appears to be empty.');
+                    return;
+                }
+                
+                // Show loading state
+                showRewriterLoading('Analyzing document readability...');
+                
+                // Call the readability analysis endpoint
+                const response = await fetch('/readability-analysis', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        content: originalText
+                    })
+                });
+                
+                hideRewriterLoading();
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Readability analysis:', result);
+                    
+                    currentReadabilityAnalysis = result;
+                    displayReadabilityAnalysis(result);
+                    showSuccessToast('Readability analysis complete!');
+                } else {
+                    const errorText = await response.text();
+                    console.error('Readability API error:', errorText);
+                    showErrorToast(`Error analyzing readability: ${response.status} ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                hideRewriterLoading();
+                console.error('Error in getReadabilityAnalysis:', error);
+                showErrorToast('Network error during readability analysis: ' + error.message);
+            }
+        }
+
+        function displayRewriterResults(rewriterResult) {
+            // Show results container and hide placeholder
+            document.getElementById('rewriterResults').style.display = 'block';
+            document.getElementById('rewriterPlaceholder').style.display = 'none';
+            
+            // Display document comparison
+            displayDocumentComparison(rewriterResult);
+            
+            // Display sentence-by-sentence improvements if available
+            if (rewriterResult.sentence_improvements) {
+                displaySentenceRewrites(rewriterResult.sentence_improvements);
+            }
+            
+            // Display readability analysis if available
+            if (rewriterResult.readability_analysis) {
+                currentReadabilityAnalysis = rewriterResult.readability_analysis;
+                displayReadabilityAnalysis(rewriterResult.readability_analysis);
+            }
+        }
+
+        function displayDocumentComparison(rewriterResult) {
+            const comparisonDiv = document.getElementById('documentComparison');
+            const originalDoc = document.getElementById('originalDocument');
+            const rewrittenDoc = document.getElementById('rewrittenDocument');
+            
+            // Set content
+            originalDoc.textContent = currentOriginalContent;
+            rewrittenDoc.textContent = currentRewrittenContent;
+            
+            // Add comparison stats if available
+            if (rewriterResult.improvements) {
+                const improvements = rewriterResult.improvements;
+                let statsHtml = '<div class="comparison-stats">';
+                statsHtml += '<h6 class="mb-2"><i class="fas fa-chart-line me-1"></i>Improvements Summary:</h6>';
+                
+                for (const [metric, data] of Object.entries(improvements)) {
+                    const improvement = data.improvement || 0;
+                    const indicatorClass = improvement > 0 ? 'positive' : improvement < 0 ? 'negative' : 'neutral';
+                    const sign = improvement > 0 ? '+' : '';
+                    
+                    statsHtml += `
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span>${metric.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                            <span>
+                                ${data.before || 'N/A'} → ${data.after || 'N/A'}
+                                <span class="improvement-indicator ${indicatorClass}">${sign}${improvement.toFixed(1)}%</span>
+                            </span>
+                        </div>
+                    `;
+                }
+                
+                statsHtml += '</div>';
+                comparisonDiv.insertAdjacentHTML('afterbegin', statsHtml);
+            }
+            
+            comparisonDiv.style.display = 'block';
+        }
+
+        function displaySentenceRewrites(sentenceImprovements) {
+            const sentenceDiv = document.getElementById('sentenceRewrites');
+            const sentenceList = document.getElementById('sentenceRewritesList');
+            
+            sentenceList.innerHTML = '';
+            
+            sentenceImprovements.forEach((improvement, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'sentence-rewrite-item';
+                
+                itemDiv.innerHTML = `
+                    <div class="mb-3">
+                        <h6 class="mb-2">Sentence ${index + 1}</h6>
+                        
+                        <div class="mb-2">
+                            <label class="text-muted small">Original:</label>
+                            <div class="original-sentence">${improvement.original}</div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <label class="text-success small">Improved:</label>
+                            <div class="rewritten-sentence">${improvement.rewritten}</div>
+                        </div>
+                        
+                        ${improvement.explanation ? `
+                            <div class="text-muted small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                ${improvement.explanation}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                sentenceList.appendChild(itemDiv);
+            });
+            
+            sentenceDiv.style.display = 'block';
+        }
+
+        function displayReadabilityAnalysis(readabilityData) {
+            const analysisDiv = document.getElementById('readabilityAnalysis');
+            const statsDiv = document.getElementById('readabilityStats');
+            
+            statsDiv.innerHTML = '';
+            
+            // Define readability metrics with their interpretations
+            const metrics = [
+                { key: 'flesch_reading_ease', label: 'Flesch Reading Ease', range: [0, 100], higher_better: true },
+                { key: 'flesch_kincaid_grade', label: 'Grade Level', range: [1, 20], higher_better: false },
+                { key: 'automated_readability_index', label: 'Readability Index', range: [1, 20], higher_better: false },
+                { key: 'coleman_liau_index', label: 'Coleman-Liau', range: [1, 20], higher_better: false },
+                { key: 'gunning_fog', label: 'Gunning Fog', range: [1, 20], higher_better: false },
+                { key: 'smog_index', label: 'SMOG Index', range: [1, 20], higher_better: false }
+            ];
+            
+            metrics.forEach(metric => {
+                if (readabilityData[metric.key] !== undefined) {
+                    const value = readabilityData[metric.key];
+                    const scoreClass = getReadabilityScoreClass(value, metric);
+                    
+                    const metricDiv = document.createElement('div');
+                    metricDiv.className = 'col-md-4 col-sm-6 mb-3';
+                    
+                    metricDiv.innerHTML = `
+                        <div class="readability-metric">
+                            <div class="readability-score ${scoreClass}">${value.toFixed(1)}</div>
+                            <div class="small text-muted">${metric.label}</div>
+                        </div>
+                    `;
+                    
+                    statsDiv.appendChild(metricDiv);
+                }
+            });
+            
+            // Add overall statistics
+            if (readabilityData.lexicon_count || readabilityData.sentence_count) {
+                const overallDiv = document.createElement('div');
+                overallDiv.className = 'col-12 mb-3';
+                
+                overallDiv.innerHTML = `
+                    <div class="readability-metric">
+                        <div class="row">
+                            ${readabilityData.lexicon_count ? `
+                                <div class="col-6">
+                                    <div class="readability-score">${readabilityData.lexicon_count}</div>
+                                    <div class="small text-muted">Words</div>
+                                </div>
+                            ` : ''}
+                            ${readabilityData.sentence_count ? `
+                                <div class="col-6">
+                                    <div class="readability-score">${readabilityData.sentence_count}</div>
+                                    <div class="small text-muted">Sentences</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                
+                statsDiv.appendChild(overallDiv);
+            }
+            
+            analysisDiv.style.display = 'block';
+        }
+
+        function getReadabilityScoreClass(value, metric) {
+            // Determine score class based on metric type and value
+            if (metric.key === 'flesch_reading_ease') {
+                if (value >= 90) return 'excellent';
+                if (value >= 80) return 'good';
+                if (value >= 70) return 'fair';
+                return 'poor';
+            } else if (metric.higher_better === false) {
+                // Lower is better (grade levels, complexity indices)
+                if (value <= 8) return 'excellent';
+                if (value <= 10) return 'good';
+                if (value <= 13) return 'fair';
+                return 'poor';
+            } else {
+                return 'good'; // Default
+            }
+        }
+
+        function showRewriterLoading(message) {
+            // Create loading overlay in the rewriter tab
+            const rewriterContent = document.getElementById('rewriterContent');
+            
+            let loadingDiv = rewriterContent.querySelector('.rewriter-loading');
+            if (!loadingDiv) {
+                loadingDiv = document.createElement('div');
+                loadingDiv.className = 'rewriter-loading';
+                rewriterContent.appendChild(loadingDiv);
+            }
+            
+            loadingDiv.innerHTML = `
+                <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                <h5>${message}</h5>
+                <p class="text-muted">This may take a few moments...</p>
+            `;
+            
+            loadingDiv.classList.add('active');
+        }
+
+        function hideRewriterLoading() {
+            const loadingDiv = document.querySelector('.rewriter-loading');
+            if (loadingDiv) {
+                loadingDiv.classList.remove('active');
+            }
+        }
+
+        function clearRewriterResults() {
+            // Hide results container and show placeholder
+            document.getElementById('rewriterResults').style.display = 'none';
+            document.getElementById('rewriterPlaceholder').style.display = 'block';
+            
+            // Clear stored content
+            currentOriginalContent = '';
+            currentRewrittenContent = '';
+            currentReadabilityAnalysis = null;
+            
+            // Clear individual sections
+            document.getElementById('readabilityAnalysis').style.display = 'none';
+            document.getElementById('documentComparison').style.display = 'none';
+            document.getElementById('sentenceRewrites').style.display = 'none';
+            
+            // Clear comparison stats
+            const comparisonDiv = document.getElementById('documentComparison');
+            const statsDiv = comparisonDiv.querySelector('.comparison-stats');
+            if (statsDiv) {
+                statsDiv.remove();
+            }
+        }
+
+        function acceptRewrittenVersion() {
+            if (!currentRewrittenContent) {
+                showErrorToast('No rewritten content available to accept.');
+                return;
+            }
+            
+            // Replace the document content with the rewritten version
+            const documentContent = document.getElementById('documentContent');
+            const originalContentDiv = documentContent.querySelector('.original-content');
+            
+            if (originalContentDiv) {
+                originalContentDiv.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${currentRewrittenContent}</pre>`;
+                showSuccessToast('Rewritten version applied to document!');
+                
+                // Switch back to the document view
+                switchTabProgrammatically('feedback');
+            }
+        }
+
+        function downloadRewritten() {
+            if (!currentRewrittenContent) {
+                showErrorToast('No rewritten content available to download.');
+                return;
+            }
+            
+            // Create downloadable file
+            const blob = new Blob([currentRewrittenContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rewritten-document.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showSuccessToast('Rewritten document downloaded!');
+        }
+
+        function copyRewrittenToClipboard() {
+            if (!currentRewrittenContent) {
+                showErrorToast('No rewritten content available to copy.');
+                return;
+            }
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(currentRewrittenContent).then(() => {
+                showSuccessToast('Rewritten content copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                
+                // Fallback method
+                const textArea = document.createElement('textarea');
+                textArea.value = currentRewrittenContent;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showSuccessToast('Rewritten content copied to clipboard!');
+                } catch (err) {
+                    showErrorToast('Failed to copy content to clipboard.');
+                }
+                document.body.removeChild(textArea);
+            });
         }
         
         // Function to add AI feedback to the AI tab
@@ -2306,11 +2987,14 @@
             });
             
             if (tabName === 'feedback') {
-                document.querySelector('.tab-button:first-child').classList.add('active');
+                document.querySelector('.tab-button:nth-child(1)').classList.add('active');
                 document.getElementById('feedbackContent').classList.add('active');
             } else if (tabName === 'ai-feedback') {
-                document.querySelector('.tab-button:last-child').classList.add('active');
+                document.querySelector('.tab-button:nth-child(2)').classList.add('active');
                 document.getElementById('aiFeedbackContent').classList.add('active');
+            } else if (tabName === 'rewriter') {
+                document.querySelector('.tab-button:nth-child(3)').classList.add('active');
+                document.getElementById('rewriterContent').classList.add('active');
             }
         }
         
