@@ -7,10 +7,10 @@
       "quality": "llama3:8b"
     },
     "timeouts": {
-      "quick": 5,
-      "standard": 10,
-      "high": 15,
-      "maximum": 20
+      "quick": 20,
+      "standard": 45,
+      "high": 60,
+      "maximum": 90
     },
     "generation_options": {
       "quick": {

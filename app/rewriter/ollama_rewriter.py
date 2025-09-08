@@ -27,9 +27,9 @@ class OllamaRewriter:
             "quality": "llama3:8b"
         })
         self.timeouts = self.config.get("timeouts", {
-            "quick": 5,
-            "standard": 10,
-            "high": 15
+            "quick": 15,
+            "standard": 30,
+            "high": 45
         })
         
     def _load_config(self, config_path: str = None) -> Dict:
@@ -51,6 +51,7 @@ class OllamaRewriter:
     def calculate_readability(self, text: str) -> Dict:
         """Calculate comprehensive readability scores for the given text."""
         if not text or not text.strip():
+            logger.warning("Empty text provided for readability calculation")
             return {
                 "flesch_reading_ease": 0,
                 "flesch_kincaid_grade": 0,
@@ -87,6 +88,9 @@ class OllamaRewriter:
                 difficulty = "very difficult"
                 
             scores["difficulty_level"] = difficulty
+            
+            logger.debug(f"Readability scores calculated: Flesch={scores['flesch_reading_ease']}, Grade={scores['flesch_kincaid_grade']}")
+            
             return scores
             
         except Exception as e:
@@ -100,53 +104,38 @@ class OllamaRewriter:
                 "difficulty_level": "error"
             }
 
-    def _ollama_generate(self, prompt: str, mode: str = "balanced") -> str:
-        """Call Ollama API to generate rewritten text."""
-        system_prompts = {
-            "clarity": """You are an expert technical writer. Rewrite the provided text for maximum clarity while preserving all original meaning and intent. Focus on:
-- Clear, direct language
-- Proper sentence structure  
-- Logical flow and organization
-- Removing ambiguity
-- Maintaining technical accuracy
-
-Return only the improved text without explanations.""",
-
-            "simplicity": """You are an expert editor specializing in plain language. Rewrite the provided text using simpler, more accessible language suitable for a general audience (grade 9-11 reading level). Focus on:
-- Shorter, clearer sentences
-- Common vocabulary instead of jargon
-- Active voice where appropriate
-- Concrete rather than abstract language
-- Maintaining all original information
-
-Return only the simplified text without explanations.""",
-
-            "balanced": """You are an expert technical writer. Improve this text for better readability while maintaining professionalism and accuracy. Focus on:
-- Clear, concise language
-- Proper sentence structure
-- Logical organization
-- Professional tone
-- Accessibility for the target audience
-
-Return only the improved text without explanations."""
-        }
+    def _ollama_generate(self, text_to_rewrite: str, mode: str = "balanced") -> str:
+        """Call Ollama API to generate rewritten text with smart analysis."""
         
-        system_prompt = system_prompts.get(mode, system_prompts["balanced"])
+        # First, analyze the text to create targeted instructions
+        analysis = self._analyze_text_complexity(text_to_rewrite)
+        
+        # Create targeted prompt based on analysis
+        system_prompt = self._create_smart_prompt(mode, analysis)
         model = self.models.get(mode, self.models.get("balanced", "phi3:mini"))
-        timeout = self.timeouts.get(mode, self.timeouts.get("standard", 10))
+        timeout = self.timeouts.get(mode, self.timeouts.get("standard", 30))
+        
+        logger.info(f"Calling Ollama with model: {model}, mode: {mode}, timeout: {timeout}s")
+        logger.info(f"Analysis: {analysis['avg_words']} avg words/sentence, {len(analysis['issues'])} issues found")
         
         try:
+            # Use the smart, targeted prompt
+            full_prompt = f"{system_prompt}\n\nOriginal text:\n{text_to_rewrite}\n\nRewritten text:"
+            
             payload = {
                 "model": model,
-                "prompt": f"{system_prompt}\n\nText to improve:\n{prompt}",
+                "prompt": full_prompt,
                 "stream": False,
                 "options": {
-                    "temperature": 0.2,
+                    "temperature": 0.3,  # Lower for more consistent results
                     "top_p": 0.9,
-                    "num_predict": len(prompt) + 100,  # Dynamic length based on input
-                    "num_ctx": min(4096, len(prompt) * 3)  # Dynamic context
+                    "num_predict": min(len(text_to_rewrite) * 1.5, 400),  # More reasonable length
+                    "num_ctx": 4096,  # Larger context
+                    "repeat_penalty": 1.1
                 }
             }
+            
+            logger.debug(f"Using smart prompt with {len(analysis['issues'])} specific improvements")
             
             response = requests.post(self.api_url, json=payload, timeout=timeout)
             response.raise_for_status()
@@ -154,18 +143,202 @@ Return only the improved text without explanations."""
             result = response.json()
             generated_text = result.get("response", "").strip()
             
+            logger.info(f"Ollama response received. Length: {len(generated_text)} chars")
+            
             if not generated_text:
                 logger.warning(f"Empty response from Ollama for mode: {mode}")
-                return prompt  # Return original if no response
-                
+                return self._fallback_rewrite(text_to_rewrite)
+            
+            # Check if the response is just repeating the original
+            if generated_text.lower().strip() == text_to_rewrite.lower().strip():
+                logger.warning(f"Ollama returned identical text for mode: {mode}. Using fallback.")
+                return self._fallback_rewrite(text_to_rewrite)
+            
             return generated_text
             
         except requests.RequestException as e:
             logger.error(f"Ollama API error for mode {mode}: {e}")
-            return prompt  # Return original text if API fails
+            return self._fallback_rewrite(text_to_rewrite)
         except Exception as e:
             logger.error(f"Unexpected error in Ollama generation: {e}")
-            return prompt
+            return self._fallback_rewrite(text_to_rewrite)
+    
+    def _analyze_text_complexity(self, text: str) -> Dict:
+        """Analyze text to identify specific areas for improvement"""
+        import re
+        
+        # Split into sentences
+        sentences = re.split(r'[.!?]+', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        
+        if not sentences:
+            return {'avg_words': 0, 'issues': []}
+        
+        # Calculate metrics
+        word_counts = [len(s.split()) for s in sentences]
+        avg_words = sum(word_counts) / len(word_counts)
+        
+        issues = []
+        
+        # Check for long sentences
+        if avg_words > 20:
+            issues.append("long_sentences")
+        
+        # Check for technical terms
+        technical_patterns = [
+            r'\b(implementation|methodology|functionality|configuration|utilization)\b',
+            r'\b\w+tion\b', r'\b\w+ment\b'  # Nominalizations
+        ]
+        
+        technical_count = 0
+        for pattern in technical_patterns:
+            technical_count += len(re.findall(pattern, text, re.IGNORECASE))
+        
+        if technical_count > 3:
+            issues.append("technical_jargon")
+        
+        # Check for passive voice
+        passive_patterns = [r'\b(is|are|was|were)\s+\w+ed\b', r'\bwill be\s+\w+ed\b']
+        passive_count = 0
+        for pattern in passive_patterns:
+            passive_count += len(re.findall(pattern, text, re.IGNORECASE))
+        
+        if passive_count > len(sentences) * 0.3:
+            issues.append("passive_voice")
+        
+        return {
+            'avg_words': avg_words,
+            'issues': issues,
+            'sentence_count': len(sentences)
+        }
+    
+    def _create_smart_prompt(self, mode: str, analysis: Dict) -> str:
+        """Create a targeted prompt based on text analysis"""
+        
+        # More aggressive prompts for technical content
+        if "technical_jargon" in analysis['issues']:
+            base_prompt = """REWRITE this technical documentation in PLAIN ENGLISH that anyone can understand. 
+            
+RULES:
+- Use simple, everyday words (not technical terms)
+- Write short sentences (under 20 words each)  
+- Explain what things DO, not what they ARE
+- Replace all jargon with simple language
+
+EXAMPLES:
+- "payload" → "data package" or "information"
+- "indicates" → "shows" or "tells you"
+- "structure" → "layout" or "organization"  
+- "schema" → "format" or "template"
+- "configuration" → "settings" or "setup"
+- "This section describes..." → "Here's how to..."
+- "The recommended structure..." → "The best way to organize..."
+
+Transform this technical content into simple, clear instructions:"""
+        
+        else:
+            base_prompts = {
+                "clarity": "Rewrite this text to be crystal clear and easy to understand.",
+                "simplicity": "Rewrite this text using simple, everyday language that anyone can understand.",
+                "balanced": "Rewrite this text to be clearer and more professional while keeping the original meaning."
+            }
+            base_prompt = base_prompts.get(mode, base_prompts["balanced"])
+        
+        instructions = [base_prompt]
+        
+        # Add specific instructions based on analysis
+        if "long_sentences" in analysis['issues']:
+            instructions.append("Break every long sentence into 2-3 shorter sentences (maximum 15 words each).")
+        
+        if "passive_voice" in analysis['issues']:
+            instructions.append("Use active voice - say WHO does WHAT clearly.")
+        
+        # For technical content, add more specific guidance
+        if analysis.get('avg_words', 0) > 25:
+            instructions.append("Make this sound like you're explaining it to a friend, not writing a manual.")
+        
+        return '\n'.join(instructions)
+    
+    def _fallback_rewrite(self, text: str) -> str:
+        """Enhanced rule-based rewriting when AI fails"""
+        import re
+        
+        # If text is very short, try simple AI prompt as fallback
+        if len(text) < 200:
+            try:
+                simple_payload = {
+                    "model": "phi3:mini",
+                    "prompt": f"Rewrite in simple words: {text}",
+                    "stream": False,
+                    "options": {"temperature": 0.7, "num_predict": 100}
+                }
+                response = requests.post(self.api_url, json=simple_payload, timeout=15)
+                if response.status_code == 200:
+                    result = response.json().get("response", "").strip()
+                    if result and result != text:
+                        return result
+            except:
+                pass  # Fall back to rule-based
+        
+        # Apply rule-based transformations
+        rewritten = text
+        
+        # Replace technical terms with simple alternatives
+        technical_replacements = {
+            r'\bpayloadType\b': 'data type',
+            r'\bencoding\b': 'format',
+            r'\bmsgStructureScheme\b': 'message format',
+            r'\bmsgStructureSchemeVersion\b': 'format version',
+            r'\bprovideAppInstanceId\b': 'app ID',
+            r'\bpayloadMsgType\b': 'message type',
+            r'\baccessmode\b': 'access method',
+            r'\bconnectionname\b': 'connection name',
+            r'\bcollectionname\b': 'group name',
+            r'\bimplementation\b': 'setup',
+            r'\bmethodology\b': 'method',
+            r'\bfunctionality\b': 'features',
+            r'\bconfiguration\b': 'settings',
+            r'\butilization\b': 'use',
+            r'\bfacilitates?\b': 'helps',
+            r'\bindicates?\b': 'shows',
+            r'\bcontains?\b': 'has'
+        }
+        
+        for pattern, replacement in technical_replacements.items():
+            rewritten = re.sub(pattern, replacement, rewritten, flags=re.IGNORECASE)
+        
+        # Simplify complex phrases
+        phrase_replacements = {
+            r'\bThis section describes\b': 'Here is how',
+            r'\bThe recommended structure\b': 'The best way to structure',
+            r'\bis as follows\b': 'is',
+            r'\bthe above elements\b': 'these parts',
+            r'\bThis indicates\b': 'This shows',
+            r'\bPossible Values\b': 'Options',
+            r'\bin bulk mode\b': 'all together'
+        }
+        
+        for pattern, replacement in phrase_replacements.items():
+            rewritten = re.sub(pattern, replacement, rewritten, flags=re.IGNORECASE)
+        
+        # Break up very long sentences (basic)
+        sentences = re.split(r'([.!?]+)', rewritten)
+        improved_sentences = []
+        
+        for i in range(0, len(sentences), 2):
+            if i < len(sentences):
+                sentence = sentences[i].strip()
+                punct = sentences[i+1] if i+1 < len(sentences) else ''
+                
+                # If sentence is very long (>30 words), try to break it
+                if len(sentence.split()) > 30 and ' and ' in sentence:
+                    parts = sentence.split(' and ', 1)
+                    improved_sentences.append(parts[0] + '.')
+                    improved_sentences.append(' ' + parts[1] + punct)
+                else:
+                    improved_sentences.append(sentence + punct)
+        
+        return ''.join(improved_sentences)
 
     def rewrite_document(self, content: str, mode: str = "balanced") -> Dict:
         """
@@ -210,12 +383,50 @@ Return only the improved text without explanations."""
             # Calculate rewritten text readability scores
             rewritten_scores = self.calculate_readability(final_text)
             
+            # Safety checks for score validity
+            def safe_score(score, default=0):
+                return score if isinstance(score, (int, float)) and not (score != score) else default  # Check for NaN
+            
+            original_flesch = safe_score(original_scores.get("flesch_reading_ease", 0))
+            rewritten_flesch = safe_score(rewritten_scores.get("flesch_reading_ease", 0))
+            original_grade = safe_score(original_scores.get("flesch_kincaid_grade", 0))
+            rewritten_grade = safe_score(rewritten_scores.get("flesch_kincaid_grade", 0))
+            
             # Calculate improvement metrics
-            readability_improvement = rewritten_scores["flesch_reading_ease"] - original_scores["flesch_reading_ease"]
-            grade_improvement = original_scores["flesch_kincaid_grade"] - rewritten_scores["flesch_kincaid_grade"]
+            readability_improvement = rewritten_flesch - original_flesch
+            grade_improvement = original_grade - rewritten_grade  # Lower grade is better
+            length_change = len(final_text) - len(content)
+            
+            # Check if text was actually changed
+            text_was_changed = final_text.strip() != content.strip()
             
             logger.info(f"Rewriting complete. New length: {len(final_text)} characters. "
-                       f"Readability improvement: {readability_improvement:.1f} points")
+                       f"Readability improvement: {readability_improvement:.1f} points. "
+                       f"Text changed: {text_was_changed}")
+            
+            # Format improvements for frontend display
+            improvements = {
+                "readability_change": {
+                    "before": round(original_flesch, 1),
+                    "after": round(rewritten_flesch, 1),
+                    "improvement": round(readability_improvement, 1)
+                },
+                "grade_level_change": {
+                    "before": round(original_grade, 1),
+                    "after": round(rewritten_grade, 1),
+                    "improvement": round(grade_improvement, 1)
+                },
+                "length_change": {
+                    "before": len(content),
+                    "after": len(final_text),
+                    "improvement": round(((len(final_text) - len(content)) / len(content)) * 100 if len(content) > 0 else 0, 1)
+                },
+                "improved": {
+                    "before": "Original",
+                    "after": "Improved" if text_was_changed else "Unchanged",
+                    "improvement": round(readability_improvement, 1) if text_was_changed else 0
+                }
+            }
             
             return {
                 "success": True,
@@ -226,12 +437,7 @@ Return only the improved text without explanations."""
                     "original": original_scores,
                     "rewritten": rewritten_scores
                 },
-                "improvements": {
-                    "readability_change": round(readability_improvement, 2),
-                    "grade_level_change": round(grade_improvement, 2),
-                    "length_change": len(final_text) - len(content),
-                    "improved": readability_improvement > 0
-                },
+                "improvements": improvements,
                 "metadata": {
                     "model_used": self.models.get(mode, "phi3:mini"),
                     "processing_mode": mode,

@@ -1168,14 +1168,14 @@ def get_readability_analysis():
         if not data:
             return jsonify({"success": False, "error": "No JSON data provided"}), 400
         
-        text = data.get('text', '')
-        if not text:
-            return jsonify({"success": False, "error": "No text provided"}), 400
+        content = data.get('content', '')
+        if not content:
+            return jsonify({"success": False, "error": "No content provided"}), 400
         
         from .rewriter.ollama_rewriter import get_rewriter
         rewriter = get_rewriter()
         
-        scores = rewriter.calculate_readability(text)
+        scores = rewriter.calculate_readability(content)
         
         # Generate recommendations
         recommendations = []
@@ -1194,12 +1194,32 @@ def get_readability_analysis():
         if not recommendations:
             recommendations.append("Readability is within acceptable range")
         
+        # Add additional textstat metrics for comprehensive analysis
+        word_count = len(content.split())
+        sentence_count = content.count('.') + content.count('!') + content.count('?')
+        
+        # Extend scores with additional metrics
+        comprehensive_scores = {
+            **scores,
+            "lexicon_count": word_count,
+            "sentence_count": max(1, sentence_count),  # Avoid division by zero
+            "coleman_liau_index": round(__import__('textstat').coleman_liau_index(content), 2) if content else 0
+        }
+        
         return jsonify({
             "success": True,
-            "text_length": len(text),
-            "word_count": len(text.split()),
-            "scores": scores,
+            "text_length": len(content),
+            "word_count": word_count,
+            "sentence_count": sentence_count,
+            **comprehensive_scores,  # Flatten the scores into the main response
             "recommendations": recommendations
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in readability analysis endpoint: {e}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
         })
         
     except Exception as e:
