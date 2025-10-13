@@ -9,9 +9,23 @@ from bs4 import BeautifulSoup
 import logging
 import importlib
 import sys
-import textstat
 import time
 from dataclasses import asdict
+
+# Make textstat optional
+try:
+    import textstat
+    TEXTSTAT_AVAILABLE = True
+except ImportError:
+    TEXTSTAT_AVAILABLE = False
+    class MockTextstat:
+        @staticmethod
+        def flesch_reading_ease(text):
+            return 60.0  # Default middle-range score
+        @staticmethod
+        def automated_readability_index(text):
+            return 8.0   # Default grade level
+    textstat = MockTextstat()
 
 # Try to import spacy but handle import errors gracefully
 try:
@@ -683,20 +697,28 @@ def ai_suggestion():
             raise ValueError(f"Invalid result structure: {type(result)}")
 
         # Prefer enriched rewrite; never echo placeholder text
-        suggestion = (
+        suggestion_raw = (
             result.get("suggestion")
             or result.get("proposed_rewrite")
             or ""
-        ).strip()
+        )
+        # Ensure suggestion is always a string, never None/null/other type
+        if not isinstance(suggestion_raw, str):
+            suggestion_raw = str(suggestion_raw) if suggestion_raw is not None else ""
+        suggestion = suggestion_raw.strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted suggestion: '{suggestion[:100]}...' "
                     f"(length: {len(suggestion)})")
 
-        ai_answer = (
+        ai_answer_raw = (
             result.get("ai_answer")
             or result.get("solution_text")
             or ""
-        ).strip()
+        )
+        # Ensure ai_answer is always a string, never None/null/other type
+        if not isinstance(ai_answer_raw, str):
+            ai_answer_raw = str(ai_answer_raw) if ai_answer_raw is not None else ""
+        ai_answer = ai_answer_raw.strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
                     f"(length: {len(ai_answer)})")
@@ -708,7 +730,11 @@ def ai_suggestion():
             # Use a lightweight engine instance for fallback rewrite
             fallback_engine = AISuggestionEngine()
             fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
+            fallback_suggestion = fallback.get("suggestion") or ""
+            # Ensure fallback suggestion is also a string
+            if not isinstance(fallback_suggestion, str):
+                fallback_suggestion = str(fallback_suggestion) if fallback_suggestion is not None else ""
+            suggestion = fallback_suggestion.strip()
             ai_answer = ai_answer or "Deterministic fallback rewrite."
             logger.info(f"🔧 ENDPOINT: Used fallback suggestion: '{suggestion[:100]}...'")
         else:
@@ -720,7 +746,11 @@ def ai_suggestion():
             from .ai_improvement import AISuggestionEngine
             fallback_engine = AISuggestionEngine()
             fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
+            fallback_suggestion2 = fallback.get("suggestion") or ""
+            # Ensure this fallback suggestion is also a string
+            if not isinstance(fallback_suggestion2, str):
+                fallback_suggestion2 = str(fallback_suggestion2) if fallback_suggestion2 is not None else ""
+            suggestion = fallback_suggestion2.strip()
             if not ai_answer:
                 ai_answer = "Applied deterministic rewrite to resolve the issue."
 
@@ -737,6 +767,12 @@ def ai_suggestion():
             suggestion = (fallback.get("suggestion") or "").strip()
             if not ai_answer:
                 ai_answer = "Applied deterministic rewrite to resolve the issue."
+
+        # Final safety check: ensure all string fields are actually strings
+        if not isinstance(suggestion, str):
+            suggestion = str(suggestion) if suggestion is not None else "Unable to generate suggestion"
+        if not isinstance(ai_answer, str):
+            ai_answer = str(ai_answer) if ai_answer is not None else "No guidance available"
 
         return jsonify({
         # ✅ Concrete rewrite to show in the “AI Suggestion” box

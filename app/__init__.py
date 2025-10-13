@@ -1,12 +1,22 @@
 from flask import Flask
-from flask_socketio import SocketIO
+
+# Make flask_socketio optional
+try:
+    from flask_socketio import SocketIO
+    SOCKETIO_AVAILABLE = True
+except ImportError:
+    SOCKETIO_AVAILABLE = False
+    SocketIO = None
 
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this in production
     
-    # Initialize SocketIO
-    socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+    # Initialize SocketIO only if available
+    if SOCKETIO_AVAILABLE:
+        socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
+    else:
+        socketio = None
     
     # Initialize progress tracker
     from .progress_tracker import initialize_progress_tracker
@@ -15,22 +25,23 @@ def create_app():
     from .app import main as main_blueprint
     app.register_blueprint(main_blueprint)
     
-    # Add SocketIO event handlers
-    @socketio.on('connect')
-    def handle_connect():
-        print('Client connected')
-    
-    @socketio.on('disconnect')
-    def handle_disconnect():
-        print('Client disconnected')
-    
-    @socketio.on('join_progress_room')
-    def handle_join_room(data):
-        from flask_socketio import join_room
-        room_id = data.get('room_id')
-        if room_id:
-            join_room(room_id)
-            print(f'Client joined progress room: {room_id}')
+    # Add SocketIO event handlers only if available
+    if SOCKETIO_AVAILABLE and socketio:
+        @socketio.on('connect')
+        def handle_connect():
+            print('Client connected')
+        
+        @socketio.on('disconnect')
+        def handle_disconnect():
+            print('Client disconnected')
+        
+        @socketio.on('join_progress_room')
+        def handle_join_room(data):
+            from flask_socketio import join_room
+            room_id = data.get('room_id')
+            if room_id:
+                join_room(room_id)
+                print(f'Client joined progress room: {room_id}')
     
     # Register agent blueprint
     try:

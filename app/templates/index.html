@@ -2845,8 +2845,10 @@
             const lines = suggestionText.split(/\n|<br\s*\/?>(?=\w+:)/g);
             let html = '';
             lines.forEach(line => {
-                const match = line.match(/^([A-Z][A-Z_ \-]+):\s*(.*)$/i);
-                if (match) {
+                // More restrictive regex - only match actual structured output like "IMPROVED:", "SUGGESTION:", etc.
+                // Must be ALL CAPS or CAPS_WITH_UNDERSCORES followed by colon and content
+                const match = line.match(/^([A-Z][A-Z_]+):\s+(.+)$/);
+                if (match && match[1].length <= 20) { // Reasonable key length limit
                     const key = match[1].replace(/_/g, ' ').replace(/\b([a-z])/g, c => c.toUpperCase());
                     const value = match[2];
                     html += `<div style="margin-bottom:4px;"><strong>${key}:</strong> <span style="color:#333;background:rgba(255,255,255,0.7);padding:2px 4px;border-radius:3px;">${value}</span></div>`;
