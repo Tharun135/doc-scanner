@@ -374,6 +374,17 @@ class AISuggestionEngine:
                 return s.replace("that is displayed in the", "from the")
         elif "that is displayed" in s_lower:
             return s.replace("that is displayed", "that appears").replace("data that appears", "visible data")
+        elif "are made available" in s_lower:
+            import re
+            # Handle "LoRaWAN tags are made available in the Databus"
+            m = re.search(r'(.+?)\s+are\s+made\s+available\s+in\s+the\s+(\w+)', s, re.IGNORECASE)
+            if m:
+                subject = m.group(1).strip()
+                location = m.group(2).strip()
+                return f"The system makes {subject.lower()} available in the {location}"
+            else:
+                # General fallback for "are made available"
+                return s.replace("are made available", "become available").replace("LoRaWAN tags", "The system makes LoRaWAN tags")
         elif "are displayed" in s_lower:
             return s.replace("are displayed", "appear on screen").replace("The configuration options", "The system displays the configuration options")
         elif "are shown" in s_lower:
@@ -663,7 +674,7 @@ def _generate_smart_suggestion(feedback_text: str, sentence: str) -> Optional[Di
         }
     
     # Handle passive voice issues
-    if "passive" in feedback_lower and any(word in sentence.lower() for word in ["was", "were", "been", "is being", "are being", "is displayed", "are displayed", "is shown", "are shown"]):
+    if "passive" in feedback_lower and any(word in sentence.lower() for word in ["was", "were", "been", "is being", "are being", "is displayed", "are displayed", "is shown", "are shown", "are made available"]):
         
         # Try to make smart conversions for common patterns
         improved_sentence = sentence
@@ -744,6 +755,24 @@ def _generate_smart_suggestion(feedback_text: str, sentence: str) -> Optional[Di
                     improved_sentence = f"The system displays the {item}."
 
                     explanation = f"Converted passive voice to active by identifying who performs the action (the system). This clarifies the relationship between components."
+                    conversion_made = True
+        
+        # Pattern: "X are made available" → "The system makes X available"
+        if not conversion_made and re.search(r"(?i)(.+?)\s+are\s+made\s+available", sentence):
+            match = re.search(r"(?i)(.+?)\s+are\s+made\s+available\s+in\s+the\s+(\w+)", sentence)
+            if match:
+                subject = match.group(1).strip()
+                location = match.group(2).strip()
+                improved_sentence = f"The system makes {subject.lower()} available in the {location}"
+                explanation = f"Converted passive voice to active by identifying the system as the agent that makes {subject.lower()} available."
+                conversion_made = True
+            else:
+                # General fallback for "are made available" without specific location
+                match = re.search(r"(?i)(.+?)\s+are\s+made\s+available", sentence)
+                if match:
+                    subject = match.group(1).strip()
+                    improved_sentence = sentence.replace(f"{subject} are made available", f"The system makes {subject.lower()} available")
+                    explanation = f"Converted passive voice to active by identifying the system as the agent."
                     conversion_made = True
         
         if conversion_made:
