@@ -191,7 +191,7 @@ if LEGACY_AVAILABLE:
         return get_enhanced_rag_system()
 
 # Performance testing utility
-def run_performance_test(rag_system: EnhancedRAGSystem = None, num_queries: int = 10):
+def run_performance_test(rag_system = None, num_queries: int = 10):
     """Run basic performance test"""
     if rag_system is None:
         rag_system = get_enhanced_rag_system()

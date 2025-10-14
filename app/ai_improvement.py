@@ -11,17 +11,20 @@ import re
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Advanced RAG system integration (disabled temporarily for stability)
-# try:
-#     from enhanced_rag.advanced_integration import get_advanced_rag_system, AdvancedRAGConfig
-#     ADVANCED_RAG_AVAILABLE = True
-#     logger.info("✅ Advanced RAG system available")
-# except ImportError as e:
-#     ADVANCED_RAG_AVAILABLE = False
-#     logger.info("ℹ️ Advanced RAG system not available, using smart fallbacks")
+# Advanced RAG system integration - now enabled for better AI suggestions
+try:
+    from enhanced_rag.advanced_integration import get_advanced_rag_system, AdvancedRAGConfig
+    ADVANCED_RAG_AVAILABLE = True
+    logger.info("✅ Advanced RAG system available - enabling intelligent suggestions")
+except ImportError as e:
+    ADVANCED_RAG_AVAILABLE = False
+    logger.info("ℹ️ Advanced RAG system not available, using smart fallbacks")
+    logger.warning(f"RAG import error: {e}")
 
-ADVANCED_RAG_AVAILABLE = False
-logger.info("🚀 Using fast smart suggestion system (Advanced RAG disabled for stability)")
+if ADVANCED_RAG_AVAILABLE:
+    logger.info("🧠 Using advanced AI system with vector database and LLM integration")
+else:
+    logger.info("⚡ Using fast smart suggestion system (Advanced RAG unavailable)")
 
 
 # (Optional) Load .env
@@ -31,18 +34,14 @@ try:
 except ImportError:
     logger.warning("python-dotenv not available - environment variables must be set manually")
 
-# RAG availability (disabled temporarily to prevent hanging)
-# The old RAG system may cause hanging when loading
-RAG_AVAILABLE = False
-logger.info("Legacy RAG system disabled for faster response times")
-
-# try:
-#     from scripts.ollama_rag_system import get_rag_suggestion
-#     RAG_AVAILABLE = True
-#     logger.info("RAG system loaded successfully from ollama_rag_system")
-# except Exception as e:
-#     RAG_AVAILABLE = False
-#     logger.warning(f"RAG system not available - falling back to rule-based suggestions only: {e}")
+# RAG availability - re-enabled for better suggestions  
+try:
+    from scripts.ollama_rag_system import get_rag_suggestion
+    RAG_AVAILABLE = True
+    logger.info("✅ Legacy RAG system loaded successfully from ollama_rag_system")
+except Exception as e:
+    RAG_AVAILABLE = False
+    logger.warning(f"Legacy RAG system not available - using enhanced RAG or rule-based fallbacks: {e}")
 
 
 class AISuggestionEngine:
@@ -505,17 +504,93 @@ def get_enhanced_ai_suggestion(
     issue: Optional[Dict[str, Any]] = None,   # <-- pass full issue when possible
 ) -> Dict[str, Any]:
     """
-    Enhanced AI suggestion using the advanced RAG system with smart fallbacks.
-    This function now provides much better suggestions for common writing issues.
+    Enhanced AI suggestion using the new multi-layered system.
+    
+    Architecture: Smart Rules → RAG Context → LLM → Quality Filter
+    This provides much better suggestions with proper validation.
     """
     print(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
     logger.info(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
     
-    # Skip advanced RAG for now and go directly to smart suggestions
-    # The advanced RAG system has dependency issues that cause hanging
-    logger.info("⚡ Using fast smart suggestion system")
+    # Use the new enhanced AI system 
+    try:
+        import sys
+        import os
+        # Add the parent directory to sys.path to enable imports
+        parent_dir = os.path.dirname(os.path.dirname(__file__))
+        if parent_dir not in sys.path:
+            sys.path.insert(0, parent_dir)
+            
+        # Now try to import the enhanced system
+        try:
+            from app.enhanced_ai_improvement import get_enhanced_ai_suggestion as enhanced_ai_func
+        except ImportError:
+            # Alternative import path
+            import enhanced_ai_improvement
+            enhanced_ai_func = enhanced_ai_improvement.get_enhanced_ai_suggestion
+            
+        logger.info("🧠 Using enhanced multi-layer AI system")
+        
+        result = enhanced_ai_func(
+            feedback_text=feedback_text,
+            sentence_context=sentence_context,
+            document_type=document_type,
+            writing_goals=writing_goals,
+            document_content=document_content,
+            option_number=option_number,
+            issue=issue
+        )
+        
+        if result and result.get('success'):
+            logger.info(f"✅ Enhanced AI system success: method={result.get('method')}")
+            return result
+        else:
+            logger.warning("Enhanced AI system returned low-quality result, trying fallback")
+            
+    except Exception as e:
+        logger.warning(f"Enhanced AI system failed: {e}, using fallback")
     
-    # Smart rule-based fallbacks for common issues
+    # Fallback to legacy systems if enhanced system fails
+    if ADVANCED_RAG_AVAILABLE:
+        try:
+            logger.info("🔄 Trying advanced RAG system as fallback")
+            rag_system = get_advanced_rag_system()
+            
+            # Configure for high-quality suggestions
+            config = AdvancedRAGConfig(
+                max_tokens=150,
+                temperature=0.1,
+                enable_context_enhancement=True,
+                enable_multi_step_reasoning=True
+            )
+            
+            advanced_result = rag_system.get_enhanced_suggestion(
+                feedback_text=feedback_text,
+                sentence=sentence_context,
+                document_type=document_type,
+                config=config
+            )
+            
+            if advanced_result and advanced_result.get('suggestion'):
+                logger.info("✅ Using advanced RAG fallback")
+                return advanced_result
+                
+        except Exception as e:
+            logger.warning(f"Advanced RAG fallback failed: {e}")
+    
+    # Legacy RAG fallback
+    if RAG_AVAILABLE:
+        try:
+            logger.info("🔄 Trying legacy RAG system")
+            rag_result = get_rag_suggestion(feedback_text, sentence_context, document_type)
+            if rag_result and rag_result.get('suggestion'):
+                logger.info("✅ Using legacy RAG suggestion")
+                return rag_result
+        except Exception as e:
+            logger.warning(f"Legacy RAG failed: {e}")
+    
+    # Smart rule-based fallback 
+    logger.info("⚡ Using smart rule-based system as final fallback")
     smart_suggestion = _generate_smart_suggestion(feedback_text, sentence_context)
     if smart_suggestion:
         logger.info("✅ Using smart rule-based suggestion")
