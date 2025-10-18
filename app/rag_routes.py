@@ -195,6 +195,16 @@ def knowledge_base_dashboard():
             try:
                 retriever_stats = retriever.get_collection_stats()
                 stats.update(retriever_stats)
+                
+                # Update computed stats based on retriever capabilities
+                stats.update({
+                    'hybrid_available': retriever_stats.get('embeddings_available', False) and retriever_stats.get('tfidf_available', False),
+                    'search_methods': 3 if (retriever_stats.get('embeddings_available', False) and retriever_stats.get('tfidf_available', False)) else 1,
+                    'embedding_model': 'sentence-transformers' if retriever_stats.get('embeddings_available', False) else 'N/A',
+                    'chromadb_available': retriever_stats.get('chromadb_available', False),
+                    'embeddings_available': retriever_stats.get('embeddings_available', False)
+                })
+                
             except Exception as e:
                 logger.warning(f"Failed to get retriever stats: {e}")
     
@@ -272,6 +282,16 @@ def rag_dashboard():
                 try:
                     retriever_stats = retriever.get_collection_stats()
                     stats.update(retriever_stats)
+                    
+                    # Update computed stats based on retriever capabilities
+                    stats.update({
+                        'hybrid_available': retriever_stats.get('embeddings_available', False) and retriever_stats.get('tfidf_available', False),
+                        'search_methods': 3 if (retriever_stats.get('embeddings_available', False) and retriever_stats.get('tfidf_available', False)) else 1,
+                        'embedding_model': 'sentence-transformers' if retriever_stats.get('embeddings_available', False) else 'N/A',
+                        'chromadb_available': retriever_stats.get('chromadb_available', False),
+                        'embeddings_available': retriever_stats.get('embeddings_available', False)
+                    })
+                    
                 except Exception as e:
                     logger.warning(f"Failed to get retriever stats: {e}")
             
@@ -578,7 +598,27 @@ def log_feedback():
 def get_stats():
     """Get comprehensive RAG system statistics for dashboard and API."""
     try:
-        stats = {"rag_available": RAG_AVAILABLE}
+        # Check dependencies and initialize if needed
+        deps_available = check_rag_dependencies()
+        stats = {"rag_available": deps_available}
+        
+        # Initialize RAG modules if dependencies are available
+        if deps_available and init_rag_modules():
+            global retriever, evaluator
+            
+            # Initialize retriever if not done
+            if retriever is None:
+                try:
+                    retriever = AdvancedRetriever()
+                except Exception as e:
+                    logger.warning(f"Failed to initialize retriever for stats: {e}")
+            
+            # Initialize evaluator if not done  
+            if evaluator is None:
+                try:
+                    evaluator = get_rag_evaluator()
+                except Exception as e:
+                    logger.warning(f"Failed to initialize evaluator for stats: {e}")
         
         if retriever:
             base_stats = retriever.get_collection_stats()
