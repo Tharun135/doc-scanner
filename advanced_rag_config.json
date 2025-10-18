@@ -1,0 +1,23 @@
+{
+  "advanced_rag": {
+    "enabled": true,
+    "embedding_provider": "sentence_transformers",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "chunk_size": 500,
+    "chunk_overlap": 75,
+    "semantic_weight": 0.6,
+    "enable_reranking": true,
+    "enable_caching": true,
+    "enable_feedback": true,
+    "cache_ttl": 3600
+  },
+  "fallback": {
+    "enabled": true,
+    "use_existing_rag": true
+  },
+  "performance": {
+    "max_response_time": 10.0,
+    "enable_metrics": true,
+    "adaptation_threshold": 10
+  }
+}

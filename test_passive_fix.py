@@ -1,35 +1,48 @@
 #!/usr/bin/env python3
 """
-Test the improved passive voice handling for "Tags are only defined for sensors"
+Test script to verify the passive voice conversion for the specific LoRaWAN sentence.
 """
+
 import sys
-sys.path.append('app')
+import os
 
-from app.services.enrichment import _create_deterministic_rewrite
+# Add the app directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
 
-def test_specific_case():
-    print("🧪 Testing Improved Passive Voice Detection")
+from ai_improvement import AISuggestionEngine
+
+def test_passive_conversion():
+    engine = AISuggestionEngine()
+    
+    # Test the specific sentence that was failing
+    test_sentence = "LoRaWAN tags are made available in the Databus after you have selected the corresponding option for selected tags."
+    
+    print("🧪 Testing Passive Voice Conversion")
     print("=" * 50)
+    print(f"Original: {test_sentence}")
     
-    # The exact case from the user
-    feedback_text = "Avoid passive voice in sentence: 'Tags are only defined for sensors.'"
-    sentence_context = "Tags are only defined for sensors."
+    # Test the _fix_passive_voice method directly
+    converted = engine._fix_passive_voice(test_sentence)
+    print(f"Converted: {converted}")
     
-    print(f"📝 Original: {sentence_context}")
-    print(f"⚠️  Issue: {feedback_text}")
+    # Also test the full AI suggestion
+    print("\n🤖 Testing Full AI Suggestion")
+    print("=" * 30)
+    result = engine.generate_contextual_suggestion(
+        feedback_text="Avoid passive voice in sentence",
+        original_sentence=test_sentence,
+        context=""
+    )
     
-    result = _create_deterministic_rewrite(feedback_text, sentence_context)
+    print(f"AI Suggestion: {result.get('suggestion', 'No suggestion')}")
+    print(f"Method: {result.get('method', 'Unknown')}")
+    print(f"Success: {result.get('success', False)}")
     
-    print(f"✨ Improved Result: {result}")
-    
-    if result == f"Improve clarity: {sentence_context}":
-        print("❌ STILL USING GENERIC FALLBACK - Fix didn't work")
-    elif result == sentence_context:
-        print("❌ NO CHANGE MADE - Pattern didn't match")
-    elif "The system defines" in result:
-        print("✅ SUCCESS - Converted to active voice!")
+    # Check if the conversion actually changed the sentence
+    if converted != test_sentence:
+        print("\n✅ SUCCESS: Passive voice was converted!")
     else:
-        print(f"⚠️  DIFFERENT APPROACH - Analyze: {result}")
+        print("\n❌ ISSUE: Sentence was not converted")
 
 if __name__ == "__main__":
-    test_specific_case()
+    test_passive_conversion()

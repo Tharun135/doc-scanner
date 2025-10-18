@@ -26,6 +26,8 @@ def _get_nlp():
     if nlp is None:
         try:
             nlp = spacy.load("en_core_web_sm")
+            # Increase max_length to handle large documents
+            nlp.max_length = 3000000
         except OSError:
             print("⚠️ spaCy model en_core_web_sm not found - grammar rules disabled")
             nlp = False
@@ -66,11 +68,36 @@ def check(content):
             if token.tag_ == "VBZ" and token.head.tag_ == "NNS":
                 suggestions.append(f"Check subject–verb agreement: '{sent.text.strip()}'")
 
-        # Example 2: Sentence starts with lowercase (skip markdown info blocks)
+        # Example 2: Sentence starts with lowercase (skip markdown info blocks and technical codes)
         if sent.text[0].islower():
+            sent_text = sent.text.strip()
+            
             # Skip markdown info/note syntax like: info "NOTICE", warning "TEXT", etc.
-            if not re.match(r'^\s*(info|warning|note|tip|caution)\s*"', sent.text.strip(), re.IGNORECASE):
-                suggestions.append(f"Start sentences with a capital letter: '{sent.text.strip()}'")
+            if re.match(r'^\s*(info|warning|note|tip|caution)\s*"', sent_text, re.IGNORECASE):
+                continue
+                
+            # Skip technical documentation patterns: id: description, vals: description, etc.
+            if re.match(r'^[a-z][a-z0-9_]*\s*:\s*', sent_text, re.IGNORECASE):
+                continue
+                
+            # Skip technical codes, paths, URLs, and identifiers
+            # Pattern examples: ie/d/j/simatic/v1/slmp1/dp/r//default, api/v1/users, src/main.js
+            if re.match(r'^[a-z][a-z0-9]*(/[a-z0-9_\-\.]*)+/?$', sent_text, re.IGNORECASE):
+                continue
+                
+            # Skip file paths with extensions: file.txt, config.json, etc.
+            if re.match(r'^[a-z][a-z0-9_\-]*\.[a-z0-9]+$', sent_text, re.IGNORECASE):
+                continue
+                
+            # Skip code identifiers: variable.method(), object.property
+            if re.match(r'^[a-z][a-z0-9_]*\.[a-z0-9_\.()]*$', sent_text, re.IGNORECASE):
+                continue
+                
+            # Skip URLs: http://example.com, https://api.com/path, ftp://files.com
+            if re.match(r'^(https?|ftp)://', sent_text, re.IGNORECASE):
+                continue
+                
+            suggestions.append(f"Start sentences with a capital letter: '{sent_text}'")
 
     # ------------------------------
     # RAG-based contextual checks (if available)

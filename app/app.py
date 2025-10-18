@@ -599,7 +599,7 @@ def ai_suggestion():
     print("🔧 ENDPOINT: AI suggestion endpoint called")
     logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
 
-    from .ai_improvement import get_enhanced_ai_suggestion
+    from .intelligent_ai_improvement import get_enhanced_ai_suggestion
     from .performance_monitor import track_suggestion, learning_system
     import uuid, time
 
@@ -865,6 +865,81 @@ def performance_dashboard():
     except Exception as e:
         logger.error(f"Error getting dashboard data: {str(e)}")
         return jsonify({"error": "Failed to get dashboard data"}), 500
+
+@main.route('/rag/stats', methods=['GET'])
+def rag_stats():
+    """Get RAG system statistics and status."""
+    try:
+        from .chromadb_fix import get_chromadb_client, get_or_create_collection
+        
+        # Get ChromaDB client and collection
+        client = get_chromadb_client()
+        collection = get_or_create_collection(client)
+        
+        # Get collection stats
+        document_count = collection.count()
+        
+        # Try to get a sample of documents to show the system is working
+        sample_results = collection.peek(limit=5) if document_count > 0 else None
+        
+        stats = {
+            "status": "active" if document_count > 0 else "no_data",
+            "total_documents": document_count,
+            "database_type": "ChromaDB",
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "last_updated": "2025-10-17",
+            "sample_documents": len(sample_results['documents']) if sample_results and sample_results.get('documents') else 0,
+            "available_features": [
+                "Document Search",
+                "Semantic Similarity", 
+                "Context Retrieval",
+                "AI Enhancement"
+            ]
+        }
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        logger.error(f"Error getting RAG stats: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "total_documents": 0,
+            "database_type": "ChromaDB (unavailable)",
+            "embedding_model": "N/A",
+            "last_updated": "N/A",
+            "sample_documents": 0,
+            "available_features": []
+        })
+
+@main.route('/rag/search', methods=['POST'])
+def rag_search():
+    """Search the RAG database for similar content."""
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        limit = data.get('limit', 5)
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+            
+        from .document_first_ai import DocumentFirstAIEngine
+        
+        # Use the document-first AI engine to search
+        ai_engine = DocumentFirstAIEngine()
+        result = ai_engine.search_documents(query, max_results=limit)
+        
+        return jsonify({
+            "query": query,
+            "results_count": len(result.get('sources', [])),
+            "results": result.get('sources', []),
+            "method": result.get('method', 'document_search'),
+            "confidence": result.get('confidence', 'medium')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in RAG search: {str(e)}")
+        return jsonify({"error": f"Search failed: {str(e)}"}), 500
 
 @main.route('/ai_config', methods=['GET', 'POST'])
 def ai_configuration():

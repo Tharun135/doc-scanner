@@ -17,8 +17,15 @@ try:
 except ImportError:
     TITLE_UTILS_AVAILABLE = False
 
-# Load spaCy English model
-nlp = spacy.load("en_core_web_sm")
+# Load spaCy model lazily to avoid startup issues
+nlp = None
+
+def _get_nlp():
+    global nlp
+    if nlp is None:
+        nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max length to 3MB
+    return nlp
 
 def check(content):
     suggestions = []
@@ -26,7 +33,12 @@ def check(content):
     # Extract plain text (remove HTML if present)
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
-    doc = nlp(text_content)
+    
+    try:
+        nlp_model = _get_nlp()
+        doc = nlp_model(text_content)
+    except Exception as e:
+        doc = None
 
     # ------------------------------
     # Regex-based style checks
@@ -74,19 +86,20 @@ def check(content):
     # ------------------------------
     # spaCy-based style checks
     # ------------------------------
-    for sent in doc.sents:
-        # Skip titles and headings for style checks
-        if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
-            continue
-            
-        # Example 2: Adverbs ending with -ly (may weaken writing)
-        for token in sent:
-            if token.text.endswith("ly") and token.pos_ == "ADV":
-                suggestions.append(f"Check use of adverb: '{token.text}' in sentence '{sent.text.strip()}'")
+    if doc is not None:
+        for sent in doc.sents:
+            # Skip titles and headings for style checks
+            if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
+                continue
+                
+            # Example 2: Adverbs ending with -ly (may weaken writing)
+            for token in sent:
+                if token.text.endswith("ly") and token.pos_ == "ADV":
+                    suggestions.append(f"Check use of adverb: '{token.text}' in sentence '{sent.text.strip()}'")
 
-        # Example 3: Detecting overuse of 'very'
-        if "very" in sent.text.lower():
-            suggestions.append(f"Try replacing or removing 'very': '{sent.text.strip()}'")
+            # Example 3: Detecting overuse of 'very'
+            if "very" in sent.text.lower():
+                suggestions.append(f"Try replacing or removing 'very': '{sent.text.strip()}'")
 
     # ------------------------------
     # RAG-based contextual style checks (if available)
