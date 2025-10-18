@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base Dashboard - DocScanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .rag-dashboard {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .feature-card {
+            background: white;
+            padding: 1.5rem;
+            height: 100%;
+        }
+        .feature-icon {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .action-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .navbar-brand {
+            font-weight: bold;
+        }
+        .stat-icon {
+            opacity: 0.7;
+            font-size: 1.5rem;
+        }
+        .upload-zone {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            background: #e9ecef;
+            border-color: #007bff !important;
+            color: #007bff;
+        }
+        .method-status {
+            padding: 0.25rem 0;
+        }
+        .health-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .health-item:last-child {
+            border-bottom: none;
+        }
+        .metric-box {
+            background: #f8f9fa;
+        }
+        .indicator-item {
+            padding: 0.25rem 0;
+        }
+        .recent-query-item {
+            padding: 0.1rem 0;
+            cursor: pointer;
+        }
+        .recent-query-item:hover {
+            background: rgba(0,123,255,0.1);
+            border-radius: 4px;
+            padding-left: 0.5rem;
+        }
+        .performance-metrics .metric-box:hover {
+            background: #e9ecef;
+            transform: scale(1.02);
+            transition: all 0.2s;
+        }
+        #performanceChart {
+            max-height: 300px;
+        }
+        .badge {
+            font-size: 0.75em;
+        }
+        .card-header.bg-transparent {
+            background: rgba(0,0,0,0.02) !important;
+        }
+        .progress {
+            border-radius: 10px;
+        }
+        .progress-bar {
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="rag-dashboard">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-brain me-2"></i>DocScanner RAG
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Back to DocScanner</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12 text-center text-white mb-4">
+                <h1 class="display-4 mb-3">
+                    <i class="fas fa-database me-3"></i>Knowledge Base Dashboard
+                </h1>
+                <p class="lead">Manage your intelligent document knowledge base and RAG system</p>
+            </div>
+        </div>
+
+        <!-- Status Alert -->
+        {% if not rag_available %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="alert alert-warning" role="alert">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>RAG System Dependencies Missing</h5>
+                    <p class="mb-2">The full RAG system requires additional packages to enable document upload and vector search capabilities.</p>
+                    <p class="mb-2"><strong>To enable full RAG functionality:</strong></p>
+                    <div class="bg-dark text-light p-3 rounded mb-2">
+                        <code>pip install chromadb sentence-transformers scikit-learn</code>
+                    </div>
+                    <p class="mb-0">After installation, restart the application to access all RAG features.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Enhanced Statistics Cards with Live Updates -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card" id="chunks-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="chunks-count">{{ stats.get('total_chunks', 0) }}</div>
+                            <div class="stat-label">Total Chunks Indexed</div>
+                            <small class="text-muted">
+                                {% set avg_chunk_size = stats.get('avg_chunk_size', 0) %}
+                                {% if avg_chunk_size > 0 %}
+                                    Avg size: {{ avg_chunk_size|round|int }} chars
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-database text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        {% set chunk_percentage = (stats.get('total_chunks', 0) / 1000 * 100) %}
+                        <div class="progress-bar" role="progressbar" style="width: {{ chunk_percentage if chunk_percentage <= 100 else 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card" id="queries-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="queries-count">{{ stats.get('total_queries', 0) }}</div>
+                            <div class="stat-label">Total Queries (30d)</div>
+                            <small class="text-muted">
+                                {% set queries_today = stats.get('queries_today', 0) %}
+                                Today: {{ queries_today }} queries
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-search text-info"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        {% set queries_percentage = (stats.get('queries_today', 0) / 50 * 100) %}
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ queries_percentage if queries_percentage <= 100 else 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card" id="relevance-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="relevance-score">{{ "%.1f"|format(stats.get('avg_relevance', 0) * 100) }}%</div>
+                            <div class="stat-label">Avg Relevance Score</div>
+                            <small class="text-muted">
+                                {% set relevance_trend = stats.get('relevance_trend', 0) %}
+                                {% if relevance_trend > 0 %}
+                                    <i class="fas fa-arrow-up text-success"></i> +{{ "%.1f"|format(relevance_trend) }}%
+                                {% elif relevance_trend < 0 %}
+                                    <i class="fas fa-arrow-down text-danger"></i> {{ "%.1f"|format(relevance_trend) }}%
+                                {% else %}
+                                    <i class="fas fa-minus text-muted"></i> No change
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-bullseye text-success"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (stats.get('avg_relevance', 0) * 100) }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card" id="success-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="success-rate">{{ "%.1f"|format(stats.get('success_rate', 0) * 100) }}%</div>
+                            <div class="stat-label">Success Rate</div>
+                            <small class="text-muted">
+                                {% set failed_queries = stats.get('failed_queries', 0) %}
+                                {{ failed_queries }} failed queries
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle text-warning"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (stats.get('success_rate', 0) * 100) }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Insights Row -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Query Performance Trends</h6>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-outline-primary active" onclick="loadPerformanceChart('7d')">7D</button>
+                            <button type="button" class="btn btn-outline-primary" onclick="loadPerformanceChart('30d')">30D</button>
+                            <button type="button" class="btn btn-outline-primary" onclick="loadPerformanceChart('90d')">90D</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performanceChart" height="300"></canvas>
+                        <div id="chartLoading" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin"></i> Loading performance data...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>System Health</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="health-item mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Vector DB Health</span>
+                                <span class="badge bg-{{ 'success' if stats.get('chromadb_available') else 'danger' }}">
+                                    {{ 'Healthy' if stats.get('chromadb_available') else 'Down' }}
+                                </span>
+                            </div>
+                            <div class="progress mt-1" style="height: 3px;">
+                                <div class="progress-bar bg-{{ 'success' if stats.get('chromadb_available') else 'danger' }}" 
+                                     style="width: {{ 100 if stats.get('chromadb_available') else 0 }}%"></div>
+                            </div>
+                        </div>
+                        <div class="health-item mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Embedding Service</span>
+                                <span class="badge bg-{{ 'success' if stats.get('embeddings_available') else 'warning' }}">
+                                    {{ 'Active' if stats.get('embeddings_available') else 'Limited' }}
+                                </span>
+                            </div>
+                            <div class="progress mt-1" style="height: 3px;">
+                                <div class="progress-bar bg-{{ 'success' if stats.get('embeddings_available') else 'warning' }}" 
+                                     style="width: {{ 100 if stats.get('embeddings_available') else 60 }}%"></div>
+                            </div>
+                        </div>
+                        <div class="health-item mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span>Search Performance</span>
+                                {% set search_perf = stats.get('avg_search_time', 0) %}
+                                <span class="badge bg-{{ 'success' if search_perf < 1000 else 'warning' if search_perf < 3000 else 'danger' }}">
+                                    {{ search_perf|round|int }}ms
+                                </span>
+                            </div>
+                            <div class="progress mt-1" style="height: 3px;">
+                                {% set perf_width = (100 - (search_perf / 50)) %}
+                                {% set capped_width = perf_width if perf_width >= 20 else 20 %}
+                                {% set final_width = capped_width if capped_width <= 100 else 100 %}
+                                <div class="progress-bar bg-{{ 'success' if search_perf < 1000 else 'warning' if search_perf < 3000 else 'danger' }}" 
+                                     style="width: {{ final_width }}%"></div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary w-100" onclick="runHealthCheck()">
+                                <i class="fas fa-stethoscope me-2"></i>Run Health Check
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Enhanced Feature Cards -->
+        <div class="row mb-4">
+            <!-- Upload Knowledge -->
+            <div class="col-lg-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-header border-0 bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-upload"></i>
+                            </div>
+                            <span class="badge bg-primary">{{ stats.get('documents_count', 0) }} docs</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Upload Knowledge</h5>
+                        <p class="card-text">Upload documents to expand your knowledge base. Advanced processing with intelligent chunking and metadata extraction.</p>
+                        
+                        <!-- Quick Upload Area -->
+                        <div class="upload-zone border-2 border-dashed rounded p-3 mb-3 text-center" 
+                             ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
+                             onclick="document.getElementById('fileInput').click()" style="cursor: pointer;">
+                            <i class="fas fa-cloud-upload-alt text-muted mb-2" style="font-size: 2rem;"></i>
+                            <p class="mb-0 small text-muted">Drag & drop files here or click to browse</p>
+                        </div>
+                        
+                        <!-- Hidden file input -->
+                        <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc,.md,.html,.htm,.txt,.py,.js,.json,.yaml,.yml" style="display: none;" onchange="handleFileSelect(event)">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong class="small">Supported formats:</strong>
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#formatDetails">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                        </div>
+                        <div class="mb-2">
+                            {% for format in supported_formats %}
+                                <span class="badge bg-secondary me-1 mb-1">{{ format }}</span>
+                            {% endfor %}
+                        </div>
+                        <div class="collapse" id="formatDetails">
+                            <div class="small text-muted">
+                                • PDF: Text extraction with OCR support<br>
+                                • DOCX/DOC: Full formatting preservation<br>
+                                • MD: Markdown parsing with structure<br>
+                                • HTML: Clean text extraction<br>
+                                • TXT: Plain text with encoding detection
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer border-0 bg-transparent">
+                        <div class="d-grid gap-2">
+                            {% if rag_available %}
+                            <a href="{{ url_for('rag.upload_knowledge') }}" class="btn action-btn">
+                                <i class="fas fa-plus me-2"></i>Add Documents
+                            </a>
+                            {% else %}
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-lock me-2"></i>Requires Dependencies
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-outline-primary btn-sm" onclick="showBatchUpload()">
+                                <i class="fas fa-layer-group me-2"></i>Batch Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Search Knowledge -->
+            <div class="col-lg-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-header border-0 bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <span class="badge bg-info">{{ stats.get('search_methods', 0) }} methods</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Intelligent Search</h5>
+                        <p class="card-text">Advanced semantic search with multiple retrieval strategies and real-time filtering.</p>
+                        
+                        <!-- Quick Search Bar -->
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control form-control-sm" 
+                                   placeholder="Quick search..." id="quickSearch"
+                                   onkeypress="handleQuickSearch(event)">
+                            <button class="btn btn-outline-primary btn-sm" onclick="performQuickSearch()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        
+                        <!-- Search Methods Status -->
+                        <div class="search-methods mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small fw-bold">Search Methods:</span>
+                                <span class="badge bg-light text-dark">{{ stats.get('total_chunks', 0) }} searchable</span>
+                            </div>
+                            <div class="method-status mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small">
+                                        <i class="fas fa-{{ 'check-circle text-success' if stats.get('embeddings_available') else 'times-circle text-danger' }}"></i>
+                                        Semantic Search
+                                    </span>
+                                    <small class="text-muted">{{ stats.get('embedding_model', 'N/A') }}</small>
+                                </div>
+                            </div>
+                            <div class="method-status mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small">
+                                        <i class="fas fa-{{ 'check-circle text-success' if stats.get('tfidf_available') else 'times-circle text-danger' }}"></i>
+                                        Keyword Search
+                                    </span>
+                                    <small class="text-muted">TF-IDF</small>
+                                </div>
+                            </div>
+                            <div class="method-status mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small">
+                                        <i class="fas fa-{{ 'check-circle text-success' if stats.get('hybrid_available') else 'times-circle text-muted' }}"></i>
+                                        Hybrid Search
+                                    </span>
+                                    <small class="text-muted">Combined</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Searches -->
+                        <div class="recent-searches mb-3">
+                            <div class="small fw-bold mb-2">Recent Queries:</div>
+                            <div class="recent-query-list">
+                                {% for query in stats.get('recent_queries', [])[:3] %}
+                                <div class="recent-query-item mb-1">
+                                    <small class="text-muted d-block text-truncate" style="max-width: 200px;">
+                                        <i class="fas fa-clock me-1"></i>{{ query.query[:30] }}{% if query.query|length > 30 %}...{% endif %}
+                                    </small>
+                                </div>
+                                {% else %}
+                                <small class="text-muted">No recent searches</small>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer border-0 bg-transparent">
+                        <div class="d-grid gap-2">
+                            {% if rag_available %}
+                            <button class="btn action-btn" onclick="openAdvancedSearch()">
+                                <i class="fas fa-search-plus me-2"></i>Advanced Search
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="openSearchModal()">
+                                <i class="fas fa-filter me-2"></i>Search with Filters
+                            </button>
+                            {% else %}
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-lock me-2"></i>Setup Required
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced RAG Evaluation -->
+            <div class="col-lg-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-header border-0 bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="feature-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <span class="badge bg-{{ 'success' if (stats.get('avg_relevance', 0) * 100) > 70 else 'warning' if (stats.get('avg_relevance', 0) * 100) > 50 else 'danger' }}">
+                                {{ "%.0f"|format(stats.get('avg_relevance', 0) * 100) }}% score
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">Performance Analytics</h5>
+                        <p class="card-text">Real-time monitoring with automated evaluation and continuous improvement insights.</p>
+                        
+                        <!-- Performance Metrics Mini-Dashboard -->
+                        <div class="performance-metrics mb-3">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="metric-box p-2 border rounded">
+                                        <div class="metric-value text-primary fw-bold">{{ stats.get('total_queries', 0) }}</div>
+                                        <small class="text-muted">Queries</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-box p-2 border rounded">
+                                        <div class="metric-value text-success fw-bold">{{ "%.0f"|format(stats.get('avg_search_time', 0)) }}ms</div>
+                                        <small class="text-muted">Avg Time</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="metric-box p-2 border rounded">
+                                        <div class="metric-value text-info fw-bold">{{ "%.1f"|format(stats.get('user_satisfaction', 0) * 100) }}%</div>
+                                        <small class="text-muted">Satisfaction</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quality Indicators -->
+                        <div class="quality-indicators mb-3">
+                            <div class="small fw-bold mb-2">Quality Indicators:</div>
+                            <div class="indicator-item d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Retrieval Accuracy</span>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress" style="width: 60px; height: 6px;">
+                                        <div class="progress-bar bg-success" style="width: {{ (stats.get('retrieval_accuracy', 0) * 100) }}%"></div>
+                                    </div>
+                                    <small class="text-muted ms-1">{{ "%.0f"|format(stats.get('retrieval_accuracy', 0) * 100) }}%</small>
+                                </div>
+                            </div>
+                            <div class="indicator-item d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Response Relevance</span>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress" style="width: 60px; height: 6px;">
+                                        <div class="progress-bar bg-info" style="width: {{ (stats.get('response_relevance', 0) * 100) }}%"></div>
+                                    </div>
+                                    <small class="text-muted ms-1">{{ "%.0f"|format(stats.get('response_relevance', 0) * 100) }}%</small>
+                                </div>
+                            </div>
+                            <div class="indicator-item d-flex justify-content-between align-items-center mb-1">
+                                <span class="small">Context Precision</span>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress" style="width: 60px; height: 6px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ (stats.get('context_precision', 0) * 100) }}%"></div>
+                                    </div>
+                                    <small class="text-muted ms-1">{{ "%.0f"|format(stats.get('context_precision', 0) * 100) }}%</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Alert Status -->
+                        {% if stats.get('alerts', []) %}
+                        <div class="alert-status mb-3">
+                            <div class="small fw-bold mb-2 text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>Performance Alerts:
+                            </div>
+                            {% for alert in stats.get('alerts', [])[:2] %}
+                            <div class="alert alert-warning py-1 px-2 mb-1">
+                                <small>{{ alert.message }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer border-0 bg-transparent">
+                        <div class="d-grid gap-2">
+                            <a href="{{ url_for('rag.evaluation_dashboard') }}" class="btn action-btn">
+                                <i class="fas fa-chart-bar me-2"></i>Full Analytics
+                            </a>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-primary btn-sm" onclick="downloadReport()">
+                                    <i class="fas fa-download me-1"></i>Report
+                                </button>
+                                <button class="btn btn-outline-info btn-sm" onclick="scheduleEvaluation()">
+                                    <i class="fas fa-clock me-1"></i>Schedule
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-cog me-2"></i>System Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Components Status</h6>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-{{ 'check-circle text-success' if stats.get('chromadb_available') else 'times-circle text-danger' }}"></i>
+                                        ChromaDB Vector Database
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-{{ 'check-circle text-success' if stats.get('embeddings_available') else 'times-circle text-danger' }}"></i>
+                                        Sentence Transformers
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-{{ 'check-circle text-success' if stats.get('tfidf_available') else 'times-circle text-danger' }}"></i>
+                                        TF-IDF Search
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Quick Actions</h6>
+                                <div class="btn-group-vertical w-100" role="group">
+                                    <button class="btn btn-outline-primary mb-2" onclick="refreshStats()">
+                                        <i class="fas fa-sync me-2"></i>Refresh Statistics
+                                    </button>
+                                    <button class="btn btn-outline-info mb-2" onclick="exportMetrics()">
+                                        <i class="fas fa-download me-2"></i>Export Metrics
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="confirmClearKB()">
+                                        <i class="fas fa-trash me-2"></i>Clear Knowledge Base
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div class="modal fade" id="searchModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Knowledge Base</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="searchForm">
+                        <div class="mb-3">
+                            <label class="form-label">Search Query</label>
+                            <input type="text" class="form-control" id="searchQuery" placeholder="Enter your search query..." required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Search Method</label>
+                                <select class="form-select" id="searchMethod">
+                                    <option value="hybrid">Hybrid (Recommended)</option>
+                                    <option value="embedding">Embedding-based</option>
+                                    <option value="keyword">Keyword-based</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Number of Results</label>
+                                <select class="form-select" id="numResults">
+                                    <option value="5">5 results</option>
+                                    <option value="10">10 results</option>
+                                    <option value="15">15 results</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn action-btn">
+                                <i class="fas fa-search me-2"></i>Search
+                            </button>
+                        </div>
+                    </form>
+                    <div id="searchResults" class="mt-4" style="display: none;">
+                        <h6>Search Results</h6>
+                        <div id="resultsContainer"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openSearchModal() {
+            new bootstrap.Modal(document.getElementById('searchModal')).show();
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const query = document.getElementById('searchQuery').value;
+            const method = document.getElementById('searchMethod').value;
+            const numResults = document.getElementById('numResults').value;
+            
+            // Show loading
+            const resultsDiv = document.getElementById('searchResults');
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+            resultsDiv.style.display = 'block';
+            
+            // Perform search
+            fetch('/rag/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: query,
+                    method: method,
+                    n_results: parseInt(numResults)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayResults(data.results, data.latency_ms);
+                } else {
+                    container.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                container.innerHTML = `<div class="alert alert-danger">Search failed: ${error.message}</div>`;
+            });
+        });
+
+        function displayResults(results, latency) {
+            const container = document.getElementById('resultsContainer');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No results found.</div>';
+                return;
+            }
+            
+            let html = `<div class="mb-3"><small class="text-muted">Found ${results.length} results in ${latency.toFixed(2)}ms</small></div>`;
+            
+            results.forEach((result, index) => {
+                html += `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title">Result ${index + 1}</h6>
+                                <span class="badge bg-primary">${(result.relevance_score * 100).toFixed(1)}% relevance</span>
+                            </div>
+                            <p class="card-text">${result.content}</p>
+                            <div class="small text-muted">
+                                <i class="fas fa-tag me-1"></i>Method: ${result.retrieval_method} |
+                                <i class="fas fa-file me-1"></i>Source: ${result.metadata.meta_source_file || 'Unknown'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function refreshStats() {
+            location.reload();
+        }
+
+        function exportMetrics() {
+            fetch('/rag/export_metrics', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Metrics exported successfully: ${data.filename}`);
+                } else {
+                    alert(`Export failed: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                alert(`Export failed: ${error.message}`);
+            });
+        }
+
+        function confirmClearKB() {
+            if (confirm('Are you sure you want to clear the entire knowledge base? This action cannot be undone.')) {
+                fetch('/rag/clear_knowledge_base', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({confirm: true})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Knowledge base cleared successfully');
+                        location.reload();
+                    } else {
+                        alert(`Clear failed: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert(`Clear failed: ${error.message}`);
+                });
+            }
+        }
+
+        // Enhanced Dashboard Functions
+        let performanceChart = null;
+
+        function loadPerformanceChart(period) {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            document.getElementById('chartLoading').style.display = 'block';
+            
+            // Update active button
+            document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            fetch(`/rag/performance_data?period=${period}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('chartLoading').style.display = 'none';
+                    
+                    if (performanceChart) {
+                        performanceChart.destroy();
+                    }
+                    
+                    performanceChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: 'Query Volume',
+                                data: data.query_counts,
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                tension: 0.1,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Avg Relevance',
+                                data: data.relevance_scores,
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                tension: 0.1,
+                                yAxisID: 'y1'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    grid: {
+                                        drawOnChartArea: false,
+                                    },
+                                    min: 0,
+                                    max: 1
+                                }
+                            },
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: `Performance Trends (${period.toUpperCase()})`
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('chartLoading').innerHTML = 
+                        `<div class="alert alert-danger">Failed to load chart: ${error.message}</div>`;
+                });
+        }
+
+        function runHealthCheck() {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Checking...';
+            button.disabled = true;
+
+            fetch('/rag/health_check')
+                .then(response => response.json())
+                .then(data => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    
+                    let message = 'Health Check Results:\n\n';
+                    data.checks.forEach(check => {
+                        message += `${check.name}: ${check.status}\n`;
+                        if (check.message) {
+                            message += `  - ${check.message}\n`;
+                        }
+                    });
+                    
+                    alert(message);
+                    
+                    // Refresh the page to update health indicators
+                    if (data.overall_status === 'healthy') {
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                })
+                .catch(error => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    alert(`Health check failed: ${error.message}`);
+                });
+        }
+
+        // Drag and Drop Upload
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFiles(files);
+            }
+            
+            // Reset drop zone styling
+            e.target.classList.remove('dragover');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.target.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.target.classList.remove('dragover');
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadFiles(files);
+            }
+        }
+
+        function uploadFiles(files) {
+            const formData = new FormData();
+            for (let file of files) {
+                formData.append('files[]', file);
+            }
+
+            fetch('/rag/upload_knowledge', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Successfully uploaded ${files.length} files`);
+                    location.reload();
+                } else {
+                    alert(`Upload failed: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                alert(`Upload failed: ${error.message}`);
+            });
+        }
+
+        // Quick Search Functions
+        function handleQuickSearch(event) {
+            if (event.key === 'Enter') {
+                performQuickSearch();
+            }
+        }
+
+        function performQuickSearch() {
+            const query = document.getElementById('quickSearch').value.trim();
+            if (query.length < 3) {
+                alert('Please enter at least 3 characters for search');
+                return;
+            }
+
+            // Simple search and show results in modal
+            openSearchModal();
+            document.getElementById('searchQuery').value = query;
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        }
+
+        function openAdvancedSearch() {
+            // Create and show advanced search modal
+            const modalHtml = `
+                <div class="modal fade" id="advancedSearchModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Advanced Search</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="advancedSearchForm">
+                                    <div class="row mb-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label">Search Query</label>
+                                            <input type="text" class="form-control" id="advQuery" placeholder="Enter your search query">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Search Method</label>
+                                            <select class="form-select" id="advMethod">
+                                                <option value="hybrid">Hybrid (Recommended)</option>
+                                                <option value="embedding">Semantic Only</option>
+                                                <option value="keyword">Keyword Only</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Document Type Filter</label>
+                                            <select class="form-select" id="docTypeFilter">
+                                                <option value="">All Types</option>
+                                                <option value="pdf">PDF Documents</option>
+                                                <option value="docx">Word Documents</option>
+                                                <option value="md">Markdown Files</option>
+                                                <option value="html">HTML Files</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Results Count</label>
+                                            <input type="number" class="form-control" id="advResults" value="10" min="1" max="50">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Minimum Relevance Score</label>
+                                        <input type="range" class="form-range" id="minRelevance" min="0" max="100" value="50">
+                                        <div class="d-flex justify-content-between">
+                                            <small>0%</small>
+                                            <small id="relevanceValue">50%</small>
+                                            <small>100%</small>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-primary" onclick="performAdvancedSearch()">Search</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal to page if it doesn't exist
+            if (!document.getElementById('advancedSearchModal')) {
+                document.body.insertAdjacentHTML('beforeend', modalHtml);
+                
+                // Update relevance value display
+                document.getElementById('minRelevance').addEventListener('input', function() {
+                    document.getElementById('relevanceValue').textContent = this.value + '%';
+                });
+            }
+            
+            // Show modal
+            new bootstrap.Modal(document.getElementById('advancedSearchModal')).show();
+        }
+
+        function performAdvancedSearch() {
+            const query = document.getElementById('advQuery').value.trim();
+            const method = document.getElementById('advMethod').value;
+            const docType = document.getElementById('docTypeFilter').value;
+            const numResults = document.getElementById('advResults').value;
+            const minRelevance = document.getElementById('minRelevance').value / 100;
+
+            if (query.length < 2) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            // Close advanced search modal and open results modal
+            bootstrap.Modal.getInstance(document.getElementById('advancedSearchModal')).hide();
+            openSearchModal();
+            
+            // Populate search modal and perform search
+            document.getElementById('searchQuery').value = query;
+            document.getElementById('searchMethod').value = method;
+            document.getElementById('numResults').value = numResults;
+            
+            // Trigger search
+            document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+        }
+
+        function showBatchUpload() {
+            alert('Batch upload functionality - drag multiple files to the upload area or use the upload page for advanced options.');
+            window.location.href = '/rag/upload_knowledge';
+        }
+
+        function downloadReport() {
+            fetch('/rag/generate_report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create download link
+                    const link = document.createElement('a');
+                    link.href = data.download_url;
+                    link.download = data.filename;
+                    link.click();
+                } else {
+                    alert(`Report generation failed: ${data.error}`);
+                }
+            })
+            .catch(error => alert(`Report generation failed: ${error.message}`));
+        }
+
+        function scheduleEvaluation() {
+            const scheduleOptions = [
+                'Run evaluation now',
+                'Schedule daily evaluation',
+                'Schedule weekly evaluation',
+                'Cancel'
+            ];
+            
+            const choice = prompt(`Choose evaluation schedule:\n${scheduleOptions.map((opt, i) => `${i+1}. ${opt}`).join('\n')}\n\nEnter choice (1-4):`);
+            
+            if (choice && choice !== '4') {
+                fetch('/rag/schedule_evaluation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ schedule: choice })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.success ? `Evaluation ${data.message}` : `Failed: ${data.error}`);
+                })
+                .catch(error => alert(`Scheduling failed: ${error.message}`));
+            }
+        }
+
+        // Auto-refresh stats every 30 seconds
+        setInterval(() => {
+            fetch('/rag/stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Update key stats without full page reload
+                    if (data.stats) {
+                        document.getElementById('chunks-count').textContent = data.stats.total_chunks || 0;
+                        document.getElementById('queries-count').textContent = data.stats.total_queries || 0;
+                        document.getElementById('relevance-score').textContent = ((data.stats.avg_relevance || 0) * 100).toFixed(1) + '%';
+                        document.getElementById('success-rate').textContent = ((data.stats.success_rate || 0) * 100).toFixed(1) + '%';
+                    }
+                })
+                .catch(error => console.log('Stats refresh failed:', error));
+        }, 30000);
+
+        // Load initial performance chart
+        document.addEventListener('DOMContentLoaded', function() {
+            if (document.getElementById('performanceChart')) {
+                loadPerformanceChart('7d');
+            }
+        });
+    </script>
+</body>
+</html>

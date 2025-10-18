@@ -17,13 +17,26 @@ try:
 except ImportError:
     TITLE_UTILS_AVAILABLE = False
 
-nlp = spacy.load("en_core_web_sm")
+# Load spaCy model lazily to avoid startup issues
+nlp = None
+
+def _get_nlp():
+    global nlp
+    if nlp is None:
+        nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max_length to handle large documents
+    return nlp
 
 def check(content):
     suggestions = []
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
-    doc = nlp(text_content)
+    
+    try:
+        nlp_model = _get_nlp()
+        doc = nlp_model(text_content)
+    except Exception as e:
+        return []  # Return empty if spaCy fails
 
     # Flag long sentences (>25 words) - exclude titles and markdown tables
     for sent in doc.sents:

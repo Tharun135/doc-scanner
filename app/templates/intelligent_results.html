@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocScanner - Intelligent AI Suggestions</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2A3B5A;
+            --secondary-color: #2A9BAA;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .suggestion-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--info-color);
+            transition: all 0.3s ease;
+        }
+
+        .suggestion-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .original-text {
+            background: linear-gradient(135deg, #fff5f5, #ffe6e6);
+            border-left: 4px solid var(--danger-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .improved-text {
+            background: linear-gradient(135deg, #f0fff4, #e6ffe9);
+            border-left: 4px solid var(--success-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .ai-explanation {
+            background: linear-gradient(135deg, #f8f9ff, #e7ecff);
+            border-left: 4px solid var(--info-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .method-advanced_rag { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .method-vector_openai { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+        .method-ollama_local { background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; }
+        .method-intelligent_analysis { background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; }
+        .method-emergency_fallback { background: linear-gradient(135deg, #fa709a, #fee140); color: white; }
+
+        .confidence-high { border-left-color: var(--success-color); }
+        .confidence-medium { border-left-color: var(--warning-color); }
+        .confidence-low { border-left-color: var(--danger-color); }
+
+        .stats-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .btn-accept {
+            background: linear-gradient(135deg, var(--success-color), #20c997);
+            border: none;
+            color: white;
+        }
+
+        .btn-reject {
+            background: linear-gradient(135deg, var(--danger-color), #e74c3c);
+            border: none;
+            color: white;
+        }
+
+        .btn-edit {
+            background: linear-gradient(135deg, var(--info-color), #3498db);
+            border: none;
+            color: white;
+        }
+
+        .sources-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .source-item {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.25rem;
+        }
+
+        .context-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .back-button {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
+            text-decoration: none;
+        }
+
+        .progress-indicator {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="mb-0">
+                <i class="fas fa-brain"></i> 
+                Intelligent AI Writing Suggestions
+            </h1>
+            <p class="mb-0 mt-2">Advanced RAG-powered analysis with context-aware improvements</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Back Button -->
+        <a href="/" class="back-button mb-4">
+            <i class="fas fa-arrow-left"></i>
+            Back to Document Upload
+        </a>
+
+        <!-- Statistics Summary -->
+        <div class="stats-container">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ suggestions|length }}</div>
+                        <div class="stat-label">Total Suggestions</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">
+                            {{ suggestions|selectattr('confidence', 'equalto', 'high')|list|length }}
+                        </div>
+                        <div class="stat-label">High Confidence</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">
+                            {{ suggestions|selectattr('method', 'in', ['advanced_rag', 'vector_openai', 'intelligent_analysis'])|list|length }}
+                        </div>
+                        <div class="stat-label">AI-Powered</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-item">
+                        <div class="stat-number">
+                            {{ suggestions|selectattr('success', 'equalto', True)|list|length }}
+                        </div>
+                        <div class="stat-label">Successful</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Indicator -->
+        {% if suggestions %}
+        <div class="progress-indicator">
+            <h5><i class="fas fa-check-circle text-success"></i> Analysis Complete</h5>
+            <p class="mb-0">Found {{ suggestions|length }} opportunities for improvement using intelligent AI analysis.</p>
+        </div>
+        {% endif %}
+
+        <!-- Suggestions List -->
+        {% for suggestion in suggestions %}
+        <div class="suggestion-card confidence-{{ suggestion.confidence|default('medium') }}">
+            <!-- Header with method and confidence -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <span class="method-badge method-{{ suggestion.method|default('intelligent_analysis') }}">
+                        {% if suggestion.method == 'advanced_rag' %}
+                            <i class="fas fa-brain"></i> Advanced RAG
+                        {% elif suggestion.method == 'vector_openai' %}
+                            <i class="fas fa-robot"></i> Vector + OpenAI
+                        {% elif suggestion.method == 'ollama_local' %}
+                            <i class="fas fa-microchip"></i> Local Ollama
+                        {% elif suggestion.method == 'intelligent_analysis' %}
+                            <i class="fas fa-lightbulb"></i> Intelligent Analysis
+                        {% else %}
+                            <i class="fas fa-cogs"></i> {{ suggestion.method|title }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div>
+                    <span class="badge bg-{% if suggestion.confidence == 'high' %}success{% elif suggestion.confidence == 'medium' %}warning{% else %}danger{% endif %}">
+                        {{ suggestion.confidence|default('medium')|title }} Confidence
+                    </span>
+                </div>
+            </div>
+
+            <!-- Original Text -->
+            <div class="mb-3">
+                <h6><i class="fas fa-file-alt text-danger"></i> Original Text:</h6>
+                <div class="original-text">
+                    {{ suggestion.sentence|default(suggestion.original_sentence)|default('No original text provided') }}
+                </div>
+            </div>
+
+            <!-- Improved Text -->
+            <div class="mb-3">
+                <h6><i class="fas fa-magic text-success"></i> AI Suggestion:</h6>
+                <div class="improved-text">
+                    {{ suggestion.suggestion|default('No suggestion available') }}
+                </div>
+            </div>
+
+            <!-- AI Explanation -->
+            {% if suggestion.ai_answer %}
+            <div class="mb-3">
+                <h6><i class="fas fa-comment-dots text-info"></i> AI Explanation:</h6>
+                <div class="ai-explanation">
+                    {{ suggestion.ai_answer }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Sources -->
+            {% if suggestion.sources and suggestion.sources|length > 0 %}
+            <div class="mb-3">
+                <h6><i class="fas fa-book text-secondary"></i> Sources & References:</h6>
+                <div class="sources-list">
+                    {% for source in suggestion.sources %}
+                    <div class="source-item">
+                        <i class="fas fa-link"></i> {{ source }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Context Information -->
+            {% if suggestion.context_used %}
+            <div class="context-info">
+                <h6><i class="fas fa-info-circle"></i> Analysis Context:</h6>
+                <div class="row">
+                    {% if suggestion.context_used.document_type %}
+                    <div class="col-md-4">
+                        <strong>Document Type:</strong> {{ suggestion.context_used.document_type }}
+                    </div>
+                    {% endif %}
+                    {% if suggestion.context_used.primary_ai %}
+                    <div class="col-md-4">
+                        <strong>AI Engine:</strong> {{ suggestion.context_used.primary_ai }}
+                    </div>
+                    {% endif %}
+                    {% if suggestion.context_used.writing_goals %}
+                    <div class="col-md-4">
+                        <strong>Goals:</strong> {{ suggestion.context_used.writing_goals|join(', ') }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-accept btn-sm" onclick="acceptSuggestion({{ loop.index0 }})">
+                    <i class="fas fa-check"></i> Accept
+                </button>
+                <button class="btn btn-reject btn-sm" onclick="rejectSuggestion({{ loop.index0 }})">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+                <button class="btn btn-edit btn-sm" onclick="editSuggestion({{ loop.index0 }})">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- No Suggestions Message -->
+        {% if not suggestions %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted">No Suggestions Available</h3>
+            <p class="text-muted">The document analysis didn't find any areas for improvement, or there was an issue processing the document.</p>
+            <a href="/" class="back-button">
+                <i class="fas fa-upload"></i>
+                Try Another Document
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="text-center py-4 mt-5">
+            <p class="text-muted">
+                <i class="fas fa-brain"></i> 
+                Powered by Advanced RAG Technology & Intelligent AI Analysis
+            </p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Feedback functions
+        function acceptSuggestion(index) {
+            // Send feedback to server
+            fetch('/api/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    suggestion_index: index,
+                    action: 'accept',
+                    timestamp: new Date().toISOString()
+                })
+            }).then(response => {
+                if (response.ok) {
+                    showToast('Suggestion accepted! This helps improve our AI.', 'success');
+                    // Update UI to show accepted state
+                    updateSuggestionState(index, 'accepted');
+                }
+            }).catch(error => {
+                console.error('Feedback error:', error);
+            });
+        }
+
+        function rejectSuggestion(index) {
+            // Send feedback to server
+            fetch('/api/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    suggestion_index: index,
+                    action: 'reject',
+                    timestamp: new Date().toISOString()
+                })
+            }).then(response => {
+                if (response.ok) {
+                    showToast('Feedback recorded! This helps improve our AI.', 'info');
+                    updateSuggestionState(index, 'rejected');
+                }
+            }).catch(error => {
+                console.error('Feedback error:', error);
+            });
+        }
+
+        function editSuggestion(index) {
+            // Allow inline editing of suggestion
+            const suggestionCard = document.querySelectorAll('.suggestion-card')[index];
+            const improvedTextDiv = suggestionCard.querySelector('.improved-text');
+            const currentText = improvedTextDiv.textContent.trim();
+            
+            // Create editable textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = currentText;
+            textarea.className = 'form-control';
+            textarea.rows = 3;
+            
+            // Create save/cancel buttons
+            const buttonGroup = document.createElement('div');
+            buttonGroup.className = 'mt-2';
+            buttonGroup.innerHTML = `
+                <button class="btn btn-sm btn-success me-2" onclick="saveSuggestionEdit(${index}, this)">
+                    <i class="fas fa-save"></i> Save
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="cancelSuggestionEdit(${index}, '${currentText}')">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            `;
+            
+            // Replace content
+            improvedTextDiv.innerHTML = '';
+            improvedTextDiv.appendChild(textarea);
+            improvedTextDiv.appendChild(buttonGroup);
+            
+            textarea.focus();
+        }
+
+        function saveSuggestionEdit(index, button) {
+            const suggestionCard = document.querySelectorAll('.suggestion-card')[index];
+            const textarea = suggestionCard.querySelector('.improved-text textarea');
+            const newText = textarea.value.trim();
+            
+            // Send edited suggestion to server
+            fetch('/api/feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    suggestion_index: index,
+                    action: 'edit',
+                    edited_text: newText,
+                    timestamp: new Date().toISOString()
+                })
+            }).then(response => {
+                if (response.ok) {
+                    // Update the display
+                    const improvedTextDiv = suggestionCard.querySelector('.improved-text');
+                    improvedTextDiv.innerHTML = newText;
+                    showToast('Suggestion updated successfully!', 'success');
+                    updateSuggestionState(index, 'edited');
+                }
+            }).catch(error => {
+                console.error('Edit error:', error);
+                showToast('Failed to save edit. Please try again.', 'error');
+            });
+        }
+
+        function cancelSuggestionEdit(index, originalText) {
+            const suggestionCard = document.querySelectorAll('.suggestion-card')[index];
+            const improvedTextDiv = suggestionCard.querySelector('.improved-text');
+            improvedTextDiv.innerHTML = originalText;
+        }
+
+        function updateSuggestionState(index, state) {
+            const suggestionCard = document.querySelectorAll('.suggestion-card')[index];
+            const actionButtons = suggestionCard.querySelector('.action-buttons');
+            
+            // Add state indicator
+            const stateIndicator = document.createElement('span');
+            stateIndicator.className = `badge bg-${state === 'accepted' ? 'success' : state === 'rejected' ? 'danger' : 'info'} ms-2`;
+            stateIndicator.innerHTML = `<i class="fas fa-${state === 'accepted' ? 'check' : state === 'rejected' ? 'times' : 'edit'}"></i> ${state.charAt(0).toUpperCase() + state.slice(1)}`;
+            
+            actionButtons.appendChild(stateIndicator);
+        }
+
+        function showToast(message, type = 'info') {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
+                }
+            }, 5000);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Intelligent AI Suggestions page loaded');
+            
+            // Add smooth scrolling for better UX
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>

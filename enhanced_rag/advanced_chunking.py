@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 # Load spaCy model with enhanced pipeline
 try:
     nlp = spacy.load("en_core_web_sm")
+    nlp.max_length = 3000000  # Increase max length to 2MB
     # Add custom sentencizer for technical documents
     if 'sentencizer' not in nlp.pipe_names:
         nlp.add_pipe('sentencizer')

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 # Load spaCy model (will be loaded once)
 try:
     nlp = spacy.load("en_core_web_sm")
+    nlp.max_length = 3000000  # Increase max length to 2MB
 except OSError:
     print("Warning: spaCy model 'en_core_web_sm' not found. Install with: python -m spacy download en_core_web_sm")
     nlp = None

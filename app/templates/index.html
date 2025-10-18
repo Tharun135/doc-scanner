@@ -577,6 +577,38 @@
     100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
 }
 
+/* NEW: Intelligent AI Analysis Button Styles */
+.btn-gradient-intelligent {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-gradient-intelligent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    color: white;
+}
+
+.btn-gradient-intelligent:active {
+    transform: translateY(0);
+}
+
+.intelligent-badge {
+    background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+    color: #333;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(255, 154, 158, 0.3);
+}
+
 .sources-container {
     max-height: 200px;
     overflow-y: auto;
@@ -896,6 +928,9 @@
                 <button class="btn btn-outline-light btn-sm me-2" id="historyBtn">
                     <i class="fas fa-history"></i> History
                 </button>
+                <a href="{{ url_for('rag.rag_dashboard') }}" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-brain"></i> RAG Dashboard
+                </a>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="darkModeToggle">
                     <label class="form-check-label" for="darkModeToggle">Dark Mode</label>
@@ -934,6 +969,17 @@
                             <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
                             <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
+                        
+                        <!-- NEW: Intelligent AI Analysis Option -->
+                        <div class="mt-3">
+                            <button class="btn btn-gradient-intelligent w-100" type="button" id="intelligentAnalysisBtn">
+                                <i class="fas fa-brain"></i> Intelligent AI Analysis
+                                <span class="intelligent-badge">RAG-Powered</span>
+                            </button>
+                            <small class="text-muted d-block mt-1 text-center">
+                                <i class="fas fa-magic"></i> Context-aware suggestions using advanced AI
+                            </small>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -1058,10 +1104,39 @@
     </div>
 
     <script>
-        // WebSocket connection for real-time progress
-        const socket = io();
+        // WebSocket connection for real-time progress with fallback
+        let socket = null;
+        let socketConnected = false;
         let currentRoomId = null;
         let isRealTimeProgress = false;
+        
+        // Initialize WebSocket with error handling
+        try {
+            socket = io({
+                transports: ['polling', 'websocket'],
+                timeout: 5000,
+                forceNew: true
+            });
+            
+            socket.on('connect', () => {
+                console.log('✅ WebSocket connected');
+                socketConnected = true;
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('⚠️ WebSocket disconnected');
+                socketConnected = false;
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.warn('⚠️ WebSocket connection failed, using fallback mode:', error.message);
+                socketConnected = false;
+            });
+            
+        } catch (error) {
+            console.warn('⚠️ WebSocket initialization failed, using fallback mode:', error.message);
+            socketConnected = false;
+        }
 
         // File upload handling
         const dropzone = document.getElementById('dropzone');
@@ -1075,22 +1150,61 @@
         let selectedFiles = [];
         let batchResults = [];
 
-        // WebSocket event handlers
-        socket.on('connect', () => {
-            console.log('Connected to WebSocket server');
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from WebSocket server');
-        });
-
-        socket.on('progress_update', (data) => {
-            console.log('Progress update received:', data);
+        // WebSocket event handlers (only if socket is available)
+        if (socket) {
+            socket.on('progress_update', (data) => {
+                console.log('📡 Progress update received:', data);
+                
+                if (isRealTimeProgress && currentRoomId) {
+                    updateRealTimeProgress(data);
+                }
+            });
+        }
+        
+        // Fallback progress simulation when WebSocket is not available
+        function simulateFallbackProgress(roomId, onComplete) {
+            if (socketConnected) return; // Only use fallback when socket is not connected
             
-            if (isRealTimeProgress && currentRoomId) {
-                updateRealTimeProgress(data);
-            }
-        });
+            console.log('🔄 Starting fallback progress simulation');
+            
+            const stages = [
+                { percentage: 10, message: "Receiving and validating your document...", stage_name: "Upload" },
+                { percentage: 30, message: "Extracting text from document format...", stage_name: "Parse" },
+                { percentage: 50, message: "Identifying sentence boundaries...", stage_name: "Extract" },
+                { percentage: 80, message: "Applying grammar and style rules...", stage_name: "Analyze" },
+                { percentage: 100, message: "Generating final report...", stage_name: "Report" }
+            ];
+            
+            let currentStage = 0;
+            
+            const updateProgress = () => {
+                if (currentStage < stages.length) {
+                    const stage = stages[currentStage];
+                    updateRealTimeProgress({
+                        percentage: stage.percentage,
+                        message: stage.message,
+                        stage_name: stage.stage_name,
+                        elapsed_time: (currentStage + 1) * 0.8,
+                        eta_seconds: (stages.length - currentStage - 1) * 0.8,
+                        completed: false
+                    });
+                    currentStage++;
+                    setTimeout(updateProgress, 600); // Update every 600ms
+                } else {
+                    // Completion
+                    updateRealTimeProgress({
+                        percentage: 100,
+                        message: "Analysis complete!",
+                        stage_name: "Complete",
+                        completed: true,
+                        success: true
+                    });
+                    if (onComplete) onComplete();
+                }
+            };
+            
+            setTimeout(updateProgress, 200); // Start after 200ms
+        }
 
         function updateRealTimeProgress(data) {
             // Update percentage
@@ -1477,6 +1591,15 @@
             resetProgress();
         }
 
+        function updateProgressMessage(message) {
+            // Update the current stage description with a custom message
+            const stageDescription = document.getElementById('stageDescription');
+            if (stageDescription) {
+                stageDescription.textContent = message;
+            }
+            console.log('Progress message:', message);
+        }
+
         function updateProgress(stageIndex) {
             if (stageIndex >= progressStages.length) return;
             
@@ -1607,7 +1730,61 @@
             }
         });
 
+        // NEW: Intelligent AI Analysis Button Handler
+        document.getElementById('intelligentAnalysisBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            if (selectedFiles.length === 0) {
+                alert('Please select at least one file first.');
+                return;
+            }
+
+            const btn = e.target;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-brain fa-spin"></i> Analyzing with AI...';
+            btn.disabled = true;
+
+            try {
+                // Create form data with intelligent analysis flag
+                const formData = new FormData();
+                formData.append('file', selectedFiles[0]);
+                formData.append('document_type', 'general'); // Could be made configurable
+                formData.append('writing_goals', 'clarity');
+                formData.append('writing_goals', 'conciseness');
+                formData.append('writing_goals', 'directness');
+
+                // Show progress with intelligent analysis message
+                showProgressLoader(false);
+                updateProgressMessage('🧠 Initializing Intelligent AI Analysis...');
+
+                const response = await fetch('/analyze_intelligent', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Redirect to intelligent results page
+                    const resultHtml = await response.text();
+                    document.documentElement.innerHTML = resultHtml;
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed');
+                }
+
+            } catch (error) {
+                console.error('Intelligent analysis error:', error);
+                alert('Intelligent analysis failed: ' + error.message);
+            } finally {
+                hideProgressLoader();
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        });
+
         async function processSingleFile(file) {
+            let uploadCompleted = false;
+            let resultData = null;
+            
             try {
                 // Step 1: Get room ID for progress tracking
                 const roomResponse = await fetch('/start_upload', {
@@ -1620,15 +1797,28 @@
                 
                 const roomData = await roomResponse.json();
                 currentRoomId = roomData.room_id;
+                console.log('📋 Upload session started:', currentRoomId);
                 
-                // Join the progress room for WebSocket updates
-                socket.emit('join_progress_room', { room_id: currentRoomId });
+                // Join the progress room for WebSocket updates (if available)
+                if (socket && socketConnected) {
+                    console.log('🔌 Using WebSocket for progress tracking');
+                    socket.emit('join_progress_room', { room_id: currentRoomId });
+                } else {
+                    console.log('🔄 WebSocket unavailable, using fallback progress');
+                    simulateFallbackProgress(currentRoomId, () => {
+                        if (uploadCompleted && resultData) {
+                            console.log('✅ Fallback progress complete, showing results');
+                            renderChart(resultData.report || {}, resultData.sentences || []);
+                        }
+                    });
+                }
                 
                 // Step 2: Upload file with room ID
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('room_id', currentRoomId);
 
+                console.log('📤 Starting file upload...');
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -1637,34 +1827,39 @@
                 if (!response.ok) throw new Error('Upload failed');
 
                 const result = await response.json();
+                console.log('📊 Upload completed successfully');
                 
-                // Only render results after successful completion
-                // (progress completion will be handled by WebSocket)
+                uploadCompleted = true;
+                resultData = result;
+                
+                // For WebSocket mode, results will be shown via progress_update event
+                // For fallback mode, results will be shown via simulateFallbackProgress callback
+                if (!socketConnected) {
+                    // In fallback mode, also set a timeout as backup
+                    setTimeout(() => {
+                        if (result.content) {
+                            console.log('📊 Showing results (fallback timeout)');
+                            renderChart(result.report || {}, result.sentences || []);
+                        }
+                    }, 1000);
+                }
+                
+                // Backup timeout in case progress updates fail (both WebSocket and fallback)
                 setTimeout(() => {
-                    renderChart(result.report || {}, result.sentences || []);
-                    renderContent(result.content || '', result.sentences || []);
-                }, 1000); // Small delay to let progress complete animation finish
+                    if (uploadCompleted && resultData && (!socketConnected || !isRealTimeProgress)) {
+                        console.log('⏱️ Backup timeout triggered, showing results');
+                        renderChart(resultData.report || {}, resultData.sentences || []);
+                        renderContent(resultData.content || '', resultData.sentences || []);
+                        hideProgressLoader();
+                    }
+                }, 3000); // Give 3 seconds for progress to complete
                 
                 return result;
+                
             } catch (error) {
-                // If real-time progress fails, fall back to simulation
-                console.warn('Real-time progress failed, using simulation:', error);
-                isRealTimeProgress = false;
-                
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error('Upload failed');
-
-                const result = await response.json();
-                renderChart(result.report || {}, result.sentences || []);
-                renderContent(result.content || '', result.sentences || []);
-                return result;
+                console.error('❌ Upload error:', error);
+                hideProgressLoader();
+                throw error; // Re-throw to be handled by calling function
             }
         }
 

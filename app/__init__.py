@@ -25,6 +25,29 @@ def create_app():
     from .app import main as main_blueprint
     app.register_blueprint(main_blueprint)
     
+    # Register RAG blueprint for knowledge base management
+    try:
+        from .rag_routes import rag, init_rag_system
+        app.register_blueprint(rag)
+        
+        # Initialize RAG system
+        rag_success = init_rag_system()
+        if rag_success:
+            print("✅ RAG system initialized successfully!")
+        else:
+            print("⚠️ RAG system partially initialized - some features may be limited")
+    except Exception as e:
+        print(f"Warning: Could not import full RAG system: {e}")
+        print("⚠️ Loading minimal RAG system...")
+        try:
+            from .rag_routes_minimal import rag, init_rag_system
+            app.register_blueprint(rag)
+            init_rag_system()
+            print("✅ Minimal RAG system loaded successfully!")
+        except Exception as e2:
+            print(f"Error: Could not load minimal RAG system: {e2}")
+            print("⚠️ Running without RAG capabilities")
+    
     # Add SocketIO event handlers only if available
     if SOCKETIO_AVAILABLE and socketio:
         @socketio.on('connect')

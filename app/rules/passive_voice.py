@@ -18,11 +18,27 @@ try:
 except ImportError:
     TITLE_UTILS_AVAILABLE = False
 
-# Load spaCy English model
-nlp = spacy.load("en_core_web_sm")
+# Use shared spaCy instance to avoid conflicts
+try:
+    from app.app import nlp
+except ImportError:
+    # Fallback if we can't import the shared instance
+    try:
+        nlp = spacy.load("en_core_web_sm")
+        # Increase max_length to handle large documents
+        nlp.max_length = 3000000
+    except OSError:
+        # If spaCy model not available, create a minimal instance
+        import warnings
+        warnings.warn("spaCy model not available, passive voice detection will be limited")
+        nlp = None
 
 def check(content):
     suggestions = []
+    
+    # Skip if no spaCy available
+    if nlp is None:
+        return suggestions
     
     # Strip HTML tags
     soup = BeautifulSoup(content, "html.parser")

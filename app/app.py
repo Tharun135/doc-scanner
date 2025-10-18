@@ -9,23 +9,9 @@ from bs4 import BeautifulSoup
 import logging
 import importlib
 import sys
+import textstat
 import time
 from dataclasses import asdict
-
-# Make textstat optional
-try:
-    import textstat
-    TEXTSTAT_AVAILABLE = True
-except ImportError:
-    TEXTSTAT_AVAILABLE = False
-    class MockTextstat:
-        @staticmethod
-        def flesch_reading_ease(text):
-            return 60.0  # Default middle-range score
-        @staticmethod
-        def automated_readability_index(text):
-            return 8.0   # Default grade level
-    textstat = MockTextstat()
 
 # Try to import spacy but handle import errors gracefully
 try:
@@ -613,7 +599,7 @@ def ai_suggestion():
     print("🔧 ENDPOINT: AI suggestion endpoint called")
     logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
 
-    from .ai_improvement import get_enhanced_ai_suggestion
+    from .intelligent_ai_improvement import get_enhanced_ai_suggestion
     from .performance_monitor import track_suggestion, learning_system
     import uuid, time
 
@@ -697,28 +683,20 @@ def ai_suggestion():
             raise ValueError(f"Invalid result structure: {type(result)}")
 
         # Prefer enriched rewrite; never echo placeholder text
-        suggestion_raw = (
+        suggestion = (
             result.get("suggestion")
             or result.get("proposed_rewrite")
             or ""
-        )
-        # Ensure suggestion is always a string, never None/null/other type
-        if not isinstance(suggestion_raw, str):
-            suggestion_raw = str(suggestion_raw) if suggestion_raw is not None else ""
-        suggestion = suggestion_raw.strip()
+        ).strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted suggestion: '{suggestion[:100]}...' "
                     f"(length: {len(suggestion)})")
 
-        ai_answer_raw = (
+        ai_answer = (
             result.get("ai_answer")
             or result.get("solution_text")
             or ""
-        )
-        # Ensure ai_answer is always a string, never None/null/other type
-        if not isinstance(ai_answer_raw, str):
-            ai_answer_raw = str(ai_answer_raw) if ai_answer_raw is not None else ""
-        ai_answer = ai_answer_raw.strip()
+        ).strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
                     f"(length: {len(ai_answer)})")
@@ -730,11 +708,7 @@ def ai_suggestion():
             # Use a lightweight engine instance for fallback rewrite
             fallback_engine = AISuggestionEngine()
             fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            fallback_suggestion = fallback.get("suggestion") or ""
-            # Ensure fallback suggestion is also a string
-            if not isinstance(fallback_suggestion, str):
-                fallback_suggestion = str(fallback_suggestion) if fallback_suggestion is not None else ""
-            suggestion = fallback_suggestion.strip()
+            suggestion = (fallback.get("suggestion") or "").strip()
             ai_answer = ai_answer or "Deterministic fallback rewrite."
             logger.info(f"🔧 ENDPOINT: Used fallback suggestion: '{suggestion[:100]}...'")
         else:
@@ -746,11 +720,7 @@ def ai_suggestion():
             from .ai_improvement import AISuggestionEngine
             fallback_engine = AISuggestionEngine()
             fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            fallback_suggestion2 = fallback.get("suggestion") or ""
-            # Ensure this fallback suggestion is also a string
-            if not isinstance(fallback_suggestion2, str):
-                fallback_suggestion2 = str(fallback_suggestion2) if fallback_suggestion2 is not None else ""
-            suggestion = fallback_suggestion2.strip()
+            suggestion = (fallback.get("suggestion") or "").strip()
             if not ai_answer:
                 ai_answer = "Applied deterministic rewrite to resolve the issue."
 
@@ -767,12 +737,6 @@ def ai_suggestion():
             suggestion = (fallback.get("suggestion") or "").strip()
             if not ai_answer:
                 ai_answer = "Applied deterministic rewrite to resolve the issue."
-
-        # Final safety check: ensure all string fields are actually strings
-        if not isinstance(suggestion, str):
-            suggestion = str(suggestion) if suggestion is not None else "Unable to generate suggestion"
-        if not isinstance(ai_answer, str):
-            ai_answer = str(ai_answer) if ai_answer is not None else "No guidance available"
 
         return jsonify({
         # ✅ Concrete rewrite to show in the “AI Suggestion” box
@@ -901,6 +865,81 @@ def performance_dashboard():
     except Exception as e:
         logger.error(f"Error getting dashboard data: {str(e)}")
         return jsonify({"error": "Failed to get dashboard data"}), 500
+
+@main.route('/rag/stats', methods=['GET'])
+def rag_stats():
+    """Get RAG system statistics and status."""
+    try:
+        from .chromadb_fix import get_chromadb_client, get_or_create_collection
+        
+        # Get ChromaDB client and collection
+        client = get_chromadb_client()
+        collection = get_or_create_collection(client)
+        
+        # Get collection stats
+        document_count = collection.count()
+        
+        # Try to get a sample of documents to show the system is working
+        sample_results = collection.peek(limit=5) if document_count > 0 else None
+        
+        stats = {
+            "status": "active" if document_count > 0 else "no_data",
+            "total_documents": document_count,
+            "database_type": "ChromaDB",
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "last_updated": "2025-10-17",
+            "sample_documents": len(sample_results['documents']) if sample_results and sample_results.get('documents') else 0,
+            "available_features": [
+                "Document Search",
+                "Semantic Similarity", 
+                "Context Retrieval",
+                "AI Enhancement"
+            ]
+        }
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        logger.error(f"Error getting RAG stats: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "total_documents": 0,
+            "database_type": "ChromaDB (unavailable)",
+            "embedding_model": "N/A",
+            "last_updated": "N/A",
+            "sample_documents": 0,
+            "available_features": []
+        })
+
+@main.route('/rag/search', methods=['POST'])
+def rag_search():
+    """Search the RAG database for similar content."""
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        limit = data.get('limit', 5)
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+            
+        from .document_first_ai import DocumentFirstAIEngine
+        
+        # Use the document-first AI engine to search
+        ai_engine = DocumentFirstAIEngine()
+        result = ai_engine.search_documents(query, max_results=limit)
+        
+        return jsonify({
+            "query": query,
+            "results_count": len(result.get('sources', [])),
+            "results": result.get('sources', []),
+            "method": result.get('method', 'document_search'),
+            "confidence": result.get('confidence', 'medium')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in RAG search: {str(e)}")
+        return jsonify({"error": f"Search failed: {str(e)}"}), 500
 
 @main.route('/ai_config', methods=['GET', 'POST'])
 def ai_configuration():

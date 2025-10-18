@@ -26,6 +26,8 @@ def _get_nlp():
     if nlp is None:
         try:
             nlp = spacy.load("en_core_web_sm")
+            # Increase max_length to handle large documents
+            nlp.max_length = 3000000
         except OSError:
             print("⚠️ spaCy model en_core_web_sm not found - grammar rules disabled")
             nlp = False
