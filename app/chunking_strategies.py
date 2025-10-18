@@ -28,11 +28,22 @@ except ImportError:
 try:
     from sentence_transformers import SentenceTransformer
     EMBEDDINGS_AVAILABLE = True
-    # Load a lightweight model for similarity
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    # Defer model loading until needed
+    embedding_model = None
 except ImportError:
     EMBEDDINGS_AVAILABLE = False
     embedding_model = None
+
+def get_embedding_model():
+    """Get embedding model with lazy loading"""
+    global embedding_model
+    if EMBEDDINGS_AVAILABLE and embedding_model is None:
+        try:
+            embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        except Exception as e:
+            logger.warning(f"Failed to load embedding model: {e}")
+            embedding_model = None
+    return embedding_model
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +281,12 @@ class TextChunker:
             return self._chunk_fixed_size(content, target_size, doc_id)
         
         # Generate embeddings for sentences
-        embeddings = embedding_model.encode(sentences)
+        model = get_embedding_model()
+        if model is None:
+            logger.warning("Embedding model not available, falling back to fixed-size chunking")
+            return self._chunk_fixed_size(content, target_size, doc_id)
+            
+        embeddings = model.encode(sentences)
         
         # Calculate similarity between consecutive sentences
         similarities = []

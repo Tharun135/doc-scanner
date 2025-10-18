@@ -30,12 +30,9 @@ def create_app():
         from .rag_routes import rag, init_rag_system
         app.register_blueprint(rag)
         
-        # Initialize RAG system
-        rag_success = init_rag_system()
-        if rag_success:
-            print("✅ RAG system initialized successfully!")
-        else:
-            print("⚠️ RAG system partially initialized - some features may be limited")
+        # Don't initialize RAG system at startup to avoid hanging
+        # It will be initialized on first access to RAG routes
+        print("✅ RAG system registered - will initialize on first use!")
     except Exception as e:
         print(f"Warning: Could not import full RAG system: {e}")
         print("⚠️ Loading minimal RAG system...")

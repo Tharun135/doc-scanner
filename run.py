@@ -4,8 +4,8 @@ from app import create_app
 app, socketio = create_app()
 
 if __name__ == '__main__':
-    # Force disable debug mode to prevent file watching and constant restarts
-    debug_mode = False
+    # Enable debug mode to see detailed error messages
+    debug_mode = True
     
     # Use socketio.run if available, otherwise use app.run
     if socketio:
