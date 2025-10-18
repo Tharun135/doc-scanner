@@ -149,6 +149,9 @@ def init_rag_system():
 @rag.route('/')
 def knowledge_base_dashboard():
     """Main knowledge base management dashboard."""
+    # Check dependencies and initialize RAG modules
+    deps_available = check_rag_dependencies()
+    
     # Provide default stats structure
     stats = {
         'total_chunks': 0,
@@ -169,11 +172,33 @@ def knowledge_base_dashboard():
         'avg_search_time': 750  # Default search time in ms
     }
     
-    if retriever:
-        retriever_stats = retriever.get_collection_stats()
-        stats.update(retriever_stats)
+    # If RAG is available, initialize and get real stats
+    if deps_available and init_rag_modules():
+        # Initialize retriever and evaluator if not already done
+        global retriever, evaluator
+        if retriever is None:
+            try:
+                retriever = AdvancedRetriever()
+                logger.info("✅ Retriever initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize retriever: {e}")
+                
+        if evaluator is None:
+            try:
+                evaluator = get_rag_evaluator()
+                logger.info("✅ Evaluator initialized successfully")
+            except Exception as e:
+                logger.warning(f"Failed to initialize evaluator: {e}")
+        
+        # Get stats from retriever if available
+        if retriever is not None:
+            try:
+                retriever_stats = retriever.get_collection_stats()
+                stats.update(retriever_stats)
+            except Exception as e:
+                logger.warning(f"Failed to get retriever stats: {e}")
     
-    if evaluator:
+    if evaluator is not None:
         eval_stats = evaluator.get_performance_stats(days=30)
         stats.update({
             'total_queries': eval_stats.total_queries,
@@ -184,11 +209,11 @@ def knowledge_base_dashboard():
     return render_template('rag/dashboard.html', 
                          stats=stats, 
                          supported_formats=get_supported_formats_safe(),
-                         rag_available=RAG_AVAILABLE)
+                         rag_available=deps_available)
 
 def get_supported_formats_safe():
     """Safely get supported formats with fallback"""
-    if RAG_AVAILABLE and get_supported_formats is not None:
+    if check_rag_dependencies() and get_supported_formats is not None:
         try:
             return get_supported_formats()
         except Exception as e:
@@ -199,9 +224,12 @@ def get_supported_formats_safe():
 
 @rag.route('/dashboard')
 def rag_dashboard():
-    """RAG Dashboard route - safe minimal version"""
+    """RAG Dashboard route - enhanced version with real stats"""
     try:
-        # Simple stats without any RAG initialization
+        # Check if RAG dependencies are available
+        deps_available = check_rag_dependencies()
+        
+        # Default stats structure
         stats = {
             'total_chunks': 0,
             'total_queries': 0,
@@ -221,15 +249,46 @@ def rag_dashboard():
             'avg_search_time': 750
         }
         
-        # Check if RAG dependencies are available
-        deps_available, deps_message = check_rag_dependencies()
+        # If RAG is available, initialize and get real stats
+        if deps_available and init_rag_modules():
+            # Initialize retriever and evaluator if not already done
+            global retriever, evaluator
+            if retriever is None:
+                try:
+                    retriever = AdvancedRetriever()
+                    logger.info("✅ Retriever initialized successfully")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize retriever: {e}")
+                    
+            if evaluator is None:
+                try:
+                    evaluator = get_rag_evaluator()
+                    logger.info("✅ Evaluator initialized successfully")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize evaluator: {e}")
+            
+            # Get stats from retriever if available
+            if retriever is not None:
+                try:
+                    retriever_stats = retriever.get_collection_stats()
+                    stats.update(retriever_stats)
+                except Exception as e:
+                    logger.warning(f"Failed to get retriever stats: {e}")
+            
+            if evaluator is not None:
+                eval_stats = evaluator.get_performance_stats(days=30)
+                stats.update({
+                    'total_queries': eval_stats.total_queries,
+                    'avg_relevance': eval_stats.avg_relevance_score,
+                    'success_rate': eval_stats.success_rate
+                })
         
         return render_template('rag/dashboard.html', 
                              stats=stats, 
                              supported_formats=['pdf', 'docx', 'txt', 'md'],
                              rag_available=deps_available,
                              dependencies_missing=not deps_available,
-                             error_message=f"RAG system dependencies status: {deps_message}" if not deps_available else None,
+                             error_message=None if deps_available else "RAG system not available - dependencies may be missing",
                              recent_queries=[],
                              performance_data={},
                              kb_files=[],
@@ -252,7 +311,10 @@ def rag_dashboard():
 @rag.route('/upload_knowledge', methods=['GET', 'POST'])
 def upload_knowledge():
     """Upload documents to the knowledge base."""
-    if not RAG_AVAILABLE:
+    # Check dependencies dynamically instead of using static RAG_AVAILABLE
+    deps_available = check_rag_dependencies()
+    
+    if not deps_available:
         if request.method == 'POST':
             return jsonify({
                 "error": "RAG system dependencies not available",
@@ -264,6 +326,12 @@ def upload_knowledge():
             return render_template('rag/upload_knowledge.html', 
                                  supported_formats=[],
                                  rag_available=False)
+    
+    # Initialize RAG modules if needed
+    if not init_rag_modules():
+        return render_template('rag/upload_knowledge.html', 
+                             supported_formats=[],
+                             rag_available=False)
     
     if request.method == 'GET':
         return render_template('rag/upload_knowledge.html', 
@@ -356,7 +424,7 @@ def upload_knowledge():
 @rag.route('/upload_folder', methods=['POST'])
 def upload_folder():
     """Upload an entire folder to the knowledge base."""
-    if not RAG_AVAILABLE:
+    if not check_rag_dependencies() or not init_rag_modules():
         return jsonify({"error": "RAG system not available"}), 503
     
     data = request.get_json()
@@ -401,7 +469,7 @@ def upload_folder():
 @rag.route('/search', methods=['POST'])
 def search_knowledge_base():
     """Search the knowledge base."""
-    if not RAG_AVAILABLE or not retriever:
+    if not check_rag_dependencies() or not init_rag_modules() or not retriever:
         return jsonify({"error": "RAG system not available"}), 503
     
     data = request.get_json()

@@ -829,7 +829,17 @@
             
             // Update active button
             document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            // Handle both click events and programmatic calls
+            if (typeof event !== 'undefined' && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // If called programmatically, find the button for this period
+                const periodBtn = document.querySelector(`button[onclick="loadPerformanceChart('${period}')"]`);
+                if (periodBtn) {
+                    periodBtn.classList.add('active');
+                }
+            }
 
             fetch(`/rag/performance_data?period=${period}`)
                 .then(response => response.json())
