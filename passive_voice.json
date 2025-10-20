@@ -1,0 +1,31 @@
+{
+  "issue_type": "Passive Voice Detected",
+  "description": "Sentence is in passive voice. Convert to active voice for clarity.",
+  "solution_steps": [
+    "Identify subject, verb, and object in passive sentence.",
+    "Move object to subject position.",
+    "Convert verb from 'to be' + past participle to active form, keeping tense.",
+    "Add original subject after verb as doer, if known.",
+    "Adjust pronouns and indirect objects.",
+    "Check idiomatic or stylistic passive constructions."
+  ],
+  "examples": [
+    {"passive": "The meal was cooked by the chef.", "active": "The chef cooked the meal."},
+    {"passive": "The report has been approved by the manager.", "active": "The manager has approved the report."},
+    {"passive": "The room is being cleaned by the staff.", "active": "The staff is cleaning the room."},
+    {"passive": "He was given a gift by his friend.", "active": "His friend gave him a gift."},
+    {"passive": "Mistakes were made.", "active": "Someone made mistakes."},
+    {"passive": "The book will be read by all students.", "active": "All students will read the book."},
+    {"passive": "The homework should be finished by the students.", "active": "The students should finish the homework."},
+    {"passive": "The project had been completed by the team.", "active": "The team had completed the project."},
+    {"passive": "The door is to be opened by the janitor.", "active": "The janitor should open the door."},
+    {"passive": "The cake was being eaten by the children.", "active": "The children were eating the cake."}
+  ],
+  "notes": [
+    "Passive sentences may hide the doer; active improves clarity.",
+    "Keep original tense when converting.",
+    "For idiomatic passive constructions, use a generic or context-appropriate subject.",
+    "Adjust pronouns and indirect objects as needed.",
+    "Multi-verb or continuous-perfect passive forms require correct auxiliary and main verbs."
+  ]
+}
