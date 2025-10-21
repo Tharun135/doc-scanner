@@ -654,18 +654,27 @@ class IntelligentAISuggestionEngine:
     ) -> str:
         """Build a prompt optimized for Ollama local models."""
         
-        return f"""
-        Improve this sentence for technical writing:
+        return f"""You are an expert technical writing assistant. Rewrite sentences to fix specific issues.
 
-        Issue: {feedback_text}
-        Sentence: "{sentence_context}"
-        Type: {document_type}
-        Goals: {', '.join(writing_goals)}
+ISSUE DETECTED: {feedback_text}
+ORIGINAL SENTENCE: "{sentence_context}"
+DOCUMENT TYPE: {document_type}
+WRITING GOALS: {', '.join(writing_goals)}
 
-        IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
+TASK: Provide a complete rewritten sentence that fixes the specific issue identified.
 
-        Provide improved version and brief explanation.
-        """
+GUIDELINES:
+- For adverb placement issues: Move the adverb closer to the word it modifies
+- For passive voice: Convert to active voice showing who performs the action  
+- For long sentences: Break into shorter, clearer sentences
+- Preserve original meaning while improving clarity
+- Use "Application" instead of "technical writer"
+
+FORMAT:
+IMPROVED_SENTENCE: [Complete rewritten sentence]
+EXPLANATION: [What you changed and why]
+
+Rewrite the sentence now:"""
     
     def _build_ollama_rag_prompt(
         self, feedback_text: str, sentence_context: str, 
@@ -683,24 +692,32 @@ class IntelligentAISuggestionEngine:
                 context_section += f"Context {i}: {doc_preview}\n"
             context_section += "\nUse this context to inform your suggestions.\n"
         
-        return f"""You are an expert technical writing assistant. Improve this sentence using the provided context.
+        return f"""You are an expert technical writing assistant. Your task is to rewrite sentences to fix specific writing issues.
 
-Issue: {feedback_text}
-Original Sentence: "{sentence_context}"
-Document Type: {document_type}
-Writing Goals: {', '.join(writing_goals)}
+ISSUE DETECTED: {feedback_text}
+ORIGINAL SENTENCE: "{sentence_context}"
+DOCUMENT TYPE: {document_type}
+WRITING GOALS: {', '.join(writing_goals)}
 {context_section}
-Instructions:
-1. Analyze the issue with the original sentence
-2. Use the context documents to understand the domain and writing style
-3. Provide a significantly improved version
-4. Explain your reasoning
-5. IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions
 
-Format your response as:
-IMPROVED_SENTENCE: [your improved version]
-EXPLANATION: [why this improvement is better]
-"""
+INSTRUCTIONS:
+1. You must provide a complete rewritten sentence that fixes the specific issue
+2. For adverb issues (like "only"), reposition the adverb to clarify meaning
+3. For passive voice, convert to active voice
+4. For long sentences, break into shorter, clearer sentences
+5. Preserve the original meaning while improving clarity
+6. Use "Application" instead of "technical writer" in your suggestions
+
+REQUIRED FORMAT:
+IMPROVED_SENTENCE: [Complete rewritten sentence that fixes the issue]
+EXPLANATION: [Brief explanation of what you changed and why it's better]
+
+EXAMPLE FOR ADVERB ISSUES:
+- If original: "You only get basic access"
+- Consider: "You get only basic access" (if limiting access type) OR "Only you get basic access" (if limiting who gets access)
+- Choose based on the intended meaning in context
+
+Now rewrite the sentence above:"""
     
     def _parse_ai_response(self, ai_response: str, original_sentence: str) -> Tuple[str, str]:
         """Parse AI response to extract suggestion and explanation."""

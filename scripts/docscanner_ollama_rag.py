@@ -254,6 +254,18 @@ Rewrite the sentence in active voice:"""
 Original sentence: {sentence_context}
 
 Split into 2-3 shorter sentences:"""
+            elif "adverb" in feedback_text.lower():
+                query = f"""Fix the adverb placement issue in this sentence for better clarity.
+
+Issue: {feedback_text}
+Original sentence: {sentence_context}
+
+Instructions:
+- For adverbs like 'only', place them directly before the word or phrase they modify
+- For example: "You only get basic access" → "You get only basic access" (if limiting access type)
+- Preserve the original meaning while improving clarity
+
+Improved sentence:"""
             else:
                 query = f"""Rewrite this sentence to improve clarity and fix: {feedback_text}
 
