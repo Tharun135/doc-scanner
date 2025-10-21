@@ -24,6 +24,10 @@ RUN python -m spacy download en_core_web_sm
 COPY app/ ./app/
 COPY run.py .
 COPY wsgi.py .
+COPY start.sh .
+
+# Make startup script executable
+RUN chmod +x start.sh
 
 # Note: .env files are not needed in production - Render provides environment variables directly
 
@@ -46,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT:-5000}/ || exit 1
 
 # Start application with Gunicorn for production
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} --workers 2 --timeout 120 wsgi:app"]
+CMD ["./start.sh"]
