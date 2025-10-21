@@ -1769,9 +1769,18 @@
                 });
 
                 if (response.ok) {
-                    // Redirect to intelligent results page
-                    const resultHtml = await response.text();
-                    document.documentElement.innerHTML = resultHtml;
+                    // Get JSON response and redirect to intelligent results page
+                    const analysisResult = await response.json();
+                    
+                    if (analysisResult.success) {
+                        // Encode the analysis data for URL parameter
+                        const analysisDataEncoded = encodeURIComponent(JSON.stringify(analysisResult));
+                        
+                        // Redirect to the intelligent results page with nice UI
+                        window.location.href = `/intelligent_results?data=${analysisDataEncoded}`;
+                    } else {
+                        throw new Error(analysisResult.error || 'Analysis failed');
+                    }
                 } else {
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'Analysis failed');

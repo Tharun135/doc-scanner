@@ -238,7 +238,17 @@ class DocScannerOllamaRAG:
         try:
             # Create focused query for writing improvement with specific examples
             if "passive voice" in feedback_text.lower():
-                query = f"""Fix the passive voice in this sentence by making it active.
+                # Special handling for requirement sentences
+                if "requirement must be met" in sentence_context.lower():
+                    query = f"""Convert this passive voice sentence to active voice using "you" for direct address.
+
+Original sentence: {sentence_context}
+
+IMPORTANT: Use "you" not "developer" or "user". Convert "The following requirement must be met" to "You must meet this requirement".
+
+Rewrite using "you" for direct communication:"""
+                else:
+                    query = f"""Fix the passive voice in this sentence by making it active. Use "you" for direct address instead of "developer", "user", or specific roles.
 
 Original sentence: {sentence_context}
 
@@ -246,14 +256,28 @@ Examples:
 - "The report was written by John" becomes "John wrote the report"
 - "Data is displayed by the system" becomes "The system displays data"
 - "Files are processed automatically" becomes "The system processes files automatically"
+- "The requirement must be met by the developer" becomes "You must meet this requirement"
+- "The task should be completed by users" becomes "You should complete this task"
 
-Rewrite the sentence in active voice:"""
+Use "you" for direct, personal communication when addressing the reader. Rewrite the sentence in active voice:"""
             elif "long sentence" in feedback_text.lower():
                 query = f"""Break this long sentence into shorter, clearer sentences.
 
 Original sentence: {sentence_context}
 
 Split into 2-3 shorter sentences:"""
+            elif "adverb" in feedback_text.lower():
+                query = f"""Fix the adverb placement issue in this sentence for better clarity.
+
+Issue: {feedback_text}
+Original sentence: {sentence_context}
+
+Instructions:
+- For adverbs like 'only', place them directly before the word or phrase they modify
+- For example: "You only get basic access" → "You get only basic access" (if limiting access type)
+- Preserve the original meaning while improving clarity
+
+Improved sentence:"""
             else:
                 query = f"""Rewrite this sentence to improve clarity and fix: {feedback_text}
 
@@ -451,7 +475,11 @@ Improved sentence:"""
         sentence = sentence.strip()
         
         # Specific pattern-based fixes for common passive voice cases
-        if "columns are fixed and cannot be removed" in sentence.lower():
+        if "requirement must be met" in sentence.lower():
+            return sentence.replace("The following requirement must be met", "You must meet this requirement").replace("requirement must be met", "you must meet this requirement")
+        elif "requirements must be met" in sentence.lower():
+            return sentence.replace("The following requirements must be met", "You must meet these requirements").replace("requirements must be met", "you must meet these requirements")
+        elif "columns are fixed and cannot be removed" in sentence.lower():
             return "The system fixes the Time, Description, and Comments columns and prevents their removal."
         elif "data is displayed" in sentence.lower():
             return sentence.replace("data is displayed", "the system displays data").replace("Data is displayed", "The system displays data")

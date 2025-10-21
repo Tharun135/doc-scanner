@@ -237,9 +237,9 @@ EXPLANATION: [Brief explanation of the improvement]"""
         try:
             # Prepare system message based on intelligence mode
             if mode in [IntelligenceMode.DEEP, IntelligenceMode.QUALITY]:
-                system_content = "You are a senior technical writing expert with deep knowledge of documentation best practices, style guides, and advanced writing techniques. Provide thorough analysis and detailed reasoning."
+                system_content = "You are a senior technical writing expert with deep knowledge of documentation best practices, style guides, and advanced writing techniques. Provide thorough analysis and detailed reasoning. IMPORTANT: Always use 'Application' instead of 'technical writer' in your suggestions."
             else:
-                system_content = "You are a technical writing expert. Provide clear, focused improvements based on the given guidance."
+                system_content = "You are a technical writing expert. Provide clear, focused improvements based on the given guidance. IMPORTANT: Always use 'Application' instead of 'technical writer' in your suggestions."
             
             # Use chat API format
             chat_url = self.ollama_config.get("chat_url", "http://localhost:11434/api/chat")
