@@ -238,7 +238,17 @@ class DocScannerOllamaRAG:
         try:
             # Create focused query for writing improvement with specific examples
             if "passive voice" in feedback_text.lower():
-                query = f"""Fix the passive voice in this sentence by making it active. Use "you" for direct address instead of "developer", "user", or specific roles.
+                # Special handling for requirement sentences
+                if "requirement must be met" in sentence_context.lower():
+                    query = f"""Convert this passive voice sentence to active voice using "you" for direct address.
+
+Original sentence: {sentence_context}
+
+IMPORTANT: Use "you" not "developer" or "user". Convert "The following requirement must be met" to "You must meet this requirement".
+
+Rewrite using "you" for direct communication:"""
+                else:
+                    query = f"""Fix the passive voice in this sentence by making it active. Use "you" for direct address instead of "developer", "user", or specific roles.
 
 Original sentence: {sentence_context}
 
@@ -465,7 +475,11 @@ Improved sentence:"""
         sentence = sentence.strip()
         
         # Specific pattern-based fixes for common passive voice cases
-        if "columns are fixed and cannot be removed" in sentence.lower():
+        if "requirement must be met" in sentence.lower():
+            return sentence.replace("The following requirement must be met", "You must meet this requirement").replace("requirement must be met", "you must meet this requirement")
+        elif "requirements must be met" in sentence.lower():
+            return sentence.replace("The following requirements must be met", "You must meet these requirements").replace("requirements must be met", "you must meet these requirements")
+        elif "columns are fixed and cannot be removed" in sentence.lower():
             return "The system fixes the Time, Description, and Comments columns and prevents their removal."
         elif "data is displayed" in sentence.lower():
             return sentence.replace("data is displayed", "the system displays data").replace("Data is displayed", "The system displays data")
