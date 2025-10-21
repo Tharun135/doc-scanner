@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: docscanner-ai
+    runtime: docker
+    plan: starter  # or starter for free tier
+    buildCommand: docker build -t docscanner-ai .
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 wsgi:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: STABLE_MODE
+        value: "1"
+    # Add any other environment variables your app needs:
+    # - key: OPENAI_API_KEY
+    #   sync: false  # This makes it a user-defined environment variable in Render dashboard
+    # - key: ANTHROPIC_API_KEY
+    #   sync: false
+    healthCheckPath: /

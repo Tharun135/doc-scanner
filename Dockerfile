@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     python3-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -23,14 +24,17 @@ RUN python -m spacy download en_core_web_sm
 COPY app/ ./app/
 COPY agent/ ./agent/
 COPY run.py .
+COPY wsgi.py .
 COPY .env .
 
-# Expose port
-EXPOSE 5000
+# Expose port (Render uses PORT environment variable)
+EXPOSE $PORT
 
 # Set environment variables
-ENV FLASK_APP=run.py
+ENV FLASK_APP=wsgi.py
 ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
+ENV PORT=5000
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser
@@ -39,7 +43,7 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:5000/ || exit 1
+    CMD curl -f http://localhost:$PORT/ || exit 1
 
-# Start application
-CMD ["python", "run.py"]
+# Start application with Gunicorn for production
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 wsgi:app
