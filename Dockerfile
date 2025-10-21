@@ -28,7 +28,7 @@ COPY wsgi.py .
 # Note: .env files are not needed in production - Render provides environment variables directly
 
 # Expose port (Render uses PORT environment variable)
-EXPOSE $PORT
+EXPOSE ${PORT:-5000}
 
 # Set environment variables
 ENV FLASK_APP=wsgi.py
@@ -43,7 +43,7 @@ USER appuser
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:$PORT/ || exit 1
+    CMD curl -f http://localhost:${PORT:-5000}/ || exit 1
 
 # Start application with Gunicorn for production
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 wsgi:app
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT} --workers 2 --timeout 120 wsgi:app"]
