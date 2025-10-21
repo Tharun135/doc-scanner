@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "generated_at": "2025-10-21 08:57:24",
+    "docscanner_version": "1.0.0",
+    "ai_enabled": true,
+    "total_rules": 16
+  },
+  "summary": {
+    "total_issues": 3,
+    "successfully_processed": 3,
+    "failed": 0,
+    "processing_time_seconds": 0.0,
+    "average_time_per_issue": 0.0
+  },
+  "suggestions": [
+    {
+      "line_number": 15,
+      "original": "The application runs diagnostics and reports errors, and then logs them into the system automatically.",
+      "corrected": "The application runs diagnostics and reports errors. Then logs them into the system automatically.",
+      "explanation": "Split long sentence at conjunctions for better readability.",
+      "confidence": 0.6,
+      "issue_type": "Long sentence",
+      "severity": "medium",
+      "source": "fallback"
+    },
+    {
+      "line_number": 23,
+      "original": "The issue was resolved by the developer.",
+      "corrected": "the developer. resolv The issue",
+      "explanation": "Converted from passive to active voice to make the action clearer.",
+      "confidence": 0.6,
+      "issue_type": "Passive voice",
+      "severity": "low",
+      "source": "fallback"
+    },
+    {
+      "line_number": 1,
+      "original": "installing the application",
+      "corrected": "Installing the Application",
+      "explanation": "Applied proper title case capitalization.",
+      "confidence": 0.6,
+      "issue_type": "Title capitalization",
+      "severity": "low",
+      "source": "fallback"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "original": "The application runs diagnostics and reports errors, and then logs them into the system automatically.",
+    "corrected": "AI service unavailable",
+    "explanation": "Unable to connect to AI service",
+    "issue_type": "Long sentence",
+    "confidence": 0.0
+  },
+  {
+    "original": "The issue was resolved by the developer yesterday.",
+    "corrected": "AI service unavailable",
+    "explanation": "Unable to connect to AI service",
+    "issue_type": "Passive voice",
+    "confidence": 0.0
+  },
+  {
+    "original": "The system works fine and everything is good.",
+    "corrected": "AI service unavailable",
+    "explanation": "Unable to connect to AI service",
+    "issue_type": "Vague terms",
+    "confidence": 0.0
+  },
+  {
+    "original": "installing the application",
+    "corrected": "AI service unavailable",
+    "explanation": "Unable to connect to AI service",
+    "issue_type": "Title capitalization",
+    "confidence": 0.0
+  }
+]
