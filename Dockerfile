@@ -25,8 +25,7 @@ COPY app/ ./app/
 COPY run.py .
 COPY wsgi.py .
 
-# Copy environment file
-COPY .env .
+# Note: .env files are not needed in production - Render provides environment variables directly
 
 # Expose port (Render uses PORT environment variable)
 EXPOSE $PORT
