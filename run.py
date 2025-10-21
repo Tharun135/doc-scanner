@@ -4,12 +4,21 @@ from app import create_app
 app, socketio = create_app()
 
 if __name__ == '__main__':
-    # Enable debug mode to see detailed error messages
-    debug_mode = True
+    # Check for stable mode environment variable
+    stable_mode = os.environ.get('STABLE_MODE', '0') == '1'
+    debug_mode = not stable_mode and os.environ.get('FLASK_DEBUG', '1') == '1'
+    
+    print(f"🚀 Starting DocScanner AI (Debug: {debug_mode}, Stable: {stable_mode})")
     
     # Use socketio.run if available, otherwise use app.run
     if socketio:
-        socketio.run(app, debug=debug_mode, host='0.0.0.0', port=5000)
+        socketio.run(
+            app, 
+            debug=debug_mode, 
+            host='0.0.0.0', 
+            port=5000,
+            use_reloader=not stable_mode  # Disable reloader in stable mode
+        )
     else:
         print("⚠️ Running without SocketIO support")
-        app.run(debug=debug_mode, host='0.0.0.0', port=5000)
+        app.run(debug=debug_mode, host='0.0.0.0', port=5000, use_reloader=not stable_mode)

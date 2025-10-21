@@ -643,6 +643,8 @@ class IntelligentAISuggestionEngine:
         1. IMPROVED_SENTENCE: A rewritten version that addresses the issue
         2. EXPLANATION: Why this improvement makes the text better
 
+        IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
+
         Focus on clarity, conciseness, and appropriate tone for {document_type}.
         """
     
@@ -659,6 +661,8 @@ class IntelligentAISuggestionEngine:
         Sentence: "{sentence_context}"
         Type: {document_type}
         Goals: {', '.join(writing_goals)}
+
+        IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
 
         Provide improved version and brief explanation.
         """
@@ -691,6 +695,7 @@ Instructions:
 2. Use the context documents to understand the domain and writing style
 3. Provide a significantly improved version
 4. Explain your reasoning
+5. IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions
 
 Format your response as:
 IMPROVED_SENTENCE: [your improved version]
