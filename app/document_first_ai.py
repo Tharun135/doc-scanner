@@ -301,6 +301,8 @@ Based on the context documents, provide:
 1. IMPROVED_SENTENCE: A better version that addresses the issue
 2. EXPLANATION: Why this improvement is better, referencing the context
 
+IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
+
 Focus on using examples and guidance from the provided documents.
 """
             
