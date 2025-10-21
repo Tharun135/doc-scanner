@@ -931,6 +931,12 @@
                 <a href="{{ url_for('rag.rag_dashboard') }}" class="btn btn-outline-light btn-sm me-2">
                     <i class="fas fa-brain"></i> RAG Dashboard
                 </a>
+                <!-- Hybrid Intelligence Status -->
+                <div class="btn btn-outline-light btn-sm me-2" id="hybridIntelligenceStatus" title="Hybrid Intelligence Status">
+                    <i class="fas fa-robot"></i> 
+                    <span id="hybridStatusText">Checking...</span>
+                    <span id="hybridStatusIndicator" class="badge ms-1" style="background-color: #6c757d;">●</span>
+                </div>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="darkModeToggle">
                     <label class="form-check-label" for="darkModeToggle">Dark Mode</label>
@@ -2289,8 +2295,8 @@
                     <div class="sources-container">
                         ${aiSuggestion.sources.map(source => `
                             <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2">
-                                <small class="text-muted">${source.type === 'guideline' ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
-                                <div class="source-content">${source.content}</div>
+                                <small class="text-muted">${(source && source.type === 'guideline') ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
+                                <div class="source-content">${source && source.content ? source.content : 'Knowledge source content'}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -3448,6 +3454,7 @@
         // Initialize modal event handlers when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             initializeModalHandlers();
+            checkHybridIntelligenceStatus(); // Check hybrid intelligence on load
         });
 
         // If DOM is already loaded, initialize immediately
@@ -3455,7 +3462,51 @@
             document.addEventListener('DOMContentLoaded', initializeModalHandlers);
         } else {
             initializeModalHandlers();
+            checkHybridIntelligenceStatus(); // Check hybrid intelligence immediately
         }
+
+        // Hybrid Intelligence Status Checker
+        function checkHybridIntelligenceStatus() {
+            const statusText = document.getElementById('hybridStatusText');
+            const statusIndicator = document.getElementById('hybridStatusIndicator');
+            
+            if (!statusText || !statusIndicator) return;
+            
+            // Set checking state
+            statusText.textContent = 'Checking...';
+            statusIndicator.style.backgroundColor = '#6c757d'; // Gray
+            
+            fetch('/hybrid_intelligence/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hybrid_ready) {
+                        statusText.textContent = 'Ready';
+                        statusIndicator.style.backgroundColor = '#28a745'; // Green
+                        statusIndicator.title = 'Hybrid Intelligence Ready (phi3:mini + llama3:8b)';
+                    } else if (data.ollama_running && (data.phi3_available || data.llama3_available)) {
+                        statusText.textContent = 'Partial';
+                        statusIndicator.style.backgroundColor = '#ffc107'; // Yellow
+                        statusIndicator.title = 'Partial Setup (some models available)';
+                    } else if (data.ollama_running) {
+                        statusText.textContent = 'No Models';
+                        statusIndicator.style.backgroundColor = '#fd7e14'; // Orange
+                        statusIndicator.title = 'Ollama running but no models available';
+                    } else {
+                        statusText.textContent = 'Offline';
+                        statusIndicator.style.backgroundColor = '#dc3545'; // Red
+                        statusIndicator.title = 'Ollama service not running';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking hybrid intelligence status:', error);
+                    statusText.textContent = 'Error';
+                    statusIndicator.style.backgroundColor = '#dc3545'; // Red
+                    statusIndicator.title = 'Error checking status';
+                });
+        }
+
+        // Check status every 30 seconds
+        setInterval(checkHybridIntelligenceStatus, 30000);
 
         function initializeModalHandlers() {
             // Modal close handlers using event delegation

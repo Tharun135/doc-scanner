@@ -590,8 +590,9 @@ def get_feedbacks():
 def ai_suggestion():
     """
     Returns an AI-powered suggestion for a single sentence:
-    - Prefers vector-DB solutions (polished by LLM) when available
-    - Falls back to deterministic rewrite only if retrieval/LLM fail
+    - NEW: Tries hybrid intelligence (phi3:mini + llama3:8b) first
+    - Falls back to vector-DB solutions (polished by LLM) when hybrid unavailable  
+    - Final fallback to deterministic rewrite
     - Always returns a concrete rewrite + short guidance + sources
     """
     global current_document_content
@@ -619,6 +620,46 @@ def ai_suggestion():
 
     suggestion_id = str(uuid.uuid4())
     start_time = time.time()
+
+    # 🧠 NEW: Try hybrid intelligence first (phi3:mini + llama3:8b)
+    try:
+        from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
+        
+        logger.info("🧠 Trying hybrid intelligence (phi3:mini + llama3:8b)...")
+        hybrid_result = enhance_ai_suggestion_with_hybrid_intelligence(
+            feedback_text=feedback_text,
+            sentence_context=sentence_context, 
+            document_type=document_type,
+            complexity=data.get('complexity', 'default')
+        )
+        
+        if hybrid_result.get('success'):
+            response_time = time.time() - start_time
+            track_suggestion(suggestion_id, feedback_text, sentence_context,
+                           document_type, hybrid_result.get('method', 'hybrid_intelligence'), response_time)
+            
+            logger.info(f"✅ Hybrid intelligence success with {hybrid_result.get('model_used', 'unknown')}")
+            
+            return jsonify({
+                "suggestion": hybrid_result.get('suggestion', ''),
+                "ai_answer": hybrid_result.get('ai_answer', ''),
+                "confidence": hybrid_result.get('confidence', 'high'),
+                "method": hybrid_result.get('method', 'hybrid_intelligence'),
+                "suggestion_id": suggestion_id,
+                "sources": hybrid_result.get('sources', []),
+                "context_used": hybrid_result.get('context_used', {}),
+                "model_used": hybrid_result.get('model_used'),
+                "intelligence_mode": hybrid_result.get('intelligence_mode'),
+                "processing_time": hybrid_result.get('processing_time', response_time),
+                "note": f"Generated using Hybrid Intelligence ({hybrid_result.get('model_used', 'unknown')})"
+            })
+        else:
+            logger.warning(f"Hybrid intelligence unavailable: {hybrid_result.get('error', 'unknown error')}")
+    
+    except Exception as e:
+        logger.warning(f"Hybrid intelligence failed: {str(e)}")
+    
+    # Continue with existing logic if hybrid intelligence fails...
 
     try:
         # 1) Check if we have a learned pattern from prior feedback
@@ -976,6 +1017,74 @@ def ai_configuration():
         except Exception as e:
             logger.error(f"Error updating AI config: {str(e)}")
             return jsonify({"error": "Failed to update configuration"}), 500
+
+@main.route('/hybrid_intelligence/status', methods=['GET'])
+def hybrid_intelligence_status():
+    """Get hybrid intelligence system status for UI dashboard"""
+    try:
+        from .hybrid_intelligence_integration import get_hybrid_system_status
+        
+        status = get_hybrid_system_status()
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Error getting hybrid intelligence status: {str(e)}")
+        return jsonify({
+            'error': str(e),
+            'ollama_running': False,
+            'phi3_available': False,
+            'llama3_available': False,
+            'hybrid_ready': False
+        })
+
+@main.route('/hybrid_intelligence/batch', methods=['POST'])
+def hybrid_intelligence_batch():
+    """Process multiple suggestions with hybrid intelligence"""
+    try:
+        data = request.get_json()
+        issues = data.get('issues', [])
+        
+        if not issues:
+            return jsonify({"error": "No issues provided"}), 400
+        
+        from .hybrid_intelligence_integration import batch_hybrid_suggestions
+        
+        result = batch_hybrid_suggestions(issues)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error in hybrid intelligence batch processing: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@main.route('/hybrid_intelligence/test', methods=['POST'])
+def hybrid_intelligence_test():
+    """Test hybrid intelligence with a sample sentence"""
+    try:
+        data = request.get_json() or {}
+        test_sentence = data.get('sentence', 'Delete the files that are not needed.')
+        issue_type = data.get('issue_type', 'Passive voice')
+        complexity = data.get('complexity', 'default')
+        
+        from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
+        
+        result = enhance_ai_suggestion_with_hybrid_intelligence(
+            feedback_text=f"Issue: {issue_type}",
+            sentence_context=test_sentence,
+            document_type='test',
+            complexity=complexity
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error testing hybrid intelligence: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @main.route('/upload_batch', methods=['POST'])
 def upload_batch():
