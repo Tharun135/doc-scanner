@@ -22,9 +22,10 @@ RUN python -m spacy download en_core_web_sm
 
 # Copy application code
 COPY app/ ./app/
-COPY agent/ ./agent/
 COPY run.py .
 COPY wsgi.py .
+
+# Copy environment file
 COPY .env .
 
 # Expose port (Render uses PORT environment variable)
