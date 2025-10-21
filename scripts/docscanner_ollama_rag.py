@@ -238,7 +238,7 @@ class DocScannerOllamaRAG:
         try:
             # Create focused query for writing improvement with specific examples
             if "passive voice" in feedback_text.lower():
-                query = f"""Fix the passive voice in this sentence by making it active.
+                query = f"""Fix the passive voice in this sentence by making it active. Use "you" for direct address instead of "developer", "user", or specific roles.
 
 Original sentence: {sentence_context}
 
@@ -246,8 +246,10 @@ Examples:
 - "The report was written by John" becomes "John wrote the report"
 - "Data is displayed by the system" becomes "The system displays data"
 - "Files are processed automatically" becomes "The system processes files automatically"
+- "The requirement must be met by the developer" becomes "You must meet this requirement"
+- "The task should be completed by users" becomes "You should complete this task"
 
-Rewrite the sentence in active voice:"""
+Use "you" for direct, personal communication when addressing the reader. Rewrite the sentence in active voice:"""
             elif "long sentence" in feedback_text.lower():
                 query = f"""Break this long sentence into shorter, clearer sentences.
 
