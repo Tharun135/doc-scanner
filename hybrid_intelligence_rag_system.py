@@ -276,6 +276,37 @@ EXPLANATION: [Brief explanation of the improvement]"""
         except Exception as e:
             logger.error(f"Ollama call failed: {e}")
             return None
+
+    def rewrite_in_active_voice(self, sentence: str, mode: IntelligenceMode) -> Optional[str]:
+        """Ask the selected model to rewrite a sentence in active voice and return the rewritten sentence."""
+        try:
+            model = self.model_map.get(mode, self.model_map[IntelligenceMode.DEFAULT])
+            # Direct rewrite prompt: request a single-line rewritten sentence
+            prompt = (
+                "Rewrite the following sentence in clear, grammatical active voice. "
+                "Preserve the original meaning and technical content. "
+                "Return only the rewritten sentence on a single line.\n\n"
+                f"SENTENCE: \"{sentence}\""
+            )
+
+            response = self.call_ollama_chat(prompt, model, mode)
+            if not response:
+                return None
+
+            # The chat response may include labels; try to extract the first non-empty line
+            for line in response.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                # Strip common labels
+                if line.upper().startswith('CORRECTED:'):
+                    return line.split(':', 1)[1].strip()
+                return line
+
+            return None
+        except Exception as e:
+            logger.error(f"rewrite_in_active_voice failed: {e}")
+            return None
     
     def get_model_options(self, mode: IntelligenceMode) -> dict:
         """Get model-specific options based on intelligence mode"""

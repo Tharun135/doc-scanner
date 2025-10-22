@@ -9,6 +9,7 @@ integrate phi3:mini and llama3:8b models with your RAG system.
 
 import sys
 import os
+import re
 
 # Add the parent directory to the path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -93,9 +94,73 @@ def enhance_ai_suggestion_with_hybrid_intelligence(feedback_text, sentence_conte
         result = hybrid_system.generate_hybrid_solution(flagged_issue)
         
         if result.get('success'):
+            # Post-process suggestion to fix common generation artifacts
+            raw_suggestion = result.get('corrected', '') or ''
+
+            def _sanitize_suggestion(suggestion_text, original_sentence):
+                s = suggestion_text
+                # Fix stray punctuation and duplicated periods
+                s = s.replace(' .', '.').replace('..', '.').replace('. .', '.')
+                # Fix broken 'and. displayed' type splits
+                s = s.replace('and. displayed', 'and displayed')
+                s = s.replace('and. shown', 'and shown')
+                s = re.sub(r'\s+', ' ', s).strip()
+
+                # Heuristic: convert simple 'is <verb>ed [and <verb>ed]*' to active voice
+                try:
+                    lower = s.lower()
+                    m = re.search(r"\bis ((?:\w+ed)(?: (?:and|, ) (?:\w+ed))*)", lower)
+                    if m:
+                        verbs = re.findall(r"\w+ed", m.group(1))
+                        active_verbs = []
+                        for v in verbs:
+                            stem = v[:-2]
+                            if stem.endswith('y'):
+                                active = stem[:-1] + 'ies'
+                            elif stem.endswith(('s', 'x', 'z', 'ch', 'sh', 'o')):
+                                active = stem + 'es'
+                            else:
+                                active = stem + 's'
+                            active_verbs.append(active)
+
+                        active_phrase = ' and '.join(active_verbs)
+
+                        # Try to extract a sensible subject from the original sentence
+                        subj = original_sentence.split(' is ')[0].strip()
+                        tail_match = re.search(r'(in the .*table.*)$', original_sentence, re.IGNORECASE)
+                        tail = (' ' + tail_match.group(1)) if tail_match else ''
+                        if subj:
+                            s = f"{subj} {active_phrase}{tail}"
+
+                except Exception:
+                    # Best-effort only; fall back to sanitized string
+                    pass
+
+                # Capitalize first character
+                if s:
+                    s = s[0].upper() + s[1:]
+                return s
+
+            # Prefer a model-generated active-voice rewrite when possible
+            try:
+                hybrid_system = get_hybrid_system()
+                mode = getattr(hybrid_system, 'determine_intelligence_mode')(flagged_issue)
+                active_rewrite = None
+                try:
+                    active_rewrite = hybrid_system.rewrite_in_active_voice(sentence_context, mode)
+                except Exception:
+                    active_rewrite = None
+
+                if active_rewrite:
+                    cleaned = _sanitize_suggestion(active_rewrite, sentence_context)
+                else:
+                    cleaned = _sanitize_suggestion(raw_suggestion, sentence_context)
+            except Exception:
+                cleaned = _sanitize_suggestion(raw_suggestion, sentence_context)
+
             return {
                 'success': True,
-                'suggestion': result.get('corrected', ''),
+                'suggestion': cleaned,
                 'ai_answer': result.get('reasoning', ''),
                 'confidence': 'high',
                 'method': f"hybrid_{result.get('model_used', 'unknown')}",
@@ -129,32 +194,44 @@ def get_hybrid_system_status():
     """Get the status of the hybrid intelligence system"""
     try:
         import requests
-        
-        # Check Ollama service
+        from urllib.parse import urljoin
+        # Allow configuring Ollama URL via env var (useful when running in Docker Compose)
+        ollama_url = os.environ.get('OLLAMA_URL', 'http://localhost:11434')
+        tags_url = urljoin(ollama_url, '/api/tags')
+
         try:
-            response = requests.get("http://localhost:11434/api/tags", timeout=5)
-            if response.status_code == 200:
-                models_data = response.json()
-                available_models = [model['name'] for model in models_data.get('models', [])]
-                
-                phi3_available = any('phi3' in model for model in available_models)
-                llama3_available = any('llama3' in model for model in available_models)
-                
-                return {
-                    'ollama_running': True,
-                    'phi3_available': phi3_available,
-                    'llama3_available': llama3_available,
-                    'hybrid_ready': phi3_available and llama3_available,
-                    'available_models': available_models,
-                    'rag_loaded': True  # RAG system is part of hybrid intelligence
-                }
-            else:
-                return {'ollama_running': False, 'error': 'Ollama service error'}
+            response = requests.get(tags_url, timeout=5)
         except requests.exceptions.ConnectionError:
-            return {'ollama_running': False, 'error': 'Ollama not running'}
+            return {'ollama_running': False, 'error': f'Ollama not running at {ollama_url}'}
         except Exception as e:
             return {'ollama_running': False, 'error': str(e)}
-            
+
+        if response.status_code != 200:
+            return {'ollama_running': False, 'error': f'Ollama returned status {response.status_code}'}
+
+        try:
+            models_data = response.json()
+            available_models = [m.get('name', '') for m in models_data.get('models', []) if isinstance(m, dict)]
+
+            # Normalize model names for tolerant checks
+            lowered = [m.lower() for m in available_models]
+            phi3_available = any('phi3' in m or m.startswith('phi3-') for m in lowered)
+            llama3_available = any('llama3' in m or m.startswith('llama3-') for m in lowered)
+
+            hybrid_ready = phi3_available and llama3_available
+
+            return {
+                'ollama_running': True,
+                'ollama_url': ollama_url,
+                'phi3_available': phi3_available,
+                'llama3_available': llama3_available,
+                'hybrid_ready': hybrid_ready,
+                'available_models': available_models,
+                'rag_loaded': True
+            }
+        except Exception as e:
+            return {'ollama_running': True, 'error': f'Failed to parse Ollama response: {str(e)}'}
+
     except Exception as e:
         return {'error': f'System check failed: {str(e)}'}
 
