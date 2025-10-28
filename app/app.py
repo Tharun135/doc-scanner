@@ -89,6 +89,10 @@ def extract_sentences_with_html_preservation(html_content):
         # Get the HTML content of this element
         element_html = str(element)
         
+        # Debug: Check if element_html contains any highlighting markup
+        if 'sentence-highlight' in element_html:
+            logger.warning(f"🔥 INPUT HTML CONTAINS HIGHLIGHTING MARKUP: {element_html[:200]}...")
+        
         # Get the plain text version for analysis
         element_text = element.get_text()
         
@@ -227,12 +231,39 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
 # FILE PARSING HELPERS
 ############################
 
+def clean_malformed_html_attributes(text):
+    """
+    Clean malformed HTML attributes that might appear in text content.
+    Specifically targets patterns like: ="sentence-highlight" id="content-sentence-0"
+    """
+    import re
+    
+    # Pattern to match malformed HTML attributes starting with ="
+    # This catches patterns like: ="sentence-highlight" id="content-sentence-0" data-sentence-index="0">
+    pattern = r'=[\"\'][^\"\']*[\"\'][^>]*>'
+    
+    # Remove these malformed patterns
+    cleaned = re.sub(pattern, '', text)
+    
+    # Also remove any standalone HTML attributes that might be left
+    # Pattern for: id="something" data-something="value" etc.
+    attr_pattern = r'\s*(?:id|class|data-[\w-]+)\s*=\s*["\'][^"\']*["\']'
+    cleaned = re.sub(attr_pattern, '', cleaned)
+    
+    # Clean up any remaining HTML tag fragments
+    fragment_pattern = r'</?[^>]*>'
+    cleaned = re.sub(fragment_pattern, '', cleaned)
+    
+    return cleaned.strip()
+
 def parse_file(file):
     filename = file.filename.lower()
     extension = os.path.splitext(filename)[1]
 
     try:
-        if extension == '.docx':
+        if extension == '.zip':
+            return parse_zip(file)
+        elif extension == '.docx':
             return parse_docx(file)
         elif extension == '.doc':
             return parse_doc(file)
@@ -249,6 +280,65 @@ def parse_file(file):
     except Exception as e:
         logger.error(f"Error parsing {filename}: {str(e)}")
         return f"Error parsing {filename}: {str(e)}"
+
+def parse_zip(file_stream):
+    """Parse ZIP file and extract text content from supported documents inside"""
+    import zipfile
+    import io
+    
+    try:
+        html_content = "<h2>Contents of ZIP file:</h2>\n"
+        
+        with zipfile.ZipFile(file_stream, 'r') as zip_file:
+            file_list = zip_file.namelist()
+            
+            # Filter for supported file types
+            supported_files = []
+            for filename in file_list:
+                if filename.lower().endswith(('.txt', '.md', '.docx', '.pdf')):
+                    supported_files.append(filename)
+            
+            if not supported_files:
+                return "<p>No supported document files found in ZIP archive. Supported formats: .txt, .md, .docx, .pdf</p>"
+            
+            html_content += f"<p>Found {len(supported_files)} supported document(s) in ZIP file:</p>\n"
+            
+            # Process each supported file
+            for filename in supported_files:
+                try:
+                    html_content += f"<h3>📄 {filename}</h3>\n"
+                    
+                    # Extract file content
+                    with zip_file.open(filename) as extracted_file:
+                        file_content = io.BytesIO(extracted_file.read())
+                        
+                        # Determine file type and parse accordingly
+                        ext = os.path.splitext(filename.lower())[1]
+                        
+                        if ext == '.txt':
+                            content = parse_txt(file_content.read())
+                        elif ext == '.md':
+                            content = parse_md(file_content.read())
+                        elif ext == '.docx':
+                            content = parse_docx(file_content)
+                        elif ext == '.pdf':
+                            content = parse_pdf(file_content)
+                        else:
+                            content = f"<p>Unsupported file type: {ext}</p>"
+                        
+                        html_content += content + "\n"
+                        
+                except Exception as e:
+                    html_content += f"<p>Error processing {filename}: {str(e)}</p>\n"
+                    logger.error(f"Error processing file {filename} in ZIP: {e}")
+            
+            return html_content
+            
+    except zipfile.BadZipFile:
+        return "Error: Invalid or corrupted ZIP file"
+    except Exception as e:
+        logger.error(f"Error parsing ZIP file: {e}")
+        return f"Error parsing ZIP file: {str(e)}"
 
 def parse_docx(file_stream):
     doc = Document(file_stream)
@@ -550,6 +640,52 @@ def intelligent_results():
                          suggestions=suggestions,
                          title="Intelligent AI Analysis Results")
 
+@main.route('/debug')
+def debug_page():
+    """Serve the sentence debugging page"""
+    from flask import send_from_directory
+    import os
+    return send_from_directory(os.path.dirname(os.path.dirname(__file__)), 'debug_sentences.html')
+
+@main.route('/debug_sentences', methods=['POST'])
+def debug_sentences():
+    """Debug endpoint to check sentence data for malformed HTML"""
+    data = request.get_json()
+    sentences = data.get('sentences', [])
+    
+    debug_info = {
+        'total_sentences': len(sentences),
+        'malformed_sentences': [],
+        'html_sentences': [],
+        'clean_sentences': []
+    }
+    
+    for i, sentence_data in enumerate(sentences):
+        sentence_text = sentence_data.get('sentence', '')
+        
+        # Check for malformed HTML attributes
+        if '="' in sentence_text and ('sentence-highlight' in sentence_text or 'data-sentence-index' in sentence_text):
+            debug_info['malformed_sentences'].append({
+                'index': i,
+                'original': sentence_text,
+                'cleaned': clean_malformed_html_attributes(sentence_text)
+            })
+        
+        # Check for any HTML tags
+        elif '<' in sentence_text and '>' in sentence_text:
+            debug_info['html_sentences'].append({
+                'index': i,
+                'text': sentence_text
+            })
+        
+        else:
+            debug_info['clean_sentences'].append({
+                'index': i,
+                'text': sentence_text[:100] + ('...' if len(sentence_text) > 100 else '')
+            })
+    
+    return jsonify(debug_info)
+
 @main.route('/upload', methods=['POST'])
 def upload_file():
     global current_document_content  # Access global variable
@@ -561,6 +697,12 @@ def upload_file():
     if not file.filename:
         return jsonify({"error": "No selected file"}), 400
 
+    # Validate file extension
+    filename = file.filename.lower()
+    allowed_extensions = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
+    if not any(filename.endswith(ext) for ext in allowed_extensions):
+        return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"}), 400
+
     # Get room_id for progress tracking
     room_id = request.form.get('room_id')
     
@@ -568,6 +710,17 @@ def upload_file():
     progress_tracker = get_progress_tracker()
 
     logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
+    
+    # Validate file size (Flask should handle this automatically, but let's be explicit)
+    file.seek(0, 2)  # Seek to end
+    file_size = file.tell()
+    file.seek(0)  # Reset to beginning
+    
+    max_size = 50 * 1024 * 1024  # 50MB
+    if file_size > max_size:
+        return jsonify({"error": f"File too large. Maximum size: {max_size // (1024*1024)}MB"}), 400
+    
+    logger.info(f"File size: {file_size} bytes")
 
     try:
         # Stage 1: Uploading Document (10%)
@@ -581,13 +734,55 @@ def upload_file():
         # Parse file to get both plain text and HTML
         html_content = parse_file(file)
         
+        # Clean any existing sentence highlighting from the content (in case document was previously processed)
+        if 'sentence-highlight' in html_content:
+            logger.warning("🧹 Cleaning existing sentence highlighting from uploaded document...")
+            # Remove all sentence highlighting spans but keep the content
+            import re
+            # Remove opening span tags with sentence-highlight class
+            html_content = re.sub(r'<span[^>]*sentence-highlight[^>]*>', '', html_content)
+            # Remove closing span tags
+            html_content = re.sub(r'</span>', '', html_content)
+            logger.info("✅ Cleaned existing highlighting markup")
+        
+        # Check if parsing failed
+        if html_content.startswith("Error"):
+            logger.error(f"File parsing failed: {html_content}")
+            if progress_tracker and room_id:
+                progress_tracker.fail_session(room_id, html_content)
+            return jsonify({"error": html_content}), 400
+        
+        # Check if content is empty
+        if not html_content.strip():
+            error_msg = "The uploaded file appears to be empty or could not be parsed."
+            logger.error(f"Empty content from file: {file.filename}")
+            if progress_tracker and room_id:
+                progress_tracker.fail_session(room_id, error_msg)
+            return jsonify({"error": error_msg}), 400
+        
         # Stage 3: Breaking into Sentences (50%)
         if progress_tracker and room_id:
             progress_tracker.update_stage(room_id, 2, "Identifying sentence boundaries and structure...")
         
         # Store the original HTML content for highlighting
         # Extract sentences that preserve HTML structure while also having plain text for analysis
+        
+        # Debug: Check if the input HTML already contains highlighting
+        if 'sentence-highlight' in html_content:
+            logger.error(f"🔥 CRITICAL: Input HTML already contains sentence highlighting! This suggests the document was previously processed.")
+            logger.info(f"HTML snippet: {html_content[:500]}...")
+        
         sentences = extract_sentences_with_html_preservation(html_content)
+        
+        # Check if sentence extraction failed
+        if not sentences:
+            error_msg = "Could not extract any sentences from the document. The file may be corrupted or in an unsupported format."
+            logger.error(f"No sentences extracted from file: {file.filename}")
+            if progress_tracker and room_id:
+                progress_tracker.fail_session(room_id, error_msg)
+            return jsonify({"error": error_msg}), 400
+        
+        logger.info(f"Extracted {len(sentences)} sentences from {file.filename}")
         
         # Use BeautifulSoup to extract plain text for RAG context
         soup = BeautifulSoup(html_content, "html.parser")
@@ -612,6 +807,29 @@ def upload_file():
             
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
+            
+            # Debug: Log sentence content to understand the issue
+            logger.info(f"Processing sentence {index}: '{plain_text_sentence[:100]}...'")
+            
+            # AGGRESSIVE CLEANING: Handle malformed HTML attributes that somehow got into sentence text
+            if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
+                logger.error(f"🚨 MALFORMED HTML ATTRIBUTES DETECTED in sentence {index}: {plain_text_sentence}")
+                clean_text = clean_malformed_html_attributes(plain_text_sentence)
+                logger.warning(f"🧹 Cleaned malformed HTML: '{clean_text}'")
+                plain_text_sentence = clean_text
+            
+            # Extra safety: Ensure plain text sentence doesn't contain HTML tags
+            if '<' in plain_text_sentence and '>' in plain_text_sentence:
+                logger.warning(f"🚨 SENTENCE {index} CONTAINS HTML TAGS: {plain_text_sentence}")
+                # Check if it contains our highlighting markup specifically
+                if 'sentence-highlight' in plain_text_sentence:
+                    logger.error(f"🔥 CRITICAL: Sentence {index} contains highlighting markup! This suggests circular processing.")
+                
+                temp_soup = BeautifulSoup(plain_text_sentence, "html.parser")
+                clean_text = temp_soup.get_text().strip()
+                logger.warning(f"✅ Cleaned sentence {index}: '{clean_text[:100]}...'")
+                plain_text_sentence = clean_text
+            
             feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
             
             # Add sentence index to each feedback item for UI linking
@@ -639,6 +857,21 @@ def upload_file():
                 "start": sent.start_char,
                 "end": sent.end_char
             })
+            
+            # FINAL CLEANUP: Ensure no malformed HTML attributes made it through
+            if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
+                logger.error(f"🚨 FINAL CHECK: Malformed HTML still present in sentence {index}: {plain_text_sentence}")
+                clean_text = clean_malformed_html_attributes(plain_text_sentence)
+                sentence_data[-1]["sentence"] = clean_text  # Update the last added sentence
+                logger.warning(f"✅ Final cleanup applied: {clean_text}")
+            
+            # Debug logging for problematic sentences
+            if '<' in plain_text_sentence and '>' in plain_text_sentence:
+                logger.warning(f"SENTENCE {index} CONTAINS HTML: {plain_text_sentence}")
+            
+            html_fragment = getattr(sent, 'html_fragment', plain_text_sentence)
+            if html_fragment != plain_text_sentence and 'sentence-highlight' in html_fragment:
+                logger.warning(f"HTML FRAGMENT {index} CONTAINS HIGHLIGHTING: {html_fragment}")
 
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)

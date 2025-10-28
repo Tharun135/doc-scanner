@@ -961,11 +961,11 @@
                             <p>Drag & Drop files here or</p>
                             <div class="d-flex justify-content-center gap-3 mt-2">
                                 <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn">Browse Files</button>
-                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn">Browse Zip</button>
+                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" title="Select ZIP files or any file type">Browse Zip/Files</button>
                             </div>
-                            <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt" style="display: none;">
-                            <input type="file" id="batchFileInput" accept=".zip" style="display: none;">
-                            <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt" multiple style="display: none;">
+                            <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" style="display: none;">
+                            <input type="file" id="batchFileInput" style="display: none;">
+                            <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" multiple style="display: none;">
                         </div>
                         <div id="fileList" class="mb-3" style="display: none;">
                             <h6>Selected Files:</h6>
@@ -1190,12 +1190,12 @@
                         percentage: stage.percentage,
                         message: stage.message,
                         stage_name: stage.stage_name,
-                        elapsed_time: (currentStage + 1) * 0.8,
-                        eta_seconds: (stages.length - currentStage - 1) * 0.8,
+                        elapsed_time: (currentStage + 1) * 0.3,
+                        eta_seconds: (stages.length - currentStage - 1) * 0.3,
                         completed: false
                     });
                     currentStage++;
-                    setTimeout(updateProgress, 600); // Update every 600ms
+                    setTimeout(updateProgress, 300); // Faster updates every 300ms since content is already shown
                 } else {
                     // Completion
                     updateRealTimeProgress({
@@ -1261,9 +1261,11 @@
             
             // If completed, hide progress after a short delay
             if (data.completed) {
+                // Content should already be displayed immediately after upload
+                // This just handles the progress bar completion animation
                 setTimeout(() => {
                     hideProgressLoader();
-                }, 1000);
+                }, 500); // Reduced delay since content is already shown
             }
         }
 
@@ -1350,6 +1352,8 @@
             } else if (e.target.id === 'browseBatchBtn') {
                 e.preventDefault();
                 console.log('Browse batch button clicked, triggering batch file input');
+                console.log('Batch file input element:', batchFileInput);
+                console.log('Batch file input accept attribute:', batchFileInput.accept);
                 batchFileInput.click();
             }
         });
@@ -1390,7 +1394,12 @@
 
         batchFileInput.addEventListener('change', (e) => {
             const files = e.target.files;
+            console.log('Batch file input changed, files:', files);
+            console.log('Number of files selected:', files.length);
             if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    console.log(`File ${i}: ${files[i].name}, type: ${files[i].type}, size: ${files[i].size}`);
+                }
                 selectedFiles = Array.from(files);
                 updateFileList();
                 // Clear the input to allow selecting more files
@@ -1847,27 +1856,27 @@
                 uploadCompleted = true;
                 resultData = result;
                 
-                // For WebSocket mode, results will be shown via progress_update event
-                // For fallback mode, results will be shown via simulateFallbackProgress callback
+                // 🚀 IMMEDIATE DISPLAY: Show results right after upload completion
+                console.log('🚀 Immediately displaying results...');
+                renderChart(result.report || {}, result.sentences || []);
+                renderContent(result.content || '', result.sentences || []);
+                
+                // For WebSocket mode, progress will continue but results are already shown
+                // For fallback mode, results are already shown but continue progress simulation
                 if (!socketConnected) {
                     // In fallback mode, also set a timeout as backup
                     setTimeout(() => {
-                        if (result.content) {
-                            console.log('📊 Showing results (fallback timeout)');
-                            renderChart(result.report || {}, result.sentences || []);
-                        }
+                        hideProgressLoader();
                     }, 1000);
+                } else {
+                    // For WebSocket mode, let progress complete naturally
+                    // Results are already shown, so this is just for visual completion
                 }
                 
                 // Backup timeout in case progress updates fail (both WebSocket and fallback)
                 setTimeout(() => {
-                    if (uploadCompleted && resultData && (!socketConnected || !isRealTimeProgress)) {
-                        console.log('⏱️ Backup timeout triggered, showing results');
-                        renderChart(resultData.report || {}, resultData.sentences || []);
-                        renderContent(resultData.content || '', resultData.sentences || []);
-                        hideProgressLoader();
-                    }
-                }, 3000); // Give 3 seconds for progress to complete
+                    hideProgressLoader();
+                }, 3000); // Hide progress after 3 seconds max
                 
                 return result;
                 
@@ -2163,37 +2172,93 @@
 
         // Chart rendering
         function renderChart(report, sentences) {
-    const ctx = document.getElementById('analysisChart').getContext('2d');
+            console.log('🚀 Starting renderChart - immediate execution');
+            const startTime = performance.now();
+            
+            const ctx = document.getElementById('analysisChart').getContext('2d');
 
-    if (analysisChart) {
-        analysisChart.destroy();
-    }
-
-    let totalErrors = sentences.reduce((count, sentence) => count + (sentence.feedback ? sentence.feedback.length : 0), 0);
-    let totalSentences = sentences.length;
-    // Calculate quality index if not provided by backend
-    let qualityIndex = report.avgQualityScore !== undefined
-        ? report.avgQualityScore
-        : (totalSentences === 0 ? 0 : Math.max(0, Math.round(100 * (1 - (totalErrors / totalSentences)))));
-
-    analysisChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['Errors', 'Quality Index', 'Total Sentences'],
-            datasets: [{
-                data: [totalErrors, qualityIndex, totalSentences],
-                backgroundColor: ['#ff4d4d', '#007bff', '#17a2b8']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true, position: 'bottom' }
+            if (analysisChart) {
+                analysisChart.destroy();
             }
+
+            let totalErrors = sentences.reduce((count, sentence) => count + (sentence.feedback ? sentence.feedback.length : 0), 0);
+            let totalSentences = sentences.length;
+            // Calculate quality index if not provided by backend
+            let qualityIndex = report.avgQualityScore !== undefined
+                ? report.avgQualityScore
+                : (totalSentences === 0 ? 0 : Math.max(0, Math.round(100 * (1 - (totalErrors / totalSentences)))));
+
+            analysisChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Errors', 'Quality Index', 'Total Sentences'],
+                    datasets: [{
+                        data: [totalErrors, qualityIndex, totalSentences],
+                        backgroundColor: ['#ff4d4d', '#007bff', '#17a2b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'bottom' }
+                    }
+                }
+            });
+            
+            // IMMEDIATE FEEDBACK DISPLAY - show issues right away
+            displayIssuesImmediately(sentences);
+            
+            const endTime = performance.now();
+            console.log(`✅ renderChart completed in ${(endTime - startTime).toFixed(2)}ms`);
         }
-    });
-}
+        
+        // NEW: Function to immediately display issues without waiting
+        function displayIssuesImmediately(sentences) {
+            console.log('🚀 Displaying issues immediately');
+            const feedbackContent = document.getElementById('feedbackContent');
+            
+            // Count total issues for immediate feedback
+            let totalIssues = 0;
+            let issueHTML = '<h5 class="mb-3">Document Issues</h5>';
+            
+            sentences.forEach((sentence, index) => {
+                if (sentence.feedback && sentence.feedback.length > 0) {
+                    sentence.feedback.forEach(feedback => {
+                        totalIssues++;
+                        issueHTML += `
+                            <div class="feedback-item p-3 mb-2 border rounded" data-sentence-index="${index}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <strong>Sentence ${index + 1}:</strong> "${sentence.sentence.substring(0, 100)}${sentence.sentence.length > 100 ? '...' : ''}"
+                                        <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> ${feedback.message || feedback.text || feedback}</small>
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm ai-suggestion-btn" 
+                                            data-sentence-index="${index}" 
+                                            data-sentence="${encodeURIComponent(sentence.sentence)}"
+                                            title="Get AI suggestion">
+                                        <i class="fas fa-robot"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            if (totalIssues === 0) {
+                issueHTML += `
+                    <div class="text-center text-success py-4">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p>Great! No issues found in your document.</p>
+                        <small>Your writing appears to be clear and well-structured.</small>
+                    </div>
+                `;
+            }
+            
+            feedbackContent.innerHTML = issueHTML;
+            console.log(`✅ Displayed ${totalIssues} issues immediately`);
+        }
 
         // Enhanced AI functionality
         let currentSuggestionId = null;
@@ -2928,6 +2993,16 @@
             console.log('Processing sentences for highlighting:', sentences.length);
             console.log('Original HTML content:', htmlContent);
             
+            // Debug: Check if any sentences contain problematic content
+            sentences.forEach((sentenceData, idx) => {
+                if (sentenceData.sentence && sentenceData.sentence.includes('sentence-highlight')) {
+                    console.error(`🔥 SENTENCE ${idx} CONTAINS HIGHLIGHTING MARKUP:`, sentenceData.sentence);
+                }
+                if (sentenceData.sentence && sentenceData.sentence.includes('="')) {
+                    console.warn(`⚠️ SENTENCE ${idx} CONTAINS ATTRIBUTE SYNTAX:`, sentenceData.sentence);
+                }
+            });
+            
             // First, try to get plain text equivalent of HTML for better matching
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
@@ -2935,7 +3010,29 @@
             console.log('Plain text content:', plainTextContent);
             
             sentences.forEach((sentenceData, index) => {
-                const sentence = sentenceData.sentence.trim();
+                // Clean the sentence text - remove any HTML tags that might have leaked in
+                let sentence = sentenceData.sentence.trim();
+                
+                // AGGRESSIVE CLEANING: Check for malformed HTML attributes
+                if (sentence.includes('="') && (sentence.includes('sentence-highlight') || sentence.includes('data-sentence-index'))) {
+                    console.error(`🚨 MALFORMED HTML ATTRIBUTES in sentence ${index}:`, sentence);
+                    // Remove malformed HTML attribute patterns
+                    sentence = sentence.replace(/=["'][^"']*["'][^>]*>/g, '');
+                    sentence = sentence.replace(/\s*(?:id|class|data-[\w-]+)\s*=\s*["'][^"']*["']/g, '');
+                    sentence = sentence.replace(/<\/?[^>]*>/g, '');
+                    sentence = sentence.trim();
+                    console.warn(`🧹 Cleaned malformed attributes:`, sentence);
+                }
+                
+                // Extra safety: If sentence contains HTML tags, extract only the text content
+                if (sentence.includes('<') && sentence.includes('>')) {
+                    console.warn(`⚠️ Sentence ${index} contains HTML tags, cleaning:`, sentence);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = sentence;
+                    sentence = (tempDiv.textContent || tempDiv.innerText || '').trim();
+                    console.log(`Cleaned sentence ${index}:`, sentence);
+                }
+                
                 if (sentence) {
                     console.log(`Processing sentence ${index}:`, sentence);
                     
@@ -2945,10 +3042,15 @@
                     
                     // Approach 1: Direct HTML match (works for simple cases)
                     if (processedContent.includes(sentence)) {
-                        const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                        processedContent = processedContent.replace(sentence, replacement);
-                        found = true;
-                        console.log(`✓ Direct HTML match for sentence ${index}`);
+                        // Safety check: ensure sentence doesn't contain problematic patterns
+                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
+                            console.error(`🚨 Skipping direct replacement for sentence ${index} - contains problematic patterns:`, sentence);
+                        } else {
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                            processedContent = processedContent.replace(sentence, replacement);
+                            found = true;
+                            console.log(`✓ Direct HTML match for sentence ${index}`);
+                        }
                     }
                     
                     // Approach 2: Try to find sentence in plain text and map back to HTML
@@ -3030,14 +3132,34 @@
                     if (!found) {
                         console.warn(`✗ Could not find sentence ${index} in content:`, sentence);
                         
-                        // As absolute last resort, just add a marker
-                        const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${sentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
-                        
-                        // Try to insert the marker near related content
-                        const firstWords = sentence.split(' ').slice(0, 3).join(' ');
-                        if (processedContent.includes(firstWords)) {
-                            processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
-                            console.log(`Added fallback marker for sentence ${index}`);
+                        // SAFETY: Don't create markers for sentences that already contain problematic HTML
+                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
+                            console.error(`🚨 BLOCKING marker creation for sentence ${index} - contains malformed HTML:`, sentence);
+                            // Add a safe text-only marker instead
+                            const safeText = sentence.replace(/<[^>]*>/g, '').replace(/['"=]/g, '').trim();
+                            if (safeText) {
+                                const safeMarker = `<div class="sentence-not-found-safe" data-index="${index}">⚠️ Sentence ${index + 1}: ${safeText.substring(0, 50)}...</div>`;
+                                processedContent += safeMarker;
+                                console.log(`✅ Added safe marker for sentence ${index}`);
+                            }
+                        } else {
+                            // Clean the sentence text for title attribute - remove HTML tags and attributes
+                            const cleanSentence = sentence.replace(/<[^>]*>/g, '').replace(/['"]/g, '').trim();
+                            const truncatedSentence = cleanSentence.length > 100 ? cleanSentence.substring(0, 100) + '...' : cleanSentence;
+                            
+                            // As absolute last resort, just add a marker
+                            const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${truncatedSentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
+                            
+                            // Try to insert the marker near related content
+                            const firstWords = cleanSentence.split(' ').slice(0, 3).join(' ');
+                            if (firstWords && processedContent.includes(firstWords)) {
+                                processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
+                                console.log(`Added fallback marker for sentence ${index}`);
+                            } else {
+                                // If we can't find the first words, just append the marker at the end
+                                processedContent += '<br>' + marker;
+                                console.log(`Added fallback marker at end for sentence ${index}`);
+                            }
                         }
                     }
                 }
@@ -3276,14 +3398,17 @@
 
         // Enhanced content rendering with sentence highlighting
         function renderContent(content, sentences) {
+            console.log('🚀 Starting renderContent - immediate execution');
+            const startTime = performance.now();
+            
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
             
-            // Update dashboard metrics
+            // Update dashboard metrics FIRST for immediate visual feedback
             updateDocumentMetrics(content, sentences);
             
-            // Clear previous content
+            // Clear previous content - ensure no cached malformed data
             documentContent.innerHTML = '<h4>Document Content</h4>';
             feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
             
@@ -3296,8 +3421,9 @@
                 </div>
             `;
             
-            // Clear AI feedback data
+            // Clear AI feedback data and any cached sentence data
             aiFeedbackData = {};
+            window.currentSentences = [];
             
             console.log('Processing sentences:', sentences.length);
             console.log('Sentences data:', sentences);
@@ -3306,20 +3432,21 @@
             const originalContentDiv = document.createElement('div');
             originalContentDiv.className = 'original-content mt-3';
             
-            // Process the HTML content to add sentence highlighting
+            // Process the HTML content to add sentence highlighting - OPTIMIZED
             const enhancedContent = addSentenceHighlighting(content, sentences);
             originalContentDiv.innerHTML = enhancedContent;
             
             // Store sentences for reference
             window.currentSentences = sentences;
             
-            // Add the enhanced content to document
+            // Add the enhanced content to document - IMMEDIATE
             documentContent.appendChild(originalContentDiv);
             
-            // Add click handlers to the newly created sentence spans
-            setTimeout(() => {
-                addContentSentenceHandlers();
-            }, 100);
+            // Add click handlers to the newly created sentence spans - IMMEDIATE
+            addContentSentenceHandlers();
+            
+            const endTime = performance.now();
+            console.log(`✅ renderContent completed in ${(endTime - startTime).toFixed(2)}ms`);
             
             // Process sentences with AI enhancement - in document order
             let feedbackCount = 0;
@@ -3399,7 +3526,7 @@
             let cleanText = tempDiv.textContent || tempDiv.innerText || '';
 
            
-            const fileExtensions = ['csv', 'pdf', 'docx', 'txt', 'md', 'adoc', 'png', 'jpg', 'jpeg', 'gif'];
+            const fileExtensions = ['csv', 'pdf', 'docx', 'txt', 'md', 'adoc', 'zip', 'png', 'jpg', 'jpeg', 'gif'];
             const regex = new RegExp(`[^.!?]*(?<!\\b(?:${fileExtensions.join('|')})\\b)[.!?]`, 'g');
             const match = cleanText.match(regex);
             if (match) {

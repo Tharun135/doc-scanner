@@ -12,6 +12,10 @@ def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this in production
     
+    # Configure file upload settings
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+    app.config['UPLOAD_EXTENSIONS'] = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
+    
     # Initialize SocketIO only if available
     if SOCKETIO_AVAILABLE:
         socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
