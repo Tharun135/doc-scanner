@@ -170,7 +170,7 @@
                 <div class="card stat-card" id="chunks-card">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="stat-value" id="chunks-count">{{ stats.get('total_chunks', 0) }}</div>
+                            <div class="stat-value" id="total-chunks">{{ stats.get('total_chunks', 0) }}</div>
                             <div class="stat-label">Total Chunks Indexed</div>
                             <small class="text-muted">
                                 {% set avg_chunk_size = stats.get('avg_chunk_size', 0) %}
@@ -193,11 +193,61 @@
                 <div class="card stat-card" id="queries-card">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <div class="stat-value" id="queries-count">{{ stats.get('total_queries', 0) }}</div>
+                            <div class="stat-value" id="total-queries">{{ stats.get('total_queries', 0) }}</div>
                             <div class="stat-label">Total Queries (30d)</div>
                             <small class="text-muted">
-                                {% set queries_today = stats.get('queries_today', 0) %}
-                                Today: {{ queries_today }} queries
+                                <span id="queries-today">{{ stats.get('queries_today', 0) }}</span> queries today
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-search text-info"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        {% set queries_percentage = (stats.get('queries_today', 0) / 50 * 100) %}
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ queries_percentage if queries_percentage <= 100 else 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card" id="relevance-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="avg-relevance">{{ (stats.get('avg_relevance', 0) * 100)|round|int }}%</div>
+                            <div class="stat-label">Avg Relevance Score</div>
+                            <small class="text-success">
+                                <i class="fas fa-arrow-up"></i> {{ relevance_trend|round(1) }}% from last week
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-bullseye text-success"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (stats.get('avg_relevance', 0) * 100) }}%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card" id="success-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-value" id="success-rate">{{ (stats.get('success_rate', 0) * 100)|round|int }}%</div>
+                            <div class="stat-label">Success Rate</div>
+                            <small class="text-muted">
+                                {{ failed_queries }} failed queries
+                            </small>
+                        </div>
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle text-warning"></i>
+                        </div>
+                    </div>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (stats.get('success_rate', 0) * 100) }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
                             </small>
                         </div>
                         <div class="stat-icon">
@@ -287,7 +337,7 @@
                         <div class="health-item mb-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span>Vector DB Health</span>
-                                <span class="badge bg-{{ 'success' if stats.get('chromadb_available') else 'danger' }}">
+                                <span id="vector-db-status" class="badge bg-{{ 'success' if stats.get('chromadb_available') else 'danger' }}">
                                     {{ 'Healthy' if stats.get('chromadb_available') else 'Down' }}
                                 </span>
                             </div>
@@ -299,7 +349,7 @@
                         <div class="health-item mb-3">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span>Embedding Service</span>
-                                <span class="badge bg-{{ 'success' if stats.get('embeddings_available') else 'warning' }}">
+                                <span id="embedding-service-status" class="badge bg-{{ 'success' if stats.get('embeddings_available') else 'warning' }}">
                                     {{ 'Active' if stats.get('embeddings_available') else 'Limited' }}
                                 </span>
                             </div>
@@ -312,7 +362,7 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <span>Search Performance</span>
                                 {% set search_perf = stats.get('avg_search_time', 0) %}
-                                <span class="badge bg-{{ 'success' if search_perf < 1000 else 'warning' if search_perf < 3000 else 'danger' }}">
+                                <span id="search-performance-status" class="badge bg-{{ 'success' if search_perf < 1000 else 'warning' if search_perf < 3000 else 'danger' }}">
                                     {{ search_perf|round|int }}ms
                                 </span>
                             </div>
@@ -519,13 +569,13 @@
                             <div class="row text-center">
                                 <div class="col-4">
                                     <div class="metric-box p-2 border rounded">
-                                        <div class="metric-value text-primary fw-bold">{{ stats.get('total_queries', 0) }}</div>
+                                        <div class="metric-value text-primary fw-bold" id="total-queries-metric">{{ stats.get('total_queries', 0) }}</div>
                                         <small class="text-muted">Queries</small>
                                     </div>
                                 </div>
                                 <div class="col-4">
                                     <div class="metric-box p-2 border rounded">
-                                        <div class="metric-value text-success fw-bold">{{ "%.0f"|format(stats.get('avg_search_time', 0)) }}ms</div>
+                                        <div class="metric-value text-success fw-bold" id="avg-search-time">{{ "%.0f"|format(stats.get('avg_search_time', 0)) }}ms</div>
                                         <small class="text-muted">Avg Time</small>
                                     </div>
                                 </div>
@@ -545,7 +595,7 @@
                                 <span class="small">Retrieval Accuracy</span>
                                 <div class="d-flex align-items-center">
                                     <div class="progress" style="width: 60px; height: 6px;">
-                                        <div class="progress-bar bg-success" style="width: {{ (stats.get('retrieval_accuracy', 0) * 100) }}%"></div>
+                                        <div class="progress-bar bg-success" id="retrieval-accuracy" style="width: {{ (stats.get('retrieval_accuracy', 0) * 100) }}%"></div>
                                     </div>
                                     <small class="text-muted ms-1">{{ "%.0f"|format(stats.get('retrieval_accuracy', 0) * 100) }}%</small>
                                 </div>
@@ -554,7 +604,7 @@
                                 <span class="small">Response Relevance</span>
                                 <div class="d-flex align-items-center">
                                     <div class="progress" style="width: 60px; height: 6px;">
-                                        <div class="progress-bar bg-info" style="width: {{ (stats.get('response_relevance', 0) * 100) }}%"></div>
+                                        <div class="progress-bar bg-info" id="response-relevance" style="width: {{ (stats.get('response_relevance', 0) * 100) }}%"></div>
                                     </div>
                                     <small class="text-muted ms-1">{{ "%.0f"|format(stats.get('response_relevance', 0) * 100) }}%</small>
                                 </div>
@@ -563,7 +613,7 @@
                                 <span class="small">Context Precision</span>
                                 <div class="d-flex align-items-center">
                                     <div class="progress" style="width: 60px; height: 6px;">
-                                        <div class="progress-bar bg-warning" style="width: {{ (stats.get('context_precision', 0) * 100) }}%"></div>
+                                        <div class="progress-bar bg-warning" id="context-precision" style="width: {{ (stats.get('context_precision', 0) * 100) }}%"></div>
                                     </div>
                                     <small class="text-muted ms-1">{{ "%.0f"|format(stats.get('context_precision', 0) * 100) }}%</small>
                                 </div>
@@ -699,39 +749,278 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Global variables
+        let searchChart = null;
+        let performanceChart = null;
+        
+        // Initialize dashboard on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDashboard();
+            loadPerformanceChart();
+            setupEventListeners();
+        });
+        
+        function initializeDashboard() {
+            // Load real-time data
+            refreshStats();
+            loadHealthStatus();
+            
+            // Set up auto-refresh every 30 seconds
+            setInterval(refreshStats, 30000);
+        }
+        
+        function setupEventListeners() {
+            // File upload handling
+            const uploadZone = document.querySelector('.upload-zone');
+            const fileInput = document.querySelector('#fileInput');
+            
+            if (uploadZone && fileInput) {
+                uploadZone.addEventListener('click', () => fileInput.click());
+                uploadZone.addEventListener('dragover', handleDragOver);
+                uploadZone.addEventListener('drop', handleFileDrop);
+                fileInput.addEventListener('change', handleFileSelect);
+            }
+            
+            // Search form handling
+            const searchForm = document.getElementById('searchForm');
+            if (searchForm) {
+                searchForm.addEventListener('submit', handleSearch);
+            }
+        }
+        
+        function refreshStats() {
+            fetch('/rag/api/analytics')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatsDisplay(data);
+                })
+                .catch(error => {
+                    console.error('Failed to refresh stats:', error);
+                });
+        }
+        
+        function updateStatsDisplay(data) {
+            // Update main stats cards
+            updateElement('total-chunks', data.total_chunks || 0);
+            updateElement('total-queries', data.total_queries || 0);
+            updateElement('avg-relevance', ((data.avg_relevance_score || 0) * 100).toFixed(1) + '%');
+            updateElement('success-rate', ((data.success_rate || 0) * 100).toFixed(1) + '%');
+            
+            // Update performance metrics
+            if (data.performance_metrics) {
+                updateElement('queries-today', data.performance_metrics.queries_today || 0);
+                updateElement('avg-search-time', data.performance_metrics.avg_response_time || 0);
+            }
+            
+            // Update quality indicators
+            if (data.quality_metrics) {
+                updateProgressBar('retrieval-accuracy', (data.quality_metrics.retrieval_accuracy || 0) * 100);
+                updateProgressBar('response-relevance', (data.quality_metrics.response_relevance || 0) * 100);
+                updateProgressBar('context-precision', (data.quality_metrics.context_precision || 0) * 100);
+            }
+        }
+        
+        function updateElement(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        }
+        
+        function updateProgressBar(id, percentage) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.width = percentage + '%';
+                element.textContent = percentage.toFixed(0) + '%';
+            }
+        }
+        
+        function loadHealthStatus() {
+            fetch('/rag/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    updateHealthDisplay(data);
+                })
+                .catch(error => {
+                    console.error('Failed to load health status:', error);
+                });
+        }
+        
+        function updateHealthDisplay(health) {
+            updateHealthItem('vector-db-status', health.vector_db);
+            updateHealthItem('embedding-service-status', health.embedding_service);
+            updateHealthItem('search-performance-status', health.search_performance);
+        }
+        
+        function updateHealthItem(id, status) {
+            const element = document.getElementById(id);
+            if (element && status) {
+                const statusClass = getStatusClass(status.status);
+                element.innerHTML = `<span class="badge ${statusClass}">${status.status}</span> ${status.message}`;
+            }
+        }
+        
+        function getStatusClass(status) {
+            switch(status) {
+                case 'healthy': case 'good': return 'bg-success';
+                case 'limited': case 'degraded': return 'bg-warning';
+                case 'down': case 'error': return 'bg-danger';
+                default: return 'bg-secondary';
+            }
+        }
+        
+        function loadPerformanceChart() {
+            const ctx = document.getElementById('performanceChart');
+            if (!ctx) return;
+            
+            // Sample data for performance trends
+            const data = {
+                labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                datasets: [{
+                    label: 'Queries',
+                    data: [32, 45, 38, 52],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'Avg Response Time (ms)',
+                    data: [340, 285, 245, 220],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    yAxisID: 'y1'
+                }]
+            };
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+        }
+        
+        // File upload functions
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+        
+        function handleFileDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        }
+        
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                uploadFile(files[0]);
+            }
+        }
+        
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show upload progress
+            showUploadProgress(true);
+            
+            fetch('/rag/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showUploadProgress(false);
+                if (data.success) {
+                    showUploadSuccess(data.message);
+                    refreshStats();
+                } else {
+                    showUploadError(data.error);
+                }
+            })
+            .catch(error => {
+                showUploadProgress(false);
+                showUploadError('Upload failed: ' + error.message);
+            });
+        }
+        
+        function showUploadProgress(show) {
+            const zone = document.querySelector('.upload-zone');
+            if (zone) {
+                zone.innerHTML = show 
+                    ? '<i class="fas fa-spinner fa-spin fa-2x mb-2"></i><p>Uploading and processing...</p>'
+                    : '<i class="fas fa-cloud-upload-alt fa-2x mb-2"></i><p>Drag & drop files here or click to browse</p>';
+            }
+        }
+        
+        function showUploadSuccess(message) {
+            const zone = document.querySelector('.upload-zone');
+            if (zone) {
+                zone.innerHTML = `<i class="fas fa-check-circle fa-2x mb-2 text-success"></i><p class="text-success">${message}</p>`;
+                setTimeout(() => {
+                    zone.innerHTML = '<i class="fas fa-cloud-upload-alt fa-2x mb-2"></i><p>Drag & drop files here or click to browse</p>';
+                }, 3000);
+            }
+        }
+        
+        function showUploadError(error) {
+            const zone = document.querySelector('.upload-zone');
+            if (zone) {
+                zone.innerHTML = `<i class="fas fa-exclamation-triangle fa-2x mb-2 text-danger"></i><p class="text-danger">${error}</p>`;
+                setTimeout(() => {
+                    zone.innerHTML = '<i class="fas fa-cloud-upload-alt fa-2x mb-2"></i><p>Drag & drop files here or click to browse</p>';
+                }, 3000);
+            }
+        }
+        
+        // Search functions
         function openSearchModal() {
             new bootstrap.Modal(document.getElementById('searchModal')).show();
         }
-
-        document.getElementById('searchForm').addEventListener('submit', function(e) {
+        
+        function handleSearch(e) {
             e.preventDefault();
             
             const query = document.getElementById('searchQuery').value;
-            const method = document.getElementById('searchMethod').value;
-            const numResults = document.getElementById('numResults').value;
-            
-            // Show loading
             const resultsDiv = document.getElementById('searchResults');
             const container = document.getElementById('resultsContainer');
+            
+            // Show loading
             container.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
             resultsDiv.style.display = 'block';
             
             // Perform search
-            fetch('/rag/search', {
+            fetch('/rag/api/search', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    query: query,
-                    method: method,
-                    n_results: parseInt(numResults)
-                })
+                body: JSON.stringify({ query: query })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    displayResults(data.results, data.latency_ms);
+                    displaySearchResults(data.results, data.search_time);
                 } else {
                     container.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
                 }
@@ -739,9 +1028,9 @@
             .catch(error => {
                 container.innerHTML = `<div class="alert alert-danger">Search failed: ${error.message}</div>`;
             });
-        });
-
-        function displayResults(results, latency) {
+        }
+        
+        function displaySearchResults(results, searchTime) {
             const container = document.getElementById('resultsContainer');
             
             if (results.length === 0) {
@@ -749,7 +1038,7 @@
                 return;
             }
             
-            let html = `<div class="mb-3"><small class="text-muted">Found ${results.length} results in ${latency.toFixed(2)}ms</small></div>`;
+            let html = `<div class="mb-3"><small class="text-muted">Found ${results.length} results in ${searchTime}</small></div>`;
             
             results.forEach((result, index) => {
                 html += `
@@ -757,12 +1046,11 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h6 class="card-title">Result ${index + 1}</h6>
-                                <span class="badge bg-primary">${(result.relevance_score * 100).toFixed(1)}% relevance</span>
+                                <span class="badge bg-primary">${(result.score * 100).toFixed(1)}% relevance</span>
                             </div>
                             <p class="card-text">${result.content}</p>
                             <div class="small text-muted">
-                                <i class="fas fa-tag me-1"></i>Method: ${result.retrieval_method} |
-                                <i class="fas fa-file me-1"></i>Source: ${result.metadata.meta_source_file || 'Unknown'}
+                                <i class="fas fa-file me-1"></i>Source: ${result.source}
                             </div>
                         </div>
                     </div>
@@ -771,33 +1059,25 @@
             
             container.innerHTML = html;
         }
-
-        function refreshStats() {
-            location.reload();
-        }
-
+        
+        // Utility functions
         function exportMetrics() {
-            fetch('/rag/export_metrics', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Metrics exported successfully: ${data.filename}`);
-                } else {
-                    alert(`Export failed: ${data.error}`);
-                }
-            })
-            .catch(error => {
-                alert(`Export failed: ${error.message}`);
-            });
+            // Create a simple report download
+            const data = {
+                timestamp: new Date().toISOString(),
+                message: "Metrics export functionality will be implemented"
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'rag_metrics.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
-
-        function confirmClearKB() {
-            if (confirm('Are you sure you want to clear the entire knowledge base? This action cannot be undone.')) {
                 fetch('/rag/clear_knowledge_base', {
                     method: 'POST',
                     headers: {

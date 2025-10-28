@@ -624,12 +624,12 @@ class IntelligentAISuggestionEngine:
         self, feedback_text: str, sentence_context: str, document_type: str,
         writing_goals: List[str], context_examples: List[str]
     ) -> str:
-        """Build an intelligent prompt for OpenAI."""
+        """Build an intelligent prompt for OpenAI with MINIMALISM focus."""
         
         examples_text = "\n".join(context_examples[:3]) if context_examples else "No specific examples available"
         
         return f"""
-        You are an expert technical writing assistant. Please improve the following sentence:
+        You are an expert technical writing assistant focused on MINIMALISM and SIMPLICITY. Please improve the following sentence with the shortest, clearest possible rewrite.
 
         Issue identified: {feedback_text}
         Original sentence: "{sentence_context}"
@@ -639,41 +639,65 @@ class IntelligentAISuggestionEngine:
         Relevant examples from similar contexts:
         {examples_text}
 
+        CRITICAL RULE: KEEP IT MINIMAL AND SIMPLE
+        - Use the FEWEST words possible while maintaining meaning
+        - Avoid elaborate explanations or complex additions
+        - Choose the simplest, most direct phrasing
+        - Remove unnecessary words and phrases
+
+        EXAMPLES OF MINIMALIST IMPROVEMENTS:
+        - Original: "The available connectors are shown."
+        - WRONG: "Application shows that various connectors can be utilized for different purposes within electronic systems."
+        - CORRECT: "The application displays available connectors."
+
         Please provide:
-        1. IMPROVED_SENTENCE: A rewritten version that addresses the issue
-        2. EXPLANATION: Why this improvement makes the text better
+        1. IMPROVED_SENTENCE: The SHORTEST rewritten version that addresses the issue
+        2. EXPLANATION: Brief explanation of what you changed
 
         IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
 
-        Focus on clarity, conciseness, and appropriate tone for {document_type}.
+        Focus on clarity, conciseness, and the SIMPLEST appropriate tone for {document_type}.
         """
     
     def _build_ollama_prompt(
         self, feedback_text: str, sentence_context: str, 
         document_type: str, writing_goals: List[str]
     ) -> str:
-        """Build a prompt optimized for Ollama local models."""
+        """Build a prompt optimized for Ollama local models with MINIMALISM focus."""
         
-        return f"""You are an expert technical writing assistant. Rewrite sentences to fix specific issues.
+        return f"""You are an expert technical writing assistant focused on MINIMALISM and SIMPLICITY. Rewrite sentences with the shortest, clearest possible improvement.
 
 ISSUE DETECTED: {feedback_text}
 ORIGINAL SENTENCE: "{sentence_context}"
 DOCUMENT TYPE: {document_type}
 WRITING GOALS: {', '.join(writing_goals)}
 
-TASK: Provide a complete rewritten sentence that fixes the specific issue identified.
+CRITICAL RULE: KEEP IT MINIMAL AND SIMPLE
+- Use the FEWEST words possible while maintaining meaning
+- Avoid elaborate explanations or complex additions
+- Choose the simplest, most direct phrasing
+- Remove unnecessary words and phrases
+
+EXAMPLES OF MINIMALIST IMPROVEMENTS:
+- Original: "The available connectors are shown."
+- WRONG: "Application shows that various connectors can be utilized for different purposes within electronic systems."
+- CORRECT: "The application displays available connectors."
+
+- Original: "The data will be processed by the system."
+- WRONG: "The system will process the data according to predefined algorithms and specifications."
+- CORRECT: "The system processes the data."
 
 GUIDELINES:
-- For adverb placement issues: Move the adverb closer to the word it modifies
-- For passive voice: Convert to active voice showing who performs the action. Use "you" for direct address instead of "developer", "user", or other roles
-- For long sentences: Break into shorter, clearer sentences
-- Preserve original meaning while improving clarity
-- Use "Application" instead of "technical writer"
-- When addressing requirements or tasks, use "you" for direct, personal communication
+- For adverb placement: Simply move the adverb to the correct position
+- For passive voice: Convert to active voice using the shortest possible phrasing. Use "you" for direct address
+- For long sentences: Break into SHORT, clear sentences
+- Preserve original meaning but use MINIMAL words
+- Use "Application" instead of "technical writer" 
+- When addressing requirements, use "you" directly
 
 FORMAT:
-IMPROVED_SENTENCE: [Complete rewritten sentence]
-EXPLANATION: [What you changed and why]
+IMPROVED_SENTENCE: [Shortest, clearest rewritten sentence]
+EXPLANATION: [Brief explanation of what you changed]
 
 Rewrite the sentence now:"""
     
@@ -681,7 +705,7 @@ Rewrite the sentence now:"""
         self, feedback_text: str, sentence_context: str, 
         document_type: str, writing_goals: List[str], context_documents: List[str]
     ) -> str:
-        """Build a RAG-enhanced prompt for Ollama using context from uploaded documents."""
+        """Build a RAG-enhanced prompt for Ollama with MINIMALISM focus using context from uploaded documents."""
         
         # Build context section from uploaded documents
         context_section = ""
@@ -693,7 +717,7 @@ Rewrite the sentence now:"""
                 context_section += f"Context {i}: {doc_preview}\n"
             context_section += "\nUse this context to inform your suggestions.\n"
         
-        return f"""You are an expert technical writing assistant. Your task is to rewrite sentences to fix specific writing issues.
+        return f"""You are an expert technical writing assistant focused on MINIMALISM and SIMPLICITY. Your task is to rewrite sentences with the shortest, clearest possible improvement.
 
 ISSUE DETECTED: {feedback_text}
 ORIGINAL SENTENCE: "{sentence_context}"
@@ -701,28 +725,43 @@ DOCUMENT TYPE: {document_type}
 WRITING GOALS: {', '.join(writing_goals)}
 {context_section}
 
+CRITICAL RULE: KEEP IT MINIMAL AND SIMPLE
+- Use the FEWEST words possible while maintaining meaning
+- Avoid elaborate explanations or complex additions  
+- Choose the simplest, most direct phrasing
+- Remove unnecessary words and phrases
+
+EXAMPLES OF MINIMALIST IMPROVEMENTS:
+- Original: "The available connectors are shown."
+- WRONG: "Application shows that various connectors can be utilized for different purposes within electronic systems."
+- CORRECT: "The application displays available connectors."
+
+- Original: "The settings are configured by the user."
+- WRONG: "The user has the capability to configure various settings according to their specific requirements."
+- CORRECT: "You configure the settings."
+
 INSTRUCTIONS:
-1. You must provide a complete rewritten sentence that fixes the specific issue
-2. For adverb issues (like "only"), reposition the adverb to clarify meaning
-3. For passive voice, convert to active voice. Use "you" for direct address instead of "developer", "user", or specific roles
-4. For long sentences, break into shorter, clearer sentences
-5. Preserve the original meaning while improving clarity
-6. Use "Application" instead of "technical writer" in your suggestions
-7. When addressing requirements or tasks, always use "you" for direct, personal communication
+1. Provide the SHORTEST possible rewritten sentence that fixes the issue
+2. For adverb issues (like "only"), simply reposition the adverb to clarify meaning
+3. For passive voice, convert to active voice using MINIMAL words. Use "you" for direct address
+4. For long sentences, break into SHORT, clear sentences
+5. Preserve the original meaning but use the FEWEST words possible
+6. Use "Application" instead of "technical writer" 
+7. When addressing requirements, use "you" directly without extra words
 
 REQUIRED FORMAT:
-IMPROVED_SENTENCE: [Complete rewritten sentence that fixes the issue]
-EXPLANATION: [Brief explanation of what you changed and why it's better]
+IMPROVED_SENTENCE: [Shortest, clearest rewritten sentence that fixes the issue]
+EXPLANATION: [Brief explanation of what you changed]
 
 EXAMPLE FOR ADVERB ISSUES:
 - If original: "You only get basic access"
 - Consider: "You get only basic access" (if limiting access type) OR "Only you get basic access" (if limiting who gets access)
-- Choose based on the intended meaning in context
+- Choose the SHORTEST version based on intended meaning
 
 EXAMPLE FOR PASSIVE VOICE:
 - If original: "The requirement must be met by the developer"
-- Improved: "You must meet this requirement"
-- Use "you" for direct, personal communication instead of "developer", "user", etc.
+- WRONG: "It is essential that you, as the developer, ensure that this requirement is properly met"
+- CORRECT: "You must meet this requirement"
 
 Now rewrite the sentence above:"""
     

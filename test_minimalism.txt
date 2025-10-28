@@ -1,0 +1,13 @@
+Test minimalist AI suggestions
+
+The available connectors are shown.
+
+The data will be processed by the system.
+
+Settings are configured by the user.
+
+Files are automatically processed by the application.
+
+The user only gets basic access to the features.
+
+Configuration is completed by you after installation.
