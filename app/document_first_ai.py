@@ -637,6 +637,8 @@ Focus on using examples and guidance from the provided documents.
         """
         Apply passive voice conversion using patterns from uploaded documents.
         """
+        import re  # Import at the beginning of the method
+        
         try:
             # Look for conversion examples in the documents
             conversion_patterns = []
@@ -647,7 +649,6 @@ Focus on using examples and guidance from the provided documents.
                 
                 # Extract JSON-like examples if present
                 if "passive" in content and "active" in content:
-                    import re
                     
                     # Look for various passive-active patterns
                     patterns = [
@@ -683,10 +684,71 @@ Focus on using examples and guidance from the provided documents.
                                 subject = subject[4:]  # Remove "the "
                             return f"You must create {subject.lower()}."
             
-            # 2. Handle "are shown" / "is displayed" / "are added" patterns
-            if re.search(r'\b(?:are|is)\s+(?:shown|displayed|presented|added|created|configured|saved|uploaded)\b', sentence_lower):
+            # 2. Handle "are shown" / "is displayed" / "are added" / "is needed" / "is required" patterns
+            if re.search(r'\b(?:are|is)\s+(?:shown|displayed|presented|added|created|configured|saved|uploaded|needed|required)\b', sentence_lower):
+                # "The system app Databus is needed to exchange data" -> "Databus exchanges data"
+                if "is needed" in sentence_lower:
+                    # Extract the subject (what is needed)
+                    subject_match = re.search(r'(.+?)\s+is needed\s+(.+)', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        purpose = subject_match.group(2).strip()
+                        
+                        # Clean up the subject - remove articles and keep it simple
+                        if subject_full.startswith("the system app "):
+                            subject = subject_full.replace("the system app ", "")
+                        elif subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Convert purpose from "to exchange" to active form
+                        if purpose.startswith("to "):
+                            verb = purpose[3:].split()[0]  # Get the verb after "to"
+                            remainder = " ".join(purpose[3:].split()[1:])  # Get the rest
+                            remainder = remainder.rstrip('.')  # Remove trailing period to avoid double periods
+                            return f"{subject.capitalize()} {verb}s {remainder}."
+                        else:
+                            return f"{subject.capitalize()} provides {purpose}."
+                
+                # "The API key is required to authenticate requests" -> "The API key authenticates requests"
+                elif "is required" in sentence_lower:
+                    # Extract the subject (what is required)
+                    subject_match = re.search(r'(.+?)\s+is required\s+(.+)', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        purpose = subject_match.group(2).strip()
+                        
+                        # Clean up the subject - remove articles and keep it simple
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Convert purpose from "to authenticate" to active form
+                        if purpose.startswith("to "):
+                            verb = purpose[3:].split()[0]  # Get the verb after "to"
+                            remainder = " ".join(purpose[3:].split()[1:])  # Get the rest
+                            remainder = remainder.rstrip('.')  # Remove trailing period to avoid double periods
+                            
+                            # Fix verb conjugation for common verbs
+                            if verb == "access":
+                                verb = "access"  # "access" stays the same in 3rd person
+                            elif verb.endswith("s"):
+                                verb = verb  # Already ends in s
+                            else:
+                                verb = verb + "s"  # Add s for 3rd person singular
+                                
+                            return f"{subject.capitalize()} {verb} {remainder}."
+                        else:
+                            return f"{subject.capitalize()} handles {purpose}."
+                
                 # "The available connectors are shown" -> "The system shows the available connectors"
-                if "are shown" in sentence_lower:
+                elif "are shown" in sentence_lower:
                     subject = sentence_lower.split("are shown")[0].strip()
                     if subject.startswith("the "):
                         subject = subject[4:]
