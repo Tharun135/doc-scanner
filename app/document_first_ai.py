@@ -938,14 +938,28 @@ Focus on using examples and guidance from the provided documents.
     
     def _split_long_sentence(self, sentence: str) -> str:
         """
-        Split long sentences into shorter, clearer sentences.
+        Split long sentences into shorter, clearer sentences with proper grammar.
         """
         if not sentence or len(sentence.split()) <= 15:
             return sentence
         
         words = sentence.split()
+        sentence_lower = sentence.lower()
         
-        # Method 1: Look for natural break points - "from X to Y" pattern
+        # Method 1: Handle "either...or" constructions properly
+        if "either by" in sentence_lower and "or by" in sentence_lower:
+            import re
+            # Pattern: "do X, either by Y or by Z"
+            match = re.search(r'(.+?),\s*either\s+by\s+(.+?)\s+or\s+by\s+(.+)', sentence, re.IGNORECASE)
+            if match:
+                main_action = match.group(1).strip()
+                option1 = match.group(2).strip()
+                option2 = match.group(3).strip().rstrip('.')
+                
+                # Create two complete sentences
+                return f"{main_action}. You can do this by {option1} or by {option2}."
+        
+        # Method 2: Look for natural break points - "from X to Y" pattern
         if " from " in sentence and " to " in sentence:
             import re
             # Pattern: "transfer an IE app from the IE Hub to the IEM catalog"
@@ -958,47 +972,63 @@ Focus on using examples and guidance from the provided documents.
                 # Split into two clear sentences
                 return f"{action} from {source}. This transfers to {destination}."
         
-        # Method 2: Look for "how to" constructions and break them down
-        if "how to" in sentence.lower():
-            # Split after the introductory phrase
-            import re
-            if "provides information on how to" in sentence.lower():
-                match = re.search(r'(.+?provides information on)\s+how to\s+(.+)', sentence, re.IGNORECASE)
-                if match:
-                    intro = match.group(1).strip()
-                    action = match.group(2).strip()
-                    return f"{intro} the transfer process. It explains how to {action}."
+        # Method 3: Handle "including" constructions
+        if ", including" in sentence_lower:
+            parts = sentence.split(", including", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                detail_part = parts[1].strip().rstrip('.')
+                return f"{main_part}. This includes {detail_part}."
         
-        # Method 3: Look for conjunctions near the middle
+        # Method 4: Handle "which includes" constructions
+        if ", which includes" in sentence_lower:
+            parts = sentence.split(", which includes", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                detail_part = parts[1].strip().rstrip('.')
+                return f"{main_part}. This includes {detail_part}."
+        
+        # Method 5: Handle general "which" constructions
+        if ", which" in sentence:
+            parts = sentence.split(", which", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                detail_part = parts[1].strip().rstrip('.')
+                return f"{main_part}. This {detail_part}."
+        
+        # Method 5: Look for conjunctions but ensure both parts are complete sentences
         mid = len(words) // 2
         for i in range(max(0, mid-3), min(len(words), mid+4)):
-            if words[i].lower() in ['and', 'but', 'or', 'so', 'yet', 'for']:
+            if words[i].lower() in ['and', 'but', 'so', 'yet']:
                 first_part = ' '.join(words[:i]).strip()
                 second_part = ' '.join(words[i+1:]).strip()
-                if first_part and second_part and len(first_part.split()) > 3:
+                
+                # Check if both parts form complete thoughts
+                if (first_part and second_part and 
+                    len(first_part.split()) > 3 and len(second_part.split()) > 3 and
+                    self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
                     return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
         
-        # Method 4: Look for commas near the middle
+        # Method 6: Smart comma splitting - only if both parts are complete
         for i in range(max(0, mid-3), min(len(words), mid+4)):
             if words[i].endswith(','):
                 first_part = ' '.join(words[:i+1]).strip().rstrip(',')
                 second_part = ' '.join(words[i+1:]).strip()
-                if first_part and second_part and len(first_part.split()) > 3:
+                
+                # Only split if both parts are complete sentences
+                if (first_part and second_part and 
+                    len(first_part.split()) > 5 and len(second_part.split()) > 5 and
+                    self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
                     return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
         
-        # Method 5: Split at natural semantic breaks
-        if ", which" in sentence:
-            parts = sentence.split(", which", 1)
-            if len(parts) == 2:
-                return f"{parts[0].strip()}. This {parts[1].strip()}"
-        
-        # Method 6: Simple mid-point split as last resort
-        if len(words) > 20:
+        # Method 7: Simple mid-point split as last resort - with grammar check
+        if len(words) > 25:  # Only for very long sentences
             first_part = ' '.join(words[:mid]).strip()
             second_part = ' '.join(words[mid:]).strip()
             
-            # Ensure both parts make sense
-            if len(first_part.split()) > 5 and len(second_part.split()) > 5:
+            # Ensure both parts are complete sentences
+            if (len(first_part.split()) > 8 and len(second_part.split()) > 8 and
+                self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
                 # Capitalize the second sentence
                 if second_part:
                     second_part = second_part[0].upper() + second_part[1:] if len(second_part) > 1 else second_part.upper()
@@ -1006,6 +1036,39 @@ Focus on using examples and guidance from the provided documents.
         
         # If no good split found, return original
         return sentence
+    
+    def _is_complete_sentence(self, text: str) -> bool:
+        """
+        Basic check if a text fragment forms a complete sentence.
+        """
+        text = text.strip()
+        if not text:
+            return False
+        
+        # Check for sentence fragments that shouldn't start sentences
+        fragment_starters = [
+            'either by', 'or by', 'by importing', 'by manually', 'by following',
+            'including', 'such as', 'for example', 'which', 'that', 'because',
+            'since', 'although', 'though', 'while', 'when', 'where', 'after',
+            'before', 'during', 'unless', 'until', 'if'
+        ]
+        
+        text_lower = text.lower()
+        for starter in fragment_starters:
+            if text_lower.startswith(starter):
+                return False
+        
+        # Check for basic sentence structure (subject + verb pattern)
+        words = text.split()
+        if len(words) < 3:  # Too short to be a complete sentence
+            return False
+        
+        # Must have at least one word that could be a subject (not starting with preposition/conjunction)
+        first_word = words[0].lower()
+        if first_word in ['by', 'with', 'in', 'on', 'at', 'for', 'to', 'from', 'and', 'or', 'but']:
+            return False
+        
+        return True
 
     def _apply_perfect_tense_conversion(self, sentence: str) -> str:
         """
