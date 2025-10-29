@@ -396,7 +396,13 @@ Focus on using examples and guidance from the provided documents.
                         return sentence.strip() + "."
         
         elif "long sentence" in feedback_lower:
-            # Look for concise examples
+            # Actually split the long sentence instead of just looking for examples
+            split_result = self._split_long_sentence(sentence_context)
+            if split_result != sentence_context:
+                logger.info(f"✅ Long sentence split: '{sentence_context}' → '{split_result}'")
+                return split_result
+                
+            # Fallback: Look for concise examples in document
             sentences = document.split('. ')
             short_sentences = [s for s in sentences if len(s.split()) < 15 and len(s.split()) > 5]
             if short_sentences:
@@ -495,80 +501,124 @@ Focus on using examples and guidance from the provided documents.
     
     def _contextual_rag_search(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
         """
-        Enhanced RAG search that actually converts passive voice using uploaded knowledge.
+        Enhanced RAG search that handles passive voice, long sentences, and other writing issues.
         """
         try:
-            # Enhanced search for passive voice content - prioritize special cases
-            search_queries = [
-                "special cases passive voice",  # Move this first - contains the exact pattern!
-                f"passive voice {sentence_context}",
-                "passive voice examples active voice conversion",
-                "must be created passive active",
-                "A data source must be created special cases"  # Direct search for our pattern
-            ]
+            feedback_lower = feedback_text.lower()
             
-            relevant_docs = []
+            # Handle long sentence issues first
+            if "long sentence" in feedback_lower or "shorter" in feedback_lower:
+                # Apply sentence splitting
+                split_result = self._split_long_sentence(sentence_context)
+                if split_result != sentence_context:
+                    logger.info(f"✅ Long sentence split by contextual RAG: '{sentence_context}' → '{split_result}'")
+                    return {
+                        "suggestion": split_result,
+                        "ai_answer": "Split long sentence into shorter, clearer sentences for better readability.",
+                        "confidence": "high",
+                        "method": "contextual_rag_sentence_split",
+                        "sources": ["Sentence splitting guidance"],
+                        "success": True
+                    }
+            
+            # Handle passive voice - existing logic
+            if "passive voice" in feedback_lower:
+                # Enhanced search for passive voice content - prioritize special cases
+                search_queries = [
+                    "special cases passive voice",  # Move this first - contains the exact pattern!
+                    f"passive voice {sentence_context}",
+                    "passive voice examples active voice conversion",
+                    "must be created passive active",
+                    "A data source must be created special cases"  # Direct search for our pattern
+                ]
+                
+                relevant_docs = []
+                
+                for query in search_queries:
+                    results = self.collection.query(
+                        query_texts=[query],
+                        n_results=8,  # Increased from 5 to catch more documents
+                        include=["documents", "metadatas", "distances"]
+                    )
+                    
+                    if results["documents"] and results["documents"][0]:
+                        for i, doc in enumerate(results["documents"][0]):
+                            distance = results["distances"][0][i] if results["distances"] else 1.0
+                            relevant_docs.append({
+                                "content": doc,
+                                "distance": distance,
+                                "query": query  # Track which query found this doc
+                            })
+                
+                if relevant_docs:
+                    # Remove duplicates based on content hash
+                    seen_docs = set()
+                    unique_docs = []
+                    for doc in relevant_docs:
+                        doc_hash = hash(doc["content"][:200])  # Hash first 200 chars
+                        if doc_hash not in seen_docs:
+                            seen_docs.add(doc_hash)
+                            unique_docs.append(doc)
+                    
+                    # Prioritize documents that contain "special_cases" with "must be created"
+                    priority_docs = []
+                    other_docs = []
+                    
+                    for doc in unique_docs:
+                        if "special_cases" in doc["content"] and "must be created" in doc["content"]:
+                            priority_docs.append(doc)
+                        else:
+                            other_docs.append(doc)
+                    
+                    # Sort each group by relevance
+                    priority_docs.sort(key=lambda x: x["distance"])
+                    other_docs.sort(key=lambda x: x["distance"])
+                    
+                    # Combine: priority documents first, then others
+                    best_docs = priority_docs[:5] + other_docs[:5]
+                    
+                    # Try to extract passive-to-active conversion examples
+                    converted_suggestion = self._apply_passive_voice_conversion(
+                        sentence_context, best_docs, feedback_text
+                    )
+                    
+                    if converted_suggestion and converted_suggestion != sentence_context:
+                        return {
+                            "suggestion": converted_suggestion,
+                            "ai_answer": f"Applied passive-to-active conversion based on uploaded examples. Found conversion pattern in knowledge base.",
+                            "confidence": "high",
+                            "method": "contextual_rag_enhanced",
+                            "sources": ["Knowledge base: special cases passive voice conversion"],
+                            "success": True
+                        }
+                    else:
+                        # Still return the found context but indicate no conversion was possible
+                        doc_preview = best_docs[0]["content"][:200] if best_docs else "No documents found"
+                        return {
+                            "suggestion": sentence_context,
+                            "ai_answer": f"Found relevant guidance in knowledge base: {doc_preview}...",
+                            "confidence": "medium",
+                            "method": "contextual_rag",
+                            "sources": ["Knowledge base"],
+                            "success": True
+                        }
+            
+            # For other issues, do a general search
+            search_queries = [
+                f"{feedback_text} {sentence_context}",
+                feedback_text,
+                f"{document_type} writing best practices"
+            ]
             
             for query in search_queries:
                 results = self.collection.query(
                     query_texts=[query],
-                    n_results=8,  # Increased from 5 to catch more documents
+                    n_results=3,
                     include=["documents", "metadatas", "distances"]
                 )
                 
                 if results["documents"] and results["documents"][0]:
-                    for i, doc in enumerate(results["documents"][0]):
-                        distance = results["distances"][0][i] if results["distances"] else 1.0
-                        relevant_docs.append({
-                            "content": doc,
-                            "distance": distance,
-                            "query": query  # Track which query found this doc
-                        })
-            
-            if relevant_docs:
-                # Remove duplicates based on content hash
-                seen_docs = set()
-                unique_docs = []
-                for doc in relevant_docs:
-                    doc_hash = hash(doc["content"][:200])  # Hash first 200 chars
-                    if doc_hash not in seen_docs:
-                        seen_docs.add(doc_hash)
-                        unique_docs.append(doc)
-                
-                # Prioritize documents that contain "special_cases" with "must be created"
-                priority_docs = []
-                other_docs = []
-                
-                for doc in unique_docs:
-                    if "special_cases" in doc["content"] and "must be created" in doc["content"]:
-                        priority_docs.append(doc)
-                    else:
-                        other_docs.append(doc)
-                
-                # Sort each group by relevance
-                priority_docs.sort(key=lambda x: x["distance"])
-                other_docs.sort(key=lambda x: x["distance"])
-                
-                # Combine: priority documents first, then others
-                best_docs = priority_docs[:5] + other_docs[:5]
-                
-                # Try to extract passive-to-active conversion examples
-                converted_suggestion = self._apply_passive_voice_conversion(
-                    sentence_context, best_docs, feedback_text
-                )
-                
-                if converted_suggestion and converted_suggestion != sentence_context:
-                    return {
-                        "suggestion": converted_suggestion,
-                        "ai_answer": f"Applied passive-to-active conversion based on uploaded examples. Found conversion pattern in knowledge base.",
-                        "confidence": "high",
-                        "method": "contextual_rag_enhanced",
-                        "sources": ["Knowledge base: special cases passive voice conversion"],
-                        "success": True
-                    }
-                else:
-                    # Still return the found context but indicate no conversion was possible
-                    doc_preview = best_docs[0]["content"][:200] if best_docs else "No documents found"
+                    doc_preview = results["documents"][0][0][:200]
                     return {
                         "suggestion": sentence_context,
                         "ai_answer": f"Found relevant guidance in knowledge base: {doc_preview}...",
@@ -577,7 +627,7 @@ Focus on using examples and guidance from the provided documents.
                         "sources": ["Knowledge base"],
                         "success": True
                     }
-            
+                    
         except Exception as e:
             logger.error(f"Enhanced contextual RAG search failed: {e}")
         
@@ -737,6 +787,77 @@ Focus on using examples and guidance from the provided documents.
             logger.debug(f"Conversion error details: {traceback.format_exc()}")
             return sentence
     
+    def _split_long_sentence(self, sentence: str) -> str:
+        """
+        Split long sentences into shorter, clearer sentences.
+        """
+        if not sentence or len(sentence.split()) <= 15:
+            return sentence
+        
+        words = sentence.split()
+        
+        # Method 1: Look for natural break points - "from X to Y" pattern
+        if " from " in sentence and " to " in sentence:
+            import re
+            # Pattern: "transfer an IE app from the IE Hub to the IEM catalog"
+            match = re.search(r'(.+?)\s+from\s+([^,]+?)\s+to\s+(.+)', sentence, re.IGNORECASE)
+            if match:
+                action = match.group(1).strip()
+                source = match.group(2).strip()
+                destination = match.group(3).strip().rstrip('.')  # Remove trailing period
+                
+                # Split into two clear sentences
+                return f"{action} from {source}. This transfers to {destination}."
+        
+        # Method 2: Look for "how to" constructions and break them down
+        if "how to" in sentence.lower():
+            # Split after the introductory phrase
+            import re
+            if "provides information on how to" in sentence.lower():
+                match = re.search(r'(.+?provides information on)\s+how to\s+(.+)', sentence, re.IGNORECASE)
+                if match:
+                    intro = match.group(1).strip()
+                    action = match.group(2).strip()
+                    return f"{intro} the transfer process. It explains how to {action}."
+        
+        # Method 3: Look for conjunctions near the middle
+        mid = len(words) // 2
+        for i in range(max(0, mid-3), min(len(words), mid+4)):
+            if words[i].lower() in ['and', 'but', 'or', 'so', 'yet', 'for']:
+                first_part = ' '.join(words[:i]).strip()
+                second_part = ' '.join(words[i+1:]).strip()
+                if first_part and second_part and len(first_part.split()) > 3:
+                    return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
+        
+        # Method 4: Look for commas near the middle
+        for i in range(max(0, mid-3), min(len(words), mid+4)):
+            if words[i].endswith(','):
+                first_part = ' '.join(words[:i+1]).strip().rstrip(',')
+                second_part = ' '.join(words[i+1:]).strip()
+                if first_part and second_part and len(first_part.split()) > 3:
+                    return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
+        
+        # Method 5: Split at natural semantic breaks
+        if ", which" in sentence:
+            parts = sentence.split(", which", 1)
+            if len(parts) == 2:
+                return f"{parts[0].strip()}. This {parts[1].strip()}"
+        
+        # Method 6: Simple mid-point split as last resort
+        if len(words) > 20:
+            first_part = ' '.join(words[:mid]).strip()
+            second_part = ' '.join(words[mid:]).strip()
+            
+            # Ensure both parts make sense
+            if len(first_part.split()) > 5 and len(second_part.split()) > 5:
+                # Capitalize the second sentence
+                if second_part:
+                    second_part = second_part[0].upper() + second_part[1:] if len(second_part) > 1 else second_part.upper()
+                return f"{first_part}. {second_part}"
+        
+        # If no good split found, return original
+        return sentence
+
     def _fallback_suggestion(self, feedback_text: str, sentence_context: str) -> Dict[str, Any]:
         """
         Final fallback when document search fails.
