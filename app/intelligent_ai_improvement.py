@@ -500,6 +500,8 @@ class IntelligentAISuggestionEngine:
             # Try alternative improvement strategies
             if "passive voice" in feedback_text.lower():
                 suggestion = self._force_active_voice_improvement(sentence_context)
+            elif any(word in feedback_text.lower() for word in ["perfect", "tense", "has been", "have been", "had been"]):
+                suggestion = self._force_perfect_tense_improvement(sentence_context)
             elif "long sentence" in feedback_text.lower():
                 suggestion = self._force_sentence_split(sentence_context)
             else:
@@ -578,6 +580,65 @@ class IntelligentAISuggestionEngine:
         first_part = ' '.join(words[:mid]).strip()
         second_part = ' '.join(words[mid:]).strip()
         return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
+    
+    def _force_perfect_tense_improvement(self, sentence: str) -> str:
+        """Force perfect tense to simple tense conversion."""
+        import re
+        
+        # Handle "has been" / "have been" patterns
+        if "has been" in sentence.lower() or "have been" in sentence.lower():
+            # "The system has been configured" -> "The system is configured"
+            sentence = re.sub(r'\b(has|have)\s+been\s+(configured|created|established|set up|saved|updated)', 
+                            r'is \2', sentence, flags=re.IGNORECASE)
+            # "Systems have been configured" -> "Systems are configured"
+            sentence = re.sub(r'\bsystems\s+have\s+been\s+(configured|created|established|set up|saved|updated)', 
+                            r'systems are \1', sentence, flags=re.IGNORECASE)
+        
+        # Handle "had been" patterns
+        if "had been" in sentence.lower():
+            # "The file had been saved" -> "The file was saved"
+            sentence = re.sub(r'\bhad\s+been\s+(\w+)', r'was \1', sentence, flags=re.IGNORECASE)
+        
+        # Handle "have/has + past participle" patterns
+        perfect_match = re.search(r'(.+?)\s+(have|has)\s+(completed|finished|created|done|made|written|saved)\b(.*)$', sentence, re.IGNORECASE)
+        if perfect_match:
+            subject = perfect_match.group(1).strip()
+            auxiliary = perfect_match.group(2)
+            past_participle = perfect_match.group(3)
+            remainder = perfect_match.group(4).strip()
+            
+            # Convert to simple present or past
+            if auxiliary.lower() == "has":
+                # Third person singular - convert to simple present
+                verb_map = {
+                    'completed': 'completes',
+                    'finished': 'finishes', 
+                    'created': 'creates',
+                    'done': 'does',
+                    'made': 'makes',
+                    'written': 'writes',
+                    'saved': 'saves'
+                }
+                simple_verb = verb_map.get(past_participle.lower(), past_participle + 's')
+            else:
+                # Plural - convert to simple present
+                verb_map = {
+                    'completed': 'complete',
+                    'finished': 'finish',
+                    'created': 'create', 
+                    'done': 'do',
+                    'made': 'make',
+                    'written': 'write',
+                    'saved': 'save'
+                }
+                simple_verb = verb_map.get(past_participle.lower(), past_participle.rstrip('ed'))
+            
+            if remainder:
+                return f"{subject} {simple_verb}{remainder}"
+            else:
+                return f"{subject} {simple_verb}."
+        
+        return sentence
     
     def _force_general_improvement(self, sentence: str, feedback_text: str) -> str:
         """Force a general improvement based on the feedback."""
@@ -907,6 +968,10 @@ Now rewrite the sentence above:"""
             analysis["type"] = "voice_conversion"
             analysis["specific_issues"].append("passive_voice")
             
+        elif any(word in feedback_lower for word in ["perfect", "tense", "has been", "have been", "had been"]):
+            analysis["type"] = "tense_conversion"
+            analysis["specific_issues"].append("perfect_tense")
+            
         elif any(word in feedback_lower for word in ["long", "sentence", "break", "split"]):
             analysis["type"] = "sentence_length"
             analysis["specific_issues"].append("excessive_length")
@@ -935,6 +1000,8 @@ Now rewrite the sentence above:"""
         
         if issue_type == "voice_conversion":
             improved = self._improve_voice_semantically(sentence)
+        elif issue_type == "tense_conversion":
+            improved = self._improve_perfect_tense_semantically(sentence)
         elif issue_type == "sentence_length":
             improved = self._improve_length_semantically(sentence)
         elif issue_type == "conciseness":
@@ -997,6 +1064,97 @@ Now rewrite the sentence above:"""
         
         return sentence
     
+    def _improve_perfect_tense_semantically(self, sentence: str) -> str:
+        """Convert perfect tenses to simple tenses for clarity."""
+        import re
+        
+        # Pattern 1: Present Perfect -> Simple Present
+        # "I have completed the task" -> "I complete the task"
+        present_perfect = re.search(r'(.+?)\s+(have|has)\s+(\w+ed|completed|finished|created|done|made|written|taken|given)\b(.*)$', sentence, re.IGNORECASE)
+        if present_perfect:
+            subject = present_perfect.group(1).strip()
+            auxiliary = present_perfect.group(2)
+            past_participle = present_perfect.group(3)
+            remainder = present_perfect.group(4).strip()
+            
+            # Convert to simple present
+            verb_map = {
+                'completed': 'complete',
+                'finished': 'finish',
+                'created': 'create',
+                'done': 'do',
+                'made': 'make',
+                'written': 'write',
+                'taken': 'take',
+                'given': 'give'
+            }
+            
+            base_verb = verb_map.get(past_participle.lower(), past_participle.rstrip('ed'))
+            
+            # Add 's' for third person singular
+            if auxiliary.lower() == 'has':
+                if base_verb.endswith(('s', 'sh', 'ch', 'x', 'z')):
+                    simple_verb = base_verb + 'es'
+                elif base_verb.endswith('y') and len(base_verb) > 1 and base_verb[-2] not in 'aeiou':
+                    simple_verb = base_verb[:-1] + 'ies'
+                else:
+                    simple_verb = base_verb + 's'
+            else:
+                simple_verb = base_verb
+            
+            if remainder:
+                return f"{subject} {simple_verb}{remainder}"
+            else:
+                return f"{subject} {simple_verb}."
+        
+        # Pattern 2: Past Perfect -> Simple Past
+        # "The user had previously saved the file" -> "The user saved the file"
+        past_perfect = re.search(r'(.+?)\s+had\s+(?:previously\s+|already\s+)?(\w+ed|\w+n|\w+t)\b(.*)$', sentence, re.IGNORECASE)
+        if past_perfect:
+            subject = past_perfect.group(1).strip()
+            past_participle = past_perfect.group(2)
+            remainder = past_perfect.group(3).strip()
+            
+            # Convert to simple past
+            past_map = {
+                'written': 'wrote',
+                'taken': 'took', 
+                'given': 'gave',
+                'done': 'did',
+                'made': 'made',
+                'built': 'built'
+            }
+            
+            simple_past = past_map.get(past_participle.lower(), past_participle)
+            
+            if remainder:
+                return f"{subject} {simple_past}{remainder}"
+            else:
+                return f"{subject} {simple_past}."
+        
+        # Pattern 3: Present Perfect Continuous -> Simple Present
+        # "The system has been running" -> "The system runs"
+        perfect_continuous = re.search(r'(.+?)\s+(have|has)\s+been\s+(\w+ing)\b(.*)$', sentence, re.IGNORECASE)
+        if perfect_continuous:
+            subject = perfect_continuous.group(1).strip()
+            auxiliary = perfect_continuous.group(2)
+            present_participle = perfect_continuous.group(3)
+            remainder = perfect_continuous.group(4).strip()
+            
+            # Convert -ing to simple present
+            base_verb = present_participle.rstrip('ing')
+            if auxiliary.lower() == 'has':
+                simple_verb = base_verb + 's'
+            else:
+                simple_verb = base_verb
+            
+            if remainder:
+                return f"{subject} {simple_verb}{remainder}"
+            else:
+                return f"{subject} {simple_verb}."
+        
+        return sentence
+
     def _improve_length_semantically(self, sentence: str) -> str:
         """Improve sentence length using semantic understanding."""
         

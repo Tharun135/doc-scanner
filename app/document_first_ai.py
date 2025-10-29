@@ -603,6 +603,33 @@ Focus on using examples and guidance from the provided documents.
                             "success": True
                         }
             
+            # Handle perfect tense conversion - NEW FEATURE
+            perfect_tense_keywords = ["perfect tense", "tense", "has been", "have been", "had been", "has completed", "have completed", "had completed"]
+            if any(keyword in feedback_lower for keyword in perfect_tense_keywords):
+                # Apply perfect tense conversion
+                converted_sentence = self._apply_perfect_tense_conversion(sentence_context)
+                
+                if converted_sentence and converted_sentence != sentence_context:
+                    logger.info(f"✅ Perfect tense converted: '{sentence_context}' → '{converted_sentence}'")
+                    return {
+                        "suggestion": converted_sentence,
+                        "ai_answer": f"Converted perfect tense to simple tense for clarity. Original used complex tense structure; simplified version is more direct and easier to understand.",
+                        "confidence": "high", 
+                        "method": "perfect_tense_conversion",
+                        "sources": ["Perfect tense simplification rule"],
+                        "success": True
+                    }
+                else:
+                    # No perfect tense found to convert
+                    return {
+                        "suggestion": sentence_context,
+                        "ai_answer": "No perfect tense patterns detected in this sentence. The sentence already uses simple tense forms.",
+                        "confidence": "medium",
+                        "method": "perfect_tense_check",
+                        "sources": ["Perfect tense analysis"],
+                        "success": True
+                    }
+            
             # For other issues, do a general search
             search_queries = [
                 f"{feedback_text} {sentence_context}",
@@ -670,7 +697,7 @@ Focus on using examples and guidance from the provided documents.
             sentence_clean = sentence.strip()
             
             # 1. Handle "has been" / "have been" patterns (present perfect passive) -> simple present
-            if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed)\b', sentence_lower):
+            if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed|processed)\b', sentence_lower):
                 # "A data source has already been created" -> "A data source exists"
                 if re.search(r'(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower):
                     subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower)
@@ -708,6 +735,26 @@ Focus on using examples and guidance from the provided documents.
                             return f"{subject.capitalize()} are ready."
                         else:
                             return f"{subject.capitalize()} is ready."
+                
+                # "The data has been processed" -> "The data processes" (active) or "The data is processed" (state)
+                elif re.search(r'(?:has|have)\s+(?:already\s+)?been\s+processed', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+processed', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        
+                        # Clean up the subject
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Use simple present tense - state description
+                        if subject.lower().endswith('s') and subject.lower() != 'data':
+                            return f"{subject.capitalize()} are processed."
+                        else:
+                            return f"{subject.capitalize()} is processed."
             
             # 2. Specific conversions for "must be created" pattern
             if "must be created" in sentence_lower:
@@ -959,6 +1006,199 @@ Focus on using examples and guidance from the provided documents.
         
         # If no good split found, return original
         return sentence
+
+    def _apply_perfect_tense_conversion(self, sentence: str) -> str:
+        """
+        Convert perfect tenses (have/has/had + past participle) to simple tenses for clarity.
+        """
+        import re
+        
+        try:
+            sentence_clean = sentence.strip()
+            sentence_lower = sentence_clean.lower()
+            
+            # Pattern 1: Present Perfect (have/has + past participle) -> Simple Present
+            # "I have completed the task" -> "I complete the task"
+            # First handle "have/has been + past participle" patterns
+            present_perfect_been = re.search(r'(.+?)\s+(have|has)\s+been\s+(\w+ed|\w+en|\w+n)\b(.*)$', sentence_lower)
+            if present_perfect_been:
+                subject = present_perfect_been.group(1).strip()
+                auxiliary = present_perfect_been.group(2)  # have/has
+                past_participle = present_perfect_been.group(3)
+                remainder = present_perfect_been.group(4).strip()
+                
+                # Convert "has/have been + past participle" to simple present state
+                # "The system has been configured" -> "The system is configured"
+                if auxiliary == 'has':
+                    simple_form = f"{subject.capitalize()} is {past_participle}"
+                else:
+                    # Check if subject is plural
+                    if subject.lower().endswith('s') and subject.lower() not in ['data', 'access', 'process']:
+                        simple_form = f"{subject.capitalize()} are {past_participle}"
+                    else:
+                        simple_form = f"{subject.capitalize()} are {past_participle}"
+                
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{simple_form} {remainder_clean}."
+                    else:
+                        return f"{simple_form}."
+                else:
+                    return f"{simple_form}."
+            
+            # Pattern 2: Present Perfect (have/has + past participle) without "been"
+            present_perfect_match = re.search(r'(.+?)\s+(have|has)\s+(\w+ed|completed|finished|created|done|made|written|taken|given|built|sent|received|started|stopped)\b(.*)$', sentence_lower)
+            if present_perfect_match:
+                subject = present_perfect_match.group(1).strip()
+                auxiliary = present_perfect_match.group(2)  # have/has
+                past_participle = present_perfect_match.group(3)
+                remainder = present_perfect_match.group(4).strip()
+                
+                # Convert past participle to simple present form
+                verb_conversions = {
+                    'completed': 'complete',
+                    'finished': 'finish', 
+                    'created': 'create',
+                    'established': 'establish',
+                    'configured': 'configure',
+                    'installed': 'install',
+                    'updated': 'update',
+                    'processed': 'process',
+                    'saved': 'save',
+                    'uploaded': 'upload',
+                    'downloaded': 'download',
+                    'written': 'write',
+                    'taken': 'take',
+                    'given': 'give',
+                    'done': 'do',
+                    'made': 'make',
+                    'built': 'build',
+                    'sent': 'send',
+                    'received': 'receive',
+                    'started': 'start',
+                    'stopped': 'stop'
+                }
+                
+                # Get the base verb form
+                base_verb = verb_conversions.get(past_participle, past_participle.rstrip('ed'))
+                
+                # Determine if we need 3rd person singular 's'
+                if auxiliary == 'has':
+                    # Third person singular - add 's' if needed
+                    if base_verb.endswith(('s', 'sh', 'ch', 'x', 'z')):
+                        simple_verb = base_verb + 'es'
+                    elif base_verb.endswith('y') and len(base_verb) > 1 and base_verb[-2] not in 'aeiou':
+                        simple_verb = base_verb[:-1] + 'ies'
+                    else:
+                        simple_verb = base_verb + 's'
+                else:
+                    # First/second person or plural - use base form
+                    simple_verb = base_verb
+                
+                # Construct the simple present sentence
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{subject.capitalize()} {simple_verb} {remainder_clean}."
+                    else:
+                        return f"{subject.capitalize()} {simple_verb}."
+                else:
+                    return f"{subject.capitalize()} {simple_verb}."
+            
+            # Pattern 3: Past Perfect (had + past participle) -> Simple Past
+            # "The user had previously saved the file" -> "The user saved the file"
+            past_perfect_match = re.search(r'(.+?)\s+had\s+(?:previously\s+|already\s+)?(\w+ed|completed|finished|created|done|made|written|taken|given|built|sent|received|started|stopped|saved|uploaded|downloaded)\b(.*)$', sentence_lower)
+            if past_perfect_match:
+                subject = past_perfect_match.group(1).strip()
+                past_participle = past_perfect_match.group(2)
+                remainder = past_perfect_match.group(3).strip()
+                
+                # Convert past participle to simple past
+                past_conversions = {
+                    'completed': 'completed',
+                    'finished': 'finished',
+                    'created': 'created', 
+                    'established': 'established',
+                    'configured': 'configured',
+                    'installed': 'installed',
+                    'updated': 'updated',
+                    'processed': 'processed',
+                    'saved': 'saved',
+                    'uploaded': 'uploaded',
+                    'downloaded': 'downloaded',
+                    'written': 'wrote',
+                    'taken': 'took',
+                    'given': 'gave',
+                    'done': 'did',
+                    'made': 'made',
+                    'built': 'built',
+                    'sent': 'sent',
+                    'received': 'received',
+                    'started': 'started',
+                    'stopped': 'stopped'
+                }
+                
+                simple_past = past_conversions.get(past_participle, past_participle)
+                
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{subject.capitalize()} {simple_past} {remainder_clean}."
+                    else:
+                        return f"{subject.capitalize()} {simple_past}."
+                else:
+                    return f"{subject.capitalize()} {simple_past}."
+            
+            # Pattern 4: Present Perfect Continuous -> Simple Present
+            # "The system has been running" -> "The system runs"
+            present_perfect_continuous = re.search(r'(.+?)\s+(have|has)\s+been\s+(\w+ing)\b(.*)$', sentence_lower)
+            if present_perfect_continuous:
+                subject = present_perfect_continuous.group(1).strip()
+                auxiliary = present_perfect_continuous.group(2)
+                present_participle = present_perfect_continuous.group(3)
+                remainder = present_perfect_continuous.group(4).strip()
+                
+                # Convert -ing form to simple present
+                ing_conversions = {
+                    'running': 'runs' if auxiliary == 'has' else 'run',
+                    'working': 'works' if auxiliary == 'has' else 'work',
+                    'processing': 'processes' if auxiliary == 'has' else 'process',
+                    'operating': 'operates' if auxiliary == 'has' else 'operate',
+                    'functioning': 'functions' if auxiliary == 'has' else 'function',
+                    'executing': 'executes' if auxiliary == 'has' else 'execute',
+                    'performing': 'performs' if auxiliary == 'has' else 'perform'
+                }
+                
+                # Default conversion: remove 'ing' and add 's' for 3rd person singular
+                if present_participle in ing_conversions:
+                    simple_verb = ing_conversions[present_participle]
+                else:
+                    base_verb = present_participle.rstrip('ing')
+                    if auxiliary == 'has':
+                        simple_verb = base_verb + 's'
+                    else:
+                        simple_verb = base_verb
+                
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{subject.capitalize()} {simple_verb} {remainder_clean}."
+                    else:
+                        return f"{subject.capitalize()} {simple_verb}."
+                else:
+                    return f"{subject.capitalize()} {simple_verb}."
+            
+            # If no perfect tense patterns found, return original
+            return sentence_clean
+            
+        except Exception as e:
+            logger.warning(f"Perfect tense conversion failed: {e}")
+            return sentence
 
     def _fallback_suggestion(self, feedback_text: str, sentence_context: str) -> Dict[str, Any]:
         """
