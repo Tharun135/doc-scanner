@@ -669,7 +669,47 @@ Focus on using examples and guidance from the provided documents.
             sentence_lower = sentence.lower().strip()
             sentence_clean = sentence.strip()
             
-            # 1. Specific conversions for "must be created" pattern
+            # 1. Handle "has been" / "have been" patterns (present perfect passive) -> simple present
+            if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed)\b', sentence_lower):
+                # "A data source has already been created" -> "A data source exists"
+                if re.search(r'(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        
+                        # Clean up the subject - remove articles and keep it simple
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Use simple present tense - "exists" for created things
+                        return f"{subject.capitalize()} exists."
+                
+                # "The configuration has been set up" -> "The configuration is ready"
+                elif re.search(r'(?:has|have)\s+(?:already\s+)?been\s+(?:configured|set up|established)', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+(?:configured|set up|established)', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        
+                        # Clean up the subject
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Use simple present tense - "is ready" for configured things
+                        # Check if subject is plural for proper verb agreement
+                        if subject.lower().endswith('s') and subject.lower() not in ['access', 'process', 'address', 'database']:
+                            return f"{subject.capitalize()} are ready."
+                        else:
+                            return f"{subject.capitalize()} is ready."
+            
+            # 2. Specific conversions for "must be created" pattern
             if "must be created" in sentence_lower:
                 for passive_example, active_example in conversion_patterns:
                     if "must be created" in passive_example.lower():
@@ -684,7 +724,7 @@ Focus on using examples and guidance from the provided documents.
                                 subject = subject[4:]  # Remove "the "
                             return f"You must create {subject.lower()}."
             
-            # 2. Handle "are shown" / "is displayed" / "are added" / "is needed" / "is required" patterns
+            # 3. Handle "are shown" / "is displayed" / "are added" / "is needed" / "is required" patterns
             if re.search(r'\b(?:are|is)\s+(?:shown|displayed|presented|added|created|configured|saved|uploaded|needed|required)\b', sentence_lower):
                 # "The system app Databus is needed to exchange data" -> "Databus exchanges data"
                 if "is needed" in sentence_lower:
@@ -801,7 +841,7 @@ Focus on using examples and guidance from the provided documents.
                         subject = subject[4:]
                     return f"The system shows {subject}."
             
-            # 3. Handle other "must be" patterns  
+            # 4. Handle other "must be" patterns  
             if "must be" in sentence_lower and "created" not in sentence_lower:
                 verb_match = re.search(r'must be (\w+)', sentence_lower)
                 if verb_match:
@@ -811,12 +851,12 @@ Focus on using examples and guidance from the provided documents.
                         subject = re.sub(r'^(a|the)\s+', '', subject, flags=re.IGNORECASE)
                     return f"You must {verb} {subject.lower()}."
             
-            # 4. Try to find exact matches in uploaded patterns
+            # 5. Try to find exact matches in uploaded patterns
             for passive_example, active_example in all_patterns:
                 if sentence_clean.lower().strip() == passive_example.lower().strip():
                     return active_example.strip()
             
-            # 5. Handle general "is/are + past participle" patterns
+            # 6. Handle general "is/are + past participle" patterns
             general_passive = re.search(r'(.+?)\s+(?:is|are)\s+(\w+ed|\w+n|\w+t)\b(.*)$', sentence_lower)
             if general_passive:
                 subject = general_passive.group(1).strip()
