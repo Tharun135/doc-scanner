@@ -827,7 +827,7 @@ EXAMPLE FOR PASSIVE VOICE:
 Now rewrite the sentence above:"""
     
     def _parse_ai_response(self, ai_response: str, original_sentence: str) -> Tuple[str, str]:
-        """Parse AI response to extract suggestion and explanation."""
+        """Parse AI response to extract suggestion and explanation with strict minimalism enforcement."""
         
         if not ai_response or not ai_response.strip():
             logger.warning("Empty AI response received, using fallback")
@@ -849,37 +849,57 @@ Now rewrite the sentence above:"""
                 explanation = line.split(":", 1)[1].strip()
                 logger.info(f"🔧 FOUND EXPLANATION: '{explanation}'")
         
-        # Method 2: If no structured response, look for sentences that differ from original
+        # Method 2: Look for concise sentences ONLY (reject essays)
         if not suggestion:
-            logger.info("🔧 No structured format found, looking for alternative sentence")
+            logger.info("🔧 No structured format found, looking for concise alternatives")
+            original_word_count = len(original_sentence.split())
+            
             for line in lines:
                 line = line.strip().strip('"').strip("'")
-                if (len(line) > 20 and 
+                
+                # STRICT CONCISENESS CHECK: Reject overly long responses
+                word_count = len(line.split())
+                if word_count > original_word_count + 5:  # Allow max 5 extra words
+                    logger.info(f"🔧 REJECTING TOO LONG: '{line[:50]}...' ({word_count} words)")
+                    continue
+                
+                # Look for valid short sentences
+                if (10 <= word_count <= original_word_count + 5 and  # Reasonable length
                     line != original_sentence and
-                    not line.startswith(("The", "This", "Here", "Consider", "You should", "It", "Note")) and
-                    not any(word in line.lower() for word in ["analysis", "issue", "problem", "sentence"])):
+                    not line.startswith(("The analysis", "This sentence", "Here", "Consider", "You should", "It is", "Note", "Application shows that")) and
+                    not any(phrase in line.lower() for phrase in ["analysis", "issue", "problem", "within an ecosystem", "facilitating", "capabilities", "specifications"])):
+                    
                     suggestion = line
-                    logger.info(f"🔧 FOUND ALTERNATIVE SUGGESTION: '{suggestion}'")
+                    logger.info(f"🔧 FOUND CONCISE SUGGESTION: '{suggestion}' ({word_count} words)")
                     break
         
-        # Method 3: Look for any sentence that's meaningfully different
-        if not suggestion:
-            logger.info("🔧 No clear alternative found, analyzing for meaningful differences")
-            for line in lines:
-                line = line.strip().strip('"').strip("'")
-                if line and len(line) > 10 and line != original_sentence:
-                    # Check if it's a reasonable sentence (has a verb)
-                    words = line.lower().split()
-                    has_verb = any(word in words for word in ['get', 'have', 'is', 'are', 'can', 'will', 'provides', 'shows'])
-                    if has_verb:
-                        suggestion = line
-                        logger.info(f"🔧 FOUND MEANINGFUL DIFFERENCE: '{suggestion}'")
-                        break
+        # Method 3: Extract ONLY the first sentence if response is too verbose
+        if not suggestion and ai_response:
+            logger.info("🔧 Extracting first sentence from verbose response")
+            # Split by periods and take the first complete sentence
+            sentences = ai_response.split('.')
+            for sentence in sentences:
+                sentence = sentence.strip()
+                word_count = len(sentence.split())
+                if (5 <= word_count <= len(original_sentence.split()) + 3 and
+                    sentence != original_sentence and
+                    not sentence.lower().startswith(("application shows that", "the system", "this", "here"))):
+                    suggestion = sentence + "."
+                    logger.info(f"🔧 EXTRACTED FIRST SENTENCE: '{suggestion}'")
+                    break
         
-        # Fallback: Generate a suggestion if nothing found
+        # Fallback: Generate a suggestion if nothing found or if AI was too verbose
         if not suggestion:
-            logger.warning("🔧 No valid suggestion found in AI response, generating fallback")
+            logger.warning("🔧 No valid concise suggestion found in AI response, generating rule-based fallback")
             suggestion, explanation = self._generate_fallback_suggestion(original_sentence, "parsing_failed")
+        
+        # FINAL VALIDATION: Ensure suggestion is concise
+        suggestion_word_count = len(suggestion.split())
+        original_word_count = len(original_sentence.split())
+        
+        if suggestion_word_count > original_word_count + 8:  # Too verbose
+            logger.warning(f"🔧 AI suggestion too verbose ({suggestion_word_count} words), using rule-based fallback")
+            suggestion, explanation = self._generate_fallback_suggestion(original_sentence, "too_verbose")
         
         # Validate the suggestion
         if suggestion == original_sentence:
@@ -903,8 +923,35 @@ Now rewrite the sentence above:"""
         suggestion = original_sentence
         explanation = "Applied basic writing improvement guidelines."
         
+        # Handle passive voice patterns first (most common issue)
+        if any(pattern in original_sentence.lower() for pattern in ['is displayed', 'are shown', 'is shown', 'was created', 'were generated', 'are provided', 'is provided', 'are generated', 'is generated']):
+            if 'are shown' in original_sentence.lower():
+                suggestion = original_sentence.replace('are shown', 'appear').replace('are displayed', 'appear')
+                explanation = "Converted to active voice for more direct communication."
+                logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
+            elif 'is shown' in original_sentence.lower():
+                suggestion = original_sentence.replace('is shown', 'appears').replace('is displayed', 'appears')
+                explanation = "Converted to active voice for more direct communication."
+                logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
+            elif 'is displayed' in original_sentence.lower():
+                suggestion = original_sentence.replace('is displayed', 'displays').replace('are displayed', 'display')
+                explanation = "Converted to active voice for more direct communication."
+                logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
+            elif 'are provided' in original_sentence.lower():
+                suggestion = original_sentence.replace('are provided', 'provide').replace('is provided', 'provides')
+                explanation = "Converted to active voice for more direct communication."
+                logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
+            elif 'are generated' in original_sentence.lower():
+                suggestion = original_sentence.replace('are generated', 'generate').replace('is generated', 'generates')
+                explanation = "Converted to active voice for more direct communication."
+                logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
+            elif 'were generated' in original_sentence.lower():
+                suggestion = original_sentence.replace('were generated', 'generated').replace('was created', 'created')
+                explanation = "Converted to active voice for more direct communication."
+                logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
+        
         # Handle adverb repositioning (like "only")
-        if "only" in original_sentence.lower():
+        elif "only" in original_sentence.lower():
             import re
             if re.search(r'\byou only (get|have|see|access|receive|obtain)\b', original_sentence, re.IGNORECASE):
                 suggestion = re.sub(
@@ -929,18 +976,16 @@ Now rewrite the sentence above:"""
             explanation = "Split long sentence into shorter, clearer segments for better readability."
             logger.info(f"🔧 APPLIED SENTENCE SPLIT: '{suggestion}'")
         
-        # Handle passive voice patterns
-        elif any(pattern in original_sentence.lower() for pattern in ['is displayed', 'are shown', 'was created', 'were generated']):
-            if 'is displayed' in original_sentence.lower():
-                suggestion = original_sentence.replace('is displayed', 'displays').replace('are displayed', 'display')
-                explanation = "Converted to active voice for more direct communication."
-                logger.info(f"🔧 APPLIED PASSIVE FIX: '{suggestion}'")
-        
-        # If no specific pattern matched, provide a generic improvement
+        # If no specific pattern matched, provide a minimal improvement
         if suggestion == original_sentence:
-            suggestion = f"Consider rephrasing for clarity: {original_sentence}"
-            explanation = "Review and simplify the sentence structure for better readability."
-            logger.info(f"🔧 APPLIED GENERIC IMPROVEMENT: '{suggestion}'")
+            # Just make a small word adjustment to indicate improvement
+            if 'the' in original_sentence.lower() and len(original_sentence.split()) < 15:
+                suggestion = original_sentence  # Keep original but mark as reviewed
+                explanation = "Sentence structure is clear. Consider minor phrasing adjustments if needed."
+            else:
+                suggestion = f"Consider rephrasing: {original_sentence}"
+                explanation = "Review and simplify the sentence structure for better readability."
+            logger.info(f"🔧 APPLIED MINIMAL IMPROVEMENT: '{suggestion}'")
         
         return suggestion, explanation
     
