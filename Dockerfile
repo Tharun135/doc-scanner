@@ -1,9 +1,9 @@
 FROM python:3.11-slim
 
-# Production-ready single-stage Dockerfile
+# Set working directory
 WORKDIR /app
 
-# Install system deps commonly needed to build wheels and run the app
+# Install essential system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -16,37 +16,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker layer cache
+# Copy requirements first (to leverage layer caching)
 COPY requirements.txt /app/requirements.txt
 
-# Upgrade pip and install Python dependencies
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r /app/requirements.txt
+# 🩷 Step 1: Upgrade pip, setuptools, wheel
+RUN pip install --upgrade pip setuptools wheel
 
-# Note: the repo's requirements.txt references the spaCy model wheel URL; if you prefer
-# to download via `python -m spacy download en_core_web_sm` at build time, add that here.
-# Installing the spaCy model at build-time increases image size.
+# 🩷 Step 2: Install heavy packages like torch and torchvision first
+RUN pip install --no-cache-dir torch torchvision
 
-# Copy application source
+# 🩷 Step 3: Install the rest of the dependencies
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy the entire application
 COPY . /app
 
-# Environment defaults (can be overridden with -e or an env file)
+# Environment variables
 ENV FLASK_APP=wsgi.py \
     FLASK_ENV=production \
     PYTHONUNBUFFERED=1 \
     PORT=5000
 
-# Expose port
+# Expose the Flask/Gunicorn port
 EXPOSE ${PORT}
 
-# Create non-root user and set ownership
+# Create non-root user for better security
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Healthcheck (runs as container user; uses curl from the base image)
+# Healthcheck to verify container is running
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT} || exit 1
 
-# Start application with Gunicorn pointing at the WSGI app
-# Uses a modest worker count; adjust `--workers`/`--threads` for your deployment.
+# Start the Flask app via Gunicorn
 CMD ["gunicorn", "wsgi:app", "-b", "0.0.0.0:5000", "--workers", "3", "--threads", "4", "--timeout", "120"]
