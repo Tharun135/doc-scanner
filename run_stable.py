@@ -25,7 +25,8 @@ def run_stable_server():
     
     try:
         print("📋 Initializing application...")
-        app, socketio = create_app()
+        app = create_app()
+        socketio = app.socketio
         
         # Configure for stability
         app.config['DEBUG'] = False

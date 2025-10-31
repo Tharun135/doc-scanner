@@ -16,7 +16,8 @@ def run_ultra_simple_server():
     
     try:
         from app import create_app
-        app, socketio = create_app()
+        app = create_app()
+        socketio = app.socketio
         
         print("Application initialized successfully")
         print("Server starting on http://localhost:5000")

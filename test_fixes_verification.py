@@ -101,7 +101,8 @@ def test_flask_app_creation():
         from app import create_app
         
         # Try to create the app
-        app, socketio = create_app()
+        app = create_app()
+        socketio = app.socketio
         print("✅ Flask app created successfully!")
         
         # Check registered blueprints

@@ -7,7 +7,8 @@ try:
     from app import create_app
     print("✅ App import successful")
     
-    app, socketio = create_app()
+    app = create_app()
+    socketio = app.socketio
     print("✅ App creation successful")
     print("✅ SocketIO instance created")
     

@@ -19,7 +19,8 @@ def run_simple_stable_server():
         print("📋 Initializing application...")
         from app import create_app
         
-        app, socketio = create_app()
+        app = create_app()
+        socketio = app.socketio
         
         print("✅ Application initialized successfully")
         print("🌐 Starting server on http://localhost:5000")

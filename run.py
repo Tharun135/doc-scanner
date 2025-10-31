@@ -1,7 +1,8 @@
 import os
 from app import create_app
 
-app, socketio = create_app()
+app = create_app()
+socketio = app.socketio
 
 if __name__ == '__main__':
     # Check for stable mode environment variable

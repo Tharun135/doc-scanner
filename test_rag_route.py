@@ -5,7 +5,8 @@ sys.path.append('.')
 
 try:
     from app import create_app
-    app, socketio = create_app()
+    app = create_app()
+    socketio = app.socketio
     
     print("Testing RAG dashboard route...")
     with app.test_client() as client:

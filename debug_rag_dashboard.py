@@ -13,7 +13,8 @@ def test_rag_dashboard():
     """Test the RAG dashboard route directly"""
     try:
         # Create app
-        app, socketio = create_app()
+        app = create_app()
+        socketio = app.socketio
         
         # Test client
         with app.test_client() as client:

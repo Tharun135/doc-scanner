@@ -105,4 +105,4 @@ def create_app():
 
     # Store socketio instance in app for access in routes
     app.socketio = socketio
-    return app, socketio
+    return app
