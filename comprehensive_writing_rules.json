@@ -192,5 +192,34 @@
       "good": ["Set up the network configuration", "Create the object", "Use the feature"]
     },
     "solution": "Use plain language alternatives to technical jargon when possible."
+  },
+  {
+    "rule_id": "MOD-perfect_tense_simplification",
+    "title": "Convert Perfect Tenses to Simple Tenses",
+    "explanation": "Replace perfect tenses (have/has/had + past participle) with simple present or past tense for clarity and directness.",
+    "why": "Perfect tenses can make writing unnecessarily complex. Simple tenses are clearer, more direct, and easier to understand.",
+    "examples": {
+      "bad": ["The system has been configured", "We have completed the setup", "The user had previously saved the file", "Data has been processed successfully"],
+      "good": ["The system is configured", "We completed the setup", "The user saved the file", "Data processes successfully"]
+    },
+    "solution": "Convert perfect tenses to simple present or past tense for clearer, more direct communication.",
+    "rewrite_policy": {
+      "patterns": [
+        "has been\\s+(\\w+ed|\\w+en)",
+        "have been\\s+(\\w+ed|\\w+en)", 
+        "had been\\s+(\\w+ed|\\w+en)",
+        "has\\s+(\\w+ed|\\w+en)",
+        "have\\s+(\\w+ed|\\w+en)",
+        "had\\s+(\\w+ed|\\w+en)"
+      ],
+      "perfect_tense_conversions": {
+        "has been": "is",
+        "have been": "are", 
+        "had been": "was/were",
+        "has": "present_simple",
+        "have": "present_simple", 
+        "had": "past_simple"
+      }
+    }
   }
 ]

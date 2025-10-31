@@ -396,7 +396,13 @@ Focus on using examples and guidance from the provided documents.
                         return sentence.strip() + "."
         
         elif "long sentence" in feedback_lower:
-            # Look for concise examples
+            # Actually split the long sentence instead of just looking for examples
+            split_result = self._split_long_sentence(sentence_context)
+            if split_result != sentence_context:
+                logger.info(f"✅ Long sentence split: '{sentence_context}' → '{split_result}'")
+                return split_result
+                
+            # Fallback: Look for concise examples in document
             sentences = document.split('. ')
             short_sentences = [s for s in sentences if len(s.split()) < 15 and len(s.split()) > 5]
             if short_sentences:
@@ -495,80 +501,151 @@ Focus on using examples and guidance from the provided documents.
     
     def _contextual_rag_search(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
         """
-        Enhanced RAG search that actually converts passive voice using uploaded knowledge.
+        Enhanced RAG search that handles passive voice, long sentences, and other writing issues.
         """
         try:
-            # Enhanced search for passive voice content - prioritize special cases
-            search_queries = [
-                "special cases passive voice",  # Move this first - contains the exact pattern!
-                f"passive voice {sentence_context}",
-                "passive voice examples active voice conversion",
-                "must be created passive active",
-                "A data source must be created special cases"  # Direct search for our pattern
-            ]
+            feedback_lower = feedback_text.lower()
             
-            relevant_docs = []
+            # Handle long sentence issues first
+            if "long sentence" in feedback_lower or "shorter" in feedback_lower:
+                # Apply sentence splitting
+                split_result = self._split_long_sentence(sentence_context)
+                if split_result != sentence_context:
+                    logger.info(f"✅ Long sentence split by contextual RAG: '{sentence_context}' → '{split_result}'")
+                    return {
+                        "suggestion": split_result,
+                        "ai_answer": "Split long sentence into shorter, clearer sentences for better readability.",
+                        "confidence": "high",
+                        "method": "contextual_rag_sentence_split",
+                        "sources": ["Sentence splitting guidance"],
+                        "success": True
+                    }
+            
+            # Handle passive voice - existing logic
+            if "passive voice" in feedback_lower:
+                # Enhanced search for passive voice content - prioritize special cases
+                search_queries = [
+                    "special cases passive voice",  # Move this first - contains the exact pattern!
+                    f"passive voice {sentence_context}",
+                    "passive voice examples active voice conversion",
+                    "must be created passive active",
+                    "A data source must be created special cases"  # Direct search for our pattern
+                ]
+                
+                relevant_docs = []
+                
+                for query in search_queries:
+                    results = self.collection.query(
+                        query_texts=[query],
+                        n_results=8,  # Increased from 5 to catch more documents
+                        include=["documents", "metadatas", "distances"]
+                    )
+                    
+                    if results["documents"] and results["documents"][0]:
+                        for i, doc in enumerate(results["documents"][0]):
+                            distance = results["distances"][0][i] if results["distances"] else 1.0
+                            relevant_docs.append({
+                                "content": doc,
+                                "distance": distance,
+                                "query": query  # Track which query found this doc
+                            })
+                
+                if relevant_docs:
+                    # Remove duplicates based on content hash
+                    seen_docs = set()
+                    unique_docs = []
+                    for doc in relevant_docs:
+                        doc_hash = hash(doc["content"][:200])  # Hash first 200 chars
+                        if doc_hash not in seen_docs:
+                            seen_docs.add(doc_hash)
+                            unique_docs.append(doc)
+                    
+                    # Prioritize documents that contain "special_cases" with "must be created"
+                    priority_docs = []
+                    other_docs = []
+                    
+                    for doc in unique_docs:
+                        if "special_cases" in doc["content"] and "must be created" in doc["content"]:
+                            priority_docs.append(doc)
+                        else:
+                            other_docs.append(doc)
+                    
+                    # Sort each group by relevance
+                    priority_docs.sort(key=lambda x: x["distance"])
+                    other_docs.sort(key=lambda x: x["distance"])
+                    
+                    # Combine: priority documents first, then others
+                    best_docs = priority_docs[:5] + other_docs[:5]
+                    
+                    # Try to extract passive-to-active conversion examples
+                    converted_suggestion = self._apply_passive_voice_conversion(
+                        sentence_context, best_docs, feedback_text
+                    )
+                    
+                    if converted_suggestion and converted_suggestion != sentence_context:
+                        return {
+                            "suggestion": converted_suggestion,
+                            "ai_answer": f"Applied passive-to-active conversion based on uploaded examples. Found conversion pattern in knowledge base.",
+                            "confidence": "high",
+                            "method": "contextual_rag_enhanced",
+                            "sources": ["Knowledge base: special cases passive voice conversion"],
+                            "success": True
+                        }
+                    else:
+                        # Still return the found context but indicate no conversion was possible
+                        doc_preview = best_docs[0]["content"][:200] if best_docs else "No documents found"
+                        return {
+                            "suggestion": sentence_context,
+                            "ai_answer": f"Found relevant guidance in knowledge base: {doc_preview}...",
+                            "confidence": "medium",
+                            "method": "contextual_rag",
+                            "sources": ["Knowledge base"],
+                            "success": True
+                        }
+            
+            # Handle perfect tense conversion - NEW FEATURE
+            perfect_tense_keywords = ["perfect tense", "tense", "has been", "have been", "had been", "has completed", "have completed", "had completed"]
+            if any(keyword in feedback_lower for keyword in perfect_tense_keywords):
+                # Apply perfect tense conversion
+                converted_sentence = self._apply_perfect_tense_conversion(sentence_context)
+                
+                if converted_sentence and converted_sentence != sentence_context:
+                    logger.info(f"✅ Perfect tense converted: '{sentence_context}' → '{converted_sentence}'")
+                    return {
+                        "suggestion": converted_sentence,
+                        "ai_answer": f"Converted perfect tense to simple tense for clarity. Original used complex tense structure; simplified version is more direct and easier to understand.",
+                        "confidence": "high", 
+                        "method": "perfect_tense_conversion",
+                        "sources": ["Perfect tense simplification rule"],
+                        "success": True
+                    }
+                else:
+                    # No perfect tense found to convert
+                    return {
+                        "suggestion": sentence_context,
+                        "ai_answer": "No perfect tense patterns detected in this sentence. The sentence already uses simple tense forms.",
+                        "confidence": "medium",
+                        "method": "perfect_tense_check",
+                        "sources": ["Perfect tense analysis"],
+                        "success": True
+                    }
+            
+            # For other issues, do a general search
+            search_queries = [
+                f"{feedback_text} {sentence_context}",
+                feedback_text,
+                f"{document_type} writing best practices"
+            ]
             
             for query in search_queries:
                 results = self.collection.query(
                     query_texts=[query],
-                    n_results=8,  # Increased from 5 to catch more documents
+                    n_results=3,
                     include=["documents", "metadatas", "distances"]
                 )
                 
                 if results["documents"] and results["documents"][0]:
-                    for i, doc in enumerate(results["documents"][0]):
-                        distance = results["distances"][0][i] if results["distances"] else 1.0
-                        relevant_docs.append({
-                            "content": doc,
-                            "distance": distance,
-                            "query": query  # Track which query found this doc
-                        })
-            
-            if relevant_docs:
-                # Remove duplicates based on content hash
-                seen_docs = set()
-                unique_docs = []
-                for doc in relevant_docs:
-                    doc_hash = hash(doc["content"][:200])  # Hash first 200 chars
-                    if doc_hash not in seen_docs:
-                        seen_docs.add(doc_hash)
-                        unique_docs.append(doc)
-                
-                # Prioritize documents that contain "special_cases" with "must be created"
-                priority_docs = []
-                other_docs = []
-                
-                for doc in unique_docs:
-                    if "special_cases" in doc["content"] and "must be created" in doc["content"]:
-                        priority_docs.append(doc)
-                    else:
-                        other_docs.append(doc)
-                
-                # Sort each group by relevance
-                priority_docs.sort(key=lambda x: x["distance"])
-                other_docs.sort(key=lambda x: x["distance"])
-                
-                # Combine: priority documents first, then others
-                best_docs = priority_docs[:5] + other_docs[:5]
-                
-                # Try to extract passive-to-active conversion examples
-                converted_suggestion = self._apply_passive_voice_conversion(
-                    sentence_context, best_docs, feedback_text
-                )
-                
-                if converted_suggestion and converted_suggestion != sentence_context:
-                    return {
-                        "suggestion": converted_suggestion,
-                        "ai_answer": f"Applied passive-to-active conversion based on uploaded examples. Found conversion pattern in knowledge base.",
-                        "confidence": "high",
-                        "method": "contextual_rag_enhanced",
-                        "sources": ["Knowledge base: special cases passive voice conversion"],
-                        "success": True
-                    }
-                else:
-                    # Still return the found context but indicate no conversion was possible
-                    doc_preview = best_docs[0]["content"][:200] if best_docs else "No documents found"
+                    doc_preview = results["documents"][0][0][:200]
                     return {
                         "suggestion": sentence_context,
                         "ai_answer": f"Found relevant guidance in knowledge base: {doc_preview}...",
@@ -577,7 +654,7 @@ Focus on using examples and guidance from the provided documents.
                         "sources": ["Knowledge base"],
                         "success": True
                     }
-            
+                    
         except Exception as e:
             logger.error(f"Enhanced contextual RAG search failed: {e}")
         
@@ -587,6 +664,8 @@ Focus on using examples and guidance from the provided documents.
         """
         Apply passive voice conversion using patterns from uploaded documents.
         """
+        import re  # Import at the beginning of the method
+        
         try:
             # Look for conversion examples in the documents
             conversion_patterns = []
@@ -597,7 +676,6 @@ Focus on using examples and guidance from the provided documents.
                 
                 # Extract JSON-like examples if present
                 if "passive" in content and "active" in content:
-                    import re
                     
                     # Look for various passive-active patterns
                     patterns = [
@@ -618,7 +696,67 @@ Focus on using examples and guidance from the provided documents.
             sentence_lower = sentence.lower().strip()
             sentence_clean = sentence.strip()
             
-            # 1. Specific conversions for "must be created" pattern
+            # 1. Handle "has been" / "have been" patterns (present perfect passive) -> simple present
+            if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed|processed)\b', sentence_lower):
+                # "A data source has already been created" -> "A data source exists"
+                if re.search(r'(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        
+                        # Clean up the subject - remove articles and keep it simple
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Use simple present tense - "exists" for created things
+                        return f"{subject.capitalize()} exists."
+                
+                # "The configuration has been set up" -> "The configuration is ready"
+                elif re.search(r'(?:has|have)\s+(?:already\s+)?been\s+(?:configured|set up|established)', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+(?:configured|set up|established)', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        
+                        # Clean up the subject
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Use simple present tense - "is ready" for configured things
+                        # Check if subject is plural for proper verb agreement
+                        if subject.lower().endswith('s') and subject.lower() not in ['access', 'process', 'address', 'database']:
+                            return f"{subject.capitalize()} are ready."
+                        else:
+                            return f"{subject.capitalize()} is ready."
+                
+                # "The data has been processed" -> "The data processes" (active) or "The data is processed" (state)
+                elif re.search(r'(?:has|have)\s+(?:already\s+)?been\s+processed', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+processed', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        
+                        # Clean up the subject
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Use simple present tense - state description
+                        if subject.lower().endswith('s') and subject.lower() != 'data':
+                            return f"{subject.capitalize()} are processed."
+                        else:
+                            return f"{subject.capitalize()} is processed."
+            
+            # 2. Specific conversions for "must be created" pattern
             if "must be created" in sentence_lower:
                 for passive_example, active_example in conversion_patterns:
                     if "must be created" in passive_example.lower():
@@ -633,10 +771,71 @@ Focus on using examples and guidance from the provided documents.
                                 subject = subject[4:]  # Remove "the "
                             return f"You must create {subject.lower()}."
             
-            # 2. Handle "are shown" / "is displayed" / "are added" patterns
-            if re.search(r'\b(?:are|is)\s+(?:shown|displayed|presented|added|created|configured|saved|uploaded)\b', sentence_lower):
+            # 3. Handle "are shown" / "is displayed" / "are added" / "is needed" / "is required" patterns
+            if re.search(r'\b(?:are|is)\s+(?:shown|displayed|presented|added|created|configured|saved|uploaded|needed|required)\b', sentence_lower):
+                # "The system app Databus is needed to exchange data" -> "Databus exchanges data"
+                if "is needed" in sentence_lower:
+                    # Extract the subject (what is needed)
+                    subject_match = re.search(r'(.+?)\s+is needed\s+(.+)', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        purpose = subject_match.group(2).strip()
+                        
+                        # Clean up the subject - remove articles and keep it simple
+                        if subject_full.startswith("the system app "):
+                            subject = subject_full.replace("the system app ", "")
+                        elif subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Convert purpose from "to exchange" to active form
+                        if purpose.startswith("to "):
+                            verb = purpose[3:].split()[0]  # Get the verb after "to"
+                            remainder = " ".join(purpose[3:].split()[1:])  # Get the rest
+                            remainder = remainder.rstrip('.')  # Remove trailing period to avoid double periods
+                            return f"{subject.capitalize()} {verb}s {remainder}."
+                        else:
+                            return f"{subject.capitalize()} provides {purpose}."
+                
+                # "The API key is required to authenticate requests" -> "The API key authenticates requests"
+                elif "is required" in sentence_lower:
+                    # Extract the subject (what is required)
+                    subject_match = re.search(r'(.+?)\s+is required\s+(.+)', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        purpose = subject_match.group(2).strip()
+                        
+                        # Clean up the subject - remove articles and keep it simple
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Convert purpose from "to authenticate" to active form
+                        if purpose.startswith("to "):
+                            verb = purpose[3:].split()[0]  # Get the verb after "to"
+                            remainder = " ".join(purpose[3:].split()[1:])  # Get the rest
+                            remainder = remainder.rstrip('.')  # Remove trailing period to avoid double periods
+                            
+                            # Fix verb conjugation for common verbs
+                            if verb == "access":
+                                verb = "access"  # "access" stays the same in 3rd person
+                            elif verb.endswith("s"):
+                                verb = verb  # Already ends in s
+                            else:
+                                verb = verb + "s"  # Add s for 3rd person singular
+                                
+                            return f"{subject.capitalize()} {verb} {remainder}."
+                        else:
+                            return f"{subject.capitalize()} handles {purpose}."
+                
                 # "The available connectors are shown" -> "The system shows the available connectors"
-                if "are shown" in sentence_lower:
+                elif "are shown" in sentence_lower:
                     subject = sentence_lower.split("are shown")[0].strip()
                     if subject.startswith("the "):
                         subject = subject[4:]
@@ -689,7 +888,7 @@ Focus on using examples and guidance from the provided documents.
                         subject = subject[4:]
                     return f"The system shows {subject}."
             
-            # 3. Handle other "must be" patterns  
+            # 4. Handle other "must be" patterns  
             if "must be" in sentence_lower and "created" not in sentence_lower:
                 verb_match = re.search(r'must be (\w+)', sentence_lower)
                 if verb_match:
@@ -699,12 +898,12 @@ Focus on using examples and guidance from the provided documents.
                         subject = re.sub(r'^(a|the)\s+', '', subject, flags=re.IGNORECASE)
                     return f"You must {verb} {subject.lower()}."
             
-            # 4. Try to find exact matches in uploaded patterns
+            # 5. Try to find exact matches in uploaded patterns
             for passive_example, active_example in all_patterns:
                 if sentence_clean.lower().strip() == passive_example.lower().strip():
                     return active_example.strip()
             
-            # 5. Handle general "is/are + past participle" patterns
+            # 6. Handle general "is/are + past participle" patterns
             general_passive = re.search(r'(.+?)\s+(?:is|are)\s+(\w+ed|\w+n|\w+t)\b(.*)$', sentence_lower)
             if general_passive:
                 subject = general_passive.group(1).strip()
@@ -737,6 +936,333 @@ Focus on using examples and guidance from the provided documents.
             logger.debug(f"Conversion error details: {traceback.format_exc()}")
             return sentence
     
+    def _split_long_sentence(self, sentence: str) -> str:
+        """
+        Split long sentences into shorter, clearer sentences with proper grammar.
+        """
+        if not sentence or len(sentence.split()) <= 15:
+            return sentence
+        
+        words = sentence.split()
+        sentence_lower = sentence.lower()
+        
+        # Method 1: Handle "either...or" constructions properly
+        if "either by" in sentence_lower and "or by" in sentence_lower:
+            import re
+            # Pattern: "do X, either by Y or by Z"
+            match = re.search(r'(.+?),\s*either\s+by\s+(.+?)\s+or\s+by\s+(.+)', sentence, re.IGNORECASE)
+            if match:
+                main_action = match.group(1).strip()
+                option1 = match.group(2).strip()
+                option2 = match.group(3).strip().rstrip('.')
+                
+                # Create two complete sentences
+                return f"{main_action}. You can do this by {option1} or by {option2}."
+        
+        # Method 2: Look for natural break points - "from X to Y" pattern
+        if " from " in sentence and " to " in sentence:
+            import re
+            # Pattern: "transfer an IE app from the IE Hub to the IEM catalog"
+            match = re.search(r'(.+?)\s+from\s+([^,]+?)\s+to\s+(.+)', sentence, re.IGNORECASE)
+            if match:
+                action = match.group(1).strip()
+                source = match.group(2).strip()
+                destination = match.group(3).strip().rstrip('.')  # Remove trailing period
+                
+                # Split into two clear sentences
+                return f"{action} from {source}. This transfers to {destination}."
+        
+        # Method 3: Handle "including" constructions
+        if ", including" in sentence_lower:
+            parts = sentence.split(", including", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                detail_part = parts[1].strip().rstrip('.')
+                return f"{main_part}. This includes {detail_part}."
+        
+        # Method 4: Handle "which includes" constructions
+        if ", which includes" in sentence_lower:
+            parts = sentence.split(", which includes", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                detail_part = parts[1].strip().rstrip('.')
+                return f"{main_part}. This includes {detail_part}."
+        
+        # Method 5: Handle general "which" constructions
+        if ", which" in sentence:
+            parts = sentence.split(", which", 1)
+            if len(parts) == 2:
+                main_part = parts[0].strip()
+                detail_part = parts[1].strip().rstrip('.')
+                return f"{main_part}. This {detail_part}."
+        
+        # Method 5: Look for conjunctions but ensure both parts are complete sentences
+        mid = len(words) // 2
+        for i in range(max(0, mid-3), min(len(words), mid+4)):
+            if words[i].lower() in ['and', 'but', 'so', 'yet']:
+                first_part = ' '.join(words[:i]).strip()
+                second_part = ' '.join(words[i+1:]).strip()
+                
+                # Check if both parts form complete thoughts
+                if (first_part and second_part and 
+                    len(first_part.split()) > 3 and len(second_part.split()) > 3 and
+                    self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
+                    return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
+        
+        # Method 6: Smart comma splitting - only if both parts are complete
+        for i in range(max(0, mid-3), min(len(words), mid+4)):
+            if words[i].endswith(','):
+                first_part = ' '.join(words[:i+1]).strip().rstrip(',')
+                second_part = ' '.join(words[i+1:]).strip()
+                
+                # Only split if both parts are complete sentences
+                if (first_part and second_part and 
+                    len(first_part.split()) > 5 and len(second_part.split()) > 5 and
+                    self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
+                    return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
+        
+        # Method 7: Simple mid-point split as last resort - with grammar check
+        if len(words) > 25:  # Only for very long sentences
+            first_part = ' '.join(words[:mid]).strip()
+            second_part = ' '.join(words[mid:]).strip()
+            
+            # Ensure both parts are complete sentences
+            if (len(first_part.split()) > 8 and len(second_part.split()) > 8 and
+                self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
+                # Capitalize the second sentence
+                if second_part:
+                    second_part = second_part[0].upper() + second_part[1:] if len(second_part) > 1 else second_part.upper()
+                return f"{first_part}. {second_part}"
+        
+        # If no good split found, return original
+        return sentence
+    
+    def _is_complete_sentence(self, text: str) -> bool:
+        """
+        Basic check if a text fragment forms a complete sentence.
+        """
+        text = text.strip()
+        if not text:
+            return False
+        
+        # Check for sentence fragments that shouldn't start sentences
+        fragment_starters = [
+            'either by', 'or by', 'by importing', 'by manually', 'by following',
+            'including', 'such as', 'for example', 'which', 'that', 'because',
+            'since', 'although', 'though', 'while', 'when', 'where', 'after',
+            'before', 'during', 'unless', 'until', 'if'
+        ]
+        
+        text_lower = text.lower()
+        for starter in fragment_starters:
+            if text_lower.startswith(starter):
+                return False
+        
+        # Check for basic sentence structure (subject + verb pattern)
+        words = text.split()
+        if len(words) < 3:  # Too short to be a complete sentence
+            return False
+        
+        # Must have at least one word that could be a subject (not starting with preposition/conjunction)
+        first_word = words[0].lower()
+        if first_word in ['by', 'with', 'in', 'on', 'at', 'for', 'to', 'from', 'and', 'or', 'but']:
+            return False
+        
+        return True
+
+    def _apply_perfect_tense_conversion(self, sentence: str) -> str:
+        """
+        Convert perfect tenses (have/has/had + past participle) to simple tenses for clarity.
+        """
+        import re
+        
+        try:
+            sentence_clean = sentence.strip()
+            sentence_lower = sentence_clean.lower()
+            
+            # Pattern 1: Present Perfect (have/has + past participle) -> Simple Present
+            # "I have completed the task" -> "I complete the task"
+            # First handle "have/has been + past participle" patterns
+            present_perfect_been = re.search(r'(.+?)\s+(have|has)\s+been\s+(\w+ed|\w+en|\w+n)\b(.*)$', sentence_lower)
+            if present_perfect_been:
+                subject = present_perfect_been.group(1).strip()
+                auxiliary = present_perfect_been.group(2)  # have/has
+                past_participle = present_perfect_been.group(3)
+                remainder = present_perfect_been.group(4).strip()
+                
+                # Convert "has/have been + past participle" to simple present state
+                # "The system has been configured" -> "The system is configured"
+                if auxiliary == 'has':
+                    simple_form = f"{subject.capitalize()} is {past_participle}"
+                else:
+                    # Check if subject is plural
+                    if subject.lower().endswith('s') and subject.lower() not in ['data', 'access', 'process']:
+                        simple_form = f"{subject.capitalize()} are {past_participle}"
+                    else:
+                        simple_form = f"{subject.capitalize()} are {past_participle}"
+                
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{simple_form} {remainder_clean}."
+                    else:
+                        return f"{simple_form}."
+                else:
+                    return f"{simple_form}."
+            
+            # Pattern 2: Present Perfect (have/has + past participle) without "been"
+            present_perfect_match = re.search(r'(.+?)\s+(have|has)\s+(\w+ed|completed|finished|created|done|made|written|taken|given|built|sent|received|started|stopped)\b(.*)$', sentence_lower)
+            if present_perfect_match:
+                subject = present_perfect_match.group(1).strip()
+                auxiliary = present_perfect_match.group(2)  # have/has
+                past_participle = present_perfect_match.group(3)
+                remainder = present_perfect_match.group(4).strip()
+                
+                # Convert past participle to simple present form
+                verb_conversions = {
+                    'completed': 'complete',
+                    'finished': 'finish', 
+                    'created': 'create',
+                    'established': 'establish',
+                    'configured': 'configure',
+                    'installed': 'install',
+                    'updated': 'update',
+                    'processed': 'process',
+                    'saved': 'save',
+                    'uploaded': 'upload',
+                    'downloaded': 'download',
+                    'written': 'write',
+                    'taken': 'take',
+                    'given': 'give',
+                    'done': 'do',
+                    'made': 'make',
+                    'built': 'build',
+                    'sent': 'send',
+                    'received': 'receive',
+                    'started': 'start',
+                    'stopped': 'stop'
+                }
+                
+                # Get the base verb form
+                base_verb = verb_conversions.get(past_participle, past_participle.rstrip('ed'))
+                
+                # Determine if we need 3rd person singular 's'
+                if auxiliary == 'has':
+                    # Third person singular - add 's' if needed
+                    if base_verb.endswith(('s', 'sh', 'ch', 'x', 'z')):
+                        simple_verb = base_verb + 'es'
+                    elif base_verb.endswith('y') and len(base_verb) > 1 and base_verb[-2] not in 'aeiou':
+                        simple_verb = base_verb[:-1] + 'ies'
+                    else:
+                        simple_verb = base_verb + 's'
+                else:
+                    # First/second person or plural - use base form
+                    simple_verb = base_verb
+                
+                # Construct the simple present sentence
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{subject.capitalize()} {simple_verb} {remainder_clean}."
+                    else:
+                        return f"{subject.capitalize()} {simple_verb}."
+                else:
+                    return f"{subject.capitalize()} {simple_verb}."
+            
+            # Pattern 3: Past Perfect (had + past participle) -> Simple Past
+            # "The user had previously saved the file" -> "The user saved the file"
+            past_perfect_match = re.search(r'(.+?)\s+had\s+(?:previously\s+|already\s+)?(\w+ed|completed|finished|created|done|made|written|taken|given|built|sent|received|started|stopped|saved|uploaded|downloaded)\b(.*)$', sentence_lower)
+            if past_perfect_match:
+                subject = past_perfect_match.group(1).strip()
+                past_participle = past_perfect_match.group(2)
+                remainder = past_perfect_match.group(3).strip()
+                
+                # Convert past participle to simple past
+                past_conversions = {
+                    'completed': 'completed',
+                    'finished': 'finished',
+                    'created': 'created', 
+                    'established': 'established',
+                    'configured': 'configured',
+                    'installed': 'installed',
+                    'updated': 'updated',
+                    'processed': 'processed',
+                    'saved': 'saved',
+                    'uploaded': 'uploaded',
+                    'downloaded': 'downloaded',
+                    'written': 'wrote',
+                    'taken': 'took',
+                    'given': 'gave',
+                    'done': 'did',
+                    'made': 'made',
+                    'built': 'built',
+                    'sent': 'sent',
+                    'received': 'received',
+                    'started': 'started',
+                    'stopped': 'stopped'
+                }
+                
+                simple_past = past_conversions.get(past_participle, past_participle)
+                
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{subject.capitalize()} {simple_past} {remainder_clean}."
+                    else:
+                        return f"{subject.capitalize()} {simple_past}."
+                else:
+                    return f"{subject.capitalize()} {simple_past}."
+            
+            # Pattern 4: Present Perfect Continuous -> Simple Present
+            # "The system has been running" -> "The system runs"
+            present_perfect_continuous = re.search(r'(.+?)\s+(have|has)\s+been\s+(\w+ing)\b(.*)$', sentence_lower)
+            if present_perfect_continuous:
+                subject = present_perfect_continuous.group(1).strip()
+                auxiliary = present_perfect_continuous.group(2)
+                present_participle = present_perfect_continuous.group(3)
+                remainder = present_perfect_continuous.group(4).strip()
+                
+                # Convert -ing form to simple present
+                ing_conversions = {
+                    'running': 'runs' if auxiliary == 'has' else 'run',
+                    'working': 'works' if auxiliary == 'has' else 'work',
+                    'processing': 'processes' if auxiliary == 'has' else 'process',
+                    'operating': 'operates' if auxiliary == 'has' else 'operate',
+                    'functioning': 'functions' if auxiliary == 'has' else 'function',
+                    'executing': 'executes' if auxiliary == 'has' else 'execute',
+                    'performing': 'performs' if auxiliary == 'has' else 'perform'
+                }
+                
+                # Default conversion: remove 'ing' and add 's' for 3rd person singular
+                if present_participle in ing_conversions:
+                    simple_verb = ing_conversions[present_participle]
+                else:
+                    base_verb = present_participle.rstrip('ing')
+                    if auxiliary == 'has':
+                        simple_verb = base_verb + 's'
+                    else:
+                        simple_verb = base_verb
+                
+                if remainder:
+                    # Clean up remainder and ensure proper spacing
+                    remainder_clean = remainder.strip().lstrip('.')
+                    if remainder_clean:
+                        return f"{subject.capitalize()} {simple_verb} {remainder_clean}."
+                    else:
+                        return f"{subject.capitalize()} {simple_verb}."
+                else:
+                    return f"{subject.capitalize()} {simple_verb}."
+            
+            # If no perfect tense patterns found, return original
+            return sentence_clean
+            
+        except Exception as e:
+            logger.warning(f"Perfect tense conversion failed: {e}")
+            return sentence
+
     def _fallback_suggestion(self, feedback_text: str, sentence_context: str) -> Dict[str, Any]:
         """
         Final fallback when document search fails.
