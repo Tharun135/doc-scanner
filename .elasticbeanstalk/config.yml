@@ -1,6 +1,6 @@
 branch-defaults:
   main:
-    environment: null
+    environment: doc-scanner-env
     group_suffix: null
 global:
   application_name: doc-scanner
