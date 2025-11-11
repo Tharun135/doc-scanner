@@ -236,29 +236,53 @@ def get_supported_formats_safe():
 def rag_dashboard():
     """RAG Dashboard route - OPTIMIZED for fast loading"""
     try:
-        # Import performance optimizer
+        # Try to import performance optimizer (optional)
         import sys
         import os
-        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from rag_performance_optimizer import get_fast_rag_stats, get_lightweight_rag_status, lazy_rag
-        
-        logger.info("🚀 Loading RAG dashboard with performance optimization...")
         import time
         start_time = time.time()
         
-        # Get lightweight status first (fast)
-        rag_status = get_lightweight_rag_status()
-        deps_available = rag_status['rag_available']
+        # Try to use performance optimizer if available
+        performance_optimizer_available = False
+        try:
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
+            from rag_performance_optimizer import get_fast_rag_stats, get_lightweight_rag_status, lazy_rag
+            performance_optimizer_available = True
+            logger.info("🚀 Loading RAG dashboard with performance optimization...")
+        except ImportError as e:
+            logger.warning(f"Performance optimizer not available: {e}. Using standard method...")
+            performance_optimizer_available = False
         
-        # Get cached stats (much faster than heavy initialization)
-        stats = get_fast_rag_stats()
-        
-        # If components aren't initialized yet, start background initialization
-        # This won't block the current request but will make future requests faster
-        if deps_available and not lazy_rag.is_initialized():
-            from rag_performance_optimizer import initialize_rag_background
-            logger.info("🔄 Starting background RAG initialization for future requests...")
-            initialize_rag_background()
+        # Get status and stats (with or without optimizer)
+        if performance_optimizer_available:
+            # Get lightweight status first (fast)
+            rag_status = get_lightweight_rag_status()
+            deps_available = rag_status['rag_available']
+            
+            # Get cached stats (much faster than heavy initialization)
+            stats = get_fast_rag_stats()
+            
+            # If components aren't initialized yet, start background initialization
+            # This won't block the current request but will make future requests faster
+            if deps_available and not lazy_rag.is_initialized():
+                try:
+                    from rag_performance_optimizer import initialize_rag_background
+                    logger.info("🔄 Starting background RAG initialization for future requests...")
+                    initialize_rag_background()
+                except Exception as bg_e:
+                    logger.warning(f"Background initialization failed: {bg_e}")
+        else:
+            # Fallback: Use standard dependency check
+            deps_available = check_rag_dependencies()
+            stats = {
+                'total_chunks': 0,
+                'total_queries': 0,
+                'avg_relevance': 0.0,
+                'success_rate': 0.0,
+                'queries_today': 0,
+                'documents_count': 0
+            }
         
         # Generate realistic demo data if system is working but empty
         if deps_available and stats['total_chunks'] == 0:
@@ -603,23 +627,41 @@ def log_feedback():
 def get_stats():
     """Get comprehensive RAG system statistics for dashboard and API - OPTIMIZED."""
     try:
-        # Import performance optimizer
+        # Try to import performance optimizer (optional)
         import sys
         import os
-        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from rag_performance_optimizer import get_fast_rag_stats, get_lightweight_rag_status
-        
-        logger.info("🚀 Getting RAG stats with performance optimization...")
         import time
         start_time = time.time()
         
-        # Use cached stats instead of heavy initialization
-        rag_status = get_lightweight_rag_status()
-        stats = get_fast_rag_stats()
-        stats["rag_available"] = rag_status['rag_available']
+        performance_optimizer_available = False
+        try:
+            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
+            from rag_performance_optimizer import get_fast_rag_stats, get_lightweight_rag_status
+            performance_optimizer_available = True
+            logger.info("🚀 Getting RAG stats with performance optimization...")
+        except ImportError as e:
+            logger.warning(f"Performance optimizer not available: {e}. Using standard method...")
+            performance_optimizer_available = False
+        
+        # Get stats (with or without optimizer)
+        if performance_optimizer_available:
+            # Use cached stats instead of heavy initialization
+            rag_status = get_lightweight_rag_status()
+            stats = get_fast_rag_stats()
+            stats["rag_available"] = rag_status['rag_available']
+        else:
+            # Fallback: Use basic stats
+            stats = {
+                "rag_available": check_rag_dependencies(),
+                "total_chunks": 0,
+                "total_queries": 0,
+                "avg_relevance": 0.0,
+                "success_rate": 0.0
+            }
         
         load_time = time.time() - start_time
-        logger.info(f"✅ RAG stats retrieved in {load_time:.2f}s (OPTIMIZED)")
+        logger.info(f"✅ RAG stats retrieved in {load_time:.2f}s")
         
         # Add some additional computed stats for API compatibility
         if stats.get('total_chunks', 0) > 0:

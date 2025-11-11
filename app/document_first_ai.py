@@ -521,15 +521,14 @@ Focus on using examples and guidance from the provided documents.
                         "success": True
                     }
             
-            # Handle passive voice - existing logic
+            # Handle passive voice - delegate to LLM with RAG context
             if "passive voice" in feedback_lower:
-                # Enhanced search for passive voice content - prioritize special cases
+                # Enhanced search for passive voice content
                 search_queries = [
-                    "special cases passive voice",  # Move this first - contains the exact pattern!
-                    f"passive voice {sentence_context}",
-                    "passive voice examples active voice conversion",
-                    "must be created passive active",
-                    "A data source must be created special cases"  # Direct search for our pattern
+                    "passive voice examples active voice",
+                    "active voice writing style",
+                    f"passive voice {sentence_context[:50]}",
+                    "how to convert passive to active"
                 ]
                 
                 relevant_docs = []
@@ -537,7 +536,7 @@ Focus on using examples and guidance from the provided documents.
                 for query in search_queries:
                     results = self.collection.query(
                         query_texts=[query],
-                        n_results=8,  # Increased from 5 to catch more documents
+                        n_results=5,
                         include=["documents", "metadatas", "distances"]
                     )
                     
@@ -547,61 +546,21 @@ Focus on using examples and guidance from the provided documents.
                             relevant_docs.append({
                                 "content": doc,
                                 "distance": distance,
-                                "query": query  # Track which query found this doc
+                                "query": query
                             })
                 
                 if relevant_docs:
-                    # Remove duplicates based on content hash
-                    seen_docs = set()
-                    unique_docs = []
-                    for doc in relevant_docs:
-                        doc_hash = hash(doc["content"][:200])  # Hash first 200 chars
-                        if doc_hash not in seen_docs:
-                            seen_docs.add(doc_hash)
-                            unique_docs.append(doc)
-                    
-                    # Prioritize documents that contain "special_cases" with "must be created"
-                    priority_docs = []
-                    other_docs = []
-                    
-                    for doc in unique_docs:
-                        if "special_cases" in doc["content"] and "must be created" in doc["content"]:
-                            priority_docs.append(doc)
-                        else:
-                            other_docs.append(doc)
-                    
-                    # Sort each group by relevance
-                    priority_docs.sort(key=lambda x: x["distance"])
-                    other_docs.sort(key=lambda x: x["distance"])
-                    
-                    # Combine: priority documents first, then others
-                    best_docs = priority_docs[:5] + other_docs[:5]
-                    
-                    # Try to extract passive-to-active conversion examples
-                    converted_suggestion = self._apply_passive_voice_conversion(
-                        sentence_context, best_docs, feedback_text
-                    )
-                    
-                    if converted_suggestion and converted_suggestion != sentence_context:
-                        return {
-                            "suggestion": converted_suggestion,
-                            "ai_answer": f"Applied passive-to-active conversion based on uploaded examples. Found conversion pattern in knowledge base.",
-                            "confidence": "high",
-                            "method": "contextual_rag_enhanced",
-                            "sources": ["Knowledge base: special cases passive voice conversion"],
-                            "success": True
-                        }
-                    else:
-                        # Still return the found context but indicate no conversion was possible
-                        doc_preview = best_docs[0]["content"][:200] if best_docs else "No documents found"
-                        return {
-                            "suggestion": sentence_context,
-                            "ai_answer": f"Found relevant guidance in knowledge base: {doc_preview}...",
-                            "confidence": "medium",
-                            "method": "contextual_rag",
-                            "sources": ["Knowledge base"],
-                            "success": True
-                        }
+                    # Found relevant documents - return them for LLM to use
+                    logger.info(f"✅ Found {len(relevant_docs)} relevant documents for passive voice - delegating to LLM")
+                    return {
+                        "success": False,  # Let LLM handle it with these docs
+                        "context_documents": [doc["content"] for doc in relevant_docs[:5]],
+                        "method": "rag_context_prepared"
+                    }
+                
+                # No relevant documents found - let next priority try
+                logger.info("⚠️ No relevant passive voice documents found, trying next priority...")
+                return {"success": False}
             
             # Handle perfect tense conversion - NEW FEATURE
             perfect_tense_keywords = ["perfect tense", "tense", "has been", "have been", "had been", "has completed", "have completed", "had completed"]
@@ -696,8 +655,9 @@ Focus on using examples and guidance from the provided documents.
             sentence_lower = sentence.lower().strip()
             sentence_clean = sentence.strip()
             
-            # 1. Handle "has been" / "have been" patterns (present perfect passive) -> simple present
-            if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed|processed)\b', sentence_lower):
+            # 1. Handle "has been" / "have been" patterns (present perfect passive) -> simple present or past
+            # Expanded to include more verbs: verified, tested, validated, confirmed, checked, etc.
+            if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed|processed|verified|tested|validated|confirmed|checked|reviewed|approved)\b', sentence_lower):
                 # "A data source has already been created" -> "A data source exists"
                 if re.search(r'(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower):
                     subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+created', sentence_lower)
@@ -755,6 +715,30 @@ Focus on using examples and guidance from the provided documents.
                             return f"{subject.capitalize()} are processed."
                         else:
                             return f"{subject.capitalize()} is processed."
+                
+                # "The test setups have been verified" -> "We verified the test setups"
+                # OR "The following test setups have been verified in X to achieve Y" -> "We verified the following test setups in X to achieve Y"
+                elif re.search(r'(?:has|have)\s+(?:already\s+)?been\s+(?:verified|tested|validated|confirmed|checked|reviewed)', sentence_lower):
+                    subject_match = re.search(r'(.+?)\s+(?:has|have)\s+(?:already\s+)?been\s+(verified|tested|validated|confirmed|checked|reviewed)(.*)$', sentence_lower)
+                    if subject_match:
+                        subject_full = subject_match.group(1).strip()
+                        verb = subject_match.group(2).strip()
+                        remainder = subject_match.group(3).strip()
+                        
+                        # Clean up the subject - remove articles
+                        if subject_full.startswith("the "):
+                            subject = subject_full[4:]
+                        elif subject_full.startswith("a "):
+                            subject = subject_full[2:]
+                        else:
+                            subject = subject_full
+                        
+                        # Convert to active past tense: "We verified the test setups..."
+                        # Preserve the rest of the sentence including purpose clauses
+                        if remainder:
+                            return f"We {verb} the {subject}{remainder}."
+                        else:
+                            return f"We {verb} the {subject}."
             
             # 2. Specific conversions for "must be created" pattern
             if "must be created" in sentence_lower:
@@ -888,7 +872,59 @@ Focus on using examples and guidance from the provided documents.
                         subject = subject[4:]
                     return f"The system shows {subject}."
             
-            # 4. Handle other "must be" patterns  
+            # 4. Handle "is/are now + past participle" with compound structure
+            # Example: "The Connector is now configured, with the asset created and tags linked"
+            # Convert to: "You have now configured the Connector, created the asset, and linked tags to it"
+            compound_passive = re.search(
+                r'(.+?)\s+(?:is|are)\s+now\s+(\w+ed|\w+n)\s*,\s*with\s+(.+)',
+                sentence_lower
+            )
+            if compound_passive:
+                subject = compound_passive.group(1).strip()
+                main_verb_past = compound_passive.group(2).strip()
+                with_clause = compound_passive.group(3).strip().rstrip('.')
+                
+                # Remove article from subject
+                if subject.startswith("the "):
+                    subject_clean = subject[4:]
+                elif subject.startswith("a "):
+                    subject_clean = subject[2:]
+                else:
+                    subject_clean = subject
+                
+                # Convert main verb from past participle to past tense
+                verb_map = {
+                    'configured': 'configure', 'created': 'create', 'established': 'establish',
+                    'set': 'set', 'added': 'add', 'linked': 'link', 'connected': 'connect',
+                    'installed': 'install', 'deployed': 'deploy', 'enabled': 'enable'
+                }
+                main_verb_base = verb_map.get(main_verb_past, main_verb_past.rstrip('ed'))
+                
+                # Parse the "with" clause to extract additional passive constructions
+                # Example: "with the asset created and tags linked to it"
+                additional_actions = []
+                
+                # Look for "X created" pattern
+                created_match = re.search(r'(?:the\s+)?(\w+(?:\s+\w+)?)\s+created', with_clause)
+                if created_match:
+                    additional_actions.append(f"create the {created_match.group(1)}")
+                
+                # Look for "Y linked" pattern
+                linked_match = re.search(r'(?:the\s+)?(\w+(?:\s+\w+)?)\s+linked\s+to\s+it', with_clause)
+                if linked_match:
+                    additional_actions.append(f"link {linked_match.group(1)} to it")
+                elif re.search(r'(?:and\s+)?(\w+)\s+linked', with_clause):
+                    linked_simple = re.search(r'(?:and\s+)?(\w+)\s+linked', with_clause)
+                    additional_actions.append(f"link {linked_simple.group(1)}")
+                
+                # Construct the active voice sentence
+                if additional_actions:
+                    actions_str = ", ".join(additional_actions)
+                    return f"You have now {main_verb_base}d the {subject_clean}, {actions_str}."
+                else:
+                    return f"You have now {main_verb_base}d the {subject_clean}."
+            
+            # 5. Handle other "must be" patterns  
             if "must be" in sentence_lower and "created" not in sentence_lower:
                 verb_match = re.search(r'must be (\w+)', sentence_lower)
                 if verb_match:
@@ -898,12 +934,12 @@ Focus on using examples and guidance from the provided documents.
                         subject = re.sub(r'^(a|the)\s+', '', subject, flags=re.IGNORECASE)
                     return f"You must {verb} {subject.lower()}."
             
-            # 5. Try to find exact matches in uploaded patterns
+            # 6. Try to find exact matches in uploaded patterns
             for passive_example, active_example in all_patterns:
                 if sentence_clean.lower().strip() == passive_example.lower().strip():
                     return active_example.strip()
             
-            # 6. Handle general "is/are + past participle" patterns
+            # 7. Handle general "is/are + past participle" patterns
             general_passive = re.search(r'(.+?)\s+(?:is|are)\s+(\w+ed|\w+n|\w+t)\b(.*)$', sentence_lower)
             if general_passive:
                 subject = general_passive.group(1).strip()

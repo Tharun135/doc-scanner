@@ -66,7 +66,7 @@ def check(content):
         # Example 1: Subject–verb agreement (singular/plural mismatch)
         for token in sent:
             if token.tag_ == "VBZ" and token.head.tag_ == "NNS":
-                suggestions.append(f"Check subject–verb agreement: '{sent.text.strip()}'")
+                suggestions.append("Check subject–verb agreement - singular verb with plural subject")
 
         # Example 2: Sentence starts with lowercase (skip markdown info blocks and technical codes)
         if sent.text[0].islower():
@@ -97,7 +97,7 @@ def check(content):
             if re.match(r'^(https?|ftp)://', sent_text, re.IGNORECASE):
                 continue
                 
-            suggestions.append(f"Start sentences with a capital letter: '{sent_text}'")
+            suggestions.append("Start sentence with a capital letter")
 
     # ------------------------------
     # RAG-based contextual checks (if available)

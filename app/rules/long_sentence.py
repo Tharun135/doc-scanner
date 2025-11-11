@@ -54,6 +54,8 @@ def check(content):
             continue
             
         if len(sent) > 25:
-            suggestions.append(f"Consider breaking this long sentence into shorter ones: '{sent.text}'")
+            # Don't include the sentence text - the UI already shows which sentence has the issue
+            word_count = len(sent)
+            suggestions.append(f"Consider breaking this long sentence ({word_count} words) into shorter ones for better readability")
     
     return suggestions

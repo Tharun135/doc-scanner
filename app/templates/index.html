@@ -700,19 +700,28 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s ease;
             margin-left: 8px;
+            flex-shrink: 0;  /* Prevent button from shrinking */
+            z-index: 10;     /* Ensure button is above other elements */
+            pointer-events: auto;  /* Ensure button is clickable */
+            position: relative;  /* Create stacking context */
         }
         
         .ai-feedback-icon:hover {
             background: linear-gradient(45deg, #5a4fcf, #8b7ff7);
-            transform: scale(1.1);
+            transform: scale(1.15);
+            box-shadow: 0 4px 8px rgba(108, 92, 231, 0.4);
+        }
+        
+        .ai-feedback-icon:active {
+            transform: scale(1.05);
         }
         
         .ai-feedback-content {
@@ -2267,26 +2276,27 @@
         
         // Add event delegation for AI feedback icons
         document.addEventListener('click', function(e) {
+            console.log('🔍 Click detected on:', e.target);
+            console.log('🔍 Closest ai-feedback-icon:', e.target.closest('.ai-feedback-icon'));
+            
             if (e.target.closest('.ai-feedback-icon')) {
+                e.preventDefault();  // Prevent any default behavior
+                e.stopPropagation();  // Stop event from bubbling
+                
                 const button = e.target.closest('.ai-feedback-icon');
                 const sentenceIndex = parseInt(button.getAttribute('data-sentence-index'));
-                const feedback = button.getAttribute('data-feedback');
-                const sentence = button.getAttribute('data-sentence');
-                const fullSuggestion = button.getAttribute('data-full-suggestion');
+                const feedback = decodeURIComponent(button.getAttribute('data-feedback'));
+                const sentence = decodeURIComponent(button.getAttribute('data-sentence'));
+                const fullSuggestion = button.getAttribute('data-full-suggestion') ? 
+                    decodeURIComponent(button.getAttribute('data-full-suggestion')) : '';
                 
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
-                console.log('Raw attributes:', {
+                console.log('Decoded attributes:', {
                     sentenceIndex: sentenceIndex,
                     feedback: feedback,
                     sentence: sentence,
                     fullSuggestion: fullSuggestion
-                });
-                console.log('Data attributes from DOM:', {
-                    'data-sentence-index': button.getAttribute('data-sentence-index'),
-                    'data-feedback': button.getAttribute('data-feedback'),
-                    'data-sentence': button.getAttribute('data-sentence'),
-                    'data-full-suggestion': button.getAttribute('data-full-suggestion')
                 });
                 
                 showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion);
@@ -3214,33 +3224,48 @@
                 
                 // Add click functionality to scroll to sentence
                 feedbackDiv.addEventListener('click', (e) => {
-                    // Don't trigger if clicking on AI icon
+                    // Don't trigger if clicking on AI icon or its children
                     if (!e.target.closest('.ai-feedback-icon')) {
                         scrollToSentence(sentenceIndex);
                     }
                 });
                 
                 console.log('Processing feedback item:', item);
+                console.log('Creating AI button for sentence:', sentenceIndex);
                 
-                feedbackDiv.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <div class="mb-2">
-                                <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
-                                <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
-                            </div>
-                            <strong>Issue:</strong> ${item.message}
-                        </div>
-                        <button class="ai-feedback-icon" 
-                                data-sentence-index="${sentenceIndex}" 
-                                data-feedback="${encodeURIComponent(item.message)}" 
-                                data-sentence="${encodeURIComponent(sentence)}"
-                                data-full-suggestion="${encodeURIComponent(item.full_suggestion || '')}" 
-                                title="Get AI suggestions">
-                            <i class="fas fa-robot"></i>
-                        </button>
+                // Create wrapper div
+                const wrapperDiv = document.createElement('div');
+                wrapperDiv.className = 'd-flex justify-content-between align-items-start';
+                wrapperDiv.style.gap = '12px';
+                
+                // Create content div (left side)
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'flex-grow-1';
+                contentDiv.innerHTML = `
+                    <div class="mb-2">
+                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
                     </div>
+                    <strong>📋 Issue:</strong> ${item.message}
                 `;
+                
+                // Create AI button (right side) - as a proper DOM element
+                const aiButton = document.createElement('button');
+                aiButton.className = 'ai-feedback-icon';
+                aiButton.setAttribute('data-sentence-index', sentenceIndex);
+                aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
+                aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
+                aiButton.setAttribute('data-full-suggestion', encodeURIComponent(item.full_suggestion || ''));
+                aiButton.setAttribute('title', 'Get AI-powered suggestions for this issue');
+                aiButton.setAttribute('aria-label', 'Get AI suggestions');
+                aiButton.innerHTML = '<i class="fas fa-robot"></i>';
+                
+                // Assemble the structure
+                wrapperDiv.appendChild(contentDiv);
+                wrapperDiv.appendChild(aiButton);
+                feedbackDiv.appendChild(wrapperDiv);
+                
+                console.log('✅ AI button created as DOM element for sentence:', sentenceIndex);
                 
                 // Insert in the correct order
                 const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));

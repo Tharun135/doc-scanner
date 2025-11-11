@@ -192,6 +192,12 @@ class AISuggestionEngine:
             sentence_context = ""
         if sentence_context.strip():
             suggestion = self._generate_sentence_rewrite(feedback_text, sentence_context, option_number)
+            # Validate the suggestion to prevent malformed outputs
+            if '\nWHY:' in suggestion:
+                main_suggestion = suggestion.split('\nWHY:')[0].strip()
+                main_suggestion = validate_suggestion(sentence_context, main_suggestion)
+                explanation = suggestion.split('\nWHY:')[1].strip() if '\nWHY:' in suggestion else ""
+                suggestion = f"{main_suggestion}\nWHY: {explanation}" if explanation else main_suggestion
         else:
             suggestion = f"Writing issue detected: {feedback_text}. Please review and improve this text for clarity, grammar, and style."
         if not suggestion or not str(suggestion).strip():
@@ -293,18 +299,26 @@ class AISuggestionEngine:
             # Simple semantic split: commas with and/which/that
             parts = re.split(r",\s+(?=and\b|which\b|that\b|but\b|so\b)", text)
             parts = [p.strip().rstrip(".") for p in parts if p.strip()]
-            if len(parts) >= 2:
+            
+            # Validate that we have meaningful parts (each part should be at least 3 words)
+            meaningful_parts = [p for p in parts if len(p.split()) >= 3]
+            
+            if len(meaningful_parts) >= 2:
                 if option_number == 1:
-                    s = f"{parts[0]}. {parts[1]}."
-                elif option_number == 2 and len(parts) >= 3:
-                    s = f"{parts[1]}. {parts[2]}."
+                    s = f"{meaningful_parts[0]}. {meaningful_parts[1]}."
+                elif option_number == 2 and len(meaningful_parts) >= 3:
+                    s = f"{meaningful_parts[1]}. {meaningful_parts[2]}."
                 else:
-                    s = f"{parts[0]}. Additionally, {parts[1]}."
+                    s = f"{meaningful_parts[0]}. Additionally, {meaningful_parts[1]}."
             else:
-                # fallback: mid split
+                # fallback: mid split - only if sentence is actually long
                 words = text.split()
-                mid = len(words) // 2
-                s = " ".join(words[:mid]) + ". " + " ".join(words[mid:])
+                if len(words) >= 20:  # Only split genuinely long sentences
+                    mid = len(words) // 2
+                    s = " ".join(words[:mid]) + ". " + " ".join(words[mid:])
+                else:
+                    # Sentence isn't that long, return as-is
+                    s = text
             out = _cleanup(s)
             if not _differs(text, out):
                 out = _cleanup("Break the sentence into two shorter sentences for clarity")
@@ -868,3 +882,34 @@ def _generate_smart_suggestion(feedback_text: str, sentence: str) -> Optional[Di
         }
     
     return None
+
+
+def validate_suggestion(original: str, suggestion: str) -> str:
+    """Validate that the suggestion is meaningful and not malformed."""
+    
+    # Check for malformed punctuation patterns
+    malformed_patterns = [
+        r'\w+\.\s+\w+',  # word. word (period inside sentence incorrectly)
+        r'\s+\.\s+',      # space.space
+        r'\w+\s+\.\s+\w+\s+\.',  # multiple incorrect periods
+    ]
+    
+    # Check if suggestion has obvious errors
+    for pattern in malformed_patterns:
+        if re.search(pattern, suggestion) and not re.search(pattern, original):
+            # Malformed - return original instead
+            return original
+    
+    # Check if suggestion is just adding periods in weird places
+    if suggestion.count('.') > original.count('.') + 1:
+        # Too many periods added - suspicious
+        # Check if periods are in sensible locations (end of sentences)
+        if not suggestion.strip().endswith('.') or '. .' in suggestion or ' . ' in suggestion:
+            return original
+    
+    # Check for broken sentence structure
+    if len(suggestion.split()) < 3 and len(original.split()) >= 5:
+        # Suggestion is way too short - probably broken
+        return original
+    
+    return suggestion

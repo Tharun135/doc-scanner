@@ -72,7 +72,8 @@ def check(content):
             
         if token.dep_ == "auxpass":
             # Avoid duplicate suggestions for the same sentence
-            suggestion = f"Avoid passive voice in sentence: '{sentence_text}'"
+            # Note: Don't include the sentence text - the UI already shows which sentence has the issue
+            suggestion = "Avoid passive voice - consider using active voice for clearer, more direct writing"
             if suggestion not in suggestions:
                 suggestions.append(suggestion)
     

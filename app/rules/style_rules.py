@@ -65,11 +65,11 @@ def check(content):
             # Example 2: Adverbs ending with -ly (may weaken writing)
             for token in sent:
                 if token.text.endswith("ly") and token.pos_ == "ADV":
-                    suggestions.append(f"Check use of adverb: '{token.text}' in sentence '{sent.text.strip()}'")
+                    suggestions.append(f"Consider removing or replacing the adverb '{token.text}' for stronger, more direct writing")
 
             # Example 3: Detecting overuse of 'very'
             if "very" in sent.text.lower():
-                suggestions.append(f"Try replacing or removing 'very': '{sent.text.strip()}'")
+                suggestions.append("Consider replacing or removing 'very' - use more specific descriptive words instead")
 
     # ------------------------------
     # RAG-based contextual style checks (if available)

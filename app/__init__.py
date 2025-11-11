@@ -38,14 +38,17 @@ def create_app():
         # It will be initialized on first access to RAG routes
         print("✅ RAG system registered - will initialize on first use!")
         
-        # Start performance optimization in background
+        # Start performance optimization in background (optional)
         try:
             import sys
             import os
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
             from rag_performance_optimizer import preload_rag_dashboard_data
             preload_rag_dashboard_data()
             print("🚀 RAG dashboard preloading started in background...")
+        except ImportError:
+            print("Note: RAG performance optimization not available (optional feature)")
         except Exception as opt_e:
             print(f"Note: RAG performance optimization not available: {opt_e}")
     except Exception as e:

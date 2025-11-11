@@ -11,10 +11,21 @@ import sys
 import os
 import re
 
-# Add the parent directory to the path for imports
+# Add the parent directory and tools directory to the path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
 
-from hybrid_intelligence_rag_system import HybridIntelligenceRAGSystem, FlaggedIssue
+try:
+    from hybrid_intelligence_rag_system import HybridIntelligenceRAGSystem, FlaggedIssue
+    HYBRID_SYSTEM_AVAILABLE = True
+except ImportError as e:
+    HYBRID_SYSTEM_AVAILABLE = False
+    print(f"Hybrid intelligence RAG system not available: {e}")
+    # Define dummy classes to prevent errors
+    class HybridIntelligenceRAGSystem:
+        pass
+    class FlaggedIssue:
+        pass
 
 # Global system instance
 _hybrid_system = None
@@ -22,8 +33,14 @@ _hybrid_system = None
 def get_hybrid_system():
     """Get or create the hybrid intelligence system"""
     global _hybrid_system
+    if not HYBRID_SYSTEM_AVAILABLE:
+        return None
     if _hybrid_system is None:
-        _hybrid_system = HybridIntelligenceRAGSystem()
+        try:
+            _hybrid_system = HybridIntelligenceRAGSystem()
+        except Exception as e:
+            print(f"Failed to initialize hybrid system: {e}")
+            return None
     return _hybrid_system
 
 def enhance_ai_suggestion_with_hybrid_intelligence(feedback_text, sentence_context, document_type='general', complexity='default'):
@@ -33,6 +50,16 @@ def enhance_ai_suggestion_with_hybrid_intelligence(feedback_text, sentence_conte
     This function integrates with your existing ai_suggestion endpoint
     to provide smarter, context-aware suggestions.
     """
+    if not HYBRID_SYSTEM_AVAILABLE:
+        return {
+            'success': False,
+            'error': 'Hybrid intelligence system not available - module not found',
+            'suggestion': sentence_context,
+            'ai_answer': 'Hybrid intelligence system is not configured.',
+            'confidence': 'low',
+            'method': 'unavailable'
+        }
+    
     try:
         # Special handling for requirement sentences to use "you" instead of "developer"
         if ("passive" in feedback_text.lower() and 
@@ -192,6 +219,19 @@ def enhance_ai_suggestion_with_hybrid_intelligence(feedback_text, sentence_conte
 
 def get_hybrid_system_status():
     """Get the status of the hybrid intelligence system"""
+    # Check if module is available first
+    if not HYBRID_SYSTEM_AVAILABLE:
+        return {
+            'ollama_running': False,
+            'hybrid_ready': False,
+            'phi3_available': False,
+            'llama3_available': False,
+            'error': 'Hybrid intelligence RAG system module not found in tools directory',
+            'available_models': [],
+            'rag_loaded': False,
+            'system_available': False
+        }
+    
     try:
         import requests
         from urllib.parse import urljoin
@@ -202,12 +242,42 @@ def get_hybrid_system_status():
         try:
             response = requests.get(tags_url, timeout=5)
         except requests.exceptions.ConnectionError:
-            return {'ollama_running': False, 'error': f'Ollama not running at {ollama_url}'}
+            return {
+                'ollama_running': False,
+                'hybrid_ready': False,
+                'phi3_available': False,
+                'llama3_available': False,
+                'error': f'Ollama not running at {ollama_url}. Start Ollama to enable hybrid intelligence.',
+                'available_models': [],
+                'rag_loaded': False,
+                'system_available': True,
+                'ollama_url': ollama_url
+            }
         except Exception as e:
-            return {'ollama_running': False, 'error': str(e)}
+            return {
+                'ollama_running': False,
+                'hybrid_ready': False,
+                'phi3_available': False,
+                'llama3_available': False,
+                'error': str(e),
+                'available_models': [],
+                'rag_loaded': False,
+                'system_available': True,
+                'ollama_url': ollama_url
+            }
 
         if response.status_code != 200:
-            return {'ollama_running': False, 'error': f'Ollama returned status {response.status_code}'}
+            return {
+                'ollama_running': False,
+                'hybrid_ready': False,
+                'phi3_available': False,
+                'llama3_available': False,
+                'error': f'Ollama returned status {response.status_code}',
+                'available_models': [],
+                'rag_loaded': False,
+                'system_available': True,
+                'ollama_url': ollama_url
+            }
 
         try:
             models_data = response.json()
@@ -227,7 +297,8 @@ def get_hybrid_system_status():
                 'llama3_available': llama3_available,
                 'hybrid_ready': hybrid_ready,
                 'available_models': available_models,
-                'rag_loaded': True
+                'rag_loaded': True,
+                'system_available': True
             }
         except Exception as e:
             return {'ollama_running': True, 'error': f'Failed to parse Ollama response: {str(e)}'}
