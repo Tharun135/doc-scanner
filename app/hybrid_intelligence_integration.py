@@ -43,12 +43,21 @@ def get_hybrid_system():
             return None
     return _hybrid_system
 
-def enhance_ai_suggestion_with_hybrid_intelligence(feedback_text, sentence_context, document_type='general', complexity='default'):
+def enhance_ai_suggestion_with_hybrid_intelligence(
+    feedback_text, 
+    sentence_context, 
+    document_type='general', 
+    complexity='default',
+    adjacent_context=None  # NEW: adjacent sentences
+):
     """
     Enhance AI suggestions using hybrid intelligence (phi3:mini + llama3:8b)
     
     This function integrates with your existing ai_suggestion endpoint
     to provide smarter, context-aware suggestions.
+    
+    Args:
+        adjacent_context: Dict with 'previous_sentence' and/or 'next_sentence' keys
     """
     if not HYBRID_SYSTEM_AVAILABLE:
         return {

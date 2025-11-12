@@ -815,8 +815,75 @@ def _generate_smart_suggestion(feedback_text: str, sentence: str) -> Optional[Di
                 "success": True
             }
     
-    # Handle long sentence issues
+    # Handle long sentence issues - DON'T just return guidance, actually try to split
     if any(phrase in feedback_lower for phrase in ["long sentence", "break", "shorter"]):
+        # Try to intelligently split the sentence
+        words = sentence.split()
+        word_count = len(words)
+        
+        if word_count > 20:  # Only split if genuinely long
+            # Try to find natural break points
+            improved_sentence = None
+            
+            # Pattern 1: Look for "and" that connects independent clauses
+            and_split = re.search(r'^(.+?)\s+and\s+(.+)$', sentence, re.IGNORECASE)
+            if and_split and len(and_split.group(1).split()) > 8:
+                part1 = and_split.group(1).strip()
+                part2 = and_split.group(2).strip()
+                # Capitalize second part
+                part2 = part2[0].upper() + part2[1:] if part2 else part2
+                improved_sentence = f"{part1}. {part2}"
+            
+            # Pattern 2: Look for comma-separated clauses
+            elif ',' in sentence:
+                parts = [p.strip() for p in sentence.split(',')]
+                if len(parts) >= 2 and len(parts[0].split()) > 8:
+                    # Join parts, converting comma to period
+                    first_part = parts[0] + '.'
+                    rest = ' '.join(parts[1:])
+                    rest = rest[0].upper() + rest[1:] if rest else rest
+                    improved_sentence = f"{first_part} {rest}"
+            
+            # Pattern 3: Look for "to" infinitive that could be split
+            elif ' to ' in sentence and word_count > 25:
+                to_match = re.search(r'^(.+?)\s+to\s+(.+)$', sentence, re.IGNORECASE)
+                if to_match and len(to_match.group(1).split()) > 12:
+                    part1 = to_match.group(1).strip() + '.'
+                    part2 = 'To ' + to_match.group(2).strip()
+                    improved_sentence = f"{part1} {part2}"
+            
+            # Pattern 4: Split "provides information on how to" type sentences
+            elif ' on how to ' in sentence.lower():
+                match = re.search(r'^(.*?provides information)\s+on how to\s+(.+)$', sentence, re.IGNORECASE)
+                if match:
+                    part1 = match.group(1).strip() + '.'
+                    part2 = 'It explains how to ' + match.group(2).strip()
+                    improved_sentence = f"{part1} {part2}"
+            
+            # Pattern 5: Split at "from X to Y" construction when long
+            elif ' from ' in sentence and ' to ' in sentence and word_count > 20:
+                # Try to find the main action before "from"
+                from_match = re.search(r'^(.+?)\s+from\s+(.+)$', sentence, re.IGNORECASE)
+                if from_match:
+                    before_from = from_match.group(1).strip()
+                    after_from = from_match.group(2).strip()
+                    if len(before_from.split()) >= 3 and len(after_from.split()) > 8:
+                        part1 = before_from + '.'
+                        part2 = 'It transfers from ' + after_from
+                        improved_sentence = f"{part1} {part2}"
+            
+            if improved_sentence:
+                return {
+                    "suggestion": improved_sentence,
+                    "ai_answer": f"Split long sentence ({word_count} words) into shorter, clearer sentences. Each sentence now focuses on one main idea, improving readability.",
+                    "confidence": "high",
+                    "method": "smart_sentence_splitting",
+                    "sources": ["Siemens Style Guide: Keep sentences concise and focused"],
+                    "original_sentence": sentence,
+                    "success": True
+                }
+        
+        # If no automatic split was possible, provide guidance
         ai_answer = ("Consider breaking this long sentence into 2-3 shorter sentences. "
                     "Each sentence should focus on one main idea. "
                     "Use connecting words like 'Then', 'Next', 'Additionally', or 'After that' to maintain logical flow between sentences.")

@@ -152,6 +152,7 @@ class IntelligentAISuggestionEngine:
         document_content: str = "",
         option_number: int = 1,
         issue: Optional[Dict[str, Any]] = None,
+        adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
     ) -> Dict[str, Any]:
         """
         Generate intelligent, context-aware suggestions PRIORITIZING your uploaded documents.
@@ -159,10 +160,19 @@ class IntelligentAISuggestionEngine:
         NEW PRIORITY ORDER (Document-First):
         1. Search uploaded documents (7042 docs in ChromaDB)
         2. Advanced RAG with document context
-        3. Ollama + document context
+        3. Ollama + document context + adjacent sentences
         4. Smart rule-based (only as backup)
+        
+        Args:
+            adjacent_context: Dict with 'previous_sentence' and/or 'next_sentence' keys
         """
         logger.info(f"🧠 Document-first suggestion for: {feedback_text[:50]}...")
+        
+        # Log adjacent context if available
+        if adjacent_context:
+            prev = adjacent_context.get('previous_sentence', '')
+            next_sent = adjacent_context.get('next_sentence', '')
+            logger.info(f"📚 Using adjacent context: prev={bool(prev)}, next={bool(next_sent)}")
         
         # Safety checks
         if not feedback_text:
@@ -225,7 +235,8 @@ class IntelligentAISuggestionEngine:
                 result = self._generate_ollama_rag_suggestion(
                     feedback_text, sentence_context, document_type,
                     writing_goals, option_number, 
-                    prepared_context=context_documents_for_llm  # Pass prepared context
+                    prepared_context=context_documents_for_llm,  # Pass prepared context
+                    adjacent_context=adjacent_context  # Pass adjacent sentences
                 )
                 if result and result.get("success"):
                     logger.info(f"✅ Ollama provided suggestion (method: {result.get('method')})")
@@ -407,7 +418,8 @@ class IntelligentAISuggestionEngine:
     
     def _generate_ollama_rag_suggestion(
         self, feedback_text: str, sentence_context: str, document_type: str,
-        writing_goals: List[str], option_number: int, prepared_context: List[str] = None
+        writing_goals: List[str], option_number: int, prepared_context: List[str] = None,
+        adjacent_context: Optional[Dict[str, str]] = None  # NEW: adjacent sentences
     ) -> Dict[str, Any]:
         """Generate suggestion using Ollama with RAG context from uploaded documents."""
         
@@ -447,7 +459,7 @@ class IntelligentAISuggestionEngine:
         # Build enhanced prompt with context from uploaded documents
         prompt = self._build_ollama_rag_prompt(
             feedback_text, sentence_context, document_type, 
-            writing_goals, context_documents
+            writing_goals, context_documents, adjacent_context  # Pass adjacent context
         )
         
         try:
@@ -956,7 +968,8 @@ Rewrite the sentence now:"""
     
     def _build_ollama_rag_prompt(
         self, feedback_text: str, sentence_context: str, 
-        document_type: str, writing_goals: List[str], context_documents: List[str]
+        document_type: str, writing_goals: List[str], context_documents: List[str],
+        adjacent_context: Optional[Dict[str, str]] = None  # NEW: adjacent sentences
     ) -> str:
         """Build a RAG-enhanced prompt for Ollama using issue-specific optimized templates."""
         
@@ -970,6 +983,17 @@ Rewrite the sentence now:"""
                 context_section += f"\nExample {i}:\n{doc_preview}\n"
             context_section += "\n⚡ Use these examples as guidance.\n"
         
+        # Build adjacent context section
+        adjacent_section = ""
+        if adjacent_context:
+            adjacent_section = "\n📖 SENTENCE CONTEXT (Adjacent Sentences):\n"
+            if adjacent_context.get('previous_sentence'):
+                adjacent_section += f"PREVIOUS SENTENCE: \"{adjacent_context['previous_sentence']}\"\n"
+            adjacent_section += f"CURRENT SENTENCE (to improve): \"{sentence_context}\"\n"
+            if adjacent_context.get('next_sentence'):
+                adjacent_section += f"NEXT SENTENCE: \"{adjacent_context['next_sentence']}\"\n"
+            adjacent_section += "\n💡 Use this context to understand the sentence's purpose and maintain consistency.\n"
+        
         # Detect issue type and use optimized prompt template
         issue_type = feedback_text.lower()
         
@@ -979,37 +1003,52 @@ Rewrite the sentence now:"""
 
 📋 ISSUE: Passive voice detected
 📝 ORIGINAL: "{sentence_context}"
-
-🎯 YOUR TASK: Convert this passive sentence to clear, direct active voice.
+{adjacent_section}
 {context_section}
 
+🎯 YOUR TASK: Convert this passive sentence to clear, direct active voice.
+
 ✅ CONVERSION RULES:
-1. Identify who/what performs the action (the agent)
-2. Make the agent the subject of the sentence
-3. Use active verbs (no "is done", "are shown", "has been verified")
-4. For user actions, use "you" as the subject
-5. For system actions, use "the system" or component name as subject
-6. Keep the sentence concise - don't add extra words
-7. Preserve all technical details and accuracy
+1. **Consider the context**: Look at the adjacent sentences to understand if this is:
+   - A requirement/prerequisite (e.g., "The following requirement must be met:")
+   - A descriptive statement
+   - An instruction/action item
+2. Identify who/what performs the action (the agent)
+3. Make the agent the subject of the sentence
+4. Use active verbs (no "is done", "are shown", "has been verified")
+5. For user actions, use "you" as the subject
+6. For system actions, use "the system" or component name as subject
+7. **Preserve the sentence type**: If it's a heading or requirement, keep it as such
+8. Keep the sentence concise - don't add extra words
+9. Preserve all technical details and accuracy
 
 🔄 COMMON PATTERNS:
 - "is/are done" → "you do" or "system does"
 - "has been verified" → "we verified"
+- "must be met" → "you must meet" (for requirements)
 - "must be created" → "you must create"
 - "can be configured" → "you can configure"
+- "is installed" → "you install" or "the system installs"
 - "is used to X" → "does X"
+
+⚠️ CONTEXT-AWARE ADJUSTMENTS:
+- If previous sentence is a heading like "Requirements:" or "Prerequisites:", maintain the requirement style
+- If it's under a "Steps" section, convert to imperative (command form)
+- If describing system behavior, use system as subject
+- If describing user actions, use "you" as subject
 
 ❌ AVOID:
 - Adding unnecessary words
 - Making the sentence longer
 - Changing technical terminology
 - Creating awkward constructions
+- Changing requirement statements into descriptions
 
 📤 REQUIRED OUTPUT:
 IMPROVED_SENTENCE: [Your active voice conversion - keep it concise]
-EXPLANATION: [One sentence explaining the change]
+EXPLANATION: [One sentence explaining the change and why it fits the context]
 
-REMEMBER: Direct, clear, concise. Use the FEWEST words while fixing the issue."""
+REMEMBER: Direct, clear, concise. Use the FEWEST words while fixing the issue. Consider the surrounding context!"""
 
         # LONG SENTENCE PROMPT
         elif "long sentence" in issue_type or "shorter" in issue_type or "break" in issue_type:
@@ -1018,17 +1057,20 @@ REMEMBER: Direct, clear, concise. Use the FEWEST words while fixing the issue.""
 
 📋 ISSUE: Sentence too long ({word_count} words - recommended: 25 or fewer)
 📝 ORIGINAL: "{sentence_context}"
-
-🎯 YOUR TASK: Break this long sentence into 2-3 shorter, clearer sentences.
+{adjacent_section}
 {context_section}
 
+🎯 YOUR TASK: Break this long sentence into 2-3 shorter, clearer sentences.
+
 ✅ BREAKING RULES:
-1. Split at natural break points: periods, coordinating conjunctions ("and", "but")
-2. One main idea per sentence
-3. Separate sequential instructions
-4. Use transition words: "Then", "Next", "This"
-5. Keep all original information
-6. Maintain logical flow between sentences
+1. **Check adjacent sentences**: Ensure the split maintains logical flow with surrounding text
+2. Split at natural break points: periods, coordinating conjunctions ("and", "but")
+3. One main idea per sentence
+4. Separate sequential instructions
+5. Use transition words: "Then", "Next", "This"
+6. Keep all original information
+7. Maintain logical flow between sentences
+8. **Match the style** of surrounding sentences
 
 🔍 PRIORITY SPLIT POINTS:
 1. After complete thoughts (before "and", "but")
@@ -1040,12 +1082,13 @@ REMEMBER: Direct, clear, concise. Use the FEWEST words while fixing the issue.""
 - Splitting purpose clauses ("to achieve")
 - Over-splitting (< 5 words per sentence)
 - Losing information
+- Breaking flow with adjacent sentences
 
 📤 REQUIRED OUTPUT:
 IMPROVED_SENTENCE: [Your 2-3 shorter sentences - maintain all details]
-EXPLANATION: [One sentence explaining the split]
+EXPLANATION: [One sentence explaining the split and how it fits the context]
 
-REMEMBER: Break at natural points. Each sentence = one clear idea."""
+REMEMBER: Break at natural points. Each sentence = one clear idea. Consider surrounding context!"""
 
         # ADVERB (-LY) PROMPT
         elif "adverb" in issue_type and "ly" in sentence_context:
@@ -1053,16 +1096,18 @@ REMEMBER: Break at natural points. Each sentence = one clear idea."""
 
 📋 ISSUE: Adverb detected that may weaken writing
 📝 ORIGINAL: "{sentence_context}"
-
-🎯 YOUR TASK: Remove or replace the adverb to strengthen the sentence.
+{adjacent_section}
 {context_section}
 
+🎯 YOUR TASK: Remove or replace the adverb to strengthen the sentence.
+
 ✅ IMPROVEMENT STRATEGIES:
-1. Remove if redundant: "completely finish" → "finish"
-2. Replace with strong verb: "walk quickly" → "hurry"
-3. Specify precisely: "loads quickly" → "loads in 2 seconds"
-4. Remove intensifiers: "very important" → "critical"
-5. Reposition for clarity: "only" precedes what it modifies
+1. **Check context**: Ensure the change maintains consistency with surrounding sentences
+2. Remove if redundant: "completely finish" → "finish"
+3. Replace with strong verb: "walk quickly" → "hurry"
+4. Specify precisely: "loads quickly" → "loads in 2 seconds"
+5. Remove intensifiers: "very important" → "critical"
+6. Reposition for clarity: "only" precedes what it modifies
 
 🎯 COMMON FIXES:
 - "simply click" → "click"
@@ -1073,9 +1118,9 @@ REMEMBER: Break at natural points. Each sentence = one clear idea."""
 
 📤 REQUIRED OUTPUT:
 IMPROVED_SENTENCE: [Version with adverb removed/replaced - keep concise]
-EXPLANATION: [One sentence explaining the improvement]
+EXPLANATION: [One sentence explaining the improvement and context fit]
 
-REMEMBER: Strong verbs beat verb + adverb."""
+REMEMBER: Strong verbs beat verb + adverb. Maintain flow with surrounding text!"""
 
         # VAGUE TERMS PROMPT
         elif any(term in issue_type for term in ["vague", "some", "several", "various", "stuff", "things"]):
@@ -1250,8 +1295,35 @@ REMEMBER: Fix the issue. Preserve everything else."""
         explanation = "Applied basic writing improvement guidelines."
         
         # Handle passive voice patterns first (most common issue)
-        if any(pattern in original_sentence.lower() for pattern in ['is displayed', 'are shown', 'is shown', 'was created', 'were generated', 'are provided', 'is provided', 'are generated', 'is generated']):
-            if 'are shown' in original_sentence.lower():
+        passive_patterns = [
+            'is displayed', 'are shown', 'is shown', 'was created', 'were generated', 
+            'are provided', 'is provided', 'are generated', 'is generated',
+            'are demonstrated', 'is demonstrated', 'are described', 'is described',
+            'are explained', 'is explained', 'are installed', 'is installed'
+        ]
+        
+        if any(pattern in original_sentence.lower() for pattern in passive_patterns):
+            # Pattern 1: "X are/is demonstrated in Y" → "Y demonstrates X"
+            if 'are demonstrated in' in original_sentence.lower():
+                import re
+                match = re.search(r'^(.*?)\s+are demonstrated in\s+(.+?)[:.]?$', original_sentence, re.IGNORECASE)
+                if match:
+                    subject = match.group(1).strip().replace('The ', 'the ')
+                    location = match.group(2).strip().replace('the following ', 'The following ')
+                    suggestion = f"{location.capitalize()} demonstrates {subject}."
+                    explanation = "Converted to active voice for more direct communication."
+                    logger.info(f"🔧 APPLIED PASSIVE VOICE FIX (demonstrated): '{suggestion}'")
+            elif 'is demonstrated in' in original_sentence.lower():
+                import re
+                match = re.search(r'^(.*?)\s+is demonstrated in\s+(.+?)[:.]?$', original_sentence, re.IGNORECASE)
+                if match:
+                    subject = match.group(1).strip().replace('The ', 'the ')
+                    location = match.group(2).strip().replace('the following ', 'The following ')
+                    suggestion = f"{location.capitalize()} demonstrates {subject}."
+                    explanation = "Converted to active voice for more direct communication."
+                    logger.info(f"🔧 APPLIED PASSIVE VOICE FIX (demonstrated): '{suggestion}'")
+            # Pattern 2: Simple "are shown" → "appear"
+            elif 'are shown' in original_sentence.lower():
                 suggestion = original_sentence.replace('are shown', 'appear').replace('are displayed', 'appear')
                 explanation = "Converted to active voice for more direct communication."
                 logger.info(f"🔧 APPLIED PASSIVE VOICE FIX: '{suggestion}'")
@@ -1289,18 +1361,74 @@ REMEMBER: Fix the issue. Preserve everything else."""
                 explanation = "Repositioned 'only' to clarify what it limits for better readability."
                 logger.info(f"🔧 APPLIED ADVERB FIX: '{suggestion}'")
         
-        # Handle very long sentences
+        # Handle very long sentences - IMPROVED LOGIC
         elif len(original_sentence.split()) > 20:
+            import re
+            # Try smart patterns first
             words = original_sentence.split()
-            mid = len(words) // 2
-            # Find a good break point (after conjunctions or commas)
-            for i in range(mid-3, mid+3):
-                if i < len(words) and words[i] in [',', 'and', 'but', 'or', 'while', 'because']:
-                    mid = i + 1
-                    break
-            suggestion = f"{' '.join(words[:mid])}. {' '.join(words[mid:])}"
+            word_count = len(words)
+            improved = None
+            
+            # Pattern 1: Split at "and" if it connects independent clauses
+            and_match = re.search(r'^(.+?)\s+and\s+(.+)$', original_sentence, re.IGNORECASE)
+            if and_match and len(and_match.group(1).split()) > 8:
+                part1 = and_match.group(1).strip() + '.'
+                part2 = and_match.group(2).strip()
+                part2 = part2[0].upper() + part2[1:] if part2 else part2
+                improved = f"{part1} {part2}"
+            
+            # Pattern 2: Split at "from" in "repository for X from Y" constructions
+            elif ' from ' in original_sentence and len(words) > 25:
+                from_match = re.search(r'^(.*?)\s+from\s+(.+)$', original_sentence, re.IGNORECASE)
+                if from_match:
+                    before_from = from_match.group(1).strip()
+                    after_from = from_match.group(2).strip()
+                    # Only split if both parts are substantial
+                    if len(before_from.split()) > 10 and len(after_from.split()) > 5:
+                        improved = f"{before_from}. These come from {after_from}"
+            
+            # Pattern 3: Split at comma if first part is long enough
+            elif ',' in original_sentence:
+                parts = original_sentence.split(',', 1)
+                if len(parts[0].split()) > 10:
+                    part1 = parts[0].strip() + '.'
+                    part2 = parts[1].strip()
+                    part2 = part2[0].upper() + part2[1:] if part2 else part2
+                    improved = f"{part1} {part2}"
+            
+            # Only use mid-point split as absolute last resort
+            if improved:
+                suggestion = improved
+            else:
+                # Find natural break point near middle (not exact middle)
+                mid = len(words) // 2
+                found_break = False
+                
+                # Look for conjunctions or punctuation in the words
+                for i in range(max(mid-5, 8), min(mid+5, len(words)-5)):
+                    word = words[i].lower().rstrip('.,;:')
+                    if word in ['and', 'but', 'or', 'while', 'because', 'however']:
+                        mid = i
+                        found_break = True
+                        break
+                    elif words[i].endswith(','):
+                        mid = i + 1
+                        found_break = True
+                        break
+                
+                # Only split if we found a good break point
+                if found_break:
+                    part1 = ' '.join(words[:mid]).rstrip(',')
+                    part2 = ' '.join(words[mid:])
+                    part2 = part2[0].upper() + part2[1:] if part2 else part2
+                    suggestion = f"{part1}. {part2}"
+                else:
+                    # No good break point - don't split
+                    logger.warning(f"🔧 No good break point found for: {original_sentence[:100]}")
+                    suggestion = original_sentence
+            
             explanation = "Split long sentence into shorter, clearer segments for better readability."
-            logger.info(f"🔧 APPLIED SENTENCE SPLIT: '{suggestion}'")
+            logger.info(f"🔧 APPLIED SENTENCE SPLIT: '{suggestion[:100]}...'")
         
         # If no specific pattern matched, provide a minimal improvement
         if suggestion == original_sentence:
@@ -1644,6 +1772,7 @@ def get_enhanced_ai_suggestion(
     document_content: str = "",
     option_number: int = 1,
     issue: Optional[Dict[str, Any]] = None,
+    adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
 ) -> Dict[str, Any]:
     """
     Enhanced AI suggestion using intelligent RAG-first architecture.
@@ -1701,6 +1830,7 @@ def get_enhanced_ai_suggestion(
             document_content=document_content,
             option_number=option_number,
             issue=issue,
+            adjacent_context=adjacent_context,  # Pass adjacent context
         )
         
         # Validate the result structure

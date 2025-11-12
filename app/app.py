@@ -790,6 +790,10 @@ def upload_file():
         
         # Store the document content for RAG context
         current_document_content = plain_text
+        
+        # Store all sentences for adjacent context in AI suggestions
+        global current_sentences_list
+        current_sentences_list = sentences
 
         # Stage 4: Analyzing with Rules (80%)
         if progress_tracker and room_id:
@@ -925,6 +929,7 @@ def generate_report(sentences):
 
 feedback_list = []
 current_document_content = ""  # Store current document for RAG context
+current_sentences_list = []  # Store all sentences for adjacent context
 
 @main.route('/feedback', methods=['POST'])
 def submit_feedback():
@@ -950,7 +955,7 @@ def ai_suggestion():
     - Final fallback to deterministic rewrite
     - Always returns a concrete rewrite + short guidance + sources
     """
-    global current_document_content
+    global current_document_content, current_sentences_list
 
     print("🔧 ENDPOINT: AI suggestion endpoint called")
     logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
@@ -965,6 +970,23 @@ def ai_suggestion():
     document_type   = data.get('document_type', 'general')
     writing_goals   = data.get('writing_goals', ['clarity', 'conciseness'])
     option_number   = data.get('option_number', 1)
+    sentence_index  = data.get('sentence_index', -1)  # New: get sentence position
+    
+    # Extract adjacent sentences for context
+    adjacent_context = {}
+    if sentence_index >= 0 and current_sentences_list:
+        # Get previous sentence (if exists)
+        if sentence_index > 0:
+            prev_sent = current_sentences_list[sentence_index - 1]
+            adjacent_context['previous_sentence'] = prev_sent.text if hasattr(prev_sent, 'text') else str(prev_sent)
+        
+        # Get next sentence (if exists)
+        if sentence_index < len(current_sentences_list) - 1:
+            next_sent = current_sentences_list[sentence_index + 1]
+            adjacent_context['next_sentence'] = next_sent.text if hasattr(next_sent, 'text') else str(next_sent)
+        
+        logger.info(f"📚 Adjacent context: prev={bool(adjacent_context.get('previous_sentence'))}, "
+                   f"next={bool(adjacent_context.get('next_sentence'))}")
 
     logger.info(f"AI suggestion request: feedback='{(feedback_text or '')[:50]}...', "
                 f"sentence='{sentence_context[:50]}...'")
@@ -985,7 +1007,8 @@ def ai_suggestion():
             feedback_text=feedback_text,
             sentence_context=sentence_context, 
             document_type=document_type,
-            complexity=data.get('complexity', 'default')
+            complexity=data.get('complexity', 'default'),
+            adjacent_context=adjacent_context  # Pass adjacent sentences
         )
         
         if hybrid_result.get('success'):
@@ -1066,33 +1089,52 @@ def ai_suggestion():
             writing_goals=writing_goals,
             document_content=current_document_content,  # full page text for context if needed
             option_number=option_number,
-            issue=issue_obj  # <<< IMPORTANT
+            issue=issue_obj,  # <<< IMPORTANT
+            adjacent_context=adjacent_context  # Pass adjacent sentences for better context
         )
 
         logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: "
                     f"method={result.get('method', 'unknown')}, "
                     f"suggestion_present={bool(result.get('suggestion'))}, "
-                    f"ai_answer_present={bool(result.get('ai_answer'))}")
+                    f"ai_answer_present={bool(result.get('ai_answer'))}, "
+                    f"success={result.get('success', 'not_specified')}")
 
         # 3) Validate structure
         if not isinstance(result, dict):
+            logger.error(f"🚨 CRITICAL: Result is not a dict! Type: {type(result)}")
             raise ValueError(f"Invalid result structure: {type(result)}")
+        
+        # Debug: Log the actual result keys to understand what we're getting
+        logger.info(f"🔍 Result keys: {list(result.keys())}")
+        logger.info(f"🔍 Result.suggestion type: {type(result.get('suggestion'))}")
 
         # Prefer enriched rewrite; never echo placeholder text
-        suggestion = (
-            result.get("suggestion")
-            or result.get("proposed_rewrite")
-            or ""
-        ).strip()
+        # Ensure we always get a string, never None or other types
+        suggestion_raw = result.get("suggestion") or result.get("proposed_rewrite") or ""
+        
+        # Type safety: convert to string if needed
+        if not isinstance(suggestion_raw, str):
+            logger.warning(f"⚠️ suggestion is not a string, got type: {type(suggestion_raw)}")
+            # Check if it's the whole result dict accidentally
+            if isinstance(suggestion_raw, dict) and 'suggestion' in suggestion_raw:
+                logger.error(f"🚨 CRITICAL: suggestion field contains entire result dict! Extracting...")
+                suggestion_raw = str(suggestion_raw.get('suggestion', ''))
+            else:
+                suggestion_raw = str(suggestion_raw) if suggestion_raw else ""
+        
+        suggestion = suggestion_raw.strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted suggestion: '{suggestion[:100]}...' "
                     f"(length: {len(suggestion)})")
 
-        ai_answer = (
-            result.get("ai_answer")
-            or result.get("solution_text")
-            or ""
-        ).strip()
+        ai_answer_raw = result.get("ai_answer") or result.get("solution_text") or ""
+        
+        # Type safety: convert to string if needed
+        if not isinstance(ai_answer_raw, str):
+            logger.warning(f"⚠️ ai_answer is not a string, got type: {type(ai_answer_raw)}")
+            ai_answer_raw = str(ai_answer_raw) if ai_answer_raw else ""
+        
+        ai_answer = ai_answer_raw.strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
                     f"(length: {len(ai_answer)})")
@@ -1134,6 +1176,26 @@ def ai_suggestion():
             if not ai_answer:
                 ai_answer = "Applied deterministic rewrite to resolve the issue."
 
+        # Type safety: Ensure all response fields are strings (not None or other types)
+        suggestion = str(suggestion) if suggestion is not None else ""
+        ai_answer = str(ai_answer) if ai_answer is not None else ""
+        
+        # Critical fix: If the suggestion looks like a stringified dict, it means we have a bug
+        if suggestion.startswith('{') and "'suggestion':" in suggestion:
+            logger.error(f"🚨 CRITICAL BUG: Suggestion is a stringified dict! Raw value: {suggestion[:200]}")
+            # Try to parse it and extract the actual suggestion
+            try:
+                import ast
+                parsed = ast.literal_eval(suggestion)
+                if isinstance(parsed, dict) and 'suggestion' in parsed:
+                    suggestion = str(parsed['suggestion'])
+                    if not ai_answer and 'ai_answer' in parsed:
+                        ai_answer = str(parsed['ai_answer'])
+                    logger.info(f"✅ Recovered suggestion from stringified dict: {suggestion[:100]}")
+            except Exception as parse_error:
+                logger.error(f"❌ Failed to parse stringified dict: {parse_error}")
+                # Keep the stringified version as last resort
+
         return jsonify({
         # ✅ Concrete rewrite to show in the “AI Suggestion” box
         "suggestion": suggestion,
@@ -1159,7 +1221,9 @@ def ai_suggestion():
     })
 
     except Exception as e:
-        logger.error(f"AI suggestion error: {str(e)}", exc_info=True)
+        logger.error(f"❌ AI suggestion error: {str(e)}", exc_info=True)
+        logger.error(f"❌ Error details - feedback: '{feedback_text[:100]}', sentence: '{sentence_context[:100]}'")
+        logger.error(f"❌ Error type: {type(e).__name__}")
         response_time = time.time() - start_time
 
         # Final fallback: generic but useful rewrite
@@ -1170,8 +1234,11 @@ def ai_suggestion():
         track_suggestion(suggestion_id, feedback_text, sentence_context,
                          document_type, "basic_fallback", response_time)
 
+        # Ensure fallback values are strings
+        fallback_suggestion = str(fallback.get("suggestion", "Review and revise for clarity."))
+        
         return jsonify({
-            "suggestion": fallback.get("suggestion", "Review and revise for clarity."),
+            "suggestion": fallback_suggestion,
             "ai_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
             "confidence": "low",
             "method": "basic_fallback",
