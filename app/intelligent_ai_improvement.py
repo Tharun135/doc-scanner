@@ -552,7 +552,15 @@ class IntelligentAISuggestionEngine:
             elif any(word in feedback_text.lower() for word in ["perfect", "tense", "has been", "have been", "had been"]):
                 suggestion = self._force_perfect_tense_improvement(sentence_context)
             elif "long sentence" in feedback_text.lower():
-                suggestion = self._force_sentence_split(sentence_context)
+                # Use LLM for sentence splitting instead of rule-based logic
+                logger.info("🤖 Using LLM for intelligent sentence splitting")
+                llm_result = self._llm_sentence_split(sentence_context, feedback_text)
+                if llm_result and llm_result != sentence_context:
+                    suggestion = llm_result
+                    logger.info(f"✅ LLM provided split: {suggestion[:100]}...")
+                else:
+                    logger.warning("⚠️ LLM split failed, keeping original")
+                    suggestion = sentence_context
             elif "adverb" in feedback_text.lower():
                 # Force adverb removal
                 suggestion = self._force_adverb_removal(sentence_context)
@@ -760,6 +768,83 @@ class IntelligentAISuggestionEngine:
         
         # If no good split point found, return original
         return sentence
+    
+    def _llm_sentence_split(self, sentence: str, feedback_text: str) -> str:
+        """
+        Use LLM (Ollama) to intelligently split a long sentence into shorter ones.
+        This avoids the grammar errors of rule-based splitting.
+        """
+        if not OLLAMA_AVAILABLE:
+            logger.warning("⚠️ Ollama not available, cannot use LLM for sentence splitting")
+            return sentence
+        
+        # Build a focused prompt for sentence splitting
+        prompt = f"""You are a technical writing expert. Split this long sentence into 2-3 shorter, grammatically correct sentences.
+
+CRITICAL RULES:
+1. Every sentence MUST have a subject and a complete verb
+2. NEVER create sentence fragments (e.g., "Allowing it to..." is WRONG)
+3. Convert participial phrases to complete sentences:
+   - "X, allowing Y" → "X. This allows Y." (NOT "X. Allowing Y.")
+   - "X, enabling Y" → "X. This enables Y."
+4. Ensure each sentence can stand alone grammatically
+5. Preserve technical accuracy and meaning
+
+Original sentence:
+"{sentence}"
+
+Issue: {feedback_text}
+
+Provide ONLY the improved sentences (no explanations, no labels, just the rewritten text):"""
+
+        try:
+            logger.info(f"📡 Sending sentence split request to Ollama")
+            
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": "phi3:latest",
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.2,  # Low temperature for precise grammar
+                        "top_p": 0.9,
+                        "max_tokens": 200
+                    }
+                },
+                timeout=60.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                ai_response = result.get("response", "").strip()
+                logger.info(f"✅ LLM response: {ai_response[:150]}...")
+                
+                # Clean up the response
+                # Remove common AI response patterns
+                ai_response = ai_response.replace("Here's the improved version:", "").strip()
+                ai_response = ai_response.replace("Here is the rewritten text:", "").strip()
+                ai_response = ai_response.replace("Improved sentences:", "").strip()
+                
+                # If response is valid and different, use it
+                if ai_response and ai_response != sentence and len(ai_response) > 20:
+                    # Basic validation: check it doesn't start with a gerund
+                    first_word = ai_response.split('.')[0].strip().split()[0] if '.' in ai_response else ai_response.split()[0]
+                    if first_word.endswith('ing') and first_word[0].isupper():
+                        logger.warning(f"⚠️ LLM created fragment starting with '{first_word}', rejecting")
+                        return sentence
+                    
+                    return ai_response
+                else:
+                    logger.warning("⚠️ LLM response invalid or unchanged")
+                    return sentence
+            else:
+                logger.error(f"❌ Ollama returned error status {response.status_code}")
+                return sentence
+                
+        except Exception as e:
+            logger.error(f"❌ LLM sentence split failed: {type(e).__name__}: {e}")
+            return sentence
     
     def _force_perfect_tense_improvement(self, sentence: str) -> str:
         """Force perfect tense to simple tense conversion."""

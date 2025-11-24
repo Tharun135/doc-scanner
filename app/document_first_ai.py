@@ -974,103 +974,90 @@ Focus on using examples and guidance from the provided documents.
     
     def _split_long_sentence(self, sentence: str) -> str:
         """
-        Split long sentences into shorter, clearer sentences with proper grammar.
+        Split long sentences using LLM for intelligent, grammatically correct splitting.
         """
         if not sentence or len(sentence.split()) <= 15:
             return sentence
         
-        words = sentence.split()
-        sentence_lower = sentence.lower()
+        # Try LLM-based splitting first (grammatically correct)
+        try:
+            llm_result = self._llm_split_sentence(sentence)
+            if llm_result and llm_result != sentence:
+                logger.info(f"✅ LLM split successful: {llm_result[:100]}...")
+                return llm_result
+        except Exception as e:
+            logger.warning(f"⚠️ LLM splitting failed: {e}")
         
-        # Method 1: Handle "either...or" constructions properly
-        if "either by" in sentence_lower and "or by" in sentence_lower:
-            import re
-            # Pattern: "do X, either by Y or by Z"
-            match = re.search(r'(.+?),\s*either\s+by\s+(.+?)\s+or\s+by\s+(.+)', sentence, re.IGNORECASE)
-            if match:
-                main_action = match.group(1).strip()
-                option1 = match.group(2).strip()
-                option2 = match.group(3).strip().rstrip('.')
-                
-                # Create two complete sentences
-                return f"{main_action}. You can do this by {option1} or by {option2}."
+        # Fallback: Return original if LLM fails (better than creating fragments)
+        logger.info("⚠️ LLM split failed, keeping original sentence")
+        return sentence
+    
+    def _llm_split_sentence(self, sentence: str) -> str:
+        """Use Ollama to intelligently split a sentence."""
+        import requests
         
-        # Method 2: Look for natural break points - "from X to Y" pattern
-        if " from " in sentence and " to " in sentence:
-            import re
-            # Pattern: "transfer an IE app from the IE Hub to the IEM catalog"
-            match = re.search(r'(.+?)\s+from\s+([^,]+?)\s+to\s+(.+)', sentence, re.IGNORECASE)
-            if match:
-                action = match.group(1).strip()
-                source = match.group(2).strip()
-                destination = match.group(3).strip().rstrip('.')  # Remove trailing period
-                
-                # Split into two clear sentences
-                return f"{action} from {source}. This transfers to {destination}."
+        logger.info("🤖 ===== CALLING OLLAMA LLM FOR SENTENCE SPLITTING =====")
+        logger.info(f"📝 Input sentence: {sentence}")
         
-        # Method 3: Handle "including" constructions
-        if ", including" in sentence_lower:
-            parts = sentence.split(", including", 1)
-            if len(parts) == 2:
-                main_part = parts[0].strip()
-                detail_part = parts[1].strip().rstrip('.')
-                return f"{main_part}. This includes {detail_part}."
-        
-        # Method 4: Handle "which includes" constructions
-        if ", which includes" in sentence_lower:
-            parts = sentence.split(", which includes", 1)
-            if len(parts) == 2:
-                main_part = parts[0].strip()
-                detail_part = parts[1].strip().rstrip('.')
-                return f"{main_part}. This includes {detail_part}."
-        
-        # Method 5: Handle general "which" constructions
-        if ", which" in sentence:
-            parts = sentence.split(", which", 1)
-            if len(parts) == 2:
-                main_part = parts[0].strip()
-                detail_part = parts[1].strip().rstrip('.')
-                return f"{main_part}. This {detail_part}."
-        
-        # Method 5: Look for conjunctions but ensure both parts are complete sentences
-        mid = len(words) // 2
-        for i in range(max(0, mid-3), min(len(words), mid+4)):
-            if words[i].lower() in ['and', 'but', 'so', 'yet']:
-                first_part = ' '.join(words[:i]).strip()
-                second_part = ' '.join(words[i+1:]).strip()
-                
-                # Check if both parts form complete thoughts
-                if (first_part and second_part and 
-                    len(first_part.split()) > 3 and len(second_part.split()) > 3 and
-                    self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
-                    return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
-        
-        # Method 6: Smart comma splitting - only if both parts are complete
-        for i in range(max(0, mid-3), min(len(words), mid+4)):
-            if words[i].endswith(','):
-                first_part = ' '.join(words[:i+1]).strip().rstrip(',')
-                second_part = ' '.join(words[i+1:]).strip()
-                
-                # Only split if both parts are complete sentences
-                if (first_part and second_part and 
-                    len(first_part.split()) > 5 and len(second_part.split()) > 5 and
-                    self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
-                    return f"{first_part}. {second_part[0].upper()}{second_part[1:] if len(second_part) > 1 else ''}"
-        
-        # Method 7: Simple mid-point split as last resort - with grammar check
-        if len(words) > 25:  # Only for very long sentences
-            first_part = ' '.join(words[:mid]).strip()
-            second_part = ' '.join(words[mid:]).strip()
+        prompt = f"""You are a technical writing expert. Split this long sentence into 2-3 shorter, grammatically correct sentences.
+
+CRITICAL RULES:
+1. Every sentence MUST have a subject and a complete verb
+2. NEVER create sentence fragments (e.g., "Allowing it to..." is WRONG - missing subject)
+3. Convert participial phrases to complete sentences:
+   - "X, allowing Y" → "X. This allows Y." (NOT "X. Allowing Y.")
+   - "X, enabling Y" → "X. This enables Y."
+   - "X, providing Y" → "X. This provides Y."
+4. Ensure each sentence can stand alone grammatically
+5. Preserve technical accuracy and meaning
+
+Original sentence:
+"{sentence}"
+
+Provide ONLY the improved sentences (no explanations, no labels, just the rewritten text):"""
+
+        try:
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": "phi3:latest",
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.2,
+                        "top_p": 0.9,
+                        "max_tokens": 200
+                    }
+                },
+                timeout=60.0
+            )
             
-            # Ensure both parts are complete sentences
-            if (len(first_part.split()) > 8 and len(second_part.split()) > 8 and
-                self._is_complete_sentence(first_part) and self._is_complete_sentence(second_part)):
-                # Capitalize the second sentence
-                if second_part:
-                    second_part = second_part[0].upper() + second_part[1:] if len(second_part) > 1 else second_part.upper()
-                return f"{first_part}. {second_part}"
+            if response.status_code == 200:
+                result = response.json()
+                ai_response = result.get("response", "").strip()
+                
+                logger.info(f"✅ OLLAMA LLM RESPONSE: {ai_response}")
+                
+                # Clean up common AI response patterns
+                ai_response = ai_response.replace("Here's the improved version:", "").strip()
+                ai_response = ai_response.replace("Here is the rewritten text:", "").strip()
+                ai_response = ai_response.replace("Improved sentences:", "").strip()
+                ai_response = ai_response.strip('"').strip("'")
+                
+                # Validation: check it doesn't start with a gerund (fragment)
+                if ai_response and len(ai_response) > 20:
+                    sentences = [s.strip() for s in ai_response.split('.') if s.strip()]
+                    for sent in sentences:
+                        words = sent.split()
+                        if words and words[0].endswith('ing') and words[0][0].isupper():
+                            logger.warning(f"⚠️ LLM created fragment: '{words[0]}...' - rejecting")
+                            return sentence
+                    
+                    return ai_response
+                    
+        except Exception as e:
+            logger.error(f"❌ LLM split failed: {e}")
         
-        # If no good split found, return original
         return sentence
     
     def _is_complete_sentence(self, text: str) -> bool:

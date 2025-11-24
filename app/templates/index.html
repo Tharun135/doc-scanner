@@ -1865,27 +1865,44 @@
                 uploadCompleted = true;
                 resultData = result;
                 
-                // 🚀 IMMEDIATE DISPLAY: Show results right after upload completion
+                // 🚀 IMMEDIATE: Update progress message to show we're rendering
+                updateProgressMessage('✨ Rendering results...');
+                
+                // 🚀 IMMEDIATE: Show a quick "Processing complete" message
+                const documentContent = document.getElementById('documentContent');
+                const feedbackContent = document.getElementById('feedbackContent');
+                if (documentContent) {
+                    documentContent.innerHTML = `
+                        <h4>Document Content</h4>
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-primary me-3" role="status"></div>
+                                <div>
+                                    <strong>Processing Complete!</strong> 
+                                    <span class="text-muted">Rendering your document...</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (feedbackContent) {
+                    feedbackContent.innerHTML = `
+                        <h5 class="mb-3">Document Issues</h5>
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="text-muted ms-2">Loading feedback...</span>
+                        </div>
+                    `;
+                }
+                
+                // Force DOM update before proceeding
+                if (documentContent) documentContent.offsetHeight;
+                
+                // 🚀 IMMEDIATE DISPLAY: Render content immediately (synchronous)
                 console.log('🚀 Immediately displaying results...');
                 renderChart(result.report || {}, result.sentences || []);
                 renderContent(result.content || '', result.sentences || []);
-                
-                // For WebSocket mode, progress will continue but results are already shown
-                // For fallback mode, results are already shown but continue progress simulation
-                if (!socketConnected) {
-                    // In fallback mode, also set a timeout as backup
-                    setTimeout(() => {
-                        hideProgressLoader();
-                    }, 1000);
-                } else {
-                    // For WebSocket mode, let progress complete naturally
-                    // Results are already shown, so this is just for visual completion
-                }
-                
-                // Backup timeout in case progress updates fail (both WebSocket and fallback)
-                setTimeout(() => {
-                    hideProgressLoader();
-                }, 3000); // Hide progress after 3 seconds max
+                // Progress loader will be hidden inside renderContent after content is visible
                 
                 return result;
                 
@@ -3260,12 +3277,20 @@
                 aiButton.setAttribute('aria-label', 'Get AI suggestions');
                 aiButton.innerHTML = '<i class="fas fa-robot"></i>';
                 
+                // Add direct click handler to ensure it works
+                aiButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🤖 AI button clicked directly!', { sentenceIndex, feedback: item.message });
+                    showAIFeedback(sentenceIndex, item.message, sentence, item.full_suggestion || '');
+                });
+                
                 // Assemble the structure
                 wrapperDiv.appendChild(contentDiv);
                 wrapperDiv.appendChild(aiButton);
                 feedbackDiv.appendChild(wrapperDiv);
                 
-                console.log('✅ AI button created as DOM element for sentence:', sentenceIndex);
+                console.log('✅ AI button created with click handler for sentence:', sentenceIndex);
                 
                 // Insert in the correct order
                 const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));
@@ -3430,10 +3455,22 @@
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
             
+            // 🚀 IMMEDIATE: Show loading indicator in document content while processing
+            documentContent.innerHTML = `
+                <h4>Document Content</h4>
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    <span class="text-muted">Rendering content...</span>
+                </div>
+            `;
+            
+            // Force immediate DOM update
+            documentContent.offsetHeight; // Force reflow
+            
             // Update dashboard metrics FIRST for immediate visual feedback
             updateDocumentMetrics(content, sentences);
             
-            // Clear previous content - ensure no cached malformed data
+            // Clear previous content - ensure no cached malformed data (immediate, no setTimeout)
             documentContent.innerHTML = '<h4>Document Content</h4>';
             feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
             
@@ -3473,7 +3510,14 @@
             const endTime = performance.now();
             console.log(`✅ renderContent completed in ${(endTime - startTime).toFixed(2)}ms`);
             
-            // Process sentences with AI enhancement - in document order
+            // 🚀 CRITICAL: Hide progress loader immediately after content is visible
+            // Don't wait for feedback to load - content is already on screen!
+            if (typeof hideProgressLoader === 'function') {
+                hideProgressLoader();
+                console.log('⚡ Progress loader hidden - content is now visible');
+            }
+            
+            // Process sentences with AI enhancement - in document order (ASYNC, non-blocking)
             let feedbackCount = 0;
             const feedbackPromises = [];
             
@@ -3491,19 +3535,31 @@
                 }
             });
             
-            // Wait for all feedback to be rendered in order
+            // Process feedback in background (non-blocking)
             if (feedbackPromises.length > 0) {
-                // Process feedback in sequential order
+                // Show loading indicator in feedback section
+                const feedbackContent = document.getElementById('feedbackContent');
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'text-center py-2 feedback-loading';
+                loadingDiv.innerHTML = `
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    <span class="text-muted">Loading ${feedbackPromises.length} issues...</span>
+                `;
+                feedbackContent.appendChild(loadingDiv);
+                
+                // Process feedback in sequential order (async, in background)
                 feedbackPromises.sort((a, b) => a.index - b.index);
                 
-                // Execute promises sequentially to maintain order
+                // Execute promises sequentially but don't block rendering
                 feedbackPromises.reduce((prevPromise, current) => {
                     return prevPromise.then(() => current.promise);
-                }, Promise.resolve());
-            }
-            
-            // If no feedback found, show a message
-            if (feedbackCount === 0) {
+                }, Promise.resolve()).then(() => {
+                    // Remove loading indicator when done
+                    const loader = feedbackContent.querySelector('.feedback-loading');
+                    if (loader) loader.remove();
+                    console.log('✅ All feedback items rendered');
+                });
+            } else {
                 const noIssuesDiv = document.createElement('div');
                 noIssuesDiv.className = 'alert alert-success mt-3';
                 noIssuesDiv.innerHTML = `
