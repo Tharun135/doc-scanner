@@ -1,29 +1,93 @@
 version: "3.9"
+
 services:
+  # Main DocScanner application
   web:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: docscanner-app
     ports:
       - "5000:5000"
-    env_file:
-      - .env
-    depends_on:
-      - chromadb
-      - ollama
     environment:
-      OLLAMA_URL: "http://ollama:11434"
+      - OLLAMA_URL=http://ollama:11434
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist uploaded documents and ChromaDB data
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+      - ./logs:/app/logs
+      - ./config:/app/config
+    depends_on:
+      chromadb:
+        condition: service_healthy
+      ollama:
+        condition: service_started
     restart: unless-stopped
+    networks:
+      - docscanner-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ChromaDB for vector storage
   chromadb:
     image: chromadb/chroma:latest
+    container_name: docscanner-chromadb
     ports:
       - "8000:8000"
     volumes:
-      - chroma_data:/data
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
     restart: unless-stopped
+    networks:
+      - docscanner-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Ollama for LLM inference
   ollama:
     image: ollama/ollama:latest
+    container_name: docscanner-ollama
     ports:
       - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     restart: unless-stopped
+    networks:
+      - docscanner-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # Optional: Auto-pull phi3 model on startup
+    command: >
+      bash -c "ollama serve & 
+      sleep 10 && 
+      ollama pull phi3:latest && 
+      wait"
 
 volumes:
   chroma_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  docscanner-network:
+    driver: bridge
