@@ -268,25 +268,37 @@ class DocumentFirstAIEngine:
             
             # Enhanced prompt based on the specific issue type
             if "passive voice" in feedback_text.lower() or "must be" in sentence_context:
-                prompt = f"""You are an expert writing assistant specializing in converting passive voice to active voice.
+                prompt = f"""You are an expert technical writing assistant specializing in converting passive voice to active voice for technical documentation.
 
 PASSIVE VOICE CONVERSION CONTEXT:
 {context_text}
 
-TASK: Convert the passive voice sentence to active voice.
+TASK: Convert THIS SPECIFIC passive voice sentence to active voice.
 Issue: {feedback_text}
 Passive Sentence: "{sentence_context}"
+
+IMPORTANT: DO NOT provide general instructions or guidelines. ONLY convert the given sentence.
+
+RULES for Technical Documentation:
+1. For system/product features: Use the system/product name as the subject
+   - Example: "The SIMATIC S7+ Connector implements..." (not "Researchers implement...")
+2. For user actions: Use "you" as the subject
+   - Example: "You must create..." (not "The user creates...")
+3. For capabilities: Use the feature/component as the subject
+   - Example: "This feature enables..." or "The system provides..."
+4. NEVER use: "Researchers", "Developers", "Engineers", "Scientists" as subjects
+5. Keep technical terms and product names exactly as they appear
 
 Based on the examples in the context documents:
 - Look for patterns like "must be created" → "you must create" 
 - Follow the conversion steps: identify subject/verb/object, move object to subject position, convert verb to active form
-- For sentences with "must be", "should be", "needs to be" - often use "you" as the active subject
+- For sentences with "must be", "should be", "needs to be" - use "you" as the active subject
 
-Provide ONLY:
-IMPROVED_SENTENCE: [The active voice version]
-EXPLANATION: [Brief explanation of the conversion applied]
+RESPOND WITH ONLY THESE TWO LINES:
+IMPROVED_SENTENCE: [The active voice version of the sentence above]
+EXPLANATION: [One sentence explaining the conversion]
 
-Examples from context should guide your conversion approach.
+DO NOT include any other text, guidelines, or instructions in your response.
 """
             else:
                 prompt = f"""You are an expert technical writing assistant. Use the provided context from uploaded documents to improve the sentence.
@@ -349,6 +361,35 @@ Focus on using examples and guidance from the provided documents.
         
         # Generate suggestion based on document content
         suggestion = self._extract_suggestion_from_document(best_doc, feedback_text, sentence_context)
+        
+        # If the suggestion is the same as original, try LLM with document context
+        if suggestion.strip() == sentence_context.strip():
+            # Convert results to format expected by _generate_with_ollama_and_docs
+            docs_for_llm = [{"content": r["document"], "distance": r.get("relevance", 0.5)} for r in results[:3]]
+            llm_result = self._generate_with_ollama_and_docs(feedback_text, sentence_context, docs_for_llm)
+            
+            if llm_result and llm_result["suggestion"].strip() != sentence_context.strip():
+                # Validate that the suggestion is not just instructions/guidelines
+                suggestion_text = llm_result["suggestion"].lower()
+                invalid_patterns = ["when to use", "how to", "use active voice", "avoid passive", "✅", "❌"]
+                
+                if any(pattern in suggestion_text for pattern in invalid_patterns):
+                    # LLM returned guidelines instead of conversion - mark as failure
+                    logger.warning(f"LLM returned guidelines instead of conversion: {llm_result['suggestion'][:50]}...")
+                    return {"success": False}
+                
+                return {
+                    "suggestion": llm_result["suggestion"],
+                    "ai_answer": llm_result["explanation"],
+                    "confidence": confidence,
+                    "method": "document_search",
+                    "sources": [f"Document {i+1}: {result['metadata'].get('filename', 'Unknown')}" for i, result in enumerate(results[:3])] + ["AI reasoning"],
+                    "document_count": len(results),
+                    "success": True
+                }
+            else:
+                # LLM didn't improve - mark as failure to trigger fallback
+                return {"success": False}
         
         # Generate explanation
         explanation = self._generate_explanation_from_documents(results, feedback_text)
@@ -480,24 +521,58 @@ Focus on using examples and guidance from the provided documents.
         """
         Parse Ollama response to extract suggestion and explanation.
         """
-        lines = ai_response.strip().split('\n')
-        suggestion = original_sentence
-        explanation = "Improved based on document context and AI analysis."
+        import re
+        
+        # Try to find structured format first
+        improved_match = re.search(r'IMPROVED_SENTENCE:\s*["\']?(.+?)["\']?(?:\n|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        explanation_match = re.search(r'EXPLANATION:\s*(.+?)(?:\n\n|\n[A-Z]|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        
+        if improved_match:
+            suggestion = improved_match.group(1).strip()
+            # Clean up the suggestion
+            suggestion = suggestion.replace('[', '').replace(']', '').strip()
+            if suggestion.startswith('"') and suggestion.endswith('"'):
+                suggestion = suggestion[1:-1]
+            
+            explanation = explanation_match.group(1).strip() if explanation_match else "Improved based on document context and AI analysis."
+            return suggestion, explanation
+        
+        # Fallback: Look for the actual converted sentence
+        lines = [line.strip() for line in ai_response.strip().split('\n') if line.strip()]
+        
+        # Filter out instructional/header text
+        excluded_patterns = [
+            r'^When to',
+            r'^How to',
+            r'^✅',
+            r'^❌',
+            r'^Use\s+\w+\s+Voice',
+            r'^\d+\.',  # Numbered lists
+            r'^[-*]',   # Bullet points
+            r'^The following',
+            r'^Here are',
+            r'^Examples:',
+            r'^Context:',
+        ]
         
         for line in lines:
-            if line.startswith("IMPROVED_SENTENCE:"):
-                suggestion = line.split(":", 1)[1].strip().strip('"')
-            elif line.startswith("EXPLANATION:"):
-                explanation = line.split(":", 1)[1].strip()
+            # Skip excluded patterns
+            if any(re.match(pattern, line, re.IGNORECASE) for pattern in excluded_patterns):
+                continue
+            
+            # Skip if it's too similar to the original or too short
+            if len(line) < 20 or line.lower() == original_sentence.lower():
+                continue
+            
+            # This might be the improved sentence
+            if len(line) > 30 and len(line) < 300:  # Reasonable sentence length
+                # Remove quotes if present
+                suggestion = line.strip('"\'')
+                if suggestion != original_sentence:
+                    return suggestion, "Improved based on document context and AI analysis."
         
-        # If no structured response, use first substantial line
-        if suggestion == original_sentence and lines:
-            for line in lines:
-                if len(line.strip()) > 20 and not line.startswith(("The", "This", "Here")):
-                    suggestion = line.strip().strip('"')
-                    break
-        
-        return suggestion, explanation
+        # No improvement found
+        return original_sentence, "No improvement could be extracted from AI response."
     
     def _contextual_rag_search(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
         """
@@ -589,28 +664,50 @@ Focus on using examples and guidance from the provided documents.
                         "success": True
                     }
             
-            # For other issues, do a general search
+            # For other issues, do a general search with LLM enhancement
             search_queries = [
                 f"{feedback_text} {sentence_context}",
                 feedback_text,
                 f"{document_type} writing best practices"
             ]
             
+            relevant_docs = []
             for query in search_queries:
                 results = self.collection.query(
                     query_texts=[query],
-                    n_results=3,
+                    n_results=5,
                     include=["documents", "metadatas", "distances"]
                 )
                 
                 if results["documents"] and results["documents"][0]:
-                    doc_preview = results["documents"][0][0][:200]
+                    for i, doc in enumerate(results["documents"][0]):
+                        distance = results["distances"][0][i] if results["distances"] else 1.0
+                        if distance < 0.7:  # Only include relevant documents
+                            relevant_docs.append({
+                                "content": doc,
+                                "distance": distance
+                            })
+            
+            # If we found relevant documents, use them with LLM
+            if relevant_docs:
+                llm_result = self._generate_with_ollama_and_docs(feedback_text, sentence_context, relevant_docs)
+                if llm_result and llm_result["suggestion"].strip() != sentence_context.strip():
+                    # Validate that the suggestion is not just instructions/guidelines
+                    suggestion_text = llm_result["suggestion"].lower()
+                    invalid_patterns = ["when to use", "how to", "use active voice", "avoid passive", "✅", "❌"]
+                    
+                    if any(pattern in suggestion_text for pattern in invalid_patterns):
+                        # LLM returned guidelines instead of conversion
+                        logger.warning(f"Contextual RAG returned guidelines instead of conversion, triggering fallback")
+                        return {"success": False}
+                    
                     return {
-                        "suggestion": sentence_context,
-                        "ai_answer": f"Found relevant guidance in knowledge base: {doc_preview}...",
+                        "suggestion": llm_result["suggestion"],
+                        "ai_answer": llm_result["explanation"],
                         "confidence": "medium",
                         "method": "contextual_rag",
-                        "sources": ["Knowledge base"],
+                        "sources": ["Knowledge base", "AI reasoning"],
+                        "document_count": len(relevant_docs),
                         "success": True
                     }
                     
@@ -1288,16 +1385,173 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
 
     def _fallback_suggestion(self, feedback_text: str, sentence_context: str) -> Dict[str, Any]:
         """
-        Final fallback when document search fails.
+        Final fallback when document search fails - use pure LLM.
         """
+        try:
+            import requests
+            
+            # Check if Ollama is available
+            try:
+                requests.get("http://localhost:11434/api/tags", timeout=2)
+            except:
+                # Ollama not available, return basic fallback
+                return {
+                    "suggestion": sentence_context or "Please review this text for improvement.",
+                    "ai_answer": f"AI unavailable. Please review for: {feedback_text}",
+                    "confidence": "low",
+                    "method": "basic_fallback",
+                    "sources": ["Basic guidance"],
+                    "success": True
+                }
+            
+            # Build prompt based on the issue type
+            prompt = self._build_llm_prompt(feedback_text, sentence_context)
+            
+            # Call Ollama
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={
+                    "model": self.rag_config.get("ollama_model", "phi3:latest"),
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.3,
+                        "num_predict": 500
+                    }
+                },
+                timeout=60
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                llm_response = result.get("response", "").strip()
+                
+                # Parse the LLM response
+                suggestion, explanation = self._parse_llm_response(llm_response, sentence_context)
+                
+                if suggestion and suggestion.strip() != sentence_context.strip():
+                    return {
+                        "suggestion": suggestion,
+                        "ai_answer": explanation or f"AI-generated improvement for: {feedback_text}",
+                        "confidence": "medium",
+                        "method": "pure_llm_fallback",
+                        "sources": ["AI reasoning"],
+                        "success": True
+                    }
+            
+        except Exception as e:
+            logger.error(f"LLM fallback failed: {e}")
+        
+        # Final basic fallback
         return {
             "suggestion": sentence_context or "Please review this text for improvement.",
-            "ai_answer": f"Document search unavailable. Please review for: {feedback_text}",
+            "ai_answer": f"Please review manually for: {feedback_text}",
             "confidence": "low",
             "method": "basic_fallback",
-            "sources": ["Basic guidance"],
+            "sources": ["Manual review needed"],
             "success": True
         }
+    
+    def _build_llm_prompt(self, feedback_text: str, sentence_context: str) -> str:
+        """Build an appropriate prompt for the LLM based on the issue type."""
+        feedback_lower = feedback_text.lower()
+        
+        if "passive voice" in feedback_lower:
+            return f"""You are an expert technical writing assistant. Convert this passive voice sentence to active voice for technical documentation.
+
+Issue: {feedback_text}
+Passive Sentence: "{sentence_context}"
+
+IMPORTANT RULES for Technical Documentation:
+1. For system/product features: Use the system/product name as the subject
+   - Example: "The SIMATIC S7+ Connector implements specific alarm notification properties."
+2. For user actions: Use "you" as the subject
+   - Example: "You configure the settings..." (not "The user configures...")
+3. For general capabilities: Use the feature/component as the subject
+   - Example: "This feature enables..." or "The system provides..."
+4. NEVER use: "Researchers", "Developers", "Engineers" as subjects in user documentation
+5. Keep technical terms and product names exactly as they appear
+
+Convert to active voice following these rules.
+
+Provide ONLY:
+IMPROVED_SENTENCE: [The active voice version using appropriate subject]
+EXPLANATION: [Brief explanation of the conversion]"""
+        
+        elif "vague" in feedback_lower or "specific" in feedback_lower or "unclear" in feedback_lower:
+            return f"""You are an expert writing assistant. Make this sentence more specific and clear.
+
+Issue: {feedback_text}
+Original: "{sentence_context}"
+
+Make it more specific by:
+1. Replacing vague terms (some, various, etc.) with concrete examples or quantities
+2. Adding technical details where appropriate
+3. Being more precise and actionable
+
+Provide ONLY:
+IMPROVED_SENTENCE: [The more specific version]
+EXPLANATION: [Brief explanation of improvements]"""
+        
+        elif "long sentence" in feedback_lower or "split" in feedback_lower:
+            return f"""You are an expert writing assistant. Split this long sentence into clearer, shorter sentences.
+
+Issue: {feedback_text}
+Original: "{sentence_context}"
+
+Split the sentence maintaining:
+1. Grammatical correctness
+2. Logical flow
+3. All original information
+
+Provide ONLY:
+IMPROVED_SENTENCE: [The split sentences]
+EXPLANATION: [Brief explanation of how you split it]"""
+        
+        else:
+            # General improvement
+            return f"""You are an expert writing assistant. Improve this sentence for technical documentation.
+
+Issue: {feedback_text}
+Original: "{sentence_context}"
+
+Improve by addressing the specific issue while maintaining:
+1. Technical accuracy
+2. Clarity and precision
+3. Professional tone
+
+Provide ONLY:
+IMPROVED_SENTENCE: [The improved version]
+EXPLANATION: [Brief explanation of improvements]"""
+    
+    def _parse_llm_response(self, llm_response: str, original_sentence: str) -> tuple:
+        """Parse LLM response to extract suggestion and explanation."""
+        import re
+        
+        # Look for structured format
+        improved_match = re.search(r'IMPROVED_SENTENCE:\s*(.+?)(?:\n|$)', llm_response, re.IGNORECASE | re.DOTALL)
+        explanation_match = re.search(r'EXPLANATION:\s*(.+?)(?:\n|$)', llm_response, re.IGNORECASE | re.DOTALL)
+        
+        if improved_match:
+            suggestion = improved_match.group(1).strip()
+            explanation = explanation_match.group(1).strip() if explanation_match else "AI-generated improvement"
+            
+            # Clean up the suggestion
+            suggestion = suggestion.replace('[', '').replace(']', '').strip()
+            if suggestion.startswith('"') and suggestion.endswith('"'):
+                suggestion = suggestion[1:-1]
+            
+            return suggestion, explanation
+        
+        # Fallback: try to extract any improved sentence from the response
+        lines = llm_response.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line and len(line) > 20 and line != original_sentence:
+                # This might be the improved sentence
+                return line, "AI-generated improvement"
+        
+        return None, None
 
 # Example usage function
 def get_document_first_suggestion(

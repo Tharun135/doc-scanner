@@ -3630,33 +3630,110 @@
             }
         });
 
-        // Export functionality
+        // Export functionality - Enhanced with more details
         document.getElementById('exportBtn').addEventListener('click', () => {
-    // Gather feedback data
-    let csvContent = "Sentence,Feedback\n";
-    document.querySelectorAll('.sentence').forEach((sentenceSpan) => {
-        const idx = sentenceSpan.dataset.index;
-        // Find all feedback for this sentence
-        const feedbacks = [];
-        document.querySelectorAll(`.feedback-item[data-index="${idx}"]`).forEach(fb => {
-            feedbacks.push(fb.innerText.replace(/"/g, '""'));
-        });
-        if (feedbacks.length) {
-            csvContent += `"${sentenceSpan.innerText.replace(/"/g, '""')}","${feedbacks.join('; ')}"\n`;
-        }
-    });
+            console.log('📥 Export button clicked');
+            console.log('Current sentences data:', window.currentSentences);
+            
+            // Gather feedback data with enhanced details
+            let csvContent = "Sentence Number,Sentence Text,Issue Type,Issue Description,AI Suggestion,Word Count\n";
+            let rowCount = 0;
+            
+            // Get all sentences with feedback
+            if (window.currentSentences && window.currentSentences.length > 0) {
+                console.log(`Found ${window.currentSentences.length} sentences in window.currentSentences`);
+                
+                // Use the stored sentences data for accurate information
+                window.currentSentences.forEach((sentenceData, index) => {
+                    console.log(`Sentence ${index}:`, sentenceData);
+                    
+                    if (sentenceData.feedback && sentenceData.feedback.length > 0) {
+                        const sentenceText = sentenceData.sentence || '';
+                        const wordCount = sentenceText.split(/\s+/).filter(w => w.length > 0).length;
+                        
+                        sentenceData.feedback.forEach(feedbackItem => {
+                            const issueType = feedbackItem.rule || feedbackItem.type || 'General';
+                            const issueDescription = feedbackItem.message || feedbackItem.text || '';
+                            const aiSuggestion = feedbackItem.full_suggestion || feedbackItem.suggestion || 'Click AI icon for suggestion';
+                            
+                            // Escape quotes for CSV format
+                            const escapedSentence = sentenceText.replace(/"/g, '""');
+                            const escapedIssueType = issueType.replace(/"/g, '""');
+                            const escapedDescription = issueDescription.replace(/"/g, '""');
+                            const escapedSuggestion = aiSuggestion.replace(/"/g, '""');
+                            
+                            csvContent += `${index + 1},"${escapedSentence}","${escapedIssueType}","${escapedDescription}","${escapedSuggestion}",${wordCount}\n`;
+                            rowCount++;
+                        });
+                    }
+                });
+                
+                console.log(`✅ Exported ${rowCount} feedback items from window.currentSentences`);
+            } else {
+                console.log('⚠️ No window.currentSentences found, trying DOM extraction');
+                
+                // Fallback to DOM-based extraction if no sentence data available
+                const feedbackItems = document.querySelectorAll('.feedback-item');
+                console.log(`Found ${feedbackItems.length} feedback items in DOM`);
+                
+                feedbackItems.forEach((feedbackItem) => {
+                    const sentenceIndex = feedbackItem.getAttribute('data-sentence-index');
+                    console.log(`Processing feedback item for sentence ${sentenceIndex}:`, feedbackItem);
+                    
+                    // Find the corresponding sentence
+                    const sentenceSpan = document.querySelector(`.sentence[data-index="${sentenceIndex}"]`);
+                    const sentenceText = sentenceSpan ? sentenceSpan.innerText : 'Sentence not found';
+                    const wordCount = sentenceText.split(/\s+/).filter(w => w.length > 0).length;
+                    
+                    // Extract feedback text (remove icons and extra elements)
+                    const feedbackTextElements = feedbackItem.querySelectorAll('strong');
+                    let issueDescription = '';
+                    feedbackTextElements.forEach(el => {
+                        if (el.textContent.includes('Issue:')) {
+                            issueDescription = el.parentElement.textContent.replace('📋 Issue:', '').trim();
+                        }
+                    });
+                    
+                    if (!issueDescription) {
+                        issueDescription = feedbackItem.innerText.split('\n')[1] || feedbackItem.innerText;
+                    }
+                    
+                    // Escape quotes for CSV format
+                    const escapedSentence = sentenceText.replace(/"/g, '""');
+                    const escapedDescription = issueDescription.replace(/"/g, '""');
+                    
+                    csvContent += `${parseInt(sentenceIndex) + 1},"${escapedSentence}","General","${escapedDescription}","Click AI icon for suggestion",${wordCount}\n`;
+                    rowCount++;
+                });
+                
+                console.log(`✅ Exported ${rowCount} feedback items from DOM`);
+            }
+            
+            if (rowCount === 0) {
+                alert('No feedback data to export. Please analyze a document first.');
+                console.log('❌ No data exported - no feedback found');
+                return;
+            }
+            
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `document_feedback_${timestamp}.csv`;
 
-    // Download as CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'feedback_export.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-});
+            // Download as CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Show success message
+            console.log(`✅ Exported ${rowCount} items to ${filename}`);
+            alert(`Successfully exported ${rowCount} feedback items to ${filename}`);
+        });
 
         // History functionality
         document.getElementById('historyBtn').addEventListener('click', () => {
