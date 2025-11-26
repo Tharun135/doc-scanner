@@ -22,10 +22,8 @@ services:
       - ./logs:/app/logs
       - ./config:/app/config
     depends_on:
-      chromadb:
-        condition: service_healthy
-      ollama:
-        condition: service_started
+      - chromadb
+      - ollama
     restart: unless-stopped
     networks:
       - docscanner-network
@@ -50,12 +48,8 @@ services:
     restart: unless-stopped
     networks:
       - docscanner-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+    # ChromaDB image doesn't have curl or python in PATH, but service works fine
+    # Removed health check to avoid startup issues
 
   # Ollama for LLM inference
   ollama:
@@ -75,12 +69,7 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    # Optional: Auto-pull phi3 model on startup
-    command: >
-      bash -c "ollama serve & 
-      sleep 10 && 
-      ollama pull phi3:latest && 
-      wait"
+    # Model will be pulled on first use by the app
 
 volumes:
   chroma_data:
