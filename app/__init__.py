@@ -16,6 +16,15 @@ def create_app():
     app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
     app.config['UPLOAD_EXTENSIONS'] = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
     
+    # Initialize FastAPI bridge for vector search backend
+    from fastapi_bridge import FastAPIBridge
+    fastapi_bridge = FastAPIBridge()
+    app.fastapi_bridge = fastapi_bridge
+    if fastapi_bridge.enabled:
+        print("✅ FastAPI vector search backend connected!")
+    else:
+        print("⚠️  FastAPI backend not available - running without vector search")
+    
     # Initialize SocketIO only if available
     if SOCKETIO_AVAILABLE:
         socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
@@ -28,6 +37,10 @@ def create_app():
 
     from .app import main as main_blueprint
     app.register_blueprint(main_blueprint)
+    
+    # Register enhanced routes (vector search backend)
+    from .enhanced_routes import init_enhanced_routes
+    init_enhanced_routes(app)
     
     # Register RAG blueprint for knowledge base management
     try:

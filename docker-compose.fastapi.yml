@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # FastAPI service
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.fastapi
+    container_name: docscanner-fastapi
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persist vector database
+      - ./chroma_db:/app/chroma_db
+      # Persist uploaded files
+      - ./uploads:/app/uploads
+      # Mount logs
+      - ./logs:/app/logs
+    environment:
+      - FASTAPI_HOST=0.0.0.0
+      - FASTAPI_PORT=8000
+      - VECTOR_DB_DIR=/app/chroma_db
+      - UPLOAD_DIR=/app/uploads
+      - LOG_FILE=/app/logs/fastapi.log
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    networks:
+      - docscanner-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Flask service (legacy - for transition period)
+  flask:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docscanner-flask
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=production
+      - PORT=5000
+    restart: unless-stopped
+    networks:
+      - docscanner-network
+    depends_on:
+      - fastapi
+
+networks:
+  docscanner-network:
+    driver: bridge
+
+volumes:
+  chroma_db:
+  uploads:
+  logs:

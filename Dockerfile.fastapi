@@ -1,0 +1,40 @@
+# Dockerfile.fastapi
+# Production-ready FastAPI Docker image
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY fastapi_requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r fastapi_requirements.txt
+
+# Download NLTK data
+RUN python -c "import nltk; nltk.download('punkt', quiet=True)"
+
+# Copy application code
+COPY fastapi_app/ ./fastapi_app/
+COPY run_fastapi.py .
+COPY .env.fastapi.example .env
+
+# Create necessary directories
+RUN mkdir -p /app/chroma_db /app/uploads /app/logs
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run the application
+CMD ["python", "run_fastapi.py"]
