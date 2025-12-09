@@ -1,12 +1,30 @@
 """
 Document-First AI Suggestion System
 This configuration prioritizes answers from your uploaded documents over rule-based systems.
+
+NOW WITH SEMANTIC CONTEXT:
+- Understands document as a whole, not just isolated sentences
+- Tracks entities, acronyms, sections, and pronoun references
+- Generates context-aware suggestions that preserve meaning
 """
 
 from typing import List, Dict, Any, Optional
 import logging
 
 logger = logging.getLogger(__name__)
+
+# Import semantic context system
+try:
+    from .semantic_context import (
+        DocumentContext,
+        get_context_for_ai_suggestion,
+        format_context_for_llm_prompt
+    )
+    SEMANTIC_CONTEXT_AVAILABLE = True
+    logger.info("✅ Semantic context system loaded")
+except ImportError as e:
+    SEMANTIC_CONTEXT_AVAILABLE = False
+    logger.warning(f"Semantic context system not available: {e}")
 
 def configure_document_first_ai():
     """
@@ -64,14 +82,40 @@ class DocumentFirstAIEngine:
         feedback_text: str, 
         sentence_context: str = "",
         document_type: str = "general",
+        sentence_index: Optional[int] = None,
+        document_context: Optional['DocumentContext'] = None,
+        issue_type: Optional[str] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
         Generate suggestions prioritizing uploaded documents.
+        
+        NEW: Now accepts sentence_index and document_context for semantic awareness.
+        If provided, AI suggestions will be context-aware and meaning-preserving.
         """
         
+        # Build enhanced context if semantic context is available
+        enhanced_context = sentence_context
+        llm_context_str = ""
+        
+        if SEMANTIC_CONTEXT_AVAILABLE and document_context and sentence_index is not None:
+            try:
+                # Get semantic context for this sentence
+                llm_context_str = get_context_for_ai_suggestion(
+                    sentence_index,
+                    document_context,
+                    issue_type
+                )
+                logger.info(f"📍 Generated semantic context for sentence {sentence_index}")
+            except Exception as e:
+                logger.warning(f"Failed to generate semantic context: {e}")
+        
         if not self.collection:
-            return self._fallback_suggestion(feedback_text, sentence_context)
+            return self._fallback_suggestion(
+                feedback_text, 
+                sentence_context,
+                llm_context_str=llm_context_str
+            )
         
         # Method 1: Primary document search
         result = self._search_documents_primary(feedback_text, sentence_context, document_type)
@@ -83,8 +127,14 @@ class DocumentFirstAIEngine:
         if result.get("success") and result.get("confidence") in ["high", "medium"]:
             return result
         
-        # Method 3: Hybrid approach - combine documents with LLM
-        result = self._hybrid_document_llm(feedback_text, sentence_context, document_type)
+        # Method 3: Hybrid approach - combine documents with LLM (NOW WITH CONTEXT)
+        result = self._hybrid_document_llm(
+            feedback_text, 
+            sentence_context, 
+            document_type,
+            llm_context_str=llm_context_str,
+            issue_type=issue_type
+        )
         if result.get("success"):
             return result
         
@@ -93,8 +143,15 @@ class DocumentFirstAIEngine:
         if result.get("success"):
             return result
         
-        # Final fallback
-        return self._fallback_suggestion(feedback_text, sentence_context)
+        # Final fallback (now with semantic context)
+        return self._fallback_suggestion(
+            feedback_text, 
+            sentence_context,
+            llm_context_str=llm_context_str,
+            issue_type=issue_type,
+            sentence_index=sentence_index,
+            document_context=document_context,
+        )
     
     def _search_documents_primary(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
         """
@@ -207,9 +264,17 @@ class DocumentFirstAIEngine:
         
         return {"success": False}
     
-    def _hybrid_document_llm(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
+    def _hybrid_document_llm(
+        self, 
+        feedback_text: str, 
+        sentence_context: str, 
+        document_type: str,
+        llm_context_str: str = "",
+        issue_type: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Combine document search with LLM reasoning for better suggestions.
+        NOW CONTEXT-AWARE: Uses semantic context if provided.
         """
         try:
             # Get relevant documents
@@ -232,9 +297,13 @@ class DocumentFirstAIEngine:
                         })
             
             if relevant_docs:
-                # Try Ollama with document context
+                # Try Ollama with document context + semantic context
                 suggestion = self._generate_with_ollama_and_docs(
-                    feedback_text, sentence_context, relevant_docs
+                    feedback_text, 
+                    sentence_context, 
+                    relevant_docs,
+                    llm_context_str=llm_context_str,
+                    issue_type=issue_type
                 )
                 
                 if suggestion:
@@ -242,7 +311,7 @@ class DocumentFirstAIEngine:
                         "suggestion": suggestion["suggestion"],
                         "ai_answer": suggestion["explanation"],
                         "confidence": "high",
-                        "method": "hybrid_document_llm",
+                        "method": "hybrid_document_llm_with_context" if llm_context_str else "hybrid_document_llm",
                         "sources": [f"Knowledge base: {len(relevant_docs)} documents", "AI reasoning"],
                         "document_count": len(relevant_docs),
                         "success": True
@@ -253,9 +322,17 @@ class DocumentFirstAIEngine:
         
         return {"success": False}
     
-    def _generate_with_ollama_and_docs(self, feedback_text: str, sentence_context: str, relevant_docs: List[Dict]) -> Optional[Dict]:
+    def _generate_with_ollama_and_docs(
+        self, 
+        feedback_text: str, 
+        sentence_context: str, 
+        relevant_docs: List[Dict],
+        llm_context_str: str = "",
+        issue_type: Optional[str] = None
+    ) -> Optional[Dict]:
         """
         Use Ollama with document context to generate suggestions.
+        NOW CONTEXT-AWARE: Includes semantic context if provided.
         """
         try:
             import requests
@@ -266,12 +343,17 @@ class DocumentFirstAIEngine:
                 for i, doc in enumerate(relevant_docs[:3])
             ])
             
+            # Add semantic context if available
+            full_context = context_text
+            if llm_context_str:
+                full_context = f"{context_text}\n\n--- DOCUMENT CONTEXT ---\n{llm_context_str}"
+            
             # Enhanced prompt based on the specific issue type
             if "passive voice" in feedback_text.lower() or "must be" in sentence_context:
                 prompt = f"""You are an expert technical writing assistant specializing in converting passive voice to active voice for technical documentation.
 
 PASSIVE VOICE CONVERSION CONTEXT:
-{context_text}
+{full_context}
 
 TASK: Convert THIS SPECIFIC passive voice sentence to active voice.
 Issue: {feedback_text}
@@ -288,6 +370,7 @@ RULES for Technical Documentation:
    - Example: "This feature enables..." or "The system provides..."
 4. NEVER use: "Researchers", "Developers", "Engineers", "Scientists" as subjects
 5. Keep technical terms and product names exactly as they appear
+6. If semantic context shows what "it" or "this" refers to, maintain that reference
 
 Based on the examples in the context documents:
 - Look for patterns like "must be created" → "you must create" 
@@ -303,11 +386,14 @@ DO NOT include any other text, guidelines, or instructions in your response.
             else:
                 prompt = f"""You are an expert technical writing assistant. Use the provided context from uploaded documents to improve the sentence.
 
-Context from uploaded documents:
-{context_text}
+Context from uploaded documents and semantic document structure:
+{full_context}
 
 Writing Issue: {feedback_text}
 Original Sentence: "{sentence_context}"
+
+CRITICAL: Maintain all references, acronyms, and technical terms from the context.
+If the semantic context shows that an acronym was already expanded, do NOT expand it again.
 
 Based on the context documents, provide:
 1. IMPROVED_SENTENCE: A better version that addresses the issue
@@ -1383,10 +1469,70 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
             logger.warning(f"Perfect tense conversion failed: {e}")
             return sentence
 
-    def _fallback_suggestion(self, feedback_text: str, sentence_context: str) -> Dict[str, Any]:
+    def _fallback_suggestion(
+        self, 
+        feedback_text: str, 
+        sentence_context: str,
+        llm_context_str: str = "",
+        issue_type: Optional[str] = None,
+        sentence_index: Optional[int] = None,
+        document_context: Optional[Any] = None,
+    ) -> Dict[str, Any]:
         """
         Final fallback when document search fails - use pure LLM.
+        NOW CONTEXT-AWARE: Includes semantic context in prompt if available.
         """
+        
+        # CRITICAL: Eligibility gate - check before calling LLM
+        approved_justification = None  # Track justification for successful rewrites
+        
+        # Shadow mode telemetry
+        from telemetry.shadow_logger import shadow_log
+        doc_id = getattr(document_context, 'doc_id', 'unknown') if document_context else 'unknown'
+        
+        if SEMANTIC_CONTEXT_AVAILABLE and document_context and sentence_index is not None:
+            from .semantic_context import can_be_rewritten, rewrite_required
+            
+            allowed = can_be_rewritten(sentence_context, sentence_index, document_context)
+            
+            if not allowed:
+                logger.info(f"⛔ Sentence {sentence_index} not eligible for rewrite (acronym/sequence/pronoun)")
+                
+                # Log blocked by eligibility gate
+                shadow_log(doc_id, sentence_index, False, False, False, None)
+                
+                return {
+                    "suggestion": sentence_context,
+                    "ai_answer": "Original preserved (sentence not eligible for rewriting)",
+                    "confidence": "high",
+                    "method": "eligibility_gate_block",
+                    "sources": ["Eligibility check - original preserved"],
+                    "success": True
+                }
+            
+            # CRITICAL: Justification gate - check if rewrite is NECESSARY
+            rewrite_needed, justification = rewrite_required(sentence_context, sentence_index, document_context, issue_type)
+            
+            if not rewrite_needed:
+                logger.info(f"⏸️ Sentence {sentence_index} rewrite not justified: {justification}")
+                
+                # Log blocked by justification gate
+                shadow_log(doc_id, sentence_index, False, True, False, None)
+                
+                return {
+                    "suggestion": sentence_context,
+                    "ai_answer": f"Original preserved ({justification})",
+                    "confidence": "high",
+                    "method": "justification_gate_block",
+                    "justification": justification,
+                    "sources": ["Justification check - original preserved"],
+                    "success": True
+                }
+            
+            # Log approved rewrite with justification
+            approved_justification = justification
+            logger.info(f"✓ Sentence {sentence_index} rewrite justified: {justification}")
+        
         try:
             import requests
             
@@ -1404,8 +1550,18 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                     "success": True
                 }
             
-            # Build prompt based on the issue type
-            prompt = self._build_llm_prompt(feedback_text, sentence_context)
+            # Build prompt based on the issue type + semantic context
+            if SEMANTIC_CONTEXT_AVAILABLE and llm_context_str:
+                # Use context-aware prompt
+                prompt = format_context_for_llm_prompt(
+                    sentence_context,
+                    llm_context_str,
+                    issue_type=issue_type,
+                    feedback_text=feedback_text
+                )
+            else:
+                # Fall back to basic prompt
+                prompt = self._build_llm_prompt(feedback_text, sentence_context)
             
             # Call Ollama
             response = requests.post(
@@ -1415,8 +1571,8 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.3,
-                        "num_predict": 500
+                        "temperature": 0.1,  # LOWERED: Less creativity, more determinism
+                        "num_predict": 100   # LOWERED: Prevent rambling
                     }
                 },
                 timeout=60
@@ -1429,13 +1585,59 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                 # Parse the LLM response
                 suggestion, explanation = self._parse_llm_response(llm_response, sentence_context)
                 
+                # CRITICAL: Apply meaning preservation check
+                if SEMANTIC_CONTEXT_AVAILABLE and suggestion:
+                    from .semantic_context import change_alters_meaning
+                    
+                    # Check if meaning was corrupted
+                    if change_alters_meaning(sentence_context, suggestion, document_context, sentence_index):
+                        logger.warning(f"⚠️ Suggestion rejected: meaning altered. Returning original.")
+                        
+                        # Log: attempt made but blocked by meaning guard
+                        shadow_log(doc_id, sentence_index, True, True, False, approved_justification)
+                        
+                        return {
+                            "suggestion": sentence_context,
+                            "ai_answer": "Original sentence preserved (suggested change would alter meaning)",
+                            "confidence": "high",
+                            "method": "meaning_preservation_override",
+                            "sources": ["Safety check - original preserved"],
+                            "success": True
+                        }
+                
                 if suggestion and suggestion.strip() != sentence_context.strip():
+                    # Validate justification before returning rewrite
+                    from .rewrite_governance import validate_justification
+                    
+                    if approved_justification:
+                        try:
+                            validate_justification(approved_justification)
+                        except RuntimeError as e:
+                            logger.error(f"Governance violation: {e}")
+                            
+                            # Log: governance violation detected
+                            shadow_log(doc_id, sentence_index, True, True, False, approved_justification)
+                            
+                            # Return original on governance violation
+                            return {
+                                "suggestion": sentence_context,
+                                "ai_answer": f"Governance block: {str(e)}",
+                                "confidence": "high",
+                                "method": "governance_violation",
+                                "sources": ["Governance validation"],
+                                "success": True
+                            }
+                    
+                    # Log: rewrite successfully applied
+                    shadow_log(doc_id, sentence_index, True, True, True, approved_justification)
+                    
                     return {
                         "suggestion": suggestion,
                         "ai_answer": explanation or f"AI-generated improvement for: {feedback_text}",
                         "confidence": "medium",
-                        "method": "pure_llm_fallback",
-                        "sources": ["AI reasoning"],
+                        "method": "context_aware_llm_fallback" if llm_context_str else "pure_llm_fallback",
+                        "justification": approved_justification or "unknown",
+                        "sources": ["AI reasoning with semantic context"] if llm_context_str else ["AI reasoning"],
                         "success": True
                     }
             

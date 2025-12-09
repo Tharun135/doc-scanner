@@ -1,0 +1,14 @@
+{"timestamp": "2025-12-09T14:37:32.448085", "doc_id": "unknown", "idx": 0, "rewrite_attempt": false, "rewrite_allowed": true, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.456187", "doc_id": "unknown", "idx": 1, "rewrite_attempt": false, "rewrite_allowed": true, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.457461", "doc_id": "unknown", "idx": 2, "rewrite_attempt": false, "rewrite_allowed": true, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.457461", "doc_id": "unknown", "idx": 3, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.458462", "doc_id": "unknown", "idx": 4, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.458462", "doc_id": "unknown", "idx": 5, "rewrite_attempt": false, "rewrite_allowed": true, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.459460", "doc_id": "unknown", "idx": 6, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.459460", "doc_id": "unknown", "idx": 7, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.460459", "doc_id": "unknown", "idx": 8, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.460459", "doc_id": "unknown", "idx": 9, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.460459", "doc_id": "unknown", "idx": 10, "rewrite_attempt": false, "rewrite_allowed": true, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.461460", "doc_id": "unknown", "idx": 11, "rewrite_attempt": false, "rewrite_allowed": true, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:32.461460", "doc_id": "unknown", "idx": 12, "rewrite_attempt": false, "rewrite_allowed": false, "rewrite_applied": false, "justification": null}
+{"timestamp": "2025-12-09T14:37:39.753707", "doc_id": "unknown", "idx": 13, "rewrite_attempt": true, "rewrite_allowed": true, "rewrite_applied": true, "justification": "passive_referent_unclear"}

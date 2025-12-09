@@ -1,0 +1,16 @@
+# Code Ownership for Rewrite Governance
+
+# Core rewrite logic - requires governance review
+app/semantic_context.py              @Tharun135
+app/document_first_ai.py             @Tharun135
+app/intelligent_ai_improvement.py    @Tharun135
+app/rewrite_governance.py            @Tharun135
+
+# Governance tests - must not be weakened
+tests/test_rewrite_governance.py     @Tharun135
+tests/test_meaning_preservation.py   @Tharun135
+batch_context_preservation_test.py   @Tharun135
+
+# Governance documentation
+GOVERNANCE_CHECKLIST.md              @Tharun135
+SEMANTIC_CONTEXT_SYSTEM.md           @Tharun135

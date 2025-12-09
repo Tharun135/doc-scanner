@@ -65,6 +65,11 @@ else:
     nlp = None
     SPACY_AVAILABLE = False
 
+# Global variables for document context (used by AI suggestions)
+current_document_content = ""  # Plain text content for RAG
+current_sentences_list = []    # List of sentence objects
+current_document_context = None  # Semantic context map (NEW)
+
 ############################
 # SENTENCE EXTRACTION HELPERS
 ############################
@@ -828,6 +833,46 @@ def upload_file():
         # Store all sentences for adjacent context in AI suggestions
         global current_sentences_list
         current_sentences_list = sentences
+        
+        # ===== NEW: Build Semantic Context for Document-Level Understanding =====
+        # This enables context-aware AI suggestions that preserve meaning
+        document_context = None
+        try:
+            from app.semantic_context import build_document_context
+            
+            # Extract plain text sentences for semantic analysis
+            sentence_texts = [sent.text for sent in sentences]
+            
+            # Build section mapping (if available from headers)
+            sections = {}
+            current_section = "Introduction"
+            for idx, sent in enumerate(sentences):
+                # Simple heuristic: if sentence is very short and all caps or title case, it's likely a header
+                if len(sent.text.split()) <= 10 and (sent.text.isupper() or sent.text.istitle()):
+                    current_section = sent.text
+                sections[idx] = current_section
+            
+            # Build the semantic map with doc_id for telemetry
+            doc_id = file.filename if hasattr(file, 'filename') else "unknown"
+            
+            document_context = build_document_context(
+                sentences=sentence_texts,
+                sections=sections,
+                nlp=nlp if SPACY_AVAILABLE else None,
+                document_type=None,  # Could infer from filename or content
+                doc_id=doc_id
+            )
+            
+            logger.info(f"✅ Built semantic context with {len(document_context.entities)} entities and {len(document_context.acronyms)} acronyms")
+            
+            # Store globally for access by AI suggestion system
+            global current_document_context
+            current_document_context = document_context
+            
+        except Exception as e:
+            logger.warning(f"Failed to build semantic context (analysis will continue without it): {e}")
+            document_context = None
+        # ===== END Semantic Context Building =====
 
         # Stage 4: Analyzing with Rules (80%)
         if progress_tracker and room_id:
@@ -1124,7 +1169,9 @@ def ai_suggestion():
             document_content=current_document_content,  # full page text for context if needed
             option_number=option_number,
             issue=issue_obj,  # <<< IMPORTANT
-            adjacent_context=adjacent_context  # Pass adjacent sentences for better context
+            adjacent_context=adjacent_context,  # Pass adjacent sentences for better context
+            sentence_index=sentence_index,  # NEW: Pass sentence index
+            document_context=current_document_context,  # NEW: Pass semantic context
         )
 
         logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: "

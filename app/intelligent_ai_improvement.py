@@ -152,21 +152,33 @@ class IntelligentAISuggestionEngine:
         document_content: str = "",
         option_number: int = 1,
         issue: Optional[Dict[str, Any]] = None,
-        adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
+        adjacent_context: Optional[Dict[str, str]] = None,  # Adjacent sentences
+        sentence_index: Optional[int] = None,  # NEW: Sentence index
+        document_context: Optional[Any] = None,  # NEW: Semantic DocumentContext
     ) -> Dict[str, Any]:
         """
         Generate intelligent, context-aware suggestions PRIORITIZING your uploaded documents.
         
+        NOW WITH SEMANTIC CONTEXT:
+        - Uses document-level understanding for meaning-preserving suggestions
+        - Tracks entities, acronyms, sections, and pronoun references
+        
         NEW PRIORITY ORDER (Document-First):
-        1. Search uploaded documents (7042 docs in ChromaDB)
+        1. Search uploaded documents (with semantic context)
         2. Advanced RAG with document context
-        3. Ollama + document context + adjacent sentences
+        3. Ollama + document context + adjacent sentences + semantic context
         4. Smart rule-based (only as backup)
         
         Args:
             adjacent_context: Dict with 'previous_sentence' and/or 'next_sentence' keys
+            sentence_index: Index of sentence in document (for semantic context)
+            document_context: DocumentContext object with semantic map
         """
         logger.info(f"🧠 Document-first suggestion for: {feedback_text[:50]}...")
+        
+        # Log semantic context availability
+        if document_context and sentence_index is not None:
+            logger.info(f"📍 Using semantic context for sentence {sentence_index}")
         
         # Log adjacent context if available
         if adjacent_context:
@@ -191,11 +203,19 @@ class IntelligentAISuggestionEngine:
             doc_count = self.collection.count() if self.collection else 0
             logger.info(f"🔍 PRIORITY 1: Searching your {doc_count} uploaded documents first...")
             
+            # Determine issue type for better context
+            issue_type = None
+            if issue and isinstance(issue, dict):
+                issue_type = issue.get("issue_type")
+            
             result = get_document_first_suggestion(
                 feedback_text=feedback_text,
                 sentence_context=sentence_context,
                 document_type=document_type,
-                writing_goals=writing_goals
+                writing_goals=writing_goals,
+                sentence_index=sentence_index,  # NEW: Pass sentence index
+                document_context=document_context,  # NEW: Pass semantic context
+                issue_type=issue_type,  # NEW: Pass issue type
             )
             
             if result and result.get("success") and result.get("confidence") in ["high", "medium"]:
@@ -1878,10 +1898,16 @@ def get_enhanced_ai_suggestion(
     document_content: str = "",
     option_number: int = 1,
     issue: Optional[Dict[str, Any]] = None,
-    adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
+    adjacent_context: Optional[Dict[str, str]] = None,  # Adjacent sentences
+    sentence_index: Optional[int] = None,  # NEW: Index of sentence in document
+    document_context: Optional[Any] = None,  # NEW: Semantic DocumentContext object
 ) -> Dict[str, Any]:
     """
     Enhanced AI suggestion using intelligent RAG-first architecture.
+    
+    NOW WITH SEMANTIC CONTEXT:
+    - If sentence_index and document_context are provided, uses document-level
+      semantic understanding for context-aware, meaning-preserving suggestions.
     
     This is the main entry point that replaces hardcoded fallbacks with true AI reasoning.
     
@@ -1889,6 +1915,10 @@ def get_enhanced_ai_suggestion(
         Dict containing suggestion, explanation, confidence, method, and success status
     """
     logger.info(f"🧠 INTELLIGENT: get_enhanced_ai_suggestion called for: {feedback_text[:50]}")
+    
+    # Log if semantic context is available
+    if document_context and sentence_index is not None:
+        logger.info(f"📍 Using semantic context for sentence {sentence_index}")
     
     # Special handling for common requirement sentences to ensure "you" usage
     if ("passive voice" in feedback_text.lower() and 
@@ -1936,7 +1966,9 @@ def get_enhanced_ai_suggestion(
             document_content=document_content,
             option_number=option_number,
             issue=issue,
-            adjacent_context=adjacent_context,  # Pass adjacent context
+            adjacent_context=adjacent_context,
+            sentence_index=sentence_index,  # NEW: Pass sentence index
+            document_context=document_context,  # NEW: Pass semantic context
         )
         
         # Validate the result structure
