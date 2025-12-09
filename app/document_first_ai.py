@@ -1462,21 +1462,27 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
 Issue: {feedback_text}
 Passive Sentence: "{sentence_context}"
 
+CRITICAL TENSE REQUIREMENTS:
+1. Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+2. NEVER use perfect tenses (has been, have been, has configured, have completed)
+3. NEVER use "it is imperative", "must be performed", "should be ensured"
+4. Use direct, simple verb forms
+
 IMPORTANT RULES for Technical Documentation:
 1. For system/product features: Use the system/product name as the subject
-   - Example: "The SIMATIC S7+ Connector implements specific alarm notification properties."
+   - Example: "The SIMATIC S7+ Connector implements properties." (NOT "has been implemented")
 2. For user actions: Use "you" as the subject
-   - Example: "You configure the settings..." (not "The user configures...")
+   - Example: "You configure settings." (NOT "You can configure" or "You have configured")
 3. For general capabilities: Use the feature/component as the subject
-   - Example: "This feature enables..." or "The system provides..."
+   - Example: "This feature enables..." (NOT "This feature has been enabled")
 4. NEVER use: "Researchers", "Developers", "Engineers" as subjects in user documentation
 5. Keep technical terms and product names exactly as they appear
 
-Convert to active voice following these rules.
+Convert to active voice using SIMPLE PRESENT TENSE ONLY.
 
 Provide ONLY:
-IMPROVED_SENTENCE: [The active voice version using appropriate subject]
-EXPLANATION: [Brief explanation of the conversion]"""
+IMPROVED_SENTENCE: [The active voice version in simple present tense]
+EXPLANATION: [Brief explanation in simple present tense]"""
         
         elif "vague" in feedback_lower or "specific" in feedback_lower or "unclear" in feedback_lower:
             return f"""You are an expert writing assistant. Make this sentence more specific and clear.
@@ -1484,14 +1490,20 @@ EXPLANATION: [Brief explanation of the conversion]"""
 Issue: {feedback_text}
 Original: "{sentence_context}"
 
+CRITICAL TENSE REQUIREMENTS:
+1. Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+2. NEVER use perfect tenses (has been, have been, has configured, have completed)
+3. Use direct, simple verb forms
+
 Make it more specific by:
 1. Replacing vague terms (some, various, etc.) with concrete examples or quantities
 2. Adding technical details where appropriate
 3. Being more precise and actionable
+4. Using simple present tense ONLY
 
 Provide ONLY:
-IMPROVED_SENTENCE: [The more specific version]
-EXPLANATION: [Brief explanation of improvements]"""
+IMPROVED_SENTENCE: [The more specific version in simple present tense]
+EXPLANATION: [Brief explanation in simple present tense]"""
         
         elif "long sentence" in feedback_lower or "split" in feedback_lower:
             return f"""You are an expert writing assistant. Split this long sentence into clearer, shorter sentences.
@@ -1499,14 +1511,20 @@ EXPLANATION: [Brief explanation of improvements]"""
 Issue: {feedback_text}
 Original: "{sentence_context}"
 
+CRITICAL TENSE REQUIREMENTS:
+1. Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+2. NEVER use perfect tenses (has been, have been, has configured, have completed)
+3. Use direct, simple verb forms
+
 Split the sentence maintaining:
 1. Grammatical correctness
 2. Logical flow
 3. All original information
+4. Simple present tense ONLY
 
 Provide ONLY:
-IMPROVED_SENTENCE: [The split sentences]
-EXPLANATION: [Brief explanation of how you split it]"""
+IMPROVED_SENTENCE: [The split sentences in simple present tense]
+EXPLANATION: [Brief explanation in simple present tense]"""
         
         else:
             # General improvement
@@ -1515,14 +1533,21 @@ EXPLANATION: [Brief explanation of how you split it]"""
 Issue: {feedback_text}
 Original: "{sentence_context}"
 
+CRITICAL TENSE REQUIREMENTS:
+1. Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+2. NEVER use perfect tenses (has been, have been, has configured, have completed)
+3. NEVER use modal + passive constructions like "it is imperative to perform"
+4. Use direct, simple verb forms
+
 Improve by addressing the specific issue while maintaining:
 1. Technical accuracy
 2. Clarity and precision
 3. Professional tone
+4. Simple present tense ONLY
 
 Provide ONLY:
-IMPROVED_SENTENCE: [The improved version]
-EXPLANATION: [Brief explanation of improvements]"""
+IMPROVED_SENTENCE: [The improved version in simple present tense]
+EXPLANATION: [Brief explanation in simple present tense]"""
     
     def _parse_llm_response(self, llm_response: str, original_sentence: str) -> tuple:
         """Parse LLM response to extract suggestion and explanation."""

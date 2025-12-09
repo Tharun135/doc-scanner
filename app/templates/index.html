@@ -2284,12 +2284,34 @@
                 if (sentence.feedback && sentence.feedback.length > 0) {
                     sentence.feedback.forEach(feedback => {
                         totalIssues++;
+                        
+                        // Determine color class based on severity
+                        let severityClass = 'text-warning';  // Default yellow
+                        let severityIcon = 'fas fa-exclamation-triangle';
+                        let severityBadge = '';
+                        
+                        if (feedback.severity === 'error' || feedback.color === 'red') {
+                            severityClass = 'text-danger';
+                            severityIcon = 'fas fa-times-circle';
+                            severityBadge = '<span class="badge bg-danger ms-2">ERROR</span>';
+                        } else if (feedback.severity === 'warn' || feedback.color === 'yellow') {
+                            severityClass = 'text-warning';
+                            severityIcon = 'fas fa-exclamation-triangle';
+                            severityBadge = '<span class="badge bg-warning text-dark ms-2">WARNING</span>';
+                        } else if (feedback.severity === 'info' || feedback.color === 'grey') {
+                            severityClass = 'text-info';
+                            severityIcon = 'fas fa-info-circle';
+                            severityBadge = '<span class="badge bg-info text-dark ms-2">INFO</span>';
+                        }
+                        
                         issueHTML += `
                             <div class="feedback-item p-3 mb-2 border rounded" data-sentence-index="${index}">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
                                         <strong>Sentence ${index + 1}:</strong> "${sentence.sentence.substring(0, 100)}${sentence.sentence.length > 100 ? '...' : ''}"
-                                        <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> ${feedback.message || feedback.text || feedback}</small>
+                                        <br><small class="${severityClass}"><i class="${severityIcon}"></i> ${feedback.message || feedback.text || feedback}${severityBadge}</small>
+                                        ${feedback.rule_id ? '<br><small class="text-muted">Rule: ' + feedback.rule_id + '</small>' : ''}
+                                        ${feedback.suggestion ? '<br><small class="text-muted"><i class="fas fa-lightbulb"></i> Suggestion: ' + feedback.suggestion + '</small>' : ''}
                                     </div>
                                     <button class="btn btn-outline-primary btn-sm ai-suggestion-btn" 
                                             data-sentence-index="${index}" 
@@ -3290,12 +3312,34 @@
                 // Create content div (left side)
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'flex-grow-1';
+                
+                // Determine severity styling
+                let severityClass = 'text-warning';
+                let severityIcon = 'fas fa-exclamation-triangle';
+                let severityBadge = '';
+                
+                if (item.severity === 'error' || item.color === 'red') {
+                    severityClass = 'text-danger';
+                    severityIcon = 'fas fa-times-circle';
+                    severityBadge = '<span class="badge bg-danger ms-2">ERROR</span>';
+                } else if (item.severity === 'warn' || item.color === 'yellow') {
+                    severityClass = 'text-warning';
+                    severityIcon = 'fas fa-exclamation-triangle';
+                    severityBadge = '<span class="badge bg-warning text-dark ms-2">WARNING</span>';
+                } else if (item.severity === 'info' || item.color === 'grey') {
+                    severityClass = 'text-info';
+                    severityIcon = 'fas fa-info-circle';
+                    severityBadge = '<span class="badge bg-info text-dark ms-2">INFO</span>';
+                }
+                
                 contentDiv.innerHTML = `
                     <div class="mb-2">
                         <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
                         <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
                     </div>
-                    <strong>📋 Issue:</strong> ${item.message}
+                    <strong class="${severityClass}"><i class="${severityIcon}"></i> Issue:</strong> ${item.message}${severityBadge}
+                    ${item.rule_id ? '<br><small class="text-muted">Rule: ' + item.rule_id + '</small>' : ''}
+                    ${item.suggestion ? '<br><small class="text-muted"><i class="fas fa-lightbulb"></i> ' + item.suggestion + '</small>' : ''}
                 `;
                 
                 // Create AI button (right side) - as a proper DOM element

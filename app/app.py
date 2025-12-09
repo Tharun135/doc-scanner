@@ -477,18 +477,52 @@ def analyze_sentence(sentence, rules):
                         "start": 0,
                         "end": len(sentence),
                         "message": message,
-                        "full_suggestion": item  # Keep the full structured suggestion for detailed view
+                        "full_suggestion": item,  # Keep the full structured suggestion for detailed view
+                        "severity": "warn",  # Default severity for legacy string feedback
+                        "color": "yellow"
                     })
-                elif isinstance(item, dict) and all(key in item for key in ["text", "start", "end", "message"]):
-                    # Already in correct format
-                    feedback.append(item)
+                elif isinstance(item, dict):
+                    # Handle dict format - may include severity and color from atomic rules
+                    feedback_item = {
+                        "text": item.get("text", sentence),
+                        "start": item.get("start", 0),
+                        "end": item.get("end", len(sentence)),
+                        "message": item.get("message", str(item)),
+                    }
+                    
+                    # Preserve severity-based information from atomic rules
+                    if "severity" in item:
+                        feedback_item["severity"] = item["severity"]
+                    else:
+                        feedback_item["severity"] = "warn"  # Default for legacy rules
+                    
+                    if "color" in item:
+                        feedback_item["color"] = item["color"]
+                    else:
+                        # Map severity to color if not explicitly provided
+                        severity_to_color = {"error": "red", "warn": "yellow", "info": "grey"}
+                        feedback_item["color"] = severity_to_color.get(feedback_item["severity"], "yellow")
+                    
+                    # Preserve additional fields
+                    if "suggestion" in item:
+                        feedback_item["suggestion"] = item["suggestion"]
+                    if "rule_id" in item:
+                        feedback_item["rule_id"] = item["rule_id"]
+                    if "category" in item:
+                        feedback_item["category"] = item["category"]
+                    if "full_suggestion" in item:
+                        feedback_item["full_suggestion"] = item["full_suggestion"]
+                    
+                    feedback.append(feedback_item)
                 else:
                     # Handle other formats by converting to string
                     feedback.append({
                         "text": sentence,
                         "start": 0,
                         "end": len(sentence),
-                        "message": str(item)
+                        "message": str(item),
+                        "severity": "warn",
+                        "color": "yellow"
                     })
 
     return feedback, readability_scores, quality_score

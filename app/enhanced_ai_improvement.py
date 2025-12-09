@@ -256,12 +256,19 @@ class LLMIntegrator:
 
 Task: Rewrite the following sentence to improve clarity, conciseness, and correctness while maintaining the original meaning and professional tone suitable for user manuals.
 
+CRITICAL TENSE REQUIREMENTS:
+- Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+- NEVER use perfect tenses (has been, have been, has configured, have completed)
+- NEVER use "it is imperative", "must be performed", "should be ensured"
+- Use direct, simple verb forms
+
 Guidelines:
 - Use active voice when possible
 - Remove unnecessary words  
 - Use clear, direct language
 - Maintain technical accuracy
-- Keep the same meaning{context_str}
+- Keep the same meaning
+- Use simple present tense ONLY{context_str}
 
 Original: "{sentence}"
 

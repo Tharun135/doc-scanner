@@ -989,6 +989,12 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
         Relevant examples from similar contexts:
         {examples_text}
 
+        CRITICAL TENSE REQUIREMENTS:
+        - Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+        - NEVER use perfect tenses (has been, have been, has configured, have completed)
+        - NEVER use "it is imperative", "must be performed", "should be ensured"
+        - Use direct, simple verb forms
+
         CRITICAL RULE: KEEP IT MINIMAL AND SIMPLE
         - Use the FEWEST words possible while maintaining meaning
         - Avoid elaborate explanations or complex additions
@@ -1001,8 +1007,8 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
         - CORRECT: "The application displays available connectors."
 
         Please provide:
-        1. IMPROVED_SENTENCE: The SHORTEST rewritten version that addresses the issue
-        2. EXPLANATION: Brief explanation of what you changed
+        1. IMPROVED_SENTENCE: The SHORTEST rewritten version in simple present tense
+        2. EXPLANATION: Brief explanation of what you changed (in simple present tense)
 
         IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
 
@@ -1022,6 +1028,12 @@ ORIGINAL SENTENCE: "{sentence_context}"
 DOCUMENT TYPE: {document_type}
 WRITING GOALS: {', '.join(writing_goals)}
 
+CRITICAL TENSE REQUIREMENTS:
+- Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+- NEVER use perfect tenses (has been, have been, has configured, have completed)
+- NEVER use "it is imperative", "must be performed", "should be ensured"
+- Use direct, simple verb forms
+
 CRITICAL RULE: KEEP IT MINIMAL AND SIMPLE
 - Use the FEWEST words possible while maintaining meaning
 - Avoid elaborate explanations or complex additions
@@ -1039,15 +1051,16 @@ EXAMPLES OF MINIMALIST IMPROVEMENTS:
 
 GUIDELINES:
 - For adverb placement: Simply move the adverb to the correct position
-- For passive voice: Convert to active voice using the shortest possible phrasing. Use "you" for direct address
+- For passive voice: Convert to active voice using the shortest possible phrasing in simple present tense. Use "you" for direct address
 - For long sentences: Break into SHORT, clear sentences
 - Preserve original meaning but use MINIMAL words
 - Use "Application" instead of "technical writer" 
 - When addressing requirements, use "you" directly
+- Use simple present tense ONLY
 
 FORMAT:
-IMPROVED_SENTENCE: [Shortest, clearest rewritten sentence]
-EXPLANATION: [Brief explanation of what you changed]
+IMPROVED_SENTENCE: [Shortest, clearest rewritten sentence in simple present tense]
+EXPLANATION: [Brief explanation in simple present tense]
 
 Rewrite the sentence now:"""
     
@@ -1264,23 +1277,31 @@ REMEMBER: One change. Keep it simple."""
 
 🎯 YOUR TASK: Fix the detected issue while keeping the sentence CLEAR and CONCISE.
 
+⏰ CRITICAL TENSE REQUIREMENTS:
+- Use ONLY simple present tense (e.g., "configures", "enables", "provides")
+- NEVER use perfect tenses (has been, have been, has configured, have completed)
+- NEVER use "it is imperative", "must be performed", "should be ensured"
+- Use direct, simple verb forms
+
 ✅ CORE RULES:
 1. Fix the detected issue completely
 2. Keep the sentence CONCISE - use minimal words
 3. Preserve all original meaning and technical details
 4. Use clear, direct language
+5. Use simple present tense ONLY
 
 ❌ AVOID:
 - Adding unnecessary words
 - Making the sentence longer
 - Changing technical terms
 - Using elaborate phrasing
+- Using perfect tenses or complex tense structures
 
 📤 REQUIRED OUTPUT:
-IMPROVED_SENTENCE: [Your concise rewritten sentence]
-EXPLANATION: [Brief 1-sentence explanation]
+IMPROVED_SENTENCE: [Your concise rewritten sentence in simple present tense]
+EXPLANATION: [Brief 1-sentence explanation in simple present tense]
 
-REMEMBER: Fix the issue. Preserve everything else."""
+REMEMBER: Fix the issue. Preserve everything else. Use simple present tense."""
     
     def _parse_ai_response(self, ai_response: str, original_sentence: str) -> Tuple[str, str]:
         """Parse AI response to extract suggestion and explanation with strict minimalism enforcement."""

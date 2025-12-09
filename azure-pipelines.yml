@@ -1,0 +1,88 @@
+# Azure DevOps Pipeline for Documentation Quality Checks
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - feature/*
+  paths:
+    include:
+      - '*.md'
+      - 'docs/**'
+      - 'guides/**'
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - '*.md'
+      - 'docs/**'
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  python.version: '3.11'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '$(python.version)'
+  displayName: 'Use Python $(python.version)'
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- script: |
+    python batch_check.py docs/ *.md \
+      --errors-only \
+      --html docs-report.html \
+      --json docs-results.json
+  displayName: 'Run documentation quality checks'
+  continueOnError: true
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'docs-report.html'
+    artifact: 'documentation-report'
+    publishLocation: 'pipeline'
+  displayName: 'Publish HTML report'
+  condition: always()
+
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: 'docs-results.json'
+    artifact: 'documentation-results'
+    publishLocation: 'pipeline'
+  displayName: 'Publish JSON results'
+  condition: always()
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: 'docs-results.json'
+    failTaskOnFailedTests: true
+  displayName: 'Publish test results'
+  condition: always()
+
+- script: |
+    if [ -f docs-results.json ]; then
+      python -c "
+    import json
+    import sys
+    with open('docs-results.json') as f:
+        results = json.load(f)
+        summary = results['summary']
+        print(f'##vso[task.logissue type=error]Found {summary[\"errors\"]} critical errors')
+        if summary['errors'] > 0:
+            sys.exit(1)
+    "
+    fi
+  displayName: 'Check for errors'
+  condition: always()
