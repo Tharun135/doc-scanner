@@ -198,5 +198,75 @@
     "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
     "example_violation": "Utilize the configuration utility.",
     "example_correction": "Use the configuration utility."
+  },
+  {
+    "rule_id": "LIST_001",
+    "category": "procedure",
+    "regex": "\\band\\b.*\\bthen\\b",
+    "severity": "warn",
+    "message": "Multiple actions in one step.",
+    "suggestion": "Split into two numbered steps.",
+    "example_violation": "Click Save and then restart.",
+    "example_correction": "1. Click Save.\n2. Restart."
+  },
+  {
+    "rule_id": "LIST_002",
+    "category": "procedure",
+    "regex": "[A-Za-z]+:\\s*\\n\\s*\\d+\\.",
+    "severity": "error",
+    "message": "Colon cannot end a heading directly before numbered steps.",
+    "suggestion": "Remove colon, rewrite heading.",
+    "example_violation": "Steps:\n1. Click Save.",
+    "example_correction": "Steps\n1. Click Save."
+  },
+  {
+    "rule_id": "TABLE_001",
+    "category": "table",
+    "regex": "\\|\\s*\\|",
+    "severity": "error",
+    "message": "Empty table cell detected.",
+    "suggestion": "Provide data or use '—'.",
+    "example_violation": "| Value | Speed |\n|       | 1500  |",
+    "example_correction": "| Value | Speed |\n| —     | 1500  |"
+  },
+  {
+    "rule_id": "TABLE_002",
+    "category": "table",
+    "regex": "colspan|rowspan",
+    "severity": "warn",
+    "message": "Merged table cells reduce export and translation clarity.",
+    "suggestion": "Flatten table to avoid merged cells.",
+    "example_violation": "<td colspan='2'>Header</td>",
+    "example_correction": "<td>Header Col 1</td><td>Header Col 2</td>"
+  },
+  {
+    "rule_id": "TRANS_001",
+    "category": "translation",
+    "regex": "at the end of the day|in a nutshell|ballpark",
+    "severity": "warn",
+    "message": "Idioms harm localization clarity.",
+    "suggestion": "Rewrite with literal meaning.",
+    "example_violation": "At the end of the day, the device restarts.",
+    "example_correction": "Finally, the device restarts."
+  },
+  {
+    "rule_id": "TRANS_002",
+    "category": "translation",
+    "regex": "\\bvarious\\b|\\bmultiple\\b|\\bdifferent\\b",
+    "severity": "info",
+    "message": "Ambiguous quantity. Specify amount/context.",
+    "suggestion": "Replace with measurable or specific value.",
+    "example_violation": "The device supports multiple modes.",
+    "example_correction": "The device supports three modes."
+  },
+  {
+    "rule_id": "CONSIST_001",
+    "category": "consistency",
+    "regex": "(Click\\s\\w+.*\\bselect\\b)|(Select\\s\\w+.*\\bclick\\b)",
+    "severity": "error",
+    "message": "UI verb capitalization must be consistent within same procedure.",
+    "suggestion": "Use one verb form consistently: Click or Select.",
+    "example_violation": "Click Save. then select Exit.",
+    "example_correction": "Click Save. Click Exit."
   }
 ]
