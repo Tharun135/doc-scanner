@@ -245,6 +245,7 @@ def detect_passive_voice_issues(content: str, text_content: str) -> List[Dict[st
     # Load spaCy if available
     try:
         nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max length to 2MB
         doc = nlp(text_content)
         sentences = list(doc.sents)
     except:
@@ -339,6 +340,7 @@ def detect_long_sentence_issues(content: str, text_content: str) -> List[Dict[st
     # Load spaCy if available
     try:
         nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max length to 2MB
         doc = nlp(text_content)
         sentences = list(doc.sents)
     except:
@@ -380,6 +382,7 @@ def detect_modal_verb_issues(content: str, text_content: str) -> List[Dict[str, 
     # Load spaCy if available
     try:
         nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max length to 2MB
         doc = nlp(text_content)
         sentences = list(doc.sents)
     except:

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Processing Report - 2025-12-09 16:53</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header .timestamp { opacity: 0.9; font-size: 14px; }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .summary-card .label { color: #666; font-size: 14px; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        .success { color: #28a745; }
+        
+        .file-section {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .file-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-header:hover { background: #e9ecef; }
+        .file-header .filename { font-weight: 600; }
+        .file-header .status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.passed { background: #d4edda; color: #155724; }
+        .status.failed { background: #f8d7da; color: #721c24; }
+        
+        .violations {
+            padding: 20px;
+            display: none;
+        }
+        .file-section.expanded .violations { display: block; }
+        
+        .violation {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .violation.error { border-left-color: #dc3545; }
+        .violation.warn { border-left-color: #ffc107; }
+        .violation.info { border-left-color: #17a2b8; }
+        
+        .violation .severity-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 8px;
+        }
+        .violation.error .severity-badge { background: #dc3545; color: white; }
+        .violation.warn .severity-badge { background: #ffc107; color: #333; }
+        .violation.info .severity-badge { background: #17a2b8; color: white; }
+        
+        .violation .rule-id { font-weight: 600; color: #495057; }
+        .violation .message { margin: 8px 0; color: #666; }
+        .violation .sentence {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .violation .suggestion {
+            background: #e7f3ff;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+        
+        .toggle-icon { transition: transform 0.3s; }
+        .file-section.expanded .toggle-icon { transform: rotate(90deg); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Batch Processing Report</h1>
+            <div class="timestamp">Generated: 2025-12-09T16:53:37.953627</div>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <div class="label">Total Files</div>
+                <div class="value">3</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Files Passed</div>
+                <div class="value success">1</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Files with Errors</div>
+                <div class="value error">2</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Total Sentences</div>
+                <div class="value">280</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Errors</div>
+                <div class="value error">5</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Warnings</div>
+                <div class="value warning">13</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Info</div>
+                <div class="value info">7</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Total Violations</div>
+                <div class="value">25</div>
+            </div>
+        </div>
+        
+        <h2 style="margin: 30px 0 15px 0;">File Details</h2>
+
+        <div class="file-section" onclick="this.classList.toggle('expanded')">
+            <div class="file-header">
+                <div>
+                    <span class="toggle-icon">▶</span>
+                    <span class="filename">AI_TENSE_FIX.md</span>
+                    <small style="color: #666; margin-left: 10px;">
+                        7 violations
+                        (1 errors, 6 warnings, 0 info)
+                    </small>
+                </div>
+                <span class="status failed">FAILED</span>
+            </div>
+            <div class="violations">
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 40</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"- Sentence: "You can create a new asset configuration with all required parameters and settings, including the asset ID and metadata.""</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 40</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"- Sentence: "You can create a new asset configuration with all required parameters and settings, including the asset ID and metadata.""</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 46</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"- Sentence: "Some settings can be adjusted.""</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 46</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"- Sentence: "Some settings can be adjusted.""</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 71</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"- Should say: "The system processes the data.""</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 78</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"- No "it is imperative to", "should be ensured""</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 78</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"- No "it is imperative to", "should be ensured""</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="file-section" onclick="this.classList.toggle('expanded')">
+            <div class="file-header">
+                <div>
+                    <span class="toggle-icon">▶</span>
+                    <span class="filename">TABLE_DETECTION_FIX.md</span>
+                    <small style="color: #666; margin-left: 10px;">
+                        6 violations
+                        (0 errors, 3 warnings, 3 info)
+                    </small>
+                </div>
+                <span class="status passed">PASSED</span>
+            </div>
+            <div class="violations">
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 3</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"This is clearly a table row, not a sentence, but was being detected as having 85 words."</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 4</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"The existing table detection logic only checked for separator rows (), but didn't handle actual data rows with multiple cells."</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 29</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"The function uses multiple criteria to distinguish table rows from normal sentences:"</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">CONTRACTION_001</span>
+                        <small style="color: #999;">Sentence 46</small>
+                    </div>
+                    <div class="message">Contraction detected in technical documentation.</div>
+                    <div class="sentence">"- **Pipe in text** (like code examples) doesn't have multiple cells or table structure"</div>
+                    <div class="suggestion">💡 Use full form: do not, does not, will not, cannot, etc.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 46</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"- **Pipe in text** (like code examples) doesn't have multiple cells or table structure"</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 62</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"The fix has been tested and confirmed working:"</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="file-section" onclick="this.classList.toggle('expanded')">
+            <div class="file-header">
+                <div>
+                    <span class="toggle-icon">▶</span>
+                    <span class="filename">RULE_EXPANSION_27.md</span>
+                    <small style="color: #666; margin-left: 10px;">
+                        12 violations
+                        (4 errors, 4 warnings, 4 info)
+                    </small>
+                </div>
+                <span class="status failed">FAILED</span>
+            </div>
+            <div class="violations">
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 7</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"| LIST_001 | 🟡 Warning | Procedure | Multiple actions in one step ("and then") |"</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">LIST_001</span>
+                        <small style="color: #999;">Sentence 7</small>
+                    </div>
+                    <div class="message">Multiple actions in one step.</div>
+                    <div class="sentence">"| LIST_001 | 🟡 Warning | Procedure | Multiple actions in one step ("and then") |"</div>
+                    <div class="suggestion">💡 Split into two numbered steps.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 7</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"| LIST_001 | 🟡 Warning | Procedure | Multiple actions in one step ("and then") |"</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 10</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"| TABLE_002 | 🟡 Warning | Table | Merged cells (colspan/rowspan) |"</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TABLE_002</span>
+                        <small style="color: #999;">Sentence 10</small>
+                    </div>
+                    <div class="message">Merged table cells reduce export and translation clarity.</div>
+                    <div class="sentence">"| TABLE_002 | 🟡 Warning | Table | Merged cells (colspan/rowspan) |"</div>
+                    <div class="suggestion">💡 Flatten table to avoid merged cells.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TABLE_002</span>
+                        <small style="color: #999;">Sentence 10</small>
+                    </div>
+                    <div class="message">Merged table cells reduce export and translation clarity.</div>
+                    <div class="sentence">"| TABLE_002 | 🟡 Warning | Table | Merged cells (colspan/rowspan) |"</div>
+                    <div class="suggestion">💡 Flatten table to avoid merged cells.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 11</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"| TRANS_001 | 🟡 Warning | Translation | Idioms ("at the end of the day", etc.) |"</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TRANS_001</span>
+                        <small style="color: #999;">Sentence 11</small>
+                    </div>
+                    <div class="message">Idioms harm localization clarity.</div>
+                    <div class="sentence">"| TRANS_001 | 🟡 Warning | Translation | Idioms ("at the end of the day", etc.) |"</div>
+                    <div class="suggestion">💡 Rewrite with literal meaning.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 12</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"| TRANS_002 | 🔵 Info | Translation | Vague quantities ("multiple", "various") |"</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 12</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"| TRANS_002 | 🔵 Info | Translation | Vague quantities ("multiple", "various") |"</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 19</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"| 🟡 Warning | 15 | +3 | Advisory |"</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">TRANS_002</span>
+                        <small style="color: #999;">Sentence 50</small>
+                    </div>
+                    <div class="message">Ambiguous quantity. Specify amount/context.</div>
+                    <div class="sentence">"- LIST_001: Multiple actions"</div>
+                    <div class="suggestion">💡 Replace with measurable or specific value.</div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    
+    <script>
+        // Expand first file with errors by default
+        const filesWithErrors = document.querySelectorAll('.file-section .status.failed');
+        if (filesWithErrors.length > 0) {
+            filesWithErrors[0].closest('.file-section').classList.add('expanded');
+        }
+    </script>
+</body>
+</html>

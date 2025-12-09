@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Upload - FastAPI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            color: #333;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 20px 5px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .btn-secondary {
+            background: #28a745;
+        }
+        .btn-secondary:hover {
+            background: #218838;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #856404;
+            font-weight: bold;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .feature {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        .feature-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📤 Document Upload Center</h1>
+        <p class="subtitle">FastAPI Vector Search Backend</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="http://localhost:8000/docs#/Upload/upload_document_upload_post" class="btn">
+                🚀 Open Upload Interface
+            </a>
+            <a href="http://localhost:8000/docs" class="btn btn-secondary">
+                📚 View Full API Docs
+            </a>
+        </div>
+
+        <h2>🎯 How to Upload</h2>
+        
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Click the button above</strong> or visit 
+            <code>http://localhost:8000/docs</code>
+        </div>
+
+        <div class="step">
+            <span class="step-number">2</span>
+            Look for the <span class="highlight">green "Upload" section</span> in the page
+        </div>
+
+        <div class="step">
+            <span class="step-number">3</span>
+            Click the <span class="highlight">"Try it out"</span> button (top right)
+        </div>
+
+        <div class="step">
+            <span class="step-number">4</span>
+            Click <span class="highlight">"Choose File"</span> and select your document
+        </div>
+
+        <div class="step">
+            <span class="step-number">5</span>
+            Click the blue <span class="highlight">"Execute"</span> button
+        </div>
+
+        <h2>📁 Supported Formats</h2>
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📄</div>
+                <strong>PDF</strong>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📝</div>
+                <strong>Word (DOCX)</strong>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📃</div>
+                <strong>Text Files</strong>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📋</div>
+                <strong>Markdown</strong>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🌐</div>
+                <strong>HTML</strong>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📦</div>
+                <strong>ZIP Archives</strong>
+            </div>
+        </div>
+
+        <h2>🔍 After Upload</h2>
+        <p>Your documents will be:</p>
+        <ul>
+            <li>✅ Parsed and chunked automatically</li>
+            <li>✅ Converted to vector embeddings (384 dimensions)</li>
+            <li>✅ Stored in ChromaDB for semantic search</li>
+            <li>✅ Instantly searchable across all documents</li>
+        </ul>
+
+        <h2>⚡ Quick Commands</h2>
+        <p><strong>Upload via PowerShell:</strong></p>
+        <code style="display: block; padding: 10px; margin: 10px 0;">
+            curl.exe -X POST http://localhost:8000/upload -F "file=@your_document.pdf"
+        </code>
+
+        <p><strong>Search your documents:</strong></p>
+        <code style="display: block; padding: 10px; margin: 10px 0;">
+            $body = '{"query":"your search","top_k":5}'<br>
+            curl.exe -X POST http://localhost:8000/query -H "Content-Type: application/json" -d $body
+        </code>
+
+        <div style="margin-top: 40px; padding: 20px; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #0066cc;">
+            <strong>💡 Pro Tip:</strong> Upload multiple documents to build a knowledge base. 
+            Semantic search will work across ALL uploaded documents simultaneously!
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="http://localhost:8000/health/stats" style="color: #667eea; text-decoration: none;">
+                📊 Check Upload Statistics
+            </a>
+        </div>
+    </div>
+</body>
+</html>

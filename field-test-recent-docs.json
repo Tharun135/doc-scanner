@@ -1,0 +1,298 @@
+{
+  "timestamp": "2025-12-09T16:53:37.953627",
+  "files": [
+    {
+      "filename": "AI_TENSE_FIX.md",
+      "sentence_count": 96,
+      "violation_count": 7,
+      "errors": 1,
+      "warnings": 6,
+      "info": 0,
+      "violations": [
+        {
+          "sentence_number": 40,
+          "sentence": "- Sentence: \"You can create a new asset configuration with all required parameters and settings, including the asset ID and metadata.\"",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "can"
+        },
+        {
+          "sentence_number": 40,
+          "sentence": "- Sentence: \"You can create a new asset configuration with all required parameters and settings, including the asset ID and metadata.\"",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "You"
+        },
+        {
+          "sentence_number": 46,
+          "sentence": "- Sentence: \"Some settings can be adjusted.\"",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "can"
+        },
+        {
+          "sentence_number": 46,
+          "sentence": "- Sentence: \"Some settings can be adjusted.\"",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "be adjusted"
+        },
+        {
+          "sentence_number": 71,
+          "sentence": "- Should say: \"The system processes the data.\"",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "Should"
+        },
+        {
+          "sentence_number": 78,
+          "sentence": "- No \"it is imperative to\", \"should be ensured\"",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "should"
+        },
+        {
+          "sentence_number": 78,
+          "sentence": "- No \"it is imperative to\", \"should be ensured\"",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "be ensured"
+        }
+      ],
+      "status": "failed"
+    },
+    {
+      "filename": "TABLE_DETECTION_FIX.md",
+      "sentence_count": 80,
+      "violation_count": 6,
+      "errors": 0,
+      "warnings": 3,
+      "info": 3,
+      "violations": [
+        {
+          "sentence_number": 3,
+          "sentence": "This is clearly a table row, not a sentence, but was being detected as having 85 words.",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "being detected"
+        },
+        {
+          "sentence_number": 4,
+          "sentence": "The existing table detection logic only checked for separator rows (), but didn't handle actual data rows with multiple cells.",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "multiple"
+        },
+        {
+          "sentence_number": 29,
+          "sentence": "The function uses multiple criteria to distinguish table rows from normal sentences:",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "multiple"
+        },
+        {
+          "sentence_number": 46,
+          "sentence": "- **Pipe in text** (like code examples) doesn't have multiple cells or table structure",
+          "rule_id": "CONTRACTION_001",
+          "category": "formality",
+          "severity": "warn",
+          "message": "Contraction detected in technical documentation.",
+          "suggestion": "Use full form: do not, does not, will not, cannot, etc.",
+          "matched_text": "doesn't"
+        },
+        {
+          "sentence_number": 46,
+          "sentence": "- **Pipe in text** (like code examples) doesn't have multiple cells or table structure",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "multiple"
+        },
+        {
+          "sentence_number": 62,
+          "sentence": "The fix has been tested and confirmed working:",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "been tested"
+        }
+      ],
+      "status": "passed"
+    },
+    {
+      "filename": "RULE_EXPANSION_27.md",
+      "sentence_count": 104,
+      "violation_count": 12,
+      "errors": 4,
+      "warnings": 4,
+      "info": 4,
+      "violations": [
+        {
+          "sentence_number": 7,
+          "sentence": "| LIST_001 | \ud83d\udfe1 Warning | Procedure | Multiple actions in one step (\"and then\") |",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "Warning | Procedure | Multiple actions in one step (\"and then\") |"
+        },
+        {
+          "sentence_number": 7,
+          "sentence": "| LIST_001 | \ud83d\udfe1 Warning | Procedure | Multiple actions in one step (\"and then\") |",
+          "rule_id": "LIST_001",
+          "category": "procedure",
+          "severity": "warn",
+          "message": "Multiple actions in one step.",
+          "suggestion": "Split into two numbered steps.",
+          "matched_text": "and then"
+        },
+        {
+          "sentence_number": 7,
+          "sentence": "| LIST_001 | \ud83d\udfe1 Warning | Procedure | Multiple actions in one step (\"and then\") |",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "Multiple"
+        },
+        {
+          "sentence_number": 10,
+          "sentence": "| TABLE_002 | \ud83d\udfe1 Warning | Table | Merged cells (colspan/rowspan) |",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "Warning | Table | Merged cells (colspan/rowspan) |"
+        },
+        {
+          "sentence_number": 10,
+          "sentence": "| TABLE_002 | \ud83d\udfe1 Warning | Table | Merged cells (colspan/rowspan) |",
+          "rule_id": "TABLE_002",
+          "category": "table",
+          "severity": "warn",
+          "message": "Merged table cells reduce export and translation clarity.",
+          "suggestion": "Flatten table to avoid merged cells.",
+          "matched_text": "colspan"
+        },
+        {
+          "sentence_number": 10,
+          "sentence": "| TABLE_002 | \ud83d\udfe1 Warning | Table | Merged cells (colspan/rowspan) |",
+          "rule_id": "TABLE_002",
+          "category": "table",
+          "severity": "warn",
+          "message": "Merged table cells reduce export and translation clarity.",
+          "suggestion": "Flatten table to avoid merged cells.",
+          "matched_text": "rowspan"
+        },
+        {
+          "sentence_number": 11,
+          "sentence": "| TRANS_001 | \ud83d\udfe1 Warning | Translation | Idioms (\"at the end of the day\", etc.) |",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "Warning | Translation | Idioms (\"at the end of the day\", etc.) |"
+        },
+        {
+          "sentence_number": 11,
+          "sentence": "| TRANS_001 | \ud83d\udfe1 Warning | Translation | Idioms (\"at the end of the day\", etc.) |",
+          "rule_id": "TRANS_001",
+          "category": "translation",
+          "severity": "warn",
+          "message": "Idioms harm localization clarity.",
+          "suggestion": "Rewrite with literal meaning.",
+          "matched_text": "at the end of the day"
+        },
+        {
+          "sentence_number": 12,
+          "sentence": "| TRANS_002 | \ud83d\udd35 Info | Translation | Vague quantities (\"multiple\", \"various\") |",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "multiple"
+        },
+        {
+          "sentence_number": 12,
+          "sentence": "| TRANS_002 | \ud83d\udd35 Info | Translation | Vague quantities (\"multiple\", \"various\") |",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "various"
+        },
+        {
+          "sentence_number": 19,
+          "sentence": "| \ud83d\udfe1 Warning | 15 | +3 | Advisory |",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "Warning | 15 | +3 | Advisory |"
+        },
+        {
+          "sentence_number": 50,
+          "sentence": "- LIST_001: Multiple actions",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "Multiple"
+        }
+      ],
+      "status": "failed"
+    }
+  ],
+  "summary": {
+    "total_files": 3,
+    "total_sentences": 280,
+    "total_violations": 25,
+    "errors": 5,
+    "warnings": 13,
+    "info": 7,
+    "files_with_errors": 2,
+    "files_passed": 1
+  }
+}

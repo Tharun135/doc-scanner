@@ -577,6 +577,38 @@
     100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
 }
 
+/* NEW: Intelligent AI Analysis Button Styles */
+.btn-gradient-intelligent {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-gradient-intelligent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+    color: white;
+}
+
+.btn-gradient-intelligent:active {
+    transform: translateY(0);
+}
+
+.intelligent-badge {
+    background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+    color: #333;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(255, 154, 158, 0.3);
+}
+
 .sources-container {
     max-height: 200px;
     overflow-y: auto;
@@ -668,19 +700,28 @@
             color: white;
             border: none;
             border-radius: 50%;
-            width: 28px;
-            height: 28px;
+            width: 32px;
+            height: 32px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s ease;
             margin-left: 8px;
+            flex-shrink: 0;  /* Prevent button from shrinking */
+            z-index: 10;     /* Ensure button is above other elements */
+            pointer-events: auto;  /* Ensure button is clickable */
+            position: relative;  /* Create stacking context */
         }
         
         .ai-feedback-icon:hover {
             background: linear-gradient(45deg, #5a4fcf, #8b7ff7);
-            transform: scale(1.1);
+            transform: scale(1.15);
+            box-shadow: 0 4px 8px rgba(108, 92, 231, 0.4);
+        }
+        
+        .ai-feedback-icon:active {
+            transform: scale(1.05);
         }
         
         .ai-feedback-content {
@@ -896,6 +937,15 @@
                 <button class="btn btn-outline-light btn-sm me-2" id="historyBtn">
                     <i class="fas fa-history"></i> History
                 </button>
+                <a href="{{ url_for('rag.rag_dashboard') }}" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-brain"></i> RAG Dashboard
+                </a>
+                <!-- Hybrid Intelligence Status -->
+                <div class="btn btn-outline-light btn-sm me-2" id="hybridIntelligenceStatus" title="Hybrid Intelligence Status">
+                    <i class="fas fa-robot"></i> 
+                    <span id="hybridStatusText">Checking...</span>
+                    <span id="hybridStatusIndicator" class="badge ms-1" style="background-color: #6c757d;">●</span>
+                </div>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="darkModeToggle">
                     <label class="form-check-label" for="darkModeToggle">Dark Mode</label>
@@ -920,11 +970,11 @@
                             <p>Drag & Drop files here or</p>
                             <div class="d-flex justify-content-center gap-3 mt-2">
                                 <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn">Browse Files</button>
-                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn">Browse Zip</button>
+                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" title="Select ZIP files or any file type">Browse Zip/Files</button>
                             </div>
-                            <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt" style="display: none;">
-                            <input type="file" id="batchFileInput" accept=".zip" style="display: none;">
-                            <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt" multiple style="display: none;">
+                            <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" style="display: none;">
+                            <input type="file" id="batchFileInput" style="display: none;">
+                            <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" multiple style="display: none;">
                         </div>
                         <div id="fileList" class="mb-3" style="display: none;">
                             <h6>Selected Files:</h6>
@@ -934,7 +984,50 @@
                             <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
                             <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
+                        
+                        <!-- NEW: Intelligent AI Analysis Option -->
+                        <div class="mt-3">
+                            <button class="btn btn-gradient-intelligent w-100" type="button" id="intelligentAnalysisBtn">
+                                <i class="fas fa-brain"></i> Intelligent AI Analysis
+                                <span class="intelligent-badge">RAG-Powered</span>
+                            </button>
+                            <small class="text-muted d-block mt-1 text-center">
+                                <i class="fas fa-magic"></i> Context-aware suggestions using advanced AI
+                            </small>
+                        </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- Semantic Search Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>
+                        <i class="fas fa-search"></i> Semantic Search
+                        <span class="status-indicator" id="searchStatusIndicator" 
+                              style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; 
+                                     background-color: #6c757d; margin-left: 8px;"
+                              title="Search status"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="semanticSearchInput" 
+                               placeholder="Search across all documents..." 
+                               style="background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.3);">
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-lightbulb"></i> Natural language search (e.g., "security best practices")
+                        </small>
+                    </div>
+                    <button class="btn btn-secondary w-100" id="semanticSearchBtn">
+                        <i class="fas fa-brain"></i> Search
+                    </button>
+                    <div class="mt-3">
+                        <div class="text-muted mb-2" style="font-size: 0.9em;">
+                            <i class="fas fa-info-circle"></i> <span id="searchStatusText">Ready to search</span>
+                        </div>
+                        <div id="searchResultsList"></div>
+                    </div>
                 </div>
             </div>
 
@@ -1058,10 +1151,39 @@
     </div>
 
     <script>
-        // WebSocket connection for real-time progress
-        const socket = io();
+        // WebSocket connection for real-time progress with fallback
+        let socket = null;
+        let socketConnected = false;
         let currentRoomId = null;
         let isRealTimeProgress = false;
+        
+        // Initialize WebSocket with error handling
+        try {
+            socket = io({
+                transports: ['polling', 'websocket'],
+                timeout: 5000,
+                forceNew: true
+            });
+            
+            socket.on('connect', () => {
+                console.log('✅ WebSocket connected');
+                socketConnected = true;
+            });
+            
+            socket.on('disconnect', () => {
+                console.log('⚠️ WebSocket disconnected');
+                socketConnected = false;
+            });
+            
+            socket.on('connect_error', (error) => {
+                console.warn('⚠️ WebSocket connection failed, using fallback mode:', error.message);
+                socketConnected = false;
+            });
+            
+        } catch (error) {
+            console.warn('⚠️ WebSocket initialization failed, using fallback mode:', error.message);
+            socketConnected = false;
+        }
 
         // File upload handling
         const dropzone = document.getElementById('dropzone');
@@ -1075,22 +1197,61 @@
         let selectedFiles = [];
         let batchResults = [];
 
-        // WebSocket event handlers
-        socket.on('connect', () => {
-            console.log('Connected to WebSocket server');
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from WebSocket server');
-        });
-
-        socket.on('progress_update', (data) => {
-            console.log('Progress update received:', data);
+        // WebSocket event handlers (only if socket is available)
+        if (socket) {
+            socket.on('progress_update', (data) => {
+                console.log('📡 Progress update received:', data);
+                
+                if (isRealTimeProgress && currentRoomId) {
+                    updateRealTimeProgress(data);
+                }
+            });
+        }
+        
+        // Fallback progress simulation when WebSocket is not available
+        function simulateFallbackProgress(roomId, onComplete) {
+            if (socketConnected) return; // Only use fallback when socket is not connected
             
-            if (isRealTimeProgress && currentRoomId) {
-                updateRealTimeProgress(data);
-            }
-        });
+            console.log('🔄 Starting fallback progress simulation');
+            
+            const stages = [
+                { percentage: 10, message: "Receiving and validating your document...", stage_name: "Upload" },
+                { percentage: 30, message: "Extracting text from document format...", stage_name: "Parse" },
+                { percentage: 50, message: "Identifying sentence boundaries...", stage_name: "Extract" },
+                { percentage: 80, message: "Applying grammar and style rules...", stage_name: "Analyze" },
+                { percentage: 100, message: "Generating final report...", stage_name: "Report" }
+            ];
+            
+            let currentStage = 0;
+            
+            const updateProgress = () => {
+                if (currentStage < stages.length) {
+                    const stage = stages[currentStage];
+                    updateRealTimeProgress({
+                        percentage: stage.percentage,
+                        message: stage.message,
+                        stage_name: stage.stage_name,
+                        elapsed_time: (currentStage + 1) * 0.3,
+                        eta_seconds: (stages.length - currentStage - 1) * 0.3,
+                        completed: false
+                    });
+                    currentStage++;
+                    setTimeout(updateProgress, 300); // Faster updates every 300ms since content is already shown
+                } else {
+                    // Completion
+                    updateRealTimeProgress({
+                        percentage: 100,
+                        message: "Analysis complete!",
+                        stage_name: "Complete",
+                        completed: true,
+                        success: true
+                    });
+                    if (onComplete) onComplete();
+                }
+            };
+            
+            setTimeout(updateProgress, 200); // Start after 200ms
+        }
 
         function updateRealTimeProgress(data) {
             // Update percentage
@@ -1141,9 +1302,11 @@
             
             // If completed, hide progress after a short delay
             if (data.completed) {
+                // Content should already be displayed immediately after upload
+                // This just handles the progress bar completion animation
                 setTimeout(() => {
                     hideProgressLoader();
-                }, 1000);
+                }, 500); // Reduced delay since content is already shown
             }
         }
 
@@ -1230,6 +1393,8 @@
             } else if (e.target.id === 'browseBatchBtn') {
                 e.preventDefault();
                 console.log('Browse batch button clicked, triggering batch file input');
+                console.log('Batch file input element:', batchFileInput);
+                console.log('Batch file input accept attribute:', batchFileInput.accept);
                 batchFileInput.click();
             }
         });
@@ -1270,7 +1435,12 @@
 
         batchFileInput.addEventListener('change', (e) => {
             const files = e.target.files;
+            console.log('Batch file input changed, files:', files);
+            console.log('Number of files selected:', files.length);
             if (files.length > 0) {
+                for (let i = 0; i < files.length; i++) {
+                    console.log(`File ${i}: ${files[i].name}, type: ${files[i].type}, size: ${files[i].size}`);
+                }
                 selectedFiles = Array.from(files);
                 updateFileList();
                 // Clear the input to allow selecting more files
@@ -1477,6 +1647,15 @@
             resetProgress();
         }
 
+        function updateProgressMessage(message) {
+            // Update the current stage description with a custom message
+            const stageDescription = document.getElementById('stageDescription');
+            if (stageDescription) {
+                stageDescription.textContent = message;
+            }
+            console.log('Progress message:', message);
+        }
+
         function updateProgress(stageIndex) {
             if (stageIndex >= progressStages.length) return;
             
@@ -1607,7 +1786,70 @@
             }
         });
 
+        // NEW: Intelligent AI Analysis Button Handler
+        document.getElementById('intelligentAnalysisBtn').addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            if (selectedFiles.length === 0) {
+                alert('Please select at least one file first.');
+                return;
+            }
+
+            const btn = e.target;
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-brain fa-spin"></i> Analyzing with AI...';
+            btn.disabled = true;
+
+            try {
+                // Create form data with intelligent analysis flag
+                const formData = new FormData();
+                formData.append('file', selectedFiles[0]);
+                formData.append('document_type', 'general'); // Could be made configurable
+                formData.append('writing_goals', 'clarity');
+                formData.append('writing_goals', 'conciseness');
+                formData.append('writing_goals', 'directness');
+
+                // Show progress with intelligent analysis message
+                showProgressLoader(false);
+                updateProgressMessage('🧠 Initializing Intelligent AI Analysis...');
+
+                const response = await fetch('/analyze_intelligent', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Get JSON response and redirect to intelligent results page
+                    const analysisResult = await response.json();
+                    
+                    if (analysisResult.success) {
+                        // Encode the analysis data for URL parameter
+                        const analysisDataEncoded = encodeURIComponent(JSON.stringify(analysisResult));
+                        
+                        // Redirect to the intelligent results page with nice UI
+                        window.location.href = `/intelligent_results?data=${analysisDataEncoded}`;
+                    } else {
+                        throw new Error(analysisResult.error || 'Analysis failed');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed');
+                }
+
+            } catch (error) {
+                console.error('Intelligent analysis error:', error);
+                alert('Intelligent analysis failed: ' + error.message);
+            } finally {
+                hideProgressLoader();
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        });
+
         async function processSingleFile(file) {
+            let uploadCompleted = false;
+            let resultData = null;
+            
             try {
                 // Step 1: Get room ID for progress tracking
                 const roomResponse = await fetch('/start_upload', {
@@ -1620,15 +1862,28 @@
                 
                 const roomData = await roomResponse.json();
                 currentRoomId = roomData.room_id;
+                console.log('📋 Upload session started:', currentRoomId);
                 
-                // Join the progress room for WebSocket updates
-                socket.emit('join_progress_room', { room_id: currentRoomId });
+                // Join the progress room for WebSocket updates (if available)
+                if (socket && socketConnected) {
+                    console.log('🔌 Using WebSocket for progress tracking');
+                    socket.emit('join_progress_room', { room_id: currentRoomId });
+                } else {
+                    console.log('🔄 WebSocket unavailable, using fallback progress');
+                    simulateFallbackProgress(currentRoomId, () => {
+                        if (uploadCompleted && resultData) {
+                            console.log('✅ Fallback progress complete, showing results');
+                            renderChart(resultData.report || {}, resultData.sentences || []);
+                        }
+                    });
+                }
                 
                 // Step 2: Upload file with room ID
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('room_id', currentRoomId);
 
+                console.log('📤 Starting file upload...');
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -1637,34 +1892,56 @@
                 if (!response.ok) throw new Error('Upload failed');
 
                 const result = await response.json();
+                console.log('📊 Upload completed successfully');
                 
-                // Only render results after successful completion
-                // (progress completion will be handled by WebSocket)
-                setTimeout(() => {
-                    renderChart(result.report || {}, result.sentences || []);
-                    renderContent(result.content || '', result.sentences || []);
-                }, 1000); // Small delay to let progress complete animation finish
+                uploadCompleted = true;
+                resultData = result;
                 
-                return result;
-            } catch (error) {
-                // If real-time progress fails, fall back to simulation
-                console.warn('Real-time progress failed, using simulation:', error);
-                isRealTimeProgress = false;
+                // 🚀 IMMEDIATE: Update progress message to show we're rendering
+                updateProgressMessage('✨ Rendering results...');
                 
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) throw new Error('Upload failed');
-
-                const result = await response.json();
+                // 🚀 IMMEDIATE: Show a quick "Processing complete" message
+                const documentContent = document.getElementById('documentContent');
+                const feedbackContent = document.getElementById('feedbackContent');
+                if (documentContent) {
+                    documentContent.innerHTML = `
+                        <h4>Document Content</h4>
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border spinner-border-sm text-primary me-3" role="status"></div>
+                                <div>
+                                    <strong>Processing Complete!</strong> 
+                                    <span class="text-muted">Rendering your document...</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                if (feedbackContent) {
+                    feedbackContent.innerHTML = `
+                        <h5 class="mb-3">Document Issues</h5>
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="text-muted ms-2">Loading feedback...</span>
+                        </div>
+                    `;
+                }
+                
+                // Force DOM update before proceeding
+                if (documentContent) documentContent.offsetHeight;
+                
+                // 🚀 IMMEDIATE DISPLAY: Render content immediately (synchronous)
+                console.log('🚀 Immediately displaying results...');
                 renderChart(result.report || {}, result.sentences || []);
                 renderContent(result.content || '', result.sentences || []);
+                // Progress loader will be hidden inside renderContent after content is visible
+                
                 return result;
+                
+            } catch (error) {
+                console.error('❌ Upload error:', error);
+                hideProgressLoader();
+                throw error; // Re-throw to be handled by calling function
             }
         }
 
@@ -1953,37 +2230,115 @@
 
         // Chart rendering
         function renderChart(report, sentences) {
-    const ctx = document.getElementById('analysisChart').getContext('2d');
+            console.log('🚀 Starting renderChart - immediate execution');
+            const startTime = performance.now();
+            
+            const ctx = document.getElementById('analysisChart').getContext('2d');
 
-    if (analysisChart) {
-        analysisChart.destroy();
-    }
-
-    let totalErrors = sentences.reduce((count, sentence) => count + (sentence.feedback ? sentence.feedback.length : 0), 0);
-    let totalSentences = sentences.length;
-    // Calculate quality index if not provided by backend
-    let qualityIndex = report.avgQualityScore !== undefined
-        ? report.avgQualityScore
-        : (totalSentences === 0 ? 0 : Math.max(0, Math.round(100 * (1 - (totalErrors / totalSentences)))));
-
-    analysisChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: ['Errors', 'Quality Index', 'Total Sentences'],
-            datasets: [{
-                data: [totalErrors, qualityIndex, totalSentences],
-                backgroundColor: ['#ff4d4d', '#007bff', '#17a2b8']
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true, position: 'bottom' }
+            if (analysisChart) {
+                analysisChart.destroy();
             }
+
+            let totalErrors = sentences.reduce((count, sentence) => count + (sentence.feedback ? sentence.feedback.length : 0), 0);
+            let totalSentences = sentences.length;
+            // Calculate quality index if not provided by backend
+            let qualityIndex = report.avgQualityScore !== undefined
+                ? report.avgQualityScore
+                : (totalSentences === 0 ? 0 : Math.max(0, Math.round(100 * (1 - (totalErrors / totalSentences)))));
+
+            analysisChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Errors', 'Quality Index', 'Total Sentences'],
+                    datasets: [{
+                        data: [totalErrors, qualityIndex, totalSentences],
+                        backgroundColor: ['#ff4d4d', '#007bff', '#17a2b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: 'bottom' }
+                    }
+                }
+            });
+            
+            // IMMEDIATE FEEDBACK DISPLAY - show issues right away
+            displayIssuesImmediately(sentences);
+            
+            const endTime = performance.now();
+            console.log(`✅ renderChart completed in ${(endTime - startTime).toFixed(2)}ms`);
         }
-    });
-}
+        
+        // NEW: Function to immediately display issues without waiting
+        function displayIssuesImmediately(sentences) {
+            console.log('🚀 Displaying issues immediately');
+            const feedbackContent = document.getElementById('feedbackContent');
+            
+            // Count total issues for immediate feedback
+            let totalIssues = 0;
+            let issueHTML = '<h5 class="mb-3">Document Issues</h5>';
+            
+            sentences.forEach((sentence, index) => {
+                if (sentence.feedback && sentence.feedback.length > 0) {
+                    sentence.feedback.forEach(feedback => {
+                        totalIssues++;
+                        
+                        // Determine color class based on severity
+                        let severityClass = 'text-warning';  // Default yellow
+                        let severityIcon = 'fas fa-exclamation-triangle';
+                        let severityBadge = '';
+                        
+                        if (feedback.severity === 'error' || feedback.color === 'red') {
+                            severityClass = 'text-danger';
+                            severityIcon = 'fas fa-times-circle';
+                            severityBadge = '<span class="badge bg-danger ms-2">ERROR</span>';
+                        } else if (feedback.severity === 'warn' || feedback.color === 'yellow') {
+                            severityClass = 'text-warning';
+                            severityIcon = 'fas fa-exclamation-triangle';
+                            severityBadge = '<span class="badge bg-warning text-dark ms-2">WARNING</span>';
+                        } else if (feedback.severity === 'info' || feedback.color === 'grey') {
+                            severityClass = 'text-info';
+                            severityIcon = 'fas fa-info-circle';
+                            severityBadge = '<span class="badge bg-info text-dark ms-2">INFO</span>';
+                        }
+                        
+                        issueHTML += `
+                            <div class="feedback-item p-3 mb-2 border rounded" data-sentence-index="${index}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <strong>Sentence ${index + 1}:</strong> "${sentence.sentence.substring(0, 100)}${sentence.sentence.length > 100 ? '...' : ''}"
+                                        <br><small class="${severityClass}"><i class="${severityIcon}"></i> ${feedback.message || feedback.text || feedback}${severityBadge}</small>
+                                        ${feedback.rule_id ? '<br><small class="text-muted">Rule: ' + feedback.rule_id + '</small>' : ''}
+                                        ${feedback.suggestion ? '<br><small class="text-muted"><i class="fas fa-lightbulb"></i> Suggestion: ' + feedback.suggestion + '</small>' : ''}
+                                    </div>
+                                    <button class="btn btn-outline-primary btn-sm ai-suggestion-btn" 
+                                            data-sentence-index="${index}" 
+                                            data-sentence="${encodeURIComponent(sentence.sentence)}"
+                                            title="Get AI suggestion">
+                                        <i class="fas fa-robot"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+            
+            if (totalIssues === 0) {
+                issueHTML += `
+                    <div class="text-center text-success py-4">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <p>Great! No issues found in your document.</p>
+                        <small>Your writing appears to be clear and well-structured.</small>
+                    </div>
+                `;
+            }
+            
+            feedbackContent.innerHTML = issueHTML;
+            console.log(`✅ Displayed ${totalIssues} issues immediately`);
+        }
 
         // Enhanced AI functionality
         let currentSuggestionId = null;
@@ -1992,26 +2347,27 @@
         
         // Add event delegation for AI feedback icons
         document.addEventListener('click', function(e) {
+            console.log('🔍 Click detected on:', e.target);
+            console.log('🔍 Closest ai-feedback-icon:', e.target.closest('.ai-feedback-icon'));
+            
             if (e.target.closest('.ai-feedback-icon')) {
+                e.preventDefault();  // Prevent any default behavior
+                e.stopPropagation();  // Stop event from bubbling
+                
                 const button = e.target.closest('.ai-feedback-icon');
                 const sentenceIndex = parseInt(button.getAttribute('data-sentence-index'));
-                const feedback = button.getAttribute('data-feedback');
-                const sentence = button.getAttribute('data-sentence');
-                const fullSuggestion = button.getAttribute('data-full-suggestion');
+                const feedback = decodeURIComponent(button.getAttribute('data-feedback'));
+                const sentence = decodeURIComponent(button.getAttribute('data-sentence'));
+                const fullSuggestion = button.getAttribute('data-full-suggestion') ? 
+                    decodeURIComponent(button.getAttribute('data-full-suggestion')) : '';
                 
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
-                console.log('Raw attributes:', {
+                console.log('Decoded attributes:', {
                     sentenceIndex: sentenceIndex,
                     feedback: feedback,
                     sentence: sentence,
                     fullSuggestion: fullSuggestion
-                });
-                console.log('Data attributes from DOM:', {
-                    'data-sentence-index': button.getAttribute('data-sentence-index'),
-                    'data-feedback': button.getAttribute('data-feedback'),
-                    'data-sentence': button.getAttribute('data-sentence'),
-                    'data-full-suggestion': button.getAttribute('data-full-suggestion')
                 });
                 
                 showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion);
@@ -2094,8 +2450,8 @@
                     <div class="sources-container">
                         ${aiSuggestion.sources.map(source => `
                             <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2">
-                                <small class="text-muted">${source.type === 'guideline' ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
-                                <div class="source-content">${source.content}</div>
+                                <small class="text-muted">${(source && source.type === 'guideline') ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
+                                <div class="source-content">${source && source.content ? source.content : 'Knowledge source content'}</div>
                             </div>
                         `).join('')}
                     </div>
@@ -2718,6 +3074,16 @@
             console.log('Processing sentences for highlighting:', sentences.length);
             console.log('Original HTML content:', htmlContent);
             
+            // Debug: Check if any sentences contain problematic content
+            sentences.forEach((sentenceData, idx) => {
+                if (sentenceData.sentence && sentenceData.sentence.includes('sentence-highlight')) {
+                    console.error(`🔥 SENTENCE ${idx} CONTAINS HIGHLIGHTING MARKUP:`, sentenceData.sentence);
+                }
+                if (sentenceData.sentence && sentenceData.sentence.includes('="')) {
+                    console.warn(`⚠️ SENTENCE ${idx} CONTAINS ATTRIBUTE SYNTAX:`, sentenceData.sentence);
+                }
+            });
+            
             // First, try to get plain text equivalent of HTML for better matching
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlContent;
@@ -2725,7 +3091,29 @@
             console.log('Plain text content:', plainTextContent);
             
             sentences.forEach((sentenceData, index) => {
-                const sentence = sentenceData.sentence.trim();
+                // Clean the sentence text - remove any HTML tags that might have leaked in
+                let sentence = sentenceData.sentence.trim();
+                
+                // AGGRESSIVE CLEANING: Check for malformed HTML attributes
+                if (sentence.includes('="') && (sentence.includes('sentence-highlight') || sentence.includes('data-sentence-index'))) {
+                    console.error(`🚨 MALFORMED HTML ATTRIBUTES in sentence ${index}:`, sentence);
+                    // Remove malformed HTML attribute patterns
+                    sentence = sentence.replace(/=["'][^"']*["'][^>]*>/g, '');
+                    sentence = sentence.replace(/\s*(?:id|class|data-[\w-]+)\s*=\s*["'][^"']*["']/g, '');
+                    sentence = sentence.replace(/<\/?[^>]*>/g, '');
+                    sentence = sentence.trim();
+                    console.warn(`🧹 Cleaned malformed attributes:`, sentence);
+                }
+                
+                // Extra safety: If sentence contains HTML tags, extract only the text content
+                if (sentence.includes('<') && sentence.includes('>')) {
+                    console.warn(`⚠️ Sentence ${index} contains HTML tags, cleaning:`, sentence);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = sentence;
+                    sentence = (tempDiv.textContent || tempDiv.innerText || '').trim();
+                    console.log(`Cleaned sentence ${index}:`, sentence);
+                }
+                
                 if (sentence) {
                     console.log(`Processing sentence ${index}:`, sentence);
                     
@@ -2735,10 +3123,15 @@
                     
                     // Approach 1: Direct HTML match (works for simple cases)
                     if (processedContent.includes(sentence)) {
-                        const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                        processedContent = processedContent.replace(sentence, replacement);
-                        found = true;
-                        console.log(`✓ Direct HTML match for sentence ${index}`);
+                        // Safety check: ensure sentence doesn't contain problematic patterns
+                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
+                            console.error(`🚨 Skipping direct replacement for sentence ${index} - contains problematic patterns:`, sentence);
+                        } else {
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                            processedContent = processedContent.replace(sentence, replacement);
+                            found = true;
+                            console.log(`✓ Direct HTML match for sentence ${index}`);
+                        }
                     }
                     
                     // Approach 2: Try to find sentence in plain text and map back to HTML
@@ -2820,14 +3213,34 @@
                     if (!found) {
                         console.warn(`✗ Could not find sentence ${index} in content:`, sentence);
                         
-                        // As absolute last resort, just add a marker
-                        const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${sentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
-                        
-                        // Try to insert the marker near related content
-                        const firstWords = sentence.split(' ').slice(0, 3).join(' ');
-                        if (processedContent.includes(firstWords)) {
-                            processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
-                            console.log(`Added fallback marker for sentence ${index}`);
+                        // SAFETY: Don't create markers for sentences that already contain problematic HTML
+                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
+                            console.error(`🚨 BLOCKING marker creation for sentence ${index} - contains malformed HTML:`, sentence);
+                            // Add a safe text-only marker instead
+                            const safeText = sentence.replace(/<[^>]*>/g, '').replace(/['"=]/g, '').trim();
+                            if (safeText) {
+                                const safeMarker = `<div class="sentence-not-found-safe" data-index="${index}">⚠️ Sentence ${index + 1}: ${safeText.substring(0, 50)}...</div>`;
+                                processedContent += safeMarker;
+                                console.log(`✅ Added safe marker for sentence ${index}`);
+                            }
+                        } else {
+                            // Clean the sentence text for title attribute - remove HTML tags and attributes
+                            const cleanSentence = sentence.replace(/<[^>]*>/g, '').replace(/['"]/g, '').trim();
+                            const truncatedSentence = cleanSentence.length > 100 ? cleanSentence.substring(0, 100) + '...' : cleanSentence;
+                            
+                            // As absolute last resort, just add a marker
+                            const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${truncatedSentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
+                            
+                            // Try to insert the marker near related content
+                            const firstWords = cleanSentence.split(' ').slice(0, 3).join(' ');
+                            if (firstWords && processedContent.includes(firstWords)) {
+                                processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
+                                console.log(`Added fallback marker for sentence ${index}`);
+                            } else {
+                                // If we can't find the first words, just append the marker at the end
+                                processedContent += '<br>' + marker;
+                                console.log(`Added fallback marker at end for sentence ${index}`);
+                            }
                         }
                     }
                 }
@@ -2845,8 +3258,10 @@
             const lines = suggestionText.split(/\n|<br\s*\/?>(?=\w+:)/g);
             let html = '';
             lines.forEach(line => {
-                const match = line.match(/^([A-Z][A-Z_ \-]+):\s*(.*)$/i);
-                if (match) {
+                // More restrictive regex - only match actual structured output like "IMPROVED:", "SUGGESTION:", etc.
+                // Must be ALL CAPS or CAPS_WITH_UNDERSCORES followed by colon and content
+                const match = line.match(/^([A-Z][A-Z_]+):\s+(.+)$/);
+                if (match && match[1].length <= 20) { // Reasonable key length limit
                     const key = match[1].replace(/_/g, ' ').replace(/\b([a-z])/g, c => c.toUpperCase());
                     const value = match[2];
                     html += `<div style="margin-bottom:4px;"><strong>${key}:</strong> <span style="color:#333;background:rgba(255,255,255,0.7);padding:2px 4px;border-radius:3px;">${value}</span></div>`;
@@ -2880,33 +3295,78 @@
                 
                 // Add click functionality to scroll to sentence
                 feedbackDiv.addEventListener('click', (e) => {
-                    // Don't trigger if clicking on AI icon
+                    // Don't trigger if clicking on AI icon or its children
                     if (!e.target.closest('.ai-feedback-icon')) {
                         scrollToSentence(sentenceIndex);
                     }
                 });
                 
                 console.log('Processing feedback item:', item);
+                console.log('Creating AI button for sentence:', sentenceIndex);
                 
-                feedbackDiv.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <div class="mb-2">
-                                <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
-                                <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
-                            </div>
-                            <strong>Issue:</strong> ${item.message}
-                        </div>
-                        <button class="ai-feedback-icon" 
-                                data-sentence-index="${sentenceIndex}" 
-                                data-feedback="${encodeURIComponent(item.message)}" 
-                                data-sentence="${encodeURIComponent(sentence)}"
-                                data-full-suggestion="${encodeURIComponent(item.full_suggestion || '')}" 
-                                title="Get AI suggestions">
-                            <i class="fas fa-robot"></i>
-                        </button>
+                // Create wrapper div
+                const wrapperDiv = document.createElement('div');
+                wrapperDiv.className = 'd-flex justify-content-between align-items-start';
+                wrapperDiv.style.gap = '12px';
+                
+                // Create content div (left side)
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'flex-grow-1';
+                
+                // Determine severity styling
+                let severityClass = 'text-warning';
+                let severityIcon = 'fas fa-exclamation-triangle';
+                let severityBadge = '';
+                
+                if (item.severity === 'error' || item.color === 'red') {
+                    severityClass = 'text-danger';
+                    severityIcon = 'fas fa-times-circle';
+                    severityBadge = '<span class="badge bg-danger ms-2">ERROR</span>';
+                } else if (item.severity === 'warn' || item.color === 'yellow') {
+                    severityClass = 'text-warning';
+                    severityIcon = 'fas fa-exclamation-triangle';
+                    severityBadge = '<span class="badge bg-warning text-dark ms-2">WARNING</span>';
+                } else if (item.severity === 'info' || item.color === 'grey') {
+                    severityClass = 'text-info';
+                    severityIcon = 'fas fa-info-circle';
+                    severityBadge = '<span class="badge bg-info text-dark ms-2">INFO</span>';
+                }
+                
+                contentDiv.innerHTML = `
+                    <div class="mb-2">
+                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
                     </div>
+                    <strong class="${severityClass}"><i class="${severityIcon}"></i> Issue:</strong> ${item.message}${severityBadge}
+                    ${item.rule_id ? '<br><small class="text-muted">Rule: ' + item.rule_id + '</small>' : ''}
+                    ${item.suggestion ? '<br><small class="text-muted"><i class="fas fa-lightbulb"></i> ' + item.suggestion + '</small>' : ''}
                 `;
+                
+                // Create AI button (right side) - as a proper DOM element
+                const aiButton = document.createElement('button');
+                aiButton.className = 'ai-feedback-icon';
+                aiButton.setAttribute('data-sentence-index', sentenceIndex);
+                aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
+                aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
+                aiButton.setAttribute('data-full-suggestion', encodeURIComponent(item.full_suggestion || ''));
+                aiButton.setAttribute('title', 'Get AI-powered suggestions for this issue');
+                aiButton.setAttribute('aria-label', 'Get AI suggestions');
+                aiButton.innerHTML = '<i class="fas fa-robot"></i>';
+                
+                // Add direct click handler to ensure it works
+                aiButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🤖 AI button clicked directly!', { sentenceIndex, feedback: item.message });
+                    showAIFeedback(sentenceIndex, item.message, sentence, item.full_suggestion || '');
+                });
+                
+                // Assemble the structure
+                wrapperDiv.appendChild(contentDiv);
+                wrapperDiv.appendChild(aiButton);
+                feedbackDiv.appendChild(wrapperDiv);
+                
+                console.log('✅ AI button created with click handler for sentence:', sentenceIndex);
                 
                 // Insert in the correct order
                 const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));
@@ -3064,14 +3524,29 @@
 
         // Enhanced content rendering with sentence highlighting
         function renderContent(content, sentences) {
+            console.log('🚀 Starting renderContent - immediate execution');
+            const startTime = performance.now();
+            
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
             
-            // Update dashboard metrics
+            // 🚀 IMMEDIATE: Show loading indicator in document content while processing
+            documentContent.innerHTML = `
+                <h4>Document Content</h4>
+                <div class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    <span class="text-muted">Rendering content...</span>
+                </div>
+            `;
+            
+            // Force immediate DOM update
+            documentContent.offsetHeight; // Force reflow
+            
+            // Update dashboard metrics FIRST for immediate visual feedback
             updateDocumentMetrics(content, sentences);
             
-            // Clear previous content
+            // Clear previous content - ensure no cached malformed data (immediate, no setTimeout)
             documentContent.innerHTML = '<h4>Document Content</h4>';
             feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
             
@@ -3084,8 +3559,9 @@
                 </div>
             `;
             
-            // Clear AI feedback data
+            // Clear AI feedback data and any cached sentence data
             aiFeedbackData = {};
+            window.currentSentences = [];
             
             console.log('Processing sentences:', sentences.length);
             console.log('Sentences data:', sentences);
@@ -3094,22 +3570,30 @@
             const originalContentDiv = document.createElement('div');
             originalContentDiv.className = 'original-content mt-3';
             
-            // Process the HTML content to add sentence highlighting
+            // Process the HTML content to add sentence highlighting - OPTIMIZED
             const enhancedContent = addSentenceHighlighting(content, sentences);
             originalContentDiv.innerHTML = enhancedContent;
             
             // Store sentences for reference
             window.currentSentences = sentences;
             
-            // Add the enhanced content to document
+            // Add the enhanced content to document - IMMEDIATE
             documentContent.appendChild(originalContentDiv);
             
-            // Add click handlers to the newly created sentence spans
-            setTimeout(() => {
-                addContentSentenceHandlers();
-            }, 100);
+            // Add click handlers to the newly created sentence spans - IMMEDIATE
+            addContentSentenceHandlers();
             
-            // Process sentences with AI enhancement - in document order
+            const endTime = performance.now();
+            console.log(`✅ renderContent completed in ${(endTime - startTime).toFixed(2)}ms`);
+            
+            // 🚀 CRITICAL: Hide progress loader immediately after content is visible
+            // Don't wait for feedback to load - content is already on screen!
+            if (typeof hideProgressLoader === 'function') {
+                hideProgressLoader();
+                console.log('⚡ Progress loader hidden - content is now visible');
+            }
+            
+            // Process sentences with AI enhancement - in document order (ASYNC, non-blocking)
             let feedbackCount = 0;
             const feedbackPromises = [];
             
@@ -3127,19 +3611,31 @@
                 }
             });
             
-            // Wait for all feedback to be rendered in order
+            // Process feedback in background (non-blocking)
             if (feedbackPromises.length > 0) {
-                // Process feedback in sequential order
+                // Show loading indicator in feedback section
+                const feedbackContent = document.getElementById('feedbackContent');
+                const loadingDiv = document.createElement('div');
+                loadingDiv.className = 'text-center py-2 feedback-loading';
+                loadingDiv.innerHTML = `
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    <span class="text-muted">Loading ${feedbackPromises.length} issues...</span>
+                `;
+                feedbackContent.appendChild(loadingDiv);
+                
+                // Process feedback in sequential order (async, in background)
                 feedbackPromises.sort((a, b) => a.index - b.index);
                 
-                // Execute promises sequentially to maintain order
+                // Execute promises sequentially but don't block rendering
                 feedbackPromises.reduce((prevPromise, current) => {
                     return prevPromise.then(() => current.promise);
-                }, Promise.resolve());
-            }
-            
-            // If no feedback found, show a message
-            if (feedbackCount === 0) {
+                }, Promise.resolve()).then(() => {
+                    // Remove loading indicator when done
+                    const loader = feedbackContent.querySelector('.feedback-loading');
+                    if (loader) loader.remove();
+                    console.log('✅ All feedback items rendered');
+                });
+            } else {
                 const noIssuesDiv = document.createElement('div');
                 noIssuesDiv.className = 'alert alert-success mt-3';
                 noIssuesDiv.innerHTML = `
@@ -3187,7 +3683,7 @@
             let cleanText = tempDiv.textContent || tempDiv.innerText || '';
 
            
-            const fileExtensions = ['csv', 'pdf', 'docx', 'txt', 'md', 'adoc', 'png', 'jpg', 'jpeg', 'gif'];
+            const fileExtensions = ['csv', 'pdf', 'docx', 'txt', 'md', 'adoc', 'zip', 'png', 'jpg', 'jpeg', 'gif'];
             const regex = new RegExp(`[^.!?]*(?<!\\b(?:${fileExtensions.join('|')})\\b)[.!?]`, 'g');
             const match = cleanText.match(regex);
             if (match) {
@@ -3210,33 +3706,110 @@
             }
         });
 
-        // Export functionality
+        // Export functionality - Enhanced with more details
         document.getElementById('exportBtn').addEventListener('click', () => {
-    // Gather feedback data
-    let csvContent = "Sentence,Feedback\n";
-    document.querySelectorAll('.sentence').forEach((sentenceSpan) => {
-        const idx = sentenceSpan.dataset.index;
-        // Find all feedback for this sentence
-        const feedbacks = [];
-        document.querySelectorAll(`.feedback-item[data-index="${idx}"]`).forEach(fb => {
-            feedbacks.push(fb.innerText.replace(/"/g, '""'));
-        });
-        if (feedbacks.length) {
-            csvContent += `"${sentenceSpan.innerText.replace(/"/g, '""')}","${feedbacks.join('; ')}"\n`;
-        }
-    });
+            console.log('📥 Export button clicked');
+            console.log('Current sentences data:', window.currentSentences);
+            
+            // Gather feedback data with enhanced details
+            let csvContent = "Sentence Number,Sentence Text,Issue Type,Issue Description,AI Suggestion,Word Count\n";
+            let rowCount = 0;
+            
+            // Get all sentences with feedback
+            if (window.currentSentences && window.currentSentences.length > 0) {
+                console.log(`Found ${window.currentSentences.length} sentences in window.currentSentences`);
+                
+                // Use the stored sentences data for accurate information
+                window.currentSentences.forEach((sentenceData, index) => {
+                    console.log(`Sentence ${index}:`, sentenceData);
+                    
+                    if (sentenceData.feedback && sentenceData.feedback.length > 0) {
+                        const sentenceText = sentenceData.sentence || '';
+                        const wordCount = sentenceText.split(/\s+/).filter(w => w.length > 0).length;
+                        
+                        sentenceData.feedback.forEach(feedbackItem => {
+                            const issueType = feedbackItem.rule || feedbackItem.type || 'General';
+                            const issueDescription = feedbackItem.message || feedbackItem.text || '';
+                            const aiSuggestion = feedbackItem.full_suggestion || feedbackItem.suggestion || 'Click AI icon for suggestion';
+                            
+                            // Escape quotes for CSV format
+                            const escapedSentence = sentenceText.replace(/"/g, '""');
+                            const escapedIssueType = issueType.replace(/"/g, '""');
+                            const escapedDescription = issueDescription.replace(/"/g, '""');
+                            const escapedSuggestion = aiSuggestion.replace(/"/g, '""');
+                            
+                            csvContent += `${index + 1},"${escapedSentence}","${escapedIssueType}","${escapedDescription}","${escapedSuggestion}",${wordCount}\n`;
+                            rowCount++;
+                        });
+                    }
+                });
+                
+                console.log(`✅ Exported ${rowCount} feedback items from window.currentSentences`);
+            } else {
+                console.log('⚠️ No window.currentSentences found, trying DOM extraction');
+                
+                // Fallback to DOM-based extraction if no sentence data available
+                const feedbackItems = document.querySelectorAll('.feedback-item');
+                console.log(`Found ${feedbackItems.length} feedback items in DOM`);
+                
+                feedbackItems.forEach((feedbackItem) => {
+                    const sentenceIndex = feedbackItem.getAttribute('data-sentence-index');
+                    console.log(`Processing feedback item for sentence ${sentenceIndex}:`, feedbackItem);
+                    
+                    // Find the corresponding sentence
+                    const sentenceSpan = document.querySelector(`.sentence[data-index="${sentenceIndex}"]`);
+                    const sentenceText = sentenceSpan ? sentenceSpan.innerText : 'Sentence not found';
+                    const wordCount = sentenceText.split(/\s+/).filter(w => w.length > 0).length;
+                    
+                    // Extract feedback text (remove icons and extra elements)
+                    const feedbackTextElements = feedbackItem.querySelectorAll('strong');
+                    let issueDescription = '';
+                    feedbackTextElements.forEach(el => {
+                        if (el.textContent.includes('Issue:')) {
+                            issueDescription = el.parentElement.textContent.replace('📋 Issue:', '').trim();
+                        }
+                    });
+                    
+                    if (!issueDescription) {
+                        issueDescription = feedbackItem.innerText.split('\n')[1] || feedbackItem.innerText;
+                    }
+                    
+                    // Escape quotes for CSV format
+                    const escapedSentence = sentenceText.replace(/"/g, '""');
+                    const escapedDescription = issueDescription.replace(/"/g, '""');
+                    
+                    csvContent += `${parseInt(sentenceIndex) + 1},"${escapedSentence}","General","${escapedDescription}","Click AI icon for suggestion",${wordCount}\n`;
+                    rowCount++;
+                });
+                
+                console.log(`✅ Exported ${rowCount} feedback items from DOM`);
+            }
+            
+            if (rowCount === 0) {
+                alert('No feedback data to export. Please analyze a document first.');
+                console.log('❌ No data exported - no feedback found');
+                return;
+            }
+            
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const filename = `document_feedback_${timestamp}.csv`;
 
-    // Download as CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'feedback_export.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-});
+            // Download as CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Show success message
+            console.log(`✅ Exported ${rowCount} items to ${filename}`);
+            alert(`Successfully exported ${rowCount} feedback items to ${filename}`);
+        });
 
         // History functionality
         document.getElementById('historyBtn').addEventListener('click', () => {
@@ -3251,6 +3824,8 @@
         // Initialize modal event handlers when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             initializeModalHandlers();
+            checkHybridIntelligenceStatus(); // Check hybrid intelligence on load
+            initializeSemanticSearch(); // Initialize semantic search handlers
         });
 
         // If DOM is already loaded, initialize immediately
@@ -3258,7 +3833,195 @@
             document.addEventListener('DOMContentLoaded', initializeModalHandlers);
         } else {
             initializeModalHandlers();
+            checkHybridIntelligenceStatus(); // Check hybrid intelligence immediately
+            initializeSemanticSearch(); // Initialize semantic search immediately
         }
+
+        // Semantic Search Initialization
+        function initializeSemanticSearch() {
+            const searchBtn = document.getElementById('semanticSearchBtn');
+            const searchInput = document.getElementById('semanticSearchInput');
+            
+            if (!searchBtn || !searchInput) return;
+            
+            // Handle button click
+            searchBtn.addEventListener('click', performSemanticSearch);
+            
+            // Handle Enter key in input field
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSemanticSearch();
+                }
+            });
+        }
+
+        // Perform semantic search
+        async function performSemanticSearch() {
+            const query = document.getElementById('semanticSearchInput').value.trim();
+            const statusText = document.getElementById('searchStatusText');
+            const statusIndicator = document.getElementById('searchStatusIndicator');
+            const resultsList = document.getElementById('searchResultsList');
+            
+            if (!query) {
+                statusText.textContent = 'Please enter a search query';
+                statusIndicator.style.backgroundColor = '#ffc107'; // Yellow
+                return;
+            }
+            
+            // Set searching state
+            statusText.textContent = 'Searching...';
+            statusIndicator.style.backgroundColor = '#6c757d'; // Gray
+            resultsList.innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Searching vector database...</div>';
+            
+            try {
+                const response = await fetch('/api/enhanced/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: 5
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                displaySearchResults(data);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                statusText.textContent = 'Error: ' + error.message;
+                statusIndicator.style.backgroundColor = '#dc3545'; // Red
+                resultsList.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Search Failed:</strong> ${error.message}
+                        <br><small>Make sure the FastAPI backend is running on port 8000</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Display search results
+        function displaySearchResults(data) {
+            const statusText = document.getElementById('searchStatusText');
+            const statusIndicator = document.getElementById('searchStatusIndicator');
+            const resultsList = document.getElementById('searchResultsList');
+            
+            if (!data.results || data.results.length === 0) {
+                statusText.textContent = 'No results found';
+                statusIndicator.style.backgroundColor = '#ffc107'; // Yellow
+                resultsList.innerHTML = `
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        No matching documents found. Try a different query or upload more documents.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Success state
+            statusText.textContent = `Found ${data.total_results} result(s) in ${(data.search_time * 1000).toFixed(0)}ms`;
+            statusIndicator.style.backgroundColor = '#28a745'; // Green
+            
+            // Build results HTML
+            let resultsHtml = '';
+            
+            data.results.forEach((result, index) => {
+                const similarity = (result.similarity * 100).toFixed(1);
+                const relevanceClass = similarity > 70 ? 'success' : similarity > 50 ? 'warning' : 'secondary';
+                
+                resultsHtml += `
+                    <div class="search-result-item mb-3 p-3 border rounded" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="fw-bold text-primary" style="flex: 1;">
+                                <i class="fas fa-file-alt"></i> 
+                                Result ${index + 1}
+                                ${result.metadata?.filename ? `<small class="text-muted"> - ${result.metadata.filename}</small>` : ''}
+                            </div>
+                            <span class="badge bg-${relevanceClass}">
+                                ${similarity}% match
+                            </span>
+                        </div>
+                        <div class="search-result-text" style="background: white; padding: 12px; border-radius: 6px; border-left: 3px solid #3498db;">
+                            <p class="mb-0" style="color: #2c3e50; line-height: 1.6;">
+                                ${escapeHtml(result.text)}
+                            </p>
+                        </div>
+                        ${result.metadata ? `
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i>
+                                    ${result.metadata.chunk_index !== undefined ? `Chunk ${result.metadata.chunk_index + 1}` : ''}
+                                    ${result.metadata.total_chunks ? ` of ${result.metadata.total_chunks}` : ''}
+                                </small>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            resultsList.innerHTML = resultsHtml;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Hybrid Intelligence Status Checker
+        function checkHybridIntelligenceStatus() {
+            const statusText = document.getElementById('hybridStatusText');
+            const statusIndicator = document.getElementById('hybridStatusIndicator');
+            
+            if (!statusText || !statusIndicator) return;
+            
+            // Set checking state
+            statusText.textContent = 'Checking...';
+            statusIndicator.style.backgroundColor = '#6c757d'; // Gray
+            
+            fetch('/hybrid_intelligence/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hybrid_ready) {
+                        statusText.textContent = 'Ready';
+                        statusIndicator.style.backgroundColor = '#28a745'; // Green
+                        statusIndicator.title = 'Hybrid Intelligence Ready (phi3:mini + llama3:8b)';
+                    } else if (data.ollama_running && (data.phi3_available || data.llama3_available)) {
+                        statusText.textContent = 'Partial';
+                        statusIndicator.style.backgroundColor = '#ffc107'; // Yellow
+                        statusIndicator.title = 'Partial Setup (some models available)';
+                    } else if (data.ollama_running) {
+                        statusText.textContent = 'No Models';
+                        statusIndicator.style.backgroundColor = '#fd7e14'; // Orange
+                        statusIndicator.title = 'Ollama running but no models available';
+                    } else {
+                        statusText.textContent = 'Offline';
+                        statusIndicator.style.backgroundColor = '#dc3545'; // Red
+                        statusIndicator.title = 'Ollama service not running';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking hybrid intelligence status:', error);
+                    statusText.textContent = 'Error';
+                    statusIndicator.style.backgroundColor = '#dc3545'; // Red
+                    statusIndicator.title = 'Error checking status';
+                });
+        }
+
+        // Check status every 30 seconds
+        setInterval(checkHybridIntelligenceStatus, 30000);
 
         function initializeModalHandlers() {
             // Modal close handlers using event delegation

@@ -1,0 +1,21 @@
+﻿This is a sample technical document for testing the FastAPI vector search system.
+
+Introduction
+The document scanner application provides semantic search capabilities for technical documentation.
+It uses advanced embedding models to understand the meaning and context of text.
+
+Key Features
+- Multi-format document support (PDF, DOCX, TXT, MD, HTML)
+- Semantic search with vector embeddings
+- Rule-based text analysis
+- RESTful API with FastAPI
+- Interactive API documentation
+
+Technical Architecture
+The system uses a 384-dimensional embedding model to convert text into numerical vectors.
+These vectors are stored in ChromaDB for efficient similarity search.
+Users can query the system using natural language and get relevant results ranked by semantic similarity.
+
+Best Practices
+When uploading documents, ensure they are well-formatted and contain clear technical content.
+The system works best with structured documentation that has headings and logical organization.

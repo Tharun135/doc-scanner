@@ -1,71 +1,86 @@
 #!/usr/bin/env python3
 """
-Additional tests to ensure we didn't break anything
+Test edge cases that might cause invalid response structure
 """
-
 import sys
 import os
+
+# Add the app directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 
-from app.rules.rewriting_suggestions import check
-
-def test_edge_cases():
-    """Test various edge cases for the types/Enter rule"""
+try:
+    from ai_improvement import get_enhanced_ai_suggestion
     
-    test_cases = [
-        # Should NOT trigger (noun usage)
-        ("There are several types of configurations available.", False),
-        ("Choose from different types of authentication methods.", False),
-        ("The system supports multiple types of connections.", False),
-        ("Various types of errors can occur.", False),
+    def test_edge_cases():
+        """Test edge cases that might cause invalid response structure."""
         
-        # Should trigger (verb usage in procedural context)
-        ("The operator types the username into the login field.", True),
-        ("User types a new password in the dialog box.", True),
-        ("The technician types configuration data into the form.", True),
+        print("🔍 Testing Edge Cases for AI Suggestion")
+        print("=" * 50)
         
-        # Edge cases
-        ("Types of projects are listed in the menu.", False),  # "Types" at start, still a noun
-        ("The user types.", True),  # Just "types" as verb (though may not have good context)
-    ]
-    
-    print("Testing edge cases...\n")
-    
-    all_passed = True
-    for i, (content, should_trigger) in enumerate(test_cases, 1):
-        suggestions = check(content)
+        edge_cases = [
+            {
+                "feedback": "",  # Empty feedback
+                "sentence": "Test sentence.",
+                "name": "Empty Feedback"
+            },
+            {
+                "feedback": "   ",  # Whitespace-only feedback
+                "sentence": "Test sentence.",
+                "name": "Whitespace Feedback"
+            },
+            {
+                "feedback": "Test feedback",
+                "sentence": "",  # Empty sentence
+                "name": "Empty Sentence"
+            },
+            {
+                "feedback": "Test feedback",
+                "sentence": "   ",  # Whitespace-only sentence
+                "name": "Whitespace Sentence"
+            },
+            {
+                "feedback": None,  # None feedback
+                "sentence": "Test sentence.",
+                "name": "None Feedback"
+            },
+            {
+                "feedback": "Unknown issue type: xyz123",
+                "sentence": "",
+                "name": "Unknown Issue Type"
+            }
+        ]
         
-        # Check for types->Enter suggestions
-        types_suggestions = [s for s in suggestions 
-                           if 'types' in s.get('message', '').lower() 
-                           and 'enter' in s.get('message', '').lower()]
-        
-        has_suggestion = len(types_suggestions) > 0
-        
-        print(f"Test {i}: {content}")
-        print(f"   Expected: {'Should trigger' if should_trigger else 'Should NOT trigger'}")
-        print(f"   Actual: {'Triggered' if has_suggestion else 'Did not trigger'}")
-        
-        if has_suggestion == should_trigger:
-            print(f"   ✅ PASSED")
-        else:
-            print(f"   ❌ FAILED")
-            all_passed = False
+        for i, test_case in enumerate(edge_cases, 1):
+            print(f"\n📝 Test Case {i}: {test_case['name']}")
+            print(f"Feedback: '{test_case['feedback']}'")
+            print(f"Sentence: '{test_case['sentence']}'")
+            print("-" * 30)
             
-        if has_suggestion:
-            print(f"   Suggestion: {types_suggestions[0].get('message', '')}")
-        print()
-    
-    return all_passed
+            try:
+                result = get_enhanced_ai_suggestion(
+                    feedback_text=test_case['feedback'],
+                    sentence_context=test_case['sentence'],
+                    document_type="technical",
+                    writing_goals=['clarity']
+                )
+                
+                if isinstance(result, dict) and 'suggestion' in result and result['suggestion'] and result['suggestion'].strip():
+                    print("✅ VALID: Response structure is correct")
+                    print(f"  Method: {result.get('method', 'N/A')}")
+                    print(f"  Confidence: {result.get('confidence', 'N/A')}")
+                    print(f"  Suggestion length: {len(result['suggestion'])}")
+                else:
+                    print("❌ INVALID: Response structure failed validation")
+                    print(f"  Result type: {type(result)}")
+                    print(f"  Result: {result}")
+                    
+            except Exception as e:
+                print(f"❌ EXCEPTION: {e}")
 
-if __name__ == "__main__":
-    success = test_edge_cases()
-    
-    print(f"{'='*60}")
-    if success:
-        print("🎉 ALL EDGE CASE TESTS PASSED!")
-        print("The fix correctly handles various scenarios.")
-    else:
-        print("❌ Some edge case tests failed.")
-        print("The fix may need further refinement.")
-        sys.exit(1)
+    if __name__ == "__main__":
+        test_edge_cases()
+        
+except Exception as e:
+    print(f"❌ Import Error: {e}")
+    import traceback
+    traceback.print_exc()

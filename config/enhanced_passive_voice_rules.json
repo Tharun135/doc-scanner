@@ -1,0 +1,136 @@
+{
+  "enhanced_passive_voice_rules": [
+    {
+      "text": "Convert passive voice 'is displayed' to active alternatives: 'shows', 'appears', 'presents', 'renders on screen'",
+      "category": "passive_voice_display",
+      "examples": [
+        "Change 'data is displayed' to 'the system shows data'",
+        "Change 'information is displayed' to 'the interface presents information'",
+        "Change 'results are displayed' to 'the application renders results'"
+      ]
+    },
+    {
+      "text": "Convert passive voice 'are generated' to active alternatives: 'creates', 'produces', 'builds', 'constructs'", 
+      "category": "passive_voice_generation",
+      "examples": [
+        "Change 'logs are generated' to 'the system creates logs'",
+        "Change 'reports are generated' to 'the application produces reports'",
+        "Change 'files are generated' to 'the process builds files'"
+      ]
+    },
+    {
+      "text": "Convert passive voice 'are configured' to active alternatives: 'you set up', 'you arrange', 'you customize', 'you adjust'",
+      "category": "passive_voice_configuration",
+      "examples": [
+        "Change 'settings are configured' to 'you configure settings'",
+        "Change 'options are configured' to 'you set up options'",
+        "Change 'parameters are configured' to 'you customize parameters'"
+      ]
+    },
+    {
+      "text": "Convert passive voice 'are processed' to active alternatives: 'handles', 'manages', 'executes', 'runs through'",
+      "category": "passive_voice_processing", 
+      "examples": [
+        "Change 'data is processed' to 'the system handles data'",
+        "Change 'files are processed' to 'the application manages files'",
+        "Change 'requests are processed' to 'the service executes requests'"
+      ]
+    },
+    {
+      "text": "Convert passive voice 'are fixed' to active alternatives: 'locks', 'secures', 'stabilizes', 'anchors in place'",
+      "category": "passive_voice_fixed_state",
+      "examples": [
+        "Change 'columns are fixed' to 'the system locks columns'",
+        "Change 'values are fixed' to 'the interface secures values'", 
+        "Change 'settings are fixed' to 'the application anchors settings'"
+      ]
+    },
+    {
+      "text": "Convert passive voice 'cannot be removed' to active alternatives: 'prevents deletion', 'blocks removal', 'ensures permanence'",
+      "category": "passive_voice_removal_restriction",
+      "examples": [
+        "Change 'cannot be removed' to 'the system prevents deletion'",
+        "Change 'cannot be deleted' to 'the interface blocks removal'",
+        "Change 'cannot be changed' to 'the application ensures permanence'"
+      ]
+    },
+    {
+      "text": "Use variety in technical writing subjects: 'system', 'application', 'interface', 'platform', 'software', 'service'",
+      "category": "technical_subjects",
+      "examples": [
+        "The system displays...",
+        "The application manages...", 
+        "The interface presents...",
+        "The platform handles...",
+        "The software processes...",
+        "The service executes..."
+      ]
+    },
+    {
+      "text": "Use variety in user-focused subjects: 'you', 'users', 'operators', 'administrators', 'developers'",
+      "category": "user_subjects", 
+      "examples": [
+        "You configure the settings",
+        "Users can modify the options",
+        "Operators control the parameters",
+        "Administrators manage the system",
+        "Developers customize the interface"
+      ]
+    },
+    {
+      "text": "Alternative action verbs for technical writing: 'enables/allows', 'provides/offers', 'supports/facilitates', 'delivers/supplies'",
+      "category": "technical_action_verbs",
+      "examples": [
+        "The feature enables customization",
+        "The system provides flexibility", 
+        "The interface supports navigation",
+        "The platform delivers performance"
+      ]
+    },
+    {
+      "text": "Progressive and continuous alternatives: 'becomes visible', 'gets created', 'starts showing', 'begins processing'",
+      "category": "progressive_alternatives",
+      "examples": [
+        "Data becomes visible in the panel",
+        "The report gets created automatically",
+        "Information starts showing on screen", 
+        "The system begins processing requests"
+      ]
+    }
+  ],
+  
+  "synonym_categories": {
+    "display_verbs": ["show", "present", "render", "exhibit", "reveal", "expose"],
+    "creation_verbs": ["generate", "create", "produce", "build", "construct", "develop"],
+    "configuration_verbs": ["configure", "set up", "arrange", "customize", "adjust", "establish"],
+    "processing_verbs": ["process", "handle", "manage", "execute", "run", "operate"],
+    "control_verbs": ["enable", "activate", "allow", "permit", "authorize", "facilitate"],
+    "security_verbs": ["fix", "lock", "secure", "stabilize", "anchor", "fasten"]
+  },
+  
+  "sentence_patterns": {
+    "passive_to_active_templates": [
+      "{subject} {verb} {object}",
+      "You can {verb} {object} using {subject}",
+      "{object} {verb_state} when you use {subject}",
+      "The {subject} {verb} {object} automatically"
+    ],
+    "technical_subjects": ["system", "application", "interface", "platform", "software", "service", "tool"],
+    "user_subjects": ["you", "user", "operator", "administrator", "developer"]
+  },
+  
+  "quality_indicators": {
+    "preferred_patterns": [
+      "clear subject-verb-object structure",
+      "active voice with specific actors", 
+      "technical precision with variety",
+      "user-focused language where appropriate"
+    ],
+    "avoid_patterns": [
+      "generic 'it is' constructions",
+      "redundant passive constructions",
+      "unclear subjects or actors",
+      "unnecessarily complex phrasing"
+    ]
+  }
+}

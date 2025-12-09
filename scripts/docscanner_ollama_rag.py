@@ -238,28 +238,63 @@ class DocScannerOllamaRAG:
         try:
             # Create focused query for writing improvement with specific examples
             if "passive voice" in feedback_text.lower():
-                query = f"""Fix the passive voice in this sentence by making it active.
+                # Special handling for requirement sentences
+                if "requirement must be met" in sentence_context.lower():
+                    query = f"""Convert this passive voice sentence to active voice using "you" for direct address.
 
 Original sentence: {sentence_context}
 
-Examples:
-- "The report was written by John" becomes "John wrote the report"
-- "Data is displayed by the system" becomes "The system displays data"
-- "Files are processed automatically" becomes "The system processes files automatically"
+IMPORTANT: Use "you" not "developer" or "user". Convert "The following requirement must be met" to "You must meet this requirement".
 
-Rewrite the sentence in active voice:"""
+Rewrite using "you" for direct communication:"""
+                else:
+                    query = f"""Fix the passive voice in this sentence with MINIMAL changes. Use the shortest, clearest active voice version.
+
+Original sentence: {sentence_context}
+
+MINIMALIST EXAMPLES:
+- "The report was written by John" → "John wrote the report"
+- "Data is displayed by the system" → "The system displays data" 
+- "Files are processed automatically" → "The system processes files automatically"
+- "The requirement must be met by the developer" → "You must meet this requirement"
+- "The task should be completed by users" → "You should complete this task"
+
+RULE: Use the FEWEST words possible. Use "you" for direct address. NO elaborate explanations.
+
+Rewrite with minimal words:"""
             elif "long sentence" in feedback_text.lower():
-                query = f"""Break this long sentence into shorter, clearer sentences.
+                query = f"""Break this long sentence into the SHORTEST possible clear sentences.
 
 Original sentence: {sentence_context}
 
-Split into 2-3 shorter sentences:"""
+RULE: Use MINIMAL words. Keep sentences SHORT and SIMPLE.
+
+Split into 2-3 shortest sentences:"""
+            elif "adverb" in feedback_text.lower():
+                query = f"""Fix the adverb placement with MINIMAL changes.
+
+Issue: {feedback_text}
+Original sentence: {sentence_context}
+
+RULE: Use the FEWEST words possible. Simply move the adverb to the correct position.
+
+MINIMALIST EXAMPLES:
+- "You only get basic access" → "You get only basic access" (if limiting access type)
+- "Only you get access" → "Only you get access" (if limiting who gets access)
+
+Simply fix adverb placement:"""
             else:
-                query = f"""Rewrite this sentence to improve clarity and fix: {feedback_text}
+                query = f"""Rewrite this sentence with MINIMAL changes to fix: {feedback_text}
 
 Original sentence: {sentence_context}
 
-Improved sentence:"""
+RULE: Use the FEWEST words possible. Make the SIMPLEST improvement.
+
+MINIMALIST EXAMPLES:
+- "The available connectors are shown" → "The application displays available connectors"
+- "Settings are configured by the user" → "You configure the settings"
+
+Shortest improved sentence:"""
             
             # Get RAG response
             response = self.query_engine.query(query)
@@ -451,7 +486,11 @@ Improved sentence:"""
         sentence = sentence.strip()
         
         # Specific pattern-based fixes for common passive voice cases
-        if "columns are fixed and cannot be removed" in sentence.lower():
+        if "requirement must be met" in sentence.lower():
+            return sentence.replace("The following requirement must be met", "You must meet this requirement").replace("requirement must be met", "you must meet this requirement")
+        elif "requirements must be met" in sentence.lower():
+            return sentence.replace("The following requirements must be met", "You must meet these requirements").replace("requirements must be met", "you must meet these requirements")
+        elif "columns are fixed and cannot be removed" in sentence.lower():
             return "The system fixes the Time, Description, and Comments columns and prevents their removal."
         elif "data is displayed" in sentence.lower():
             return sentence.replace("data is displayed", "the system displays data").replace("Data is displayed", "The system displays data")

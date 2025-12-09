@@ -1,0 +1,34 @@
+# Enhanced RAG System Requirements
+# This file contains all dependencies for the advanced RAG system
+
+# Core requirements (always needed)
+sentence-transformers>=2.2.0    # For better embeddings and cross-encoder re-ranking
+rank-bm25>=0.2.2               # For BM25 hybrid search
+scikit-learn>=1.0.0            # For additional ML utilities
+nltk>=3.8                      # For text processing
+transformers>=4.20.0           # For advanced NLP
+
+# Optional high-quality embedding providers
+openai>=1.0.0                  # For OpenAI text-embedding-3-large (requires API key)
+cohere>=4.0.0                  # For Cohere embed-english-v3.0 (requires API key)
+
+# Optional caching and performance
+redis>=4.0.0                   # For distributed caching (requires Redis server)
+
+# Optional evaluation and metrics
+datasets>=2.0.0                # For evaluation datasets
+evaluate>=0.4.0                # For evaluation metrics
+rouge-score>=0.1.2             # For ROUGE evaluation
+
+# Development and testing
+pytest>=7.0.0                  # For testing
+black>=22.0.0                  # For code formatting
+flake8>=5.0.0                  # For linting
+
+# Already included in your project (no need to reinstall)
+# chromadb
+# requests
+# spacy
+# beautifulsoup4
+# flask
+# python-dotenv

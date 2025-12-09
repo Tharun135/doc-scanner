@@ -17,8 +17,15 @@ try:
 except ImportError:
     TITLE_UTILS_AVAILABLE = False
 
-# Load spaCy model
-nlp = spacy.load("en_core_web_sm")
+# Load spaCy model lazily to avoid startup issues
+nlp = None
+
+def _get_nlp():
+    global nlp
+    if nlp is None:
+        nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max length to 3MB
+    return nlp
 
 # Example terminology dictionary (customize for your manuals)
 TERMINOLOGY = {
@@ -35,7 +42,13 @@ def check(content):
     # Extract plain text (strip HTML if present)
     soup = BeautifulSoup(content, "html.parser")
     text_content = soup.get_text()
-    doc = nlp(text_content)
+    
+    try:
+        nlp_model = _get_nlp()
+        doc = nlp_model(text_content)
+    except Exception as e:
+        # Fall back to basic processing if spaCy fails
+        doc = None
 
     # ------------------------------
     # Regex-based terminology checks
@@ -48,19 +61,20 @@ def check(content):
     # ------------------------------
     # spaCy-based terminology checks
     # ------------------------------
-    for token in doc:
-        # Skip if token is in a title or heading
-        if TITLE_UTILS_AVAILABLE and is_title_or_heading(token.sent.text.strip(), content):
-            continue
-            
-        # Example: flagging ambiguous abbreviations
-        if token.text.upper() in ["GUI", "API", "DB"]:
-            suggestions.append(f"Spell out abbreviation '{token.text}' at first use.")
+    if doc is not None:
+        for token in doc:
+            # Skip if token is in a title or heading
+            if TITLE_UTILS_AVAILABLE and is_title_or_heading(token.sent.text.strip(), content):
+                continue
+                
+            # Example: flagging ambiguous abbreviations
+            if token.text.upper() in ["GUI", "API", "DB"]:
+                suggestions.append(f"Spell out abbreviation '{token.text}' at first use.")
 
-        # Example: consistency check for hyphenated terms
-        if token.text.lower() in ["e-mail", "email"]:
-            if "e-mail" in token.text.lower():
-                suggestions.append("Prefer 'email' instead of 'e-mail'.")
+            # Example: consistency check for hyphenated terms
+            if token.text.lower() in ["e-mail", "email"]:
+                if "e-mail" in token.text.lower():
+                    suggestions.append("Prefer 'email' instead of 'e-mail'.")
 
     # ------------------------------
     # RAG-based contextual terminology checks

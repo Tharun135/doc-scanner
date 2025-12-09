@@ -17,8 +17,15 @@ try:
 except ImportError:
     TITLE_UTILS_AVAILABLE = False
 
-# Load spaCy model
-nlp = spacy.load("en_core_web_sm")
+# Load spaCy model lazily to avoid startup issues
+nlp = None
+
+def _get_nlp():
+    global nlp
+    if nlp is None:
+        nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max_length to handle large documents
+    return nlp
 
 def check(content):
     suggestions = []

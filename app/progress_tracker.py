@@ -5,8 +5,17 @@ Real-time progress tracking for document processing using WebSocket connections.
 import time
 import uuid
 from typing import Dict, Any, Optional
-from flask_socketio import emit
 import logging
+
+# Make flask_socketio optional
+try:
+    from flask_socketio import emit
+    SOCKETIO_AVAILABLE = True
+except ImportError:
+    SOCKETIO_AVAILABLE = False
+    def emit(*args, **kwargs):
+        """Dummy emit function when SocketIO is not available"""
+        pass
 
 logger = logging.getLogger(__name__)
 

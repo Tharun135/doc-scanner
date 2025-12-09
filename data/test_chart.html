@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Performance Chart Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Performance Chart Test</h1>
+    
+    <div>
+        <button onclick="testLoadChart('7d')">7D</button>
+        <button onclick="testLoadChart('30d')">30D</button>
+        <button onclick="testLoadChart('90d')">90D</button>
+    </div>
+    
+    <div id="chartLoading" style="display: none; padding: 20px; text-align: center;">
+        Loading performance data...
+    </div>
+    
+    <div style="width: 600px; height: 400px;">
+        <canvas id="performanceChart"></canvas>
+    </div>
+
+    <script>
+        let performanceChart = null;
+
+        function testLoadChart(period) {
+            console.log(`Loading chart for period: ${period}`);
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            document.getElementById('chartLoading').style.display = 'block';
+            
+            console.log('Fetching data...');
+            fetch(`http://localhost:5000/rag/performance_data?period=${period}`)
+                .then(response => {
+                    console.log('Response received:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Data received:', data);
+                    document.getElementById('chartLoading').style.display = 'none';
+                    
+                    if (performanceChart) {
+                        performanceChart.destroy();
+                    }
+                    
+                    performanceChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                label: 'Query Volume',
+                                data: data.query_counts,
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                tension: 0.1,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Avg Relevance',
+                                data: data.relevance_scores,
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                tension: 0.1,
+                                yAxisID: 'y1'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'left',
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    display: true,
+                                    position: 'right',
+                                    grid: {
+                                        drawOnChartArea: false,
+                                    },
+                                    min: 0,
+                                    max: 1
+                                }
+                            },
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: `Performance Trends (${period.toUpperCase()})`
+                                }
+                            }
+                        }
+                    });
+                    console.log('Chart created successfully');
+                })
+                .catch(error => {
+                    console.error('Error loading chart:', error);
+                    document.getElementById('chartLoading').innerHTML = 
+                        `<div style="color: red;">Failed to load chart: ${error.message}</div>`;
+                });
+        }
+
+        // Auto-load 7d chart
+        window.addEventListener('load', function() {
+            console.log('Page loaded, auto-loading 7d chart...');
+            testLoadChart('7d');
+        });
+    </script>
+</body>
+</html>

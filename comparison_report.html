@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Processing Report - 2025-12-09 13:41</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header .timestamp { opacity: 0.9; font-size: 14px; }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .summary-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .summary-card .label { color: #666; font-size: 14px; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        .success { color: #28a745; }
+        
+        .file-section {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .file-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-header:hover { background: #e9ecef; }
+        .file-header .filename { font-weight: 600; }
+        .file-header .status {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.passed { background: #d4edda; color: #155724; }
+        .status.failed { background: #f8d7da; color: #721c24; }
+        
+        .violations {
+            padding: 20px;
+            display: none;
+        }
+        .file-section.expanded .violations { display: block; }
+        
+        .violation {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ddd;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .violation.error { border-left-color: #dc3545; }
+        .violation.warn { border-left-color: #ffc107; }
+        .violation.info { border-left-color: #17a2b8; }
+        
+        .violation .severity-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 8px;
+        }
+        .violation.error .severity-badge { background: #dc3545; color: white; }
+        .violation.warn .severity-badge { background: #ffc107; color: #333; }
+        .violation.info .severity-badge { background: #17a2b8; color: white; }
+        
+        .violation .rule-id { font-weight: 600; color: #495057; }
+        .violation .message { margin: 8px 0; color: #666; }
+        .violation .sentence {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .violation .suggestion {
+            background: #e7f3ff;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+        
+        .toggle-icon { transition: transform 0.3s; }
+        .file-section.expanded .toggle-icon { transform: rotate(90deg); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Batch Processing Report</h1>
+            <div class="timestamp">Generated: 2025-12-09T13:41:29.105479</div>
+        </div>
+        
+        <div class="summary">
+            <div class="summary-card">
+                <div class="label">Total Files</div>
+                <div class="value">2</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Files Passed</div>
+                <div class="value success">0</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Files with Errors</div>
+                <div class="value error">2</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Total Sentences</div>
+                <div class="value">77</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Errors</div>
+                <div class="value error">17</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Warnings</div>
+                <div class="value warning">28</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Info</div>
+                <div class="value info">5</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Total Violations</div>
+                <div class="value">50</div>
+            </div>
+        </div>
+        
+        <h2 style="margin: 30px 0 15px 0;">File Details</h2>
+
+        <div class="file-section" onclick="this.classList.toggle('expanded')">
+            <div class="file-header">
+                <div>
+                    <span class="toggle-icon">▶</span>
+                    <span class="filename">test_clean.md</span>
+                    <small style="color: #666; margin-left: 10px;">
+                        1 violations
+                        (1 errors, 0 warnings, 0 info)
+                    </small>
+                </div>
+                <span class="status failed">FAILED</span>
+            </div>
+            <div class="violations">
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 15</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"WARNING: High voltage present during operation."</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="file-section" onclick="this.classList.toggle('expanded')">
+            <div class="file-header">
+                <div>
+                    <span class="toggle-icon">▶</span>
+                    <span class="filename">test_atomic_rules.md</span>
+                    <small style="color: #666; margin-left: 10px;">
+                        49 violations
+                        (16 errors, 28 warnings, 5 info)
+                    </small>
+                </div>
+                <span class="status failed">FAILED</span>
+            </div>
+            <div class="violations">
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">TENSE_001</span>
+                        <small style="color: #999;">Sentence 2</small>
+                    </div>
+                    <div class="message">Future tense not allowed in procedures.</div>
+                    <div class="sentence">"The system will start automatically after reboot."</div>
+                    <div class="suggestion">💡 Rewrite in simple present.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">TENSE_001</span>
+                        <small style="color: #999;">Sentence 3</small>
+                    </div>
+                    <div class="message">Future tense not allowed in procedures.</div>
+                    <div class="sentence">"The device shall display the results."</div>
+                    <div class="suggestion">💡 Rewrite in simple present.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 4</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"You can click the Save button."</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">UI_001</span>
+                        <small style="color: #999;">Sentence 4</small>
+                    </div>
+                    <div class="message">Do not use articles or 'button' with UI labels.</div>
+                    <div class="sentence">"You can click the Save button."</div>
+                    <div class="suggestion">💡 Use: Click <LABEL> (without 'the' or 'button').</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 4</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"You can click the Save button."</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 5</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"The user should configure the settings first."</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">UI_001</span>
+                        <small style="color: #999;">Sentence 6</small>
+                    </div>
+                    <div class="message">Do not use articles or 'button' with UI labels.</div>
+                    <div class="sentence">"Click the Save button to save your work."</div>
+                    <div class="suggestion">💡 Use: Click <LABEL> (without 'the' or 'button').</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 6</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"Click the Save button to save your work."</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">UI_002</span>
+                        <small style="color: #999;">Sentence 8</small>
+                    </div>
+                    <div class="message">Do not use 'on' after UI action verbs.</div>
+                    <div class="sentence">"Click on the OK button."</div>
+                    <div class="suggestion">💡 Use: Click <LABEL> (not 'click on').</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">UI_001</span>
+                        <small style="color: #999;">Sentence 9</small>
+                    </div>
+                    <div class="message">Do not use articles or 'button' with UI labels.</div>
+                    <div class="sentence">"Press the Submit button on screen."</div>
+                    <div class="suggestion">💡 Use: Click <LABEL> (without 'the' or 'button').</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 10</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"You should configure the network settings."</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 10</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"You should configure the network settings."</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 11</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"We recommend using the default settings."</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 12</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"Your device must be connected to power."</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 12</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"Your device must be connected to power."</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">IMPERATIVE_001</span>
+                        <small style="color: #999;">Sentence 13</small>
+                    </div>
+                    <div class="message">Start procedural steps with imperative verbs.</div>
+                    <div class="sentence">"To save the file, click Save."</div>
+                    <div class="suggestion">💡 Begin with action verb (Configure, Click, Select, etc.).</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">IMPERATIVE_001</span>
+                        <small style="color: #999;">Sentence 14</small>
+                    </div>
+                    <div class="message">Start procedural steps with imperative verbs.</div>
+                    <div class="sentence">"In order to configure the system, open Settings."</div>
+                    <div class="suggestion">💡 Begin with action verb (Configure, Click, Select, etc.).</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">IMPERATIVE_001</span>
+                        <small style="color: #999;">Sentence 15</small>
+                    </div>
+                    <div class="message">Start procedural steps with imperative verbs.</div>
+                    <div class="sentence">"For best results, use the wizard."</div>
+                    <div class="suggestion">💡 Begin with action verb (Configure, Click, Select, etc.).</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">ADV_001</span>
+                        <small style="color: #999;">Sentence 16</small>
+                    </div>
+                    <div class="message">Avoid adverbs that reduce precision.</div>
+                    <div class="sentence">"Simply click the button to proceed."</div>
+                    <div class="suggestion">💡 Remove or replace with measurable details.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">ADV_001</span>
+                        <small style="color: #999;">Sentence 17</small>
+                    </div>
+                    <div class="message">Avoid adverbs that reduce precision.</div>
+                    <div class="sentence">"The system easily handles large files."</div>
+                    <div class="suggestion">💡 Remove or replace with measurable details.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">ADV_001</span>
+                        <small style="color: #999;">Sentence 18</small>
+                    </div>
+                    <div class="message">Avoid adverbs that reduce precision.</div>
+                    <div class="sentence">"Quickly configure the settings."</div>
+                    <div class="suggestion">💡 Remove or replace with measurable details.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">ADV_001</span>
+                        <small style="color: #999;">Sentence 19</small>
+                    </div>
+                    <div class="message">Avoid adverbs that reduce precision.</div>
+                    <div class="sentence">"This is very important for security."</div>
+                    <div class="suggestion">💡 Remove or replace with measurable details.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">OXFORD_001</span>
+                        <small style="color: #999;">Sentence 20</small>
+                    </div>
+                    <div class="message">Oxford comma may be missing in series.</div>
+                    <div class="sentence">"Save, compile and deploy the application."</div>
+                    <div class="suggestion">💡 Add comma before final conjunction in list of three or more items.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">OXFORD_001</span>
+                        <small style="color: #999;">Sentence 21</small>
+                    </div>
+                    <div class="message">Oxford comma may be missing in series.</div>
+                    <div class="sentence">"Configure network, display and security settings."</div>
+                    <div class="suggestion">💡 Add comma before final conjunction in list of three or more items.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PVERB_001</span>
+                        <small style="color: #999;">Sentence 22</small>
+                    </div>
+                    <div class="message">Phrasal verbs may hinder translation.</div>
+                    <div class="sentence">"Set up the device before use."</div>
+                    <div class="suggestion">💡 Prefer single verb: configure, stop, start, authenticate, save, execute.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PVERB_001</span>
+                        <small style="color: #999;">Sentence 23</small>
+                    </div>
+                    <div class="message">Phrasal verbs may hinder translation.</div>
+                    <div class="sentence">"Shut down the system properly."</div>
+                    <div class="suggestion">💡 Prefer single verb: configure, stop, start, authenticate, save, execute.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PVERB_001</span>
+                        <small style="color: #999;">Sentence 24</small>
+                    </div>
+                    <div class="message">Phrasal verbs may hinder translation.</div>
+                    <div class="sentence">"Turn on the power switch."</div>
+                    <div class="suggestion">💡 Prefer single verb: configure, stop, start, authenticate, save, execute.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PVERB_001</span>
+                        <small style="color: #999;">Sentence 25</small>
+                    </div>
+                    <div class="message">Phrasal verbs may hinder translation.</div>
+                    <div class="sentence">"Log in to the system."</div>
+                    <div class="suggestion">💡 Prefer single verb: configure, stop, start, authenticate, save, execute.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_001</span>
+                        <small style="color: #999;">Sentence 26</small>
+                    </div>
+                    <div class="message">NOTICE must not contain safety alert symbols.</div>
+                    <div class="sentence">"NOTICE ⚠️ Handle device carefully."</div>
+                    <div class="suggestion">💡 Remove symbol. NOTICE is for property damage only, not personal injury.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 27</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"WARNING High voltage present."</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 28</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"DANGER Keep away from children."</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 33</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"The file is saved automatically."</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">PASSIVE_001</span>
+                        <small style="color: #999;">Sentence 34</small>
+                    </div>
+                    <div class="message">Passive voice detected.</div>
+                    <div class="sentence">"Results are displayed on screen."</div>
+                    <div class="suggestion">💡 Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">VAGUE_001</span>
+                        <small style="color: #999;">Sentence 35</small>
+                    </div>
+                    <div class="message">Vague terms reduce precision.</div>
+                    <div class="sentence">"Configure the settings and stuff."</div>
+                    <div class="suggestion">💡 Use specific nouns or explicit lists.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">VAGUE_001</span>
+                        <small style="color: #999;">Sentence 36</small>
+                    </div>
+                    <div class="message">Vague terms reduce precision.</div>
+                    <div class="sentence">"Use something like the default configuration."</div>
+                    <div class="suggestion">💡 Use specific nouns or explicit lists.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">VAGUE_001</span>
+                        <small style="color: #999;">Sentence 37</small>
+                    </div>
+                    <div class="message">Vague terms reduce precision.</div>
+                    <div class="sentence">"The system handles things automatically."</div>
+                    <div class="suggestion">💡 Use specific nouns or explicit lists.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">CONTRACTION_001</span>
+                        <small style="color: #999;">Sentence 38</small>
+                    </div>
+                    <div class="message">Contraction detected in technical documentation.</div>
+                    <div class="sentence">"Don't close the window during updates."</div>
+                    <div class="suggestion">💡 Use full form: do not, does not, will not, cannot, etc.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">CONTRACTION_001</span>
+                        <small style="color: #999;">Sentence 39</small>
+                    </div>
+                    <div class="message">Contraction detected in technical documentation.</div>
+                    <div class="sentence">"The system won't start if power is off."</div>
+                    <div class="suggestion">💡 Use full form: do not, does not, will not, cannot, etc.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 40</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"The user can update his settings."</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">GENDER_001</span>
+                        <small style="color: #999;">Sentence 40</small>
+                    </div>
+                    <div class="message">Gender-specific or non-inclusive language detected.</div>
+                    <div class="sentence">"The user can update his settings."</div>
+                    <div class="suggestion">💡 Use gender-neutral alternatives: they, user, person, artificial, work-hours.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">TENSE_002</span>
+                        <small style="color: #999;">Sentence 41</small>
+                    </div>
+                    <div class="message">Modal verbs may weaken procedural clarity.</div>
+                    <div class="sentence">"The administrator should verify her credentials."</div>
+                    <div class="suggestion">💡 Consider using simple present for direct instructions.</div>
+                </div>
+
+                <div class="violation warn">
+                    <div>
+                        <span class="severity-badge">warn</span>
+                        <span class="rule-id">GENDER_001</span>
+                        <small style="color: #999;">Sentence 41</small>
+                    </div>
+                    <div class="message">Gender-specific or non-inclusive language detected.</div>
+                    <div class="sentence">"The administrator should verify her credentials."</div>
+                    <div class="suggestion">💡 Use gender-neutral alternatives: they, user, person, artificial, work-hours.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">JARGON_001</span>
+                        <small style="color: #999;">Sentence 42</small>
+                    </div>
+                    <div class="message">Corporate jargon or unnecessarily complex word detected.</div>
+                    <div class="sentence">"Utilize the configuration utility to optimize performance."</div>
+                    <div class="suggestion">💡 Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">JARGON_001</span>
+                        <small style="color: #999;">Sentence 42</small>
+                    </div>
+                    <div class="message">Corporate jargon or unnecessarily complex word detected.</div>
+                    <div class="sentence">"Utilize the configuration utility to optimize performance."</div>
+                    <div class="suggestion">💡 Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">JARGON_001</span>
+                        <small style="color: #999;">Sentence 43</small>
+                    </div>
+                    <div class="message">Corporate jargon or unnecessarily complex word detected.</div>
+                    <div class="sentence">"Leverage the robust API to facilitate integration."</div>
+                    <div class="suggestion">💡 Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">JARGON_001</span>
+                        <small style="color: #999;">Sentence 43</small>
+                    </div>
+                    <div class="message">Corporate jargon or unnecessarily complex word detected.</div>
+                    <div class="sentence">"Leverage the robust API to facilitate integration."</div>
+                    <div class="suggestion">💡 Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.</div>
+                </div>
+
+                <div class="violation info">
+                    <div>
+                        <span class="severity-badge">info</span>
+                        <span class="rule-id">JARGON_001</span>
+                        <small style="color: #999;">Sentence 43</small>
+                    </div>
+                    <div class="message">Corporate jargon or unnecessarily complex word detected.</div>
+                    <div class="sentence">"Leverage the robust API to facilitate integration."</div>
+                    <div class="suggestion">💡 Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">SAFETY_002</span>
+                        <small style="color: #999;">Sentence 53</small>
+                    </div>
+                    <div class="message">WARNING/DANGER/CAUTION must include safety alert symbol.</div>
+                    <div class="sentence">"⚠️ WARNING High voltage present."</div>
+                    <div class="suggestion">💡 Add appropriate symbol (⚠️) before safety message.</div>
+                </div>
+
+                <div class="violation error">
+                    <div>
+                        <span class="severity-badge">error</span>
+                        <span class="rule-id">PERSON_001</span>
+                        <small style="color: #999;">Sentence 58</small>
+                    </div>
+                    <div class="message">Avoid personal pronouns in technical documentation.</div>
+                    <div class="sentence">"Enter your password."</div>
+                    <div class="suggestion">💡 Use imperative mood or passive construction.</div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+    
+    <script>
+        // Expand first file with errors by default
+        const filesWithErrors = document.querySelectorAll('.file-section .status.failed');
+        if (filesWithErrors.length > 0) {
+            filesWithErrors[0].closest('.file-section').classList.add('expanded');
+        }
+    </script>
+</body>
+</html>

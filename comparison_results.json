@@ -1,0 +1,537 @@
+{
+  "timestamp": "2025-12-09T13:41:29.105479",
+  "files": [
+    {
+      "filename": "test_clean.md",
+      "sentence_count": 18,
+      "violation_count": 1,
+      "errors": 1,
+      "warnings": 0,
+      "info": 0,
+      "violations": [
+        {
+          "sentence_number": 15,
+          "sentence": "WARNING: High voltage present during operation.",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "WARNING: High voltage present during operation."
+        }
+      ],
+      "status": "failed"
+    },
+    {
+      "filename": "test_atomic_rules.md",
+      "sentence_count": 59,
+      "violation_count": 49,
+      "errors": 16,
+      "warnings": 28,
+      "info": 5,
+      "violations": [
+        {
+          "sentence_number": 2,
+          "sentence": "The system will start automatically after reboot.",
+          "rule_id": "TENSE_001",
+          "category": "tense",
+          "severity": "error",
+          "message": "Future tense not allowed in procedures.",
+          "suggestion": "Rewrite in simple present.",
+          "matched_text": "will"
+        },
+        {
+          "sentence_number": 3,
+          "sentence": "The device shall display the results.",
+          "rule_id": "TENSE_001",
+          "category": "tense",
+          "severity": "error",
+          "message": "Future tense not allowed in procedures.",
+          "suggestion": "Rewrite in simple present.",
+          "matched_text": "shall"
+        },
+        {
+          "sentence_number": 4,
+          "sentence": "You can click the Save button.",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "can"
+        },
+        {
+          "sentence_number": 4,
+          "sentence": "You can click the Save button.",
+          "rule_id": "UI_001",
+          "category": "ui-label",
+          "severity": "error",
+          "message": "Do not use articles or 'button' with UI labels.",
+          "suggestion": "Use: Click <LABEL> (without 'the' or 'button').",
+          "matched_text": "click the Save button"
+        },
+        {
+          "sentence_number": 4,
+          "sentence": "You can click the Save button.",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "You"
+        },
+        {
+          "sentence_number": 5,
+          "sentence": "The user should configure the settings first.",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "should"
+        },
+        {
+          "sentence_number": 6,
+          "sentence": "Click the Save button to save your work.",
+          "rule_id": "UI_001",
+          "category": "ui-label",
+          "severity": "error",
+          "message": "Do not use articles or 'button' with UI labels.",
+          "suggestion": "Use: Click <LABEL> (without 'the' or 'button').",
+          "matched_text": "Click the Save button"
+        },
+        {
+          "sentence_number": 6,
+          "sentence": "Click the Save button to save your work.",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "your"
+        },
+        {
+          "sentence_number": 8,
+          "sentence": "Click on the OK button.",
+          "rule_id": "UI_002",
+          "category": "ui-label",
+          "severity": "error",
+          "message": "Do not use 'on' after UI action verbs.",
+          "suggestion": "Use: Click <LABEL> (not 'click on').",
+          "matched_text": "Click on "
+        },
+        {
+          "sentence_number": 9,
+          "sentence": "Press the Submit button on screen.",
+          "rule_id": "UI_001",
+          "category": "ui-label",
+          "severity": "error",
+          "message": "Do not use articles or 'button' with UI labels.",
+          "suggestion": "Use: Click <LABEL> (without 'the' or 'button').",
+          "matched_text": "Press the Submit button"
+        },
+        {
+          "sentence_number": 10,
+          "sentence": "You should configure the network settings.",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "should"
+        },
+        {
+          "sentence_number": 10,
+          "sentence": "You should configure the network settings.",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "You"
+        },
+        {
+          "sentence_number": 11,
+          "sentence": "We recommend using the default settings.",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "We"
+        },
+        {
+          "sentence_number": 12,
+          "sentence": "Your device must be connected to power.",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "Your"
+        },
+        {
+          "sentence_number": 12,
+          "sentence": "Your device must be connected to power.",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "be connected"
+        },
+        {
+          "sentence_number": 13,
+          "sentence": "To save the file, click Save.",
+          "rule_id": "IMPERATIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Start procedural steps with imperative verbs.",
+          "suggestion": "Begin with action verb (Configure, Click, Select, etc.).",
+          "matched_text": "To save"
+        },
+        {
+          "sentence_number": 14,
+          "sentence": "In order to configure the system, open Settings.",
+          "rule_id": "IMPERATIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Start procedural steps with imperative verbs.",
+          "suggestion": "Begin with action verb (Configure, Click, Select, etc.).",
+          "matched_text": "In order to configure"
+        },
+        {
+          "sentence_number": 15,
+          "sentence": "For best results, use the wizard.",
+          "rule_id": "IMPERATIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Start procedural steps with imperative verbs.",
+          "suggestion": "Begin with action verb (Configure, Click, Select, etc.).",
+          "matched_text": "For best"
+        },
+        {
+          "sentence_number": 16,
+          "sentence": "Simply click the button to proceed.",
+          "rule_id": "ADV_001",
+          "category": "adverb",
+          "severity": "warn",
+          "message": "Avoid adverbs that reduce precision.",
+          "suggestion": "Remove or replace with measurable details.",
+          "matched_text": "Simply"
+        },
+        {
+          "sentence_number": 17,
+          "sentence": "The system easily handles large files.",
+          "rule_id": "ADV_001",
+          "category": "adverb",
+          "severity": "warn",
+          "message": "Avoid adverbs that reduce precision.",
+          "suggestion": "Remove or replace with measurable details.",
+          "matched_text": "easily"
+        },
+        {
+          "sentence_number": 18,
+          "sentence": "Quickly configure the settings.",
+          "rule_id": "ADV_001",
+          "category": "adverb",
+          "severity": "warn",
+          "message": "Avoid adverbs that reduce precision.",
+          "suggestion": "Remove or replace with measurable details.",
+          "matched_text": "Quickly"
+        },
+        {
+          "sentence_number": 19,
+          "sentence": "This is very important for security.",
+          "rule_id": "ADV_001",
+          "category": "adverb",
+          "severity": "warn",
+          "message": "Avoid adverbs that reduce precision.",
+          "suggestion": "Remove or replace with measurable details.",
+          "matched_text": "very"
+        },
+        {
+          "sentence_number": 20,
+          "sentence": "Save, compile and deploy the application.",
+          "rule_id": "OXFORD_001",
+          "category": "punctuation",
+          "severity": "warn",
+          "message": "Oxford comma may be missing in series.",
+          "suggestion": "Add comma before final conjunction in list of three or more items.",
+          "matched_text": "Save, compile and deploy"
+        },
+        {
+          "sentence_number": 21,
+          "sentence": "Configure network, display and security settings.",
+          "rule_id": "OXFORD_001",
+          "category": "punctuation",
+          "severity": "warn",
+          "message": "Oxford comma may be missing in series.",
+          "suggestion": "Add comma before final conjunction in list of three or more items.",
+          "matched_text": "network, display and security"
+        },
+        {
+          "sentence_number": 22,
+          "sentence": "Set up the device before use.",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "Set up"
+        },
+        {
+          "sentence_number": 23,
+          "sentence": "Shut down the system properly.",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "Shut down"
+        },
+        {
+          "sentence_number": 24,
+          "sentence": "Turn on the power switch.",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "Turn on"
+        },
+        {
+          "sentence_number": 25,
+          "sentence": "Log in to the system.",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "Log in"
+        },
+        {
+          "sentence_number": 26,
+          "sentence": "NOTICE \u26a0\ufe0f Handle device carefully.",
+          "rule_id": "SAFETY_001",
+          "category": "safety",
+          "severity": "error",
+          "message": "NOTICE must not contain safety alert symbols.",
+          "suggestion": "Remove symbol. NOTICE is for property damage only, not personal injury.",
+          "matched_text": "NOTICE \u26a0\ufe0f"
+        },
+        {
+          "sentence_number": 27,
+          "sentence": "WARNING High voltage present.",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "WARNING High voltage present."
+        },
+        {
+          "sentence_number": 28,
+          "sentence": "DANGER Keep away from children.",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "DANGER Keep away from children."
+        },
+        {
+          "sentence_number": 33,
+          "sentence": "The file is saved automatically.",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "is saved"
+        },
+        {
+          "sentence_number": 34,
+          "sentence": "Results are displayed on screen.",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "are displayed"
+        },
+        {
+          "sentence_number": 35,
+          "sentence": "Configure the settings and stuff.",
+          "rule_id": "VAGUE_001",
+          "category": "clarity",
+          "severity": "warn",
+          "message": "Vague terms reduce precision.",
+          "suggestion": "Use specific nouns or explicit lists.",
+          "matched_text": "stuff"
+        },
+        {
+          "sentence_number": 36,
+          "sentence": "Use something like the default configuration.",
+          "rule_id": "VAGUE_001",
+          "category": "clarity",
+          "severity": "warn",
+          "message": "Vague terms reduce precision.",
+          "suggestion": "Use specific nouns or explicit lists.",
+          "matched_text": "something"
+        },
+        {
+          "sentence_number": 37,
+          "sentence": "The system handles things automatically.",
+          "rule_id": "VAGUE_001",
+          "category": "clarity",
+          "severity": "warn",
+          "message": "Vague terms reduce precision.",
+          "suggestion": "Use specific nouns or explicit lists.",
+          "matched_text": "things"
+        },
+        {
+          "sentence_number": 38,
+          "sentence": "Don't close the window during updates.",
+          "rule_id": "CONTRACTION_001",
+          "category": "formality",
+          "severity": "warn",
+          "message": "Contraction detected in technical documentation.",
+          "suggestion": "Use full form: do not, does not, will not, cannot, etc.",
+          "matched_text": "Don't"
+        },
+        {
+          "sentence_number": 39,
+          "sentence": "The system won't start if power is off.",
+          "rule_id": "CONTRACTION_001",
+          "category": "formality",
+          "severity": "warn",
+          "message": "Contraction detected in technical documentation.",
+          "suggestion": "Use full form: do not, does not, will not, cannot, etc.",
+          "matched_text": "won't"
+        },
+        {
+          "sentence_number": 40,
+          "sentence": "The user can update his settings.",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "can"
+        },
+        {
+          "sentence_number": 40,
+          "sentence": "The user can update his settings.",
+          "rule_id": "GENDER_001",
+          "category": "inclusivity",
+          "severity": "warn",
+          "message": "Gender-specific or non-inclusive language detected.",
+          "suggestion": "Use gender-neutral alternatives: they, user, person, artificial, work-hours.",
+          "matched_text": "his"
+        },
+        {
+          "sentence_number": 41,
+          "sentence": "The administrator should verify her credentials.",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "should"
+        },
+        {
+          "sentence_number": 41,
+          "sentence": "The administrator should verify her credentials.",
+          "rule_id": "GENDER_001",
+          "category": "inclusivity",
+          "severity": "warn",
+          "message": "Gender-specific or non-inclusive language detected.",
+          "suggestion": "Use gender-neutral alternatives: they, user, person, artificial, work-hours.",
+          "matched_text": "her"
+        },
+        {
+          "sentence_number": 42,
+          "sentence": "Utilize the configuration utility to optimize performance.",
+          "rule_id": "JARGON_001",
+          "category": "clarity",
+          "severity": "info",
+          "message": "Corporate jargon or unnecessarily complex word detected.",
+          "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+          "matched_text": "Utilize"
+        },
+        {
+          "sentence_number": 42,
+          "sentence": "Utilize the configuration utility to optimize performance.",
+          "rule_id": "JARGON_001",
+          "category": "clarity",
+          "severity": "info",
+          "message": "Corporate jargon or unnecessarily complex word detected.",
+          "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+          "matched_text": "optimize"
+        },
+        {
+          "sentence_number": 43,
+          "sentence": "Leverage the robust API to facilitate integration.",
+          "rule_id": "JARGON_001",
+          "category": "clarity",
+          "severity": "info",
+          "message": "Corporate jargon or unnecessarily complex word detected.",
+          "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+          "matched_text": "Leverage"
+        },
+        {
+          "sentence_number": 43,
+          "sentence": "Leverage the robust API to facilitate integration.",
+          "rule_id": "JARGON_001",
+          "category": "clarity",
+          "severity": "info",
+          "message": "Corporate jargon or unnecessarily complex word detected.",
+          "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+          "matched_text": "robust"
+        },
+        {
+          "sentence_number": 43,
+          "sentence": "Leverage the robust API to facilitate integration.",
+          "rule_id": "JARGON_001",
+          "category": "clarity",
+          "severity": "info",
+          "message": "Corporate jargon or unnecessarily complex word detected.",
+          "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+          "matched_text": "facilitate"
+        },
+        {
+          "sentence_number": 53,
+          "sentence": "\u26a0\ufe0f WARNING High voltage present.",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "WARNING High voltage present."
+        },
+        {
+          "sentence_number": 58,
+          "sentence": "Enter your password.",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "your"
+        }
+      ],
+      "status": "failed"
+    }
+  ],
+  "summary": {
+    "total_files": 2,
+    "total_sentences": 77,
+    "total_violations": 50,
+    "errors": 17,
+    "warnings": 28,
+    "info": 5,
+    "files_with_errors": 2,
+    "files_passed": 0
+  }
+}

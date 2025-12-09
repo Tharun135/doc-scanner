@@ -18,6 +18,7 @@ def check_verb_tense(content: str, text_content: str) -> List[Dict[str, Any]]:
     """
     try:
         nlp = spacy.load("en_core_web_sm")
+        nlp.max_length = 3000000  # Increase max length to 2MB
     except OSError:
         return []
     

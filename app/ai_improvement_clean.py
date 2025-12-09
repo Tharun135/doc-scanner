@@ -30,6 +30,22 @@ except ImportError:
     RAG_AVAILABLE = False
     logging.debug("RAG system not available - falling back to rule-based suggestions only")
 
+# Import enhanced passive voice resolver
+try:
+    from enhanced_passive_voice_alternatives import EnhancedPassiveVoiceResolver
+    ENHANCED_PASSIVE_AVAILABLE = True
+except ImportError:
+    ENHANCED_PASSIVE_AVAILABLE = False
+    logging.debug("Enhanced passive voice resolver not available")
+
+# Import production passive voice AI
+try:
+    from production_passive_voice_ai import get_passive_voice_alternatives
+    PRODUCTION_PASSIVE_AVAILABLE = True
+except ImportError:
+    PRODUCTION_PASSIVE_AVAILABLE = False
+    logging.debug("Production passive voice AI not available")
+
 logger = logging.getLogger(__name__)
 
 class AISuggestionEngine:
@@ -40,7 +56,17 @@ class AISuggestionEngine:
     
     def __init__(self):
         self.rag_available = RAG_AVAILABLE
-        logger.info(f"AI Suggestion Engine initialized. RAG available: {self.rag_available}")
+        self.enhanced_passive_resolver = None
+        
+        # Initialize enhanced passive voice resolver if available
+        if ENHANCED_PASSIVE_AVAILABLE:
+            try:
+                self.enhanced_passive_resolver = EnhancedPassiveVoiceResolver()
+                logger.info("Enhanced passive voice resolver initialized")
+            except Exception as e:
+                logger.warning(f"Could not initialize enhanced passive voice resolver: {e}")
+        
+        logger.info(f"AI Suggestion Engine initialized. RAG available: {self.rag_available}, Enhanced passive: {self.enhanced_passive_resolver is not None}")
         
     def generate_contextual_suggestion(self, feedback_text: str, sentence_context: str = "",
                                      document_type: str = "general", 
@@ -159,6 +185,65 @@ class AISuggestionEngine:
             sentence_context = ""
             
         feedback_lower = str(feedback_text).lower()
+        
+        # ENHANCED PASSIVE VOICE: Use the new multi-alternative system with AI word variety
+        if ("passive voice" in feedback_lower or "active voice" in feedback_lower):
+            
+            # First try the production AI system for best quality
+            if PRODUCTION_PASSIVE_AVAILABLE:
+                logger.info("🔧 Using production passive voice AI for word alternatives")
+                try:
+                    result = get_passive_voice_alternatives(sentence_context, feedback_text)
+                    
+                    if result and result.get("suggestions"):
+                        suggestions = result["suggestions"]
+                        logger.info(f"🔧 Production AI generated {len(suggestions)} alternatives")
+                        
+                        # Create formatted response with all options
+                        all_options = []
+                        for i, suggestion in enumerate(suggestions[:4], 1):  # Show up to 4 options
+                            all_options.append(f"OPTION {i}: {suggestion['text']}")
+                        
+                        combined_response = "\n".join(all_options)
+                        combined_response += f"\nWHY: {result.get('explanation', 'Multiple active voice alternatives using different words and structures while preserving meaning.')}"
+                        
+                        return combined_response
+                except Exception as e:
+                    logger.error(f"🔧 Production passive voice AI failed: {e}")
+            
+            # Fallback to enhanced system if available
+            elif self.enhanced_passive_resolver:
+                logger.info("🔧 Using enhanced passive voice resolver for multiple alternatives")
+                try:
+                    result = self.enhanced_passive_resolver.generate_passive_voice_alternatives(
+                        sentence_context, feedback_text
+                    )
+                    
+                    if result and result.get("suggestions"):
+                        suggestions = result["suggestions"]
+                        logger.info(f"🔧 Enhanced passive voice generated {len(suggestions)} alternatives")
+                        
+                        # Return different option based on option_number
+                        if option_number <= len(suggestions):
+                            selected_suggestion = suggestions[option_number - 1]
+                            
+                            # Create formatted response with all options
+                            all_options = []
+                            for i, suggestion in enumerate(suggestions[:4], 1):  # Show up to 4 options
+                                all_options.append(f"OPTION {i}: {suggestion['text']}")
+                            
+                            combined_response = "\n".join(all_options)
+                            combined_response += f"\nWHY: {result.get('explanation', 'Multiple active voice alternatives using different words and structures.')}"
+                            
+                            return combined_response
+                        else:
+                            # If requesting option beyond available, return the best one
+                            return suggestions[0]["text"]
+                    else:
+                        logger.warning("🔧 Enhanced passive voice resolver returned no suggestions, falling back")
+                except Exception as e:
+                    logger.error(f"🔧 Enhanced passive voice resolver failed: {e}")
+                    # Fall through to basic passive voice handling
         
         # Passive voice fixes - detect both "passive voice" and "active voice" (which implies converting from passive)
         if "passive voice" in feedback_lower or "active voice" in feedback_lower:

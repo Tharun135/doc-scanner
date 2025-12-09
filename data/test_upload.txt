@@ -1,0 +1,9 @@
+This is a test document for upload testing.
+
+This document contains multiple sentences. It should parse correctly and provide feedback on the writing quality.
+
+Some example content:
+- This is a bullet point
+- Another bullet point with more text
+
+The document should be processed successfully by the DocScanner system.

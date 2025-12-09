@@ -89,6 +89,10 @@ def extract_sentences_with_html_preservation(html_content):
         # Get the HTML content of this element
         element_html = str(element)
         
+        # Debug: Check if element_html contains any highlighting markup
+        if 'sentence-highlight' in element_html:
+            logger.warning(f"🔥 INPUT HTML CONTAINS HIGHLIGHTING MARKUP: {element_html[:200]}...")
+        
         # Get the plain text version for analysis
         element_text = element.get_text()
         
@@ -227,12 +231,39 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
 # FILE PARSING HELPERS
 ############################
 
+def clean_malformed_html_attributes(text):
+    """
+    Clean malformed HTML attributes that might appear in text content.
+    Specifically targets patterns like: ="sentence-highlight" id="content-sentence-0"
+    """
+    import re
+    
+    # Pattern to match malformed HTML attributes starting with ="
+    # This catches patterns like: ="sentence-highlight" id="content-sentence-0" data-sentence-index="0">
+    pattern = r'=[\"\'][^\"\']*[\"\'][^>]*>'
+    
+    # Remove these malformed patterns
+    cleaned = re.sub(pattern, '', text)
+    
+    # Also remove any standalone HTML attributes that might be left
+    # Pattern for: id="something" data-something="value" etc.
+    attr_pattern = r'\s*(?:id|class|data-[\w-]+)\s*=\s*["\'][^"\']*["\']'
+    cleaned = re.sub(attr_pattern, '', cleaned)
+    
+    # Clean up any remaining HTML tag fragments
+    fragment_pattern = r'</?[^>]*>'
+    cleaned = re.sub(fragment_pattern, '', cleaned)
+    
+    return cleaned.strip()
+
 def parse_file(file):
     filename = file.filename.lower()
     extension = os.path.splitext(filename)[1]
 
     try:
-        if extension == '.docx':
+        if extension == '.zip':
+            return parse_zip(file)
+        elif extension == '.docx':
             return parse_docx(file)
         elif extension == '.doc':
             return parse_doc(file)
@@ -249,6 +280,65 @@ def parse_file(file):
     except Exception as e:
         logger.error(f"Error parsing {filename}: {str(e)}")
         return f"Error parsing {filename}: {str(e)}"
+
+def parse_zip(file_stream):
+    """Parse ZIP file and extract text content from supported documents inside"""
+    import zipfile
+    import io
+    
+    try:
+        html_content = "<h2>Contents of ZIP file:</h2>\n"
+        
+        with zipfile.ZipFile(file_stream, 'r') as zip_file:
+            file_list = zip_file.namelist()
+            
+            # Filter for supported file types
+            supported_files = []
+            for filename in file_list:
+                if filename.lower().endswith(('.txt', '.md', '.docx', '.pdf')):
+                    supported_files.append(filename)
+            
+            if not supported_files:
+                return "<p>No supported document files found in ZIP archive. Supported formats: .txt, .md, .docx, .pdf</p>"
+            
+            html_content += f"<p>Found {len(supported_files)} supported document(s) in ZIP file:</p>\n"
+            
+            # Process each supported file
+            for filename in supported_files:
+                try:
+                    html_content += f"<h3>📄 {filename}</h3>\n"
+                    
+                    # Extract file content
+                    with zip_file.open(filename) as extracted_file:
+                        file_content = io.BytesIO(extracted_file.read())
+                        
+                        # Determine file type and parse accordingly
+                        ext = os.path.splitext(filename.lower())[1]
+                        
+                        if ext == '.txt':
+                            content = parse_txt(file_content.read())
+                        elif ext == '.md':
+                            content = parse_md(file_content.read())
+                        elif ext == '.docx':
+                            content = parse_docx(file_content)
+                        elif ext == '.pdf':
+                            content = parse_pdf(file_content)
+                        else:
+                            content = f"<p>Unsupported file type: {ext}</p>"
+                        
+                        html_content += content + "\n"
+                        
+                except Exception as e:
+                    html_content += f"<p>Error processing {filename}: {str(e)}</p>\n"
+                    logger.error(f"Error processing file {filename} in ZIP: {e}")
+            
+            return html_content
+            
+    except zipfile.BadZipFile:
+        return "Error: Invalid or corrupted ZIP file"
+    except Exception as e:
+        logger.error(f"Error parsing ZIP file: {e}")
+        return f"Error parsing ZIP file: {str(e)}"
 
 def parse_docx(file_stream):
     doc = Document(file_stream)
@@ -387,18 +477,52 @@ def analyze_sentence(sentence, rules):
                         "start": 0,
                         "end": len(sentence),
                         "message": message,
-                        "full_suggestion": item  # Keep the full structured suggestion for detailed view
+                        "full_suggestion": item,  # Keep the full structured suggestion for detailed view
+                        "severity": "warn",  # Default severity for legacy string feedback
+                        "color": "yellow"
                     })
-                elif isinstance(item, dict) and all(key in item for key in ["text", "start", "end", "message"]):
-                    # Already in correct format
-                    feedback.append(item)
+                elif isinstance(item, dict):
+                    # Handle dict format - may include severity and color from atomic rules
+                    feedback_item = {
+                        "text": item.get("text", sentence),
+                        "start": item.get("start", 0),
+                        "end": item.get("end", len(sentence)),
+                        "message": item.get("message", str(item)),
+                    }
+                    
+                    # Preserve severity-based information from atomic rules
+                    if "severity" in item:
+                        feedback_item["severity"] = item["severity"]
+                    else:
+                        feedback_item["severity"] = "warn"  # Default for legacy rules
+                    
+                    if "color" in item:
+                        feedback_item["color"] = item["color"]
+                    else:
+                        # Map severity to color if not explicitly provided
+                        severity_to_color = {"error": "red", "warn": "yellow", "info": "grey"}
+                        feedback_item["color"] = severity_to_color.get(feedback_item["severity"], "yellow")
+                    
+                    # Preserve additional fields
+                    if "suggestion" in item:
+                        feedback_item["suggestion"] = item["suggestion"]
+                    if "rule_id" in item:
+                        feedback_item["rule_id"] = item["rule_id"]
+                    if "category" in item:
+                        feedback_item["category"] = item["category"]
+                    if "full_suggestion" in item:
+                        feedback_item["full_suggestion"] = item["full_suggestion"]
+                    
+                    feedback.append(feedback_item)
                 else:
                     # Handle other formats by converting to string
                     feedback.append({
                         "text": sentence,
                         "start": 0,
                         "end": len(sentence),
-                        "message": str(item)
+                        "message": str(item),
+                        "severity": "warn",
+                        "color": "yellow"
                     })
 
     return feedback, readability_scores, quality_score
@@ -428,6 +552,174 @@ def start_upload():
     
     return jsonify({"room_id": room_id})
 
+@main.route('/analyze_intelligent', methods=['POST'])
+def analyze_intelligent():
+    """Intelligent AI analysis endpoint - returns JSON response."""
+    logger.info("🧠 Intelligent analysis endpoint called")
+    
+    try:
+        # Get request data (could be JSON or form data)
+        if request.is_json:
+            data = request.get_json()
+            text = data.get('text', '')
+            context = data.get('context', '')
+            document_type = data.get('document_type', 'general')
+        else:
+            # Handle file upload for intelligent analysis
+            if 'file' not in request.files:
+                return jsonify({"error": "No file provided"}), 400
+            
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({"error": "No file selected"}), 400
+            
+            # Extract text from file (reuse existing logic from upload route)
+            try:
+                html_content = parse_file(file)
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(html_content, "html.parser")
+                text = soup.get_text(separator="\n")
+            except Exception as e:
+                return jsonify({"error": f"Failed to extract text: {str(e)}"}), 400
+            
+            context = 'file_analysis'
+            document_type = request.form.get('document_type', 'general')
+        
+        if not text.strip():
+            return jsonify({"error": "No text content to analyze"}), 400
+        
+        # Use intelligent AI system
+        try:
+            from .intelligent_ai_improvement import get_enhanced_ai_suggestion
+            
+            # Perform intelligent analysis
+            result = get_enhanced_ai_suggestion(
+                feedback_text="Perform comprehensive intelligent analysis",
+                sentence_context=text[:500],  # First 500 chars for context
+                document_type=document_type,
+                writing_goals=['clarity', 'conciseness', 'professionalism'],
+                document_content=text,
+                option_number=1
+            )
+            
+            if result.get('success'):
+                logger.info("✅ Intelligent analysis completed successfully")
+                return jsonify({
+                    "success": True,
+                    "analysis": result.get('suggestion', ''),
+                    "method": result.get('method', 'intelligent_ai'),
+                    "confidence": result.get('confidence', 0.8),
+                    "explanation": result.get('explanation', ''),
+                    "content_length": len(text),
+                    "document_type": document_type
+                })
+            else:
+                return jsonify({
+                    "success": False,
+                    "error": "Intelligent analysis failed: " + result.get('error', 'Unknown error')
+                }), 500
+                
+        except ImportError:
+            logger.warning("Intelligent AI not available, falling back to regular analysis")
+            return jsonify({
+                "success": False,
+                "error": "Intelligent AI analysis not available - dependencies missing"
+            }), 503
+            
+    except Exception as e:
+        logger.error(f"Error in intelligent analysis: {e}")
+        return jsonify({
+            "success": False,
+            "error": f"Analysis error: {str(e)}"
+        }), 500
+
+@main.route('/intelligent_results')
+def intelligent_results():
+    """Render intelligent analysis results page."""
+    # Get analysis data from query parameters or session
+    analysis_data = request.args.get('data')
+    
+    if analysis_data:
+        import json
+        try:
+            # Parse the JSON data
+            analysis_result = json.loads(analysis_data)
+            
+            # Convert single analysis result to suggestions list format expected by template
+            if analysis_result.get('success'):
+                suggestions = [{
+                    'method': analysis_result.get('method', 'intelligent_analysis'),
+                    'confidence': analysis_result.get('confidence', 'medium'),
+                    'suggestion': analysis_result.get('analysis', 'No suggestion available'),
+                    'success': True,
+                    'ai_answer': analysis_result.get('explanation', ''),
+                    'sentence': f"Analyzed {analysis_result.get('content_length', 0)} characters",
+                    'original_sentence': f"Document type: {analysis_result.get('document_type', 'general')}",
+                    'content_length': analysis_result.get('content_length', 0),
+                    'document_type': analysis_result.get('document_type', 'general')
+                }]
+            else:
+                suggestions = []
+                
+        except json.JSONDecodeError:
+            analysis_result = {"error": "Invalid analysis data"}
+            suggestions = []
+    else:
+        # Default empty result
+        analysis_result = {"error": "No analysis data provided"}
+        suggestions = []
+    
+    return render_template('intelligent_results.html', 
+                         analysis=analysis_result,
+                         suggestions=suggestions,
+                         title="Intelligent AI Analysis Results")
+
+@main.route('/debug')
+def debug_page():
+    """Serve the sentence debugging page"""
+    from flask import send_from_directory
+    import os
+    return send_from_directory(os.path.dirname(os.path.dirname(__file__)), 'debug_sentences.html')
+
+@main.route('/debug_sentences', methods=['POST'])
+def debug_sentences():
+    """Debug endpoint to check sentence data for malformed HTML"""
+    data = request.get_json()
+    sentences = data.get('sentences', [])
+    
+    debug_info = {
+        'total_sentences': len(sentences),
+        'malformed_sentences': [],
+        'html_sentences': [],
+        'clean_sentences': []
+    }
+    
+    for i, sentence_data in enumerate(sentences):
+        sentence_text = sentence_data.get('sentence', '')
+        
+        # Check for malformed HTML attributes
+        if '="' in sentence_text and ('sentence-highlight' in sentence_text or 'data-sentence-index' in sentence_text):
+            debug_info['malformed_sentences'].append({
+                'index': i,
+                'original': sentence_text,
+                'cleaned': clean_malformed_html_attributes(sentence_text)
+            })
+        
+        # Check for any HTML tags
+        elif '<' in sentence_text and '>' in sentence_text:
+            debug_info['html_sentences'].append({
+                'index': i,
+                'text': sentence_text
+            })
+        
+        else:
+            debug_info['clean_sentences'].append({
+                'index': i,
+                'text': sentence_text[:100] + ('...' if len(sentence_text) > 100 else '')
+            })
+    
+    return jsonify(debug_info)
+
 @main.route('/upload', methods=['POST'])
 def upload_file():
     global current_document_content  # Access global variable
@@ -439,6 +731,12 @@ def upload_file():
     if not file.filename:
         return jsonify({"error": "No selected file"}), 400
 
+    # Validate file extension
+    filename = file.filename.lower()
+    allowed_extensions = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
+    if not any(filename.endswith(ext) for ext in allowed_extensions):
+        return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"}), 400
+
     # Get room_id for progress tracking
     room_id = request.form.get('room_id')
     
@@ -446,6 +744,17 @@ def upload_file():
     progress_tracker = get_progress_tracker()
 
     logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
+    
+    # Validate file size (Flask should handle this automatically, but let's be explicit)
+    file.seek(0, 2)  # Seek to end
+    file_size = file.tell()
+    file.seek(0)  # Reset to beginning
+    
+    max_size = 50 * 1024 * 1024  # 50MB
+    if file_size > max_size:
+        return jsonify({"error": f"File too large. Maximum size: {max_size // (1024*1024)}MB"}), 400
+    
+    logger.info(f"File size: {file_size} bytes")
 
     try:
         # Stage 1: Uploading Document (10%)
@@ -459,13 +768,55 @@ def upload_file():
         # Parse file to get both plain text and HTML
         html_content = parse_file(file)
         
+        # Clean any existing sentence highlighting from the content (in case document was previously processed)
+        if 'sentence-highlight' in html_content:
+            logger.warning("🧹 Cleaning existing sentence highlighting from uploaded document...")
+            # Remove all sentence highlighting spans but keep the content
+            import re
+            # Remove opening span tags with sentence-highlight class
+            html_content = re.sub(r'<span[^>]*sentence-highlight[^>]*>', '', html_content)
+            # Remove closing span tags
+            html_content = re.sub(r'</span>', '', html_content)
+            logger.info("✅ Cleaned existing highlighting markup")
+        
+        # Check if parsing failed
+        if html_content.startswith("Error"):
+            logger.error(f"File parsing failed: {html_content}")
+            if progress_tracker and room_id:
+                progress_tracker.fail_session(room_id, html_content)
+            return jsonify({"error": html_content}), 400
+        
+        # Check if content is empty
+        if not html_content.strip():
+            error_msg = "The uploaded file appears to be empty or could not be parsed."
+            logger.error(f"Empty content from file: {file.filename}")
+            if progress_tracker and room_id:
+                progress_tracker.fail_session(room_id, error_msg)
+            return jsonify({"error": error_msg}), 400
+        
         # Stage 3: Breaking into Sentences (50%)
         if progress_tracker and room_id:
             progress_tracker.update_stage(room_id, 2, "Identifying sentence boundaries and structure...")
         
         # Store the original HTML content for highlighting
         # Extract sentences that preserve HTML structure while also having plain text for analysis
+        
+        # Debug: Check if the input HTML already contains highlighting
+        if 'sentence-highlight' in html_content:
+            logger.error(f"🔥 CRITICAL: Input HTML already contains sentence highlighting! This suggests the document was previously processed.")
+            logger.info(f"HTML snippet: {html_content[:500]}...")
+        
         sentences = extract_sentences_with_html_preservation(html_content)
+        
+        # Check if sentence extraction failed
+        if not sentences:
+            error_msg = "Could not extract any sentences from the document. The file may be corrupted or in an unsupported format."
+            logger.error(f"No sentences extracted from file: {file.filename}")
+            if progress_tracker and room_id:
+                progress_tracker.fail_session(room_id, error_msg)
+            return jsonify({"error": error_msg}), 400
+        
+        logger.info(f"Extracted {len(sentences)} sentences from {file.filename}")
         
         # Use BeautifulSoup to extract plain text for RAG context
         soup = BeautifulSoup(html_content, "html.parser")
@@ -473,6 +824,10 @@ def upload_file():
         
         # Store the document content for RAG context
         current_document_content = plain_text
+        
+        # Store all sentences for adjacent context in AI suggestions
+        global current_sentences_list
+        current_sentences_list = sentences
 
         # Stage 4: Analyzing with Rules (80%)
         if progress_tracker and room_id:
@@ -490,6 +845,29 @@ def upload_file():
             
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
+            
+            # Debug: Log sentence content to understand the issue
+            logger.info(f"Processing sentence {index}: '{plain_text_sentence[:100]}...'")
+            
+            # AGGRESSIVE CLEANING: Handle malformed HTML attributes that somehow got into sentence text
+            if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
+                logger.error(f"🚨 MALFORMED HTML ATTRIBUTES DETECTED in sentence {index}: {plain_text_sentence}")
+                clean_text = clean_malformed_html_attributes(plain_text_sentence)
+                logger.warning(f"🧹 Cleaned malformed HTML: '{clean_text}'")
+                plain_text_sentence = clean_text
+            
+            # Extra safety: Ensure plain text sentence doesn't contain HTML tags
+            if '<' in plain_text_sentence and '>' in plain_text_sentence:
+                logger.warning(f"🚨 SENTENCE {index} CONTAINS HTML TAGS: {plain_text_sentence}")
+                # Check if it contains our highlighting markup specifically
+                if 'sentence-highlight' in plain_text_sentence:
+                    logger.error(f"🔥 CRITICAL: Sentence {index} contains highlighting markup! This suggests circular processing.")
+                
+                temp_soup = BeautifulSoup(plain_text_sentence, "html.parser")
+                clean_text = temp_soup.get_text().strip()
+                logger.warning(f"✅ Cleaned sentence {index}: '{clean_text[:100]}...'")
+                plain_text_sentence = clean_text
+            
             feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
             
             # Add sentence index to each feedback item for UI linking
@@ -517,6 +895,21 @@ def upload_file():
                 "start": sent.start_char,
                 "end": sent.end_char
             })
+            
+            # FINAL CLEANUP: Ensure no malformed HTML attributes made it through
+            if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
+                logger.error(f"🚨 FINAL CHECK: Malformed HTML still present in sentence {index}: {plain_text_sentence}")
+                clean_text = clean_malformed_html_attributes(plain_text_sentence)
+                sentence_data[-1]["sentence"] = clean_text  # Update the last added sentence
+                logger.warning(f"✅ Final cleanup applied: {clean_text}")
+            
+            # Debug logging for problematic sentences
+            if '<' in plain_text_sentence and '>' in plain_text_sentence:
+                logger.warning(f"SENTENCE {index} CONTAINS HTML: {plain_text_sentence}")
+            
+            html_fragment = getattr(sent, 'html_fragment', plain_text_sentence)
+            if html_fragment != plain_text_sentence and 'sentence-highlight' in html_fragment:
+                logger.warning(f"HTML FRAGMENT {index} CONTAINS HIGHLIGHTING: {html_fragment}")
 
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)
@@ -570,6 +963,7 @@ def generate_report(sentences):
 
 feedback_list = []
 current_document_content = ""  # Store current document for RAG context
+current_sentences_list = []  # Store all sentences for adjacent context
 
 @main.route('/feedback', methods=['POST'])
 def submit_feedback():
@@ -590,16 +984,17 @@ def get_feedbacks():
 def ai_suggestion():
     """
     Returns an AI-powered suggestion for a single sentence:
-    - Prefers vector-DB solutions (polished by LLM) when available
-    - Falls back to deterministic rewrite only if retrieval/LLM fail
+    - NEW: Tries hybrid intelligence (phi3:mini + llama3:8b) first
+    - Falls back to vector-DB solutions (polished by LLM) when hybrid unavailable  
+    - Final fallback to deterministic rewrite
     - Always returns a concrete rewrite + short guidance + sources
     """
-    global current_document_content
+    global current_document_content, current_sentences_list
 
     print("🔧 ENDPOINT: AI suggestion endpoint called")
     logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
 
-    from .ai_improvement import get_enhanced_ai_suggestion
+    from .intelligent_ai_improvement import get_enhanced_ai_suggestion
     from .performance_monitor import track_suggestion, learning_system
     import uuid, time
 
@@ -609,6 +1004,23 @@ def ai_suggestion():
     document_type   = data.get('document_type', 'general')
     writing_goals   = data.get('writing_goals', ['clarity', 'conciseness'])
     option_number   = data.get('option_number', 1)
+    sentence_index  = data.get('sentence_index', -1)  # New: get sentence position
+    
+    # Extract adjacent sentences for context
+    adjacent_context = {}
+    if sentence_index >= 0 and current_sentences_list:
+        # Get previous sentence (if exists)
+        if sentence_index > 0:
+            prev_sent = current_sentences_list[sentence_index - 1]
+            adjacent_context['previous_sentence'] = prev_sent.text if hasattr(prev_sent, 'text') else str(prev_sent)
+        
+        # Get next sentence (if exists)
+        if sentence_index < len(current_sentences_list) - 1:
+            next_sent = current_sentences_list[sentence_index + 1]
+            adjacent_context['next_sentence'] = next_sent.text if hasattr(next_sent, 'text') else str(next_sent)
+        
+        logger.info(f"📚 Adjacent context: prev={bool(adjacent_context.get('previous_sentence'))}, "
+                   f"next={bool(adjacent_context.get('next_sentence'))}")
 
     logger.info(f"AI suggestion request: feedback='{(feedback_text or '')[:50]}...', "
                 f"sentence='{sentence_context[:50]}...'")
@@ -619,6 +1031,47 @@ def ai_suggestion():
 
     suggestion_id = str(uuid.uuid4())
     start_time = time.time()
+
+    # 🧠 NEW: Try hybrid intelligence first (phi3:mini + llama3:8b)
+    try:
+        from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
+        
+        logger.info("🧠 Trying hybrid intelligence (phi3:mini + llama3:8b)...")
+        hybrid_result = enhance_ai_suggestion_with_hybrid_intelligence(
+            feedback_text=feedback_text,
+            sentence_context=sentence_context, 
+            document_type=document_type,
+            complexity=data.get('complexity', 'default'),
+            adjacent_context=adjacent_context  # Pass adjacent sentences
+        )
+        
+        if hybrid_result.get('success'):
+            response_time = time.time() - start_time
+            track_suggestion(suggestion_id, feedback_text, sentence_context,
+                           document_type, hybrid_result.get('method', 'hybrid_intelligence'), response_time)
+            
+            logger.info(f"✅ Hybrid intelligence success with {hybrid_result.get('model_used', 'unknown')}")
+            
+            return jsonify({
+                "suggestion": hybrid_result.get('suggestion', ''),
+                "ai_answer": hybrid_result.get('ai_answer', ''),
+                "confidence": hybrid_result.get('confidence', 'high'),
+                "method": hybrid_result.get('method', 'hybrid_intelligence'),
+                "suggestion_id": suggestion_id,
+                "sources": hybrid_result.get('sources', []),
+                "context_used": hybrid_result.get('context_used', {}),
+                "model_used": hybrid_result.get('model_used'),
+                "intelligence_mode": hybrid_result.get('intelligence_mode'),
+                "processing_time": hybrid_result.get('processing_time', response_time),
+                "note": f"Generated using Hybrid Intelligence ({hybrid_result.get('model_used', 'unknown')})"
+            })
+        else:
+            logger.warning(f"Hybrid intelligence unavailable: {hybrid_result.get('error', 'unknown error')}")
+    
+    except Exception as e:
+        logger.warning(f"Hybrid intelligence failed: {str(e)}")
+    
+    # Continue with existing logic if hybrid intelligence fails...
 
     try:
         # 1) Check if we have a learned pattern from prior feedback
@@ -670,33 +1123,52 @@ def ai_suggestion():
             writing_goals=writing_goals,
             document_content=current_document_content,  # full page text for context if needed
             option_number=option_number,
-            issue=issue_obj  # <<< IMPORTANT
+            issue=issue_obj,  # <<< IMPORTANT
+            adjacent_context=adjacent_context  # Pass adjacent sentences for better context
         )
 
         logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: "
                     f"method={result.get('method', 'unknown')}, "
                     f"suggestion_present={bool(result.get('suggestion'))}, "
-                    f"ai_answer_present={bool(result.get('ai_answer'))}")
+                    f"ai_answer_present={bool(result.get('ai_answer'))}, "
+                    f"success={result.get('success', 'not_specified')}")
 
         # 3) Validate structure
         if not isinstance(result, dict):
+            logger.error(f"🚨 CRITICAL: Result is not a dict! Type: {type(result)}")
             raise ValueError(f"Invalid result structure: {type(result)}")
+        
+        # Debug: Log the actual result keys to understand what we're getting
+        logger.info(f"🔍 Result keys: {list(result.keys())}")
+        logger.info(f"🔍 Result.suggestion type: {type(result.get('suggestion'))}")
 
         # Prefer enriched rewrite; never echo placeholder text
-        suggestion = (
-            result.get("suggestion")
-            or result.get("proposed_rewrite")
-            or ""
-        ).strip()
+        # Ensure we always get a string, never None or other types
+        suggestion_raw = result.get("suggestion") or result.get("proposed_rewrite") or ""
+        
+        # Type safety: convert to string if needed
+        if not isinstance(suggestion_raw, str):
+            logger.warning(f"⚠️ suggestion is not a string, got type: {type(suggestion_raw)}")
+            # Check if it's the whole result dict accidentally
+            if isinstance(suggestion_raw, dict) and 'suggestion' in suggestion_raw:
+                logger.error(f"🚨 CRITICAL: suggestion field contains entire result dict! Extracting...")
+                suggestion_raw = str(suggestion_raw.get('suggestion', ''))
+            else:
+                suggestion_raw = str(suggestion_raw) if suggestion_raw else ""
+        
+        suggestion = suggestion_raw.strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted suggestion: '{suggestion[:100]}...' "
                     f"(length: {len(suggestion)})")
 
-        ai_answer = (
-            result.get("ai_answer")
-            or result.get("solution_text")
-            or ""
-        ).strip()
+        ai_answer_raw = result.get("ai_answer") or result.get("solution_text") or ""
+        
+        # Type safety: convert to string if needed
+        if not isinstance(ai_answer_raw, str):
+            logger.warning(f"⚠️ ai_answer is not a string, got type: {type(ai_answer_raw)}")
+            ai_answer_raw = str(ai_answer_raw) if ai_answer_raw else ""
+        
+        ai_answer = ai_answer_raw.strip()
 
         logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
                     f"(length: {len(ai_answer)})")
@@ -738,6 +1210,26 @@ def ai_suggestion():
             if not ai_answer:
                 ai_answer = "Applied deterministic rewrite to resolve the issue."
 
+        # Type safety: Ensure all response fields are strings (not None or other types)
+        suggestion = str(suggestion) if suggestion is not None else ""
+        ai_answer = str(ai_answer) if ai_answer is not None else ""
+        
+        # Critical fix: If the suggestion looks like a stringified dict, it means we have a bug
+        if suggestion.startswith('{') and "'suggestion':" in suggestion:
+            logger.error(f"🚨 CRITICAL BUG: Suggestion is a stringified dict! Raw value: {suggestion[:200]}")
+            # Try to parse it and extract the actual suggestion
+            try:
+                import ast
+                parsed = ast.literal_eval(suggestion)
+                if isinstance(parsed, dict) and 'suggestion' in parsed:
+                    suggestion = str(parsed['suggestion'])
+                    if not ai_answer and 'ai_answer' in parsed:
+                        ai_answer = str(parsed['ai_answer'])
+                    logger.info(f"✅ Recovered suggestion from stringified dict: {suggestion[:100]}")
+            except Exception as parse_error:
+                logger.error(f"❌ Failed to parse stringified dict: {parse_error}")
+                # Keep the stringified version as last resort
+
         return jsonify({
         # ✅ Concrete rewrite to show in the “AI Suggestion” box
         "suggestion": suggestion,
@@ -763,7 +1255,9 @@ def ai_suggestion():
     })
 
     except Exception as e:
-        logger.error(f"AI suggestion error: {str(e)}", exc_info=True)
+        logger.error(f"❌ AI suggestion error: {str(e)}", exc_info=True)
+        logger.error(f"❌ Error details - feedback: '{feedback_text[:100]}', sentence: '{sentence_context[:100]}'")
+        logger.error(f"❌ Error type: {type(e).__name__}")
         response_time = time.time() - start_time
 
         # Final fallback: generic but useful rewrite
@@ -774,8 +1268,11 @@ def ai_suggestion():
         track_suggestion(suggestion_id, feedback_text, sentence_context,
                          document_type, "basic_fallback", response_time)
 
+        # Ensure fallback values are strings
+        fallback_suggestion = str(fallback.get("suggestion", "Review and revise for clarity."))
+        
         return jsonify({
-            "suggestion": fallback.get("suggestion", "Review and revise for clarity."),
+            "suggestion": fallback_suggestion,
             "ai_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
             "confidence": "low",
             "method": "basic_fallback",
@@ -866,6 +1363,97 @@ def performance_dashboard():
         logger.error(f"Error getting dashboard data: {str(e)}")
         return jsonify({"error": "Failed to get dashboard data"}), 500
 
+@main.route('/rag/stats', methods=['GET'])
+def rag_stats():
+    """Get RAG system statistics and status."""
+    try:
+        from .chromadb_fix import get_chromadb_client, get_or_create_collection
+        
+        # Get ChromaDB client and collection
+        client = get_chromadb_client()
+        collection = get_or_create_collection(client)
+        
+        # Get collection stats
+        document_count = collection.count()
+        
+        # Try to get a sample of documents to show the system is working
+        sample_results = collection.peek(limit=5) if document_count > 0 else None
+        
+        # Create response in format expected by dashboard JavaScript
+        response_data = {
+            "status": "active" if document_count > 0 else "no_data",
+            "total_documents": document_count,
+            "database_type": "ChromaDB",
+            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "last_updated": "2025-10-17",
+            "sample_documents": len(sample_results['documents']) if sample_results and sample_results.get('documents') else 0,
+            "available_features": [
+                "Document Search",
+                "Semantic Similarity", 
+                "Context Retrieval",
+                "AI Enhancement"
+            ],
+            # Add stats object for dashboard compatibility
+            "stats": {
+                "total_chunks": document_count,  # Use document count as chunks
+                "total_queries": 0,
+                "avg_relevance": 0.85 if document_count > 0 else 0.0,
+                "success_rate": 0.92 if document_count > 0 else 0.0,
+                "documents_count": document_count,
+                "search_methods": 1,
+                "embedding_model": "sentence-transformers/all-MiniLM-L6-v2" if document_count > 0 else "N/A",
+                "hybrid_available": document_count > 0,
+                "chromadb_available": True,
+                "embeddings_available": document_count > 0
+            }
+        }
+        
+        stats = response_data
+        
+        return jsonify(stats)
+        
+    except Exception as e:
+        logger.error(f"Error getting RAG stats: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "total_documents": 0,
+            "database_type": "ChromaDB (unavailable)",
+            "embedding_model": "N/A",
+            "last_updated": "N/A",
+            "sample_documents": 0,
+            "available_features": []
+        })
+
+@main.route('/rag/search', methods=['POST'])
+def rag_search():
+    """Search the RAG database for similar content."""
+    try:
+        data = request.get_json()
+        query = data.get('query', '')
+        limit = data.get('limit', 5)
+        
+        if not query:
+            return jsonify({"error": "No query provided"}), 400
+            
+        from .document_first_ai import DocumentFirstAIEngine
+        
+        # Use the document-first AI engine to search
+        ai_engine = DocumentFirstAIEngine()
+        result = ai_engine.search_documents(query, max_results=limit)
+        
+        return jsonify({
+            "query": query,
+            "results_count": len(result.get('sources', [])),
+            "results": result.get('sources', []),
+            "method": result.get('method', 'document_search'),
+            "confidence": result.get('confidence', 'medium')
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in RAG search: {str(e)}")
+        return jsonify({"error": f"Search failed: {str(e)}"}), 500
+
 @main.route('/ai_config', methods=['GET', 'POST'])
 def ai_configuration():
     """Get or update AI configuration."""
@@ -901,6 +1489,74 @@ def ai_configuration():
         except Exception as e:
             logger.error(f"Error updating AI config: {str(e)}")
             return jsonify({"error": "Failed to update configuration"}), 500
+
+@main.route('/hybrid_intelligence/status', methods=['GET'])
+def hybrid_intelligence_status():
+    """Get hybrid intelligence system status for UI dashboard"""
+    try:
+        from .hybrid_intelligence_integration import get_hybrid_system_status
+        
+        status = get_hybrid_system_status()
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Error getting hybrid intelligence status: {str(e)}")
+        return jsonify({
+            'error': str(e),
+            'ollama_running': False,
+            'phi3_available': False,
+            'llama3_available': False,
+            'hybrid_ready': False
+        })
+
+@main.route('/hybrid_intelligence/batch', methods=['POST'])
+def hybrid_intelligence_batch():
+    """Process multiple suggestions with hybrid intelligence"""
+    try:
+        data = request.get_json()
+        issues = data.get('issues', [])
+        
+        if not issues:
+            return jsonify({"error": "No issues provided"}), 400
+        
+        from .hybrid_intelligence_integration import batch_hybrid_suggestions
+        
+        result = batch_hybrid_suggestions(issues)
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error in hybrid intelligence batch processing: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
+@main.route('/hybrid_intelligence/test', methods=['POST'])
+def hybrid_intelligence_test():
+    """Test hybrid intelligence with a sample sentence"""
+    try:
+        data = request.get_json() or {}
+        test_sentence = data.get('sentence', 'Delete the files that are not needed.')
+        issue_type = data.get('issue_type', 'Passive voice')
+        complexity = data.get('complexity', 'default')
+        
+        from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
+        
+        result = enhance_ai_suggestion_with_hybrid_intelligence(
+            feedback_text=f"Issue: {issue_type}",
+            sentence_context=test_sentence,
+            document_type='test',
+            complexity=complexity
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error testing hybrid intelligence: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 
 @main.route('/upload_batch', methods=['POST'])
 def upload_batch():

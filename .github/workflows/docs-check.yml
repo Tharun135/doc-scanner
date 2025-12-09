@@ -1,0 +1,133 @@
+name: Documentation Quality Check
+
+on:
+  push:
+    branches: [ main, master, develop, branch-* ]
+    paths:
+      - '**.md'
+      - '**.txt'
+      - 'docs/**'
+      - 'guides/**'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - '**.md'
+      - '**.txt'
+      - 'docs/**'
+      - 'guides/**'
+
+jobs:
+  check-documentation:
+    runs-on: ubuntu-latest
+    name: Check Technical Writing Quality
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run documentation checks (errors only)
+        id: doc_check
+        run: |
+          echo "Running documentation quality checks..."
+          python batch_check.py docs/ *.md \
+            --errors-only \
+            --html docs-report.html \
+            --json docs-results.json
+        continue-on-error: true
+      
+      - name: Upload HTML Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation-report
+          path: docs-report.html
+          retention-days: 30
+      
+      - name: Upload JSON Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation-results
+          path: docs-results.json
+          retention-days: 30
+      
+      - name: Parse results and comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            
+            try {
+              const results = JSON.parse(fs.readFileSync('docs-results.json', 'utf8'));
+              const summary = results.summary;
+              
+              let status = '✅ PASSED';
+              let color = '🟢';
+              
+              if (summary.errors > 0) {
+                status = '❌ FAILED';
+                color = '🔴';
+              } else if (summary.warnings > 0) {
+                status = '⚠️ WARNINGS';
+                color = '🟡';
+              }
+              
+              const body = `## ${color} Documentation Quality Check ${status}
+              
+              ### Summary
+              - **Total Files:** ${summary.total_files}
+              - **Total Sentences:** ${summary.total_sentences}
+              - **Total Violations:** ${summary.total_violations}
+              
+              ### Breakdown
+              - 🔴 **Errors:** ${summary.errors} (must fix)
+              - 🟡 **Warnings:** ${summary.warnings} (suggestions)
+              - 🔵 **Info:** ${summary.info} (informational)
+              
+              ### Files
+              - ✅ **Passed:** ${summary.files_passed}
+              - ❌ **Failed:** ${summary.files_with_errors}
+              
+              ${summary.errors > 0 ? '### ⚠️ Action Required\n\nThis PR contains **critical documentation errors** that must be fixed before merging.\n' : ''}
+              
+              ### 📊 Detailed Report
+              Download the [full HTML report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) from the workflow artifacts.
+              
+              ---
+              *Automated check by DocScanner - [View Rules](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/app/rules/rules.json)*
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            } catch (error) {
+              console.error('Error posting comment:', error);
+            }
+      
+      - name: Check if errors found
+        if: steps.doc_check.outcome == 'failure'
+        run: |
+          echo "❌ Documentation quality checks failed!"
+          echo "Critical errors were found in the documentation."
+          echo "Please review the HTML report in the artifacts."
+          exit 1
+      
+      - name: Success message
+        if: steps.doc_check.outcome == 'success'
+        run: |
+          echo "✅ All documentation quality checks passed!"

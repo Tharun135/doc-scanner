@@ -1,0 +1,81 @@
+# GitLab CI/CD Pipeline for Documentation Quality Checks
+
+stages:
+  - test
+  - report
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+cache:
+  paths:
+    - .cache/pip
+    - venv/
+
+documentation-quality:
+  stage: test
+  image: python:3.11-slim
+  
+  before_script:
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt
+  
+  script:
+    - echo "Running documentation quality checks..."
+    - python batch_check.py docs/ *.md --errors-only --html docs-report.html --json docs-results.json
+  
+  after_script:
+    - |
+      if [ -f docs-results.json ]; then
+        echo "Parsing results..."
+        python -c "
+      import json
+      with open('docs-results.json') as f:
+          results = json.load(f)
+          summary = results['summary']
+          print(f'Total Files: {summary[\"total_files\"]}')
+          print(f'Errors: {summary[\"errors\"]}')
+          print(f'Warnings: {summary[\"warnings\"]}')
+          print(f'Info: {summary[\"info\"]}')
+          if summary['errors'] > 0:
+              print('❌ FAILED: Critical errors found')
+          else:
+              print('✅ PASSED: No critical errors')
+        "
+      fi
+  
+  artifacts:
+    when: always
+    paths:
+      - docs-report.html
+      - docs-results.json
+    reports:
+      junit: docs-results.json
+    expire_in: 30 days
+  
+  only:
+    - merge_requests
+    - main
+    - develop
+  
+  allow_failure: false
+
+documentation-report:
+  stage: report
+  image: python:3.11-slim
+  
+  dependencies:
+    - documentation-quality
+  
+  script:
+    - echo "Documentation quality report available in artifacts"
+  
+  artifacts:
+    paths:
+      - docs-report.html
+    expire_in: 30 days
+  
+  only:
+    - merge_requests
+    - main
+    - develop

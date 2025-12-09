@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  # Main DocScanner application
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: docscanner-app
+    ports:
+      - "5000:5000"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Persist uploaded documents and ChromaDB data
+      - ./data:/app/data
+      - ./chroma_db:/app/chroma_db
+      - ./logs:/app/logs
+      - ./config:/app/config
+    depends_on:
+      - chromadb
+      - ollama
+    restart: unless-stopped
+    networks:
+      - docscanner-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ChromaDB for vector storage
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: docscanner-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    networks:
+      - docscanner-network
+    # ChromaDB image doesn't have curl or python in PATH, but service works fine
+    # Removed health check to avoid startup issues
+
+  # Ollama for LLM inference
+  ollama:
+    image: ollama/ollama:latest
+    container_name: docscanner-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - docscanner-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # Model will be pulled on first use by the app
+
+volumes:
+  chroma_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+networks:
+  docscanner-network:
+    driver: bridge

@@ -1,9 +1,26 @@
-from app import create_app  # adjust import if your factory lives elsewhere
+"""
+WSGI Entry Point for DocScanner Application
+Production-ready with Gunicorn support
+"""
+import os
+import sys
+from pathlib import Path
 
-# Your factory should return (app, socketio)
-app, socketio = create_app()
+# Add app directory to path
+sys.path.insert(0, str(Path(__file__).parent))
 
-# Do NOT call socketio.run() here; Gunicorn will serve the app.
-# If you need CORS for a separate frontend:
-# from flask_cors import CORS
-# CORS(app)
+from app import create_app
+
+# Create Flask application instance
+application = create_app()
+
+# For development/testing only
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    
+    application.run(
+        host="0.0.0.0",
+        port=port,
+        debug=debug
+    )

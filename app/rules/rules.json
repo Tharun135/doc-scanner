@@ -1,0 +1,272 @@
+[
+  {
+    "rule_id": "TENSE_001",
+    "category": "tense",
+    "regex": "\\bwill\\b|\\bgoing to\\b|\\bshall\\b",
+    "severity": "error",
+    "message": "Future tense not allowed in procedures.",
+    "suggestion": "Rewrite in simple present.",
+    "example_violation": "The system will start automatically.",
+    "example_correction": "The system starts automatically."
+  },
+  {
+    "rule_id": "TENSE_002",
+    "category": "tense",
+    "regex": "\\bcan\\b|\\bcould\\b|\\bmay\\b|\\bmight\\b|\\bshould\\b|\\bwould\\b",
+    "severity": "warn",
+    "message": "Modal verbs may weaken procedural clarity.",
+    "suggestion": "Consider using simple present for direct instructions.",
+    "example_violation": "You can click Save.",
+    "example_correction": "Click Save."
+  },
+  {
+    "rule_id": "UI_001",
+    "category": "ui-label",
+    "regex": "\\b(?:click|select|press|tap)\\s+(?:the|a)\\s+[A-Za-z]+\\s+button\\b",
+    "severity": "error",
+    "message": "Do not use articles or 'button' with UI labels.",
+    "suggestion": "Use: Click <LABEL> (without 'the' or 'button').",
+    "example_violation": "Click the Save button.",
+    "example_correction": "Click Save."
+  },
+  {
+    "rule_id": "UI_002",
+    "category": "ui-label",
+    "regex": "\\b(?:click|select|press|tap)\\s+on\\s+",
+    "severity": "error",
+    "message": "Do not use 'on' after UI action verbs.",
+    "suggestion": "Use: Click <LABEL> (not 'click on').",
+    "example_violation": "Click on Save.",
+    "example_correction": "Click Save."
+  },
+  {
+    "rule_id": "SAFETY_001",
+    "category": "safety",
+    "regex": "NOTICE.*[⚠️!🚨⚡🔥💀☠️]",
+    "severity": "error",
+    "message": "NOTICE must not contain safety alert symbols.",
+    "suggestion": "Remove symbol. NOTICE is for property damage only, not personal injury.",
+    "example_violation": "NOTICE ⚠️ Handle device carefully.",
+    "example_correction": "NOTICE Handle device carefully."
+  },
+  {
+    "rule_id": "SAFETY_002",
+    "category": "safety",
+    "regex": "\\b(?:WARNING|DANGER|CAUTION)\\b(?!.*[⚠️!🚨⚡]).*$",
+    "severity": "error",
+    "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+    "suggestion": "Add appropriate symbol (⚠️) before safety message.",
+    "example_violation": "WARNING High voltage present.",
+    "example_correction": "⚠️ WARNING High voltage present."
+  },
+  {
+    "rule_id": "PERSON_001",
+    "category": "voice",
+    "regex": "\\b(?:you|your|we|our|I|my|me)\\b",
+    "severity": "error",
+    "message": "Avoid personal pronouns in technical documentation.",
+    "suggestion": "Use imperative mood or passive construction.",
+    "example_violation": "You should configure the system.",
+    "example_correction": "Configure the system."
+  },
+  {
+    "rule_id": "IMPERATIVE_001",
+    "category": "voice",
+    "regex": "^(?:To|In order to|For)\\s+[a-z]+",
+    "severity": "warn",
+    "message": "Start procedural steps with imperative verbs.",
+    "suggestion": "Begin with action verb (Configure, Click, Select, etc.).",
+    "example_violation": "To save the file, click Save.",
+    "example_correction": "Click Save."
+  },
+  {
+    "rule_id": "ADV_001",
+    "category": "adverb",
+    "regex": "\\b(?:simply|easily|quickly|basically|very|really|extremely|actually|just)\\b",
+    "severity": "warn",
+    "message": "Avoid adverbs that reduce precision.",
+    "suggestion": "Remove or replace with measurable details.",
+    "example_violation": "Simply click the button.",
+    "example_correction": "Click the button."
+  },
+  {
+    "rule_id": "OXFORD_001",
+    "category": "punctuation",
+    "regex": "\\b[a-zA-Z]+,\\s+[a-zA-Z]+\\s+(?:and|or)\\s+[a-zA-Z]+",
+    "severity": "warn",
+    "message": "Oxford comma may be missing in series.",
+    "suggestion": "Add comma before final conjunction in list of three or more items.",
+    "example_violation": "Save, compile and deploy the file.",
+    "example_correction": "Save, compile, and deploy the file."
+  },
+  {
+    "rule_id": "PVERB_001",
+    "category": "phrasal-verb",
+    "regex": "\\b(?:set up|shut down|turn on|turn off|log in|log out|back up|carry out)\\b",
+    "severity": "warn",
+    "message": "Phrasal verbs may hinder translation.",
+    "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+    "example_violation": "Set up the configuration.",
+    "example_correction": "Configure the system."
+  },
+  {
+    "rule_id": "VAGUE_001",
+    "category": "clarity",
+    "regex": "\\b(?:stuff|things|something|somehow|somewhat|etc\\.)\\b",
+    "severity": "warn",
+    "message": "Vague terms reduce precision.",
+    "suggestion": "Use specific nouns or explicit lists.",
+    "example_violation": "Configure the settings and stuff.",
+    "example_correction": "Configure the network, display, and security settings."
+  },
+  {
+    "rule_id": "ACTION_001",
+    "category": "procedure",
+    "regex": "[.!?]\\s+(?:Then|Next|After that|Subsequently)",
+    "severity": "error",
+    "message": "Multiple actions detected in single step.",
+    "suggestion": "Break into separate numbered steps. Each step = one action.",
+    "example_violation": "Click Save. Then close the dialog.",
+    "example_correction": "1. Click Save.\n2. Close the dialog."
+  },
+  {
+    "rule_id": "PASSIVE_001",
+    "category": "voice",
+    "regex": "\\b(?:is|are|was|were|be|been|being)\\s+\\w+ed\\b",
+    "severity": "warn",
+    "message": "Passive voice detected.",
+    "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+    "example_violation": "The file is saved automatically.",
+    "example_correction": "The system saves the file automatically."
+  },
+  {
+    "rule_id": "CONDITIONAL_001",
+    "category": "procedure",
+    "regex": "\\bif\\b.*,\\s*(?:then\\s+)?[a-z]+",
+    "severity": "info",
+    "message": "Conditional statement detected.",
+    "suggestion": "Consider separating condition from action for clarity.",
+    "example_violation": "If error occurs, click Retry.",
+    "example_correction": "When an error occurs:\n1. Click Retry."
+  },
+  {
+    "rule_id": "PLURAL_001",
+    "category": "ui-label",
+    "regex": "\\b(?:buttons|menus|tabs|windows|dialogs|fields|icons)\\b",
+    "severity": "warn",
+    "message": "Plural UI element reference detected.",
+    "suggestion": "Reference specific singular UI elements by exact label.",
+    "example_violation": "Click one of the buttons.",
+    "example_correction": "Click Save or Cancel."
+  },
+  {
+    "rule_id": "ARTICLE_001",
+    "category": "article",
+    "regex": "\\b(?:the|a|an)\\s+(?:following|below|above|next)\\b",
+    "severity": "warn",
+    "message": "Unnecessary article with positional reference.",
+    "suggestion": "Remove article: 'See following table' not 'See the following table'.",
+    "example_violation": "Complete the following steps.",
+    "example_correction": "Complete these steps."
+  },
+  {
+    "rule_id": "GENDER_001",
+    "category": "inclusivity",
+    "regex": "\\b(?:he|him|his|she|her|hers|mankind|manmade|man-hours)\\b",
+    "severity": "warn",
+    "message": "Gender-specific or non-inclusive language detected.",
+    "suggestion": "Use gender-neutral alternatives: they, user, person, artificial, work-hours.",
+    "example_violation": "The user can update his settings.",
+    "example_correction": "Users can update their settings."
+  },
+  {
+    "rule_id": "CONTRACTION_001",
+    "category": "formality",
+    "regex": "\\b(?:don't|doesn't|won't|can't|shouldn't|wouldn't|isn't|aren't|haven't|hasn't)\\b",
+    "severity": "warn",
+    "message": "Contraction detected in technical documentation.",
+    "suggestion": "Use full form: do not, does not, will not, cannot, etc.",
+    "example_violation": "Don't close the window.",
+    "example_correction": "Do not close the window."
+  },
+  {
+    "rule_id": "JARGON_001",
+    "category": "clarity",
+    "regex": "\\b(?:utilize|leverage|implement|facilitate|optimize|synergy|paradigm|robust)\\b",
+    "severity": "info",
+    "message": "Corporate jargon or unnecessarily complex word detected.",
+    "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+    "example_violation": "Utilize the configuration utility.",
+    "example_correction": "Use the configuration utility."
+  },
+  {
+    "rule_id": "LIST_001",
+    "category": "procedure",
+    "regex": "\\band\\b.*\\bthen\\b",
+    "severity": "warn",
+    "message": "Multiple actions in one step.",
+    "suggestion": "Split into two numbered steps.",
+    "example_violation": "Click Save and then restart.",
+    "example_correction": "1. Click Save.\n2. Restart."
+  },
+  {
+    "rule_id": "LIST_002",
+    "category": "procedure",
+    "regex": "[A-Za-z]+:\\s*\\n\\s*\\d+\\.",
+    "severity": "error",
+    "message": "Colon cannot end a heading directly before numbered steps.",
+    "suggestion": "Remove colon, rewrite heading.",
+    "example_violation": "Steps:\n1. Click Save.",
+    "example_correction": "Steps\n1. Click Save."
+  },
+  {
+    "rule_id": "TABLE_001",
+    "category": "table",
+    "regex": "\\|\\s*\\|",
+    "severity": "error",
+    "message": "Empty table cell detected.",
+    "suggestion": "Provide data or use '—'.",
+    "example_violation": "| Value | Speed |\n|       | 1500  |",
+    "example_correction": "| Value | Speed |\n| —     | 1500  |"
+  },
+  {
+    "rule_id": "TABLE_002",
+    "category": "table",
+    "regex": "colspan|rowspan",
+    "severity": "warn",
+    "message": "Merged table cells reduce export and translation clarity.",
+    "suggestion": "Flatten table to avoid merged cells.",
+    "example_violation": "<td colspan='2'>Header</td>",
+    "example_correction": "<td>Header Col 1</td><td>Header Col 2</td>"
+  },
+  {
+    "rule_id": "TRANS_001",
+    "category": "translation",
+    "regex": "at the end of the day|in a nutshell|ballpark",
+    "severity": "warn",
+    "message": "Idioms harm localization clarity.",
+    "suggestion": "Rewrite with literal meaning.",
+    "example_violation": "At the end of the day, the device restarts.",
+    "example_correction": "Finally, the device restarts."
+  },
+  {
+    "rule_id": "TRANS_002",
+    "category": "translation",
+    "regex": "\\bvarious\\b|\\bmultiple\\b|\\bdifferent\\b",
+    "severity": "info",
+    "message": "Ambiguous quantity. Specify amount/context.",
+    "suggestion": "Replace with measurable or specific value.",
+    "example_violation": "The device supports multiple modes.",
+    "example_correction": "The device supports three modes."
+  },
+  {
+    "rule_id": "CONSIST_001",
+    "category": "consistency",
+    "regex": "(Click\\s\\w+.*\\bselect\\b)|(Select\\s\\w+.*\\bclick\\b)",
+    "severity": "error",
+    "message": "UI verb capitalization must be consistent within same procedure.",
+    "suggestion": "Use one verb form consistently: Click or Select.",
+    "example_violation": "Click Save. then select Exit.",
+    "example_correction": "Click Save. Click Exit."
+  }
+]

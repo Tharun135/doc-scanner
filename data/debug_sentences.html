@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Sentence Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .malformed { background: #ffebee; border-left: 4px solid #f44336; padding: 10px; margin: 10px 0; }
+        .html { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; margin: 10px 0; }
+        .clean { background: #e8f5e8; border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0; }
+        textarea { width: 100%; height: 200px; margin: 10px 0; }
+        button { background: #2196f3; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        button:hover { background: #1976d2; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Sentence Data Debugger</h1>
+    <p>Paste the sentence data from your upload response here to check for malformed HTML:</p>
+    
+    <textarea id="sentenceData" placeholder="Paste the 'sentences' array from your upload response here...
+Example:
+[
+  {
+    &quot;sentence&quot;: &quot;Some text here&quot;,
+    &quot;sentence_index&quot;: 0,
+    ...
+  }
+]"></textarea>
+    
+    <button onclick="debugSentences()">🔍 Analyze Sentences</button>
+    
+    <div id="results"></div>
+
+    <script>
+        async function debugSentences() {
+            const textarea = document.getElementById('sentenceData');
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const sentences = JSON.parse(textarea.value);
+                
+                const response = await fetch('/debug_sentences', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ sentences: sentences })
+                });
+                
+                const debug_info = await response.json();
+                
+                let html = `<h2>🔍 Debug Results</h2>`;
+                html += `<p><strong>Total sentences:</strong> ${debug_info.total_sentences}</p>`;
+                
+                if (debug_info.malformed_sentences.length > 0) {
+                    html += `<h3>🚨 Malformed Sentences (${debug_info.malformed_sentences.length})</h3>`;
+                    debug_info.malformed_sentences.forEach(item => {
+                        html += `<div class="malformed">
+                            <strong>Sentence ${item.index}:</strong><br>
+                            <strong>Original:</strong> ${escapeHtml(item.original)}<br>
+                            <strong>Cleaned:</strong> ${escapeHtml(item.cleaned)}
+                        </div>`;
+                    });
+                }
+                
+                if (debug_info.html_sentences.length > 0) {
+                    html += `<h3>⚠️ HTML Sentences (${debug_info.html_sentences.length})</h3>`;
+                    debug_info.html_sentences.forEach(item => {
+                        html += `<div class="html">
+                            <strong>Sentence ${item.index}:</strong> ${escapeHtml(item.text)}
+                        </div>`;
+                    });
+                }
+                
+                if (debug_info.clean_sentences.length > 0) {
+                    html += `<h3>✅ Clean Sentences (${debug_info.clean_sentences.length})</h3>`;
+                    debug_info.clean_sentences.slice(0, 5).forEach(item => {
+                        html += `<div class="clean">
+                            <strong>Sentence ${item.index}:</strong> ${escapeHtml(item.text)}
+                        </div>`;
+                    });
+                    if (debug_info.clean_sentences.length > 5) {
+                        html += `<p><em>... and ${debug_info.clean_sentences.length - 5} more clean sentences</em></p>`;
+                    }
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="malformed">❌ Error: ${error.message}</div>`;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
