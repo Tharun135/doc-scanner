@@ -1,0 +1,246 @@
+{
+  "timestamp": "2025-12-09T16:52:57.102332",
+  "files": [
+    {
+      "filename": "APP_STATUS_OVERVIEW.md",
+      "sentence_count": 400,
+      "violation_count": 22,
+      "errors": 6,
+      "warnings": 10,
+      "info": 6,
+      "violations": [
+        {
+          "sentence_number": 10,
+          "sentence": "- **Batch processing** (multiple document analysis)",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "multiple"
+        },
+        {
+          "sentence_number": 30,
+          "sentence": "- Eliminates modal constructions (\"you can\", \"you should\")",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "can"
+        },
+        {
+          "sentence_number": 30,
+          "sentence": "- Eliminates modal constructions (\"you can\", \"you should\")",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "should"
+        },
+        {
+          "sentence_number": 30,
+          "sentence": "- Eliminates modal constructions (\"you can\", \"you should\")",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "you"
+        },
+        {
+          "sentence_number": 30,
+          "sentence": "- Eliminates modal constructions (\"you can\", \"you should\")",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "you"
+        },
+        {
+          "sentence_number": 37,
+          "sentence": "**Before:** \"You can back up and restore the configuration...\"",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "can"
+        },
+        {
+          "sentence_number": 37,
+          "sentence": "**Before:** \"You can back up and restore the configuration...\"",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "You"
+        },
+        {
+          "sentence_number": 37,
+          "sentence": "**Before:** \"You can back up and restore the configuration...\"",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "back up"
+        },
+        {
+          "sentence_number": 38,
+          "sentence": "**After:** \"You back up and restore the configuration...\"",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "You"
+        },
+        {
+          "sentence_number": 38,
+          "sentence": "**After:** \"You back up and restore the configuration...\"",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "back up"
+        },
+        {
+          "sentence_number": 44,
+          "sentence": "- Prevents false positives like:  being flagged as \"85-word sentence\"",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "being flagged"
+        },
+        {
+          "sentence_number": 59,
+          "sentence": "Return True if table, False if normal sentence",
+          "rule_id": "CONDITIONAL_001",
+          "category": "procedure",
+          "severity": "info",
+          "message": "Conditional statement detected.",
+          "suggestion": "Consider separating condition from action for clarity.",
+          "matched_text": "if table, False"
+        },
+        {
+          "sentence_number": 82,
+          "sentence": "- 3-tier severity: \ud83d\udd34 ERROR, \ud83d\udfe1 WARNING, \ud83d\udd35 INFO",
+          "rule_id": "SAFETY_002",
+          "category": "safety",
+          "severity": "error",
+          "message": "WARNING/DANGER/CAUTION must include safety alert symbol.",
+          "suggestion": "Add appropriate symbol (\u26a0\ufe0f) before safety message.",
+          "matched_text": "WARNING, \ud83d\udd35 INFO"
+        },
+        {
+          "sentence_number": 92,
+          "sentence": "- Procedure (2 rules) - Multiple actions, conditionals",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "Multiple"
+        },
+        {
+          "sentence_number": 122,
+          "sentence": "Search: \"How do I configure backups?\"",
+          "rule_id": "PERSON_001",
+          "category": "voice",
+          "severity": "error",
+          "message": "Avoid personal pronouns in technical documentation.",
+          "suggestion": "Use imperative mood or passive construction.",
+          "matched_text": "I"
+        },
+        {
+          "sentence_number": 129,
+          "sentence": "- Analyze multiple files/folders at once",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "multiple"
+        },
+        {
+          "sentence_number": 168,
+          "sentence": "| FastAPI Backend | ~800 | Multiple modules |",
+          "rule_id": "TRANS_002",
+          "category": "translation",
+          "severity": "info",
+          "message": "Ambiguous quantity. Specify amount/context.",
+          "suggestion": "Replace with measurable or specific value.",
+          "matched_text": "Multiple"
+        },
+        {
+          "sentence_number": 309,
+          "sentence": "- \u26a0\ufe0f Flask secret key should be changed in production",
+          "rule_id": "TENSE_002",
+          "category": "tense",
+          "severity": "warn",
+          "message": "Modal verbs may weaken procedural clarity.",
+          "suggestion": "Consider using simple present for direct instructions.",
+          "matched_text": "should"
+        },
+        {
+          "sentence_number": 309,
+          "sentence": "- \u26a0\ufe0f Flask secret key should be changed in production",
+          "rule_id": "PASSIVE_001",
+          "category": "voice",
+          "severity": "warn",
+          "message": "Passive voice detected.",
+          "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
+          "matched_text": "be changed"
+        },
+        {
+          "sentence_number": 314,
+          "sentence": "- [ ] Set up authentication for web interface",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "Set up"
+        },
+        {
+          "sentence_number": 316,
+          "sentence": "- [ ] Implement rate limiting",
+          "rule_id": "JARGON_001",
+          "category": "clarity",
+          "severity": "info",
+          "message": "Corporate jargon or unnecessarily complex word detected.",
+          "suggestion": "Prefer simpler alternatives: use, apply, build, enable, improve, cooperation, model, strong.",
+          "matched_text": "Implement"
+        },
+        {
+          "sentence_number": 317,
+          "sentence": "- [ ] Set up logging and monitoring",
+          "rule_id": "PVERB_001",
+          "category": "phrasal-verb",
+          "severity": "warn",
+          "message": "Phrasal verbs may hinder translation.",
+          "suggestion": "Prefer single verb: configure, stop, start, authenticate, save, execute.",
+          "matched_text": "Set up"
+        }
+      ],
+      "status": "failed"
+    }
+  ],
+  "summary": {
+    "total_files": 1,
+    "total_sentences": 400,
+    "total_violations": 22,
+    "errors": 6,
+    "warnings": 10,
+    "info": 6,
+    "files_with_errors": 1,
+    "files_passed": 0
+  }
+}
