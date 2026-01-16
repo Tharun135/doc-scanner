@@ -1,0 +1,11 @@
+query,expected_rule,should_rewrite,expected_severity,notes
+sentence with passive voice,PASSIVE_VOICE,true,medium,Test basic passive voice detection
+very long sentence with many clauses,LONG_SENTENCES,true,medium,Test long sentence detection
+text with very important adverb,ADVERBS,true,low,Test adverb detection
+UI button label says Save,UI_LABEL,false,critical,Test negative knowledge - do not rewrite UI labels
+error code ERROR_404 in documentation,ERROR_CODE,false,critical,Test negative knowledge - do not rewrite error codes
+how to write a procedure,PATTERN_PROCEDURE,false,medium,Test pattern retrieval
+when to use numbered lists,PATTERN_LISTS,false,medium,Test pattern retrieval
+nominalization in sentence,NOMINALIZATIONS,true,medium,Test nominalization detection
+vague terms like various and several,VAGUE_TERMS,true,medium,Test vague terms detection
+inconsistent verb tense,VERB_TENSE,true,medium,Test verb tense consistency

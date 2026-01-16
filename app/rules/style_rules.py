@@ -68,7 +68,7 @@ def check(content):
                     suggestions.append(f"Consider removing or replacing the adverb '{token.text}' for stronger, more direct writing")
 
             # Example 3: Detecting overuse of 'very'
-            if "very" in sent.text.lower():
+            if re.search(r'\bvery\b', sent.text.lower()):
                 suggestions.append("Consider replacing or removing 'very' - use more specific descriptive words instead")
 
     # ------------------------------

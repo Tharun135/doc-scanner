@@ -1,0 +1,3465 @@
+{
+  "metadata": {
+    "generated_at": "2026-01-16T14:38:07.651934",
+    "total_chunks": 223,
+    "version": "1.0",
+    "statistics": {
+      "total_chunks": 223,
+      "by_knowledge_type": {
+        "rule": 30,
+        "exception": 20,
+        "example": 40,
+        "negative": 96,
+        "pattern": 37
+      },
+      "by_doc_type": {
+        "manual": 87,
+        "rewrite_history": 40,
+        "ui": 26,
+        "api": 16,
+        "legal": 12,
+        "safety": 5,
+        "pattern": 37
+      },
+      "by_severity": {
+        "medium": 124,
+        "low": 2,
+        "high": 30,
+        "critical": 67
+      },
+      "by_rewrite_allowed": {
+        "true": 117,
+        "false": 106
+      },
+      "token_distribution": {
+        "min": 28,
+        "max": 156,
+        "avg": 51.789237668161434,
+        "median": 52
+      },
+      "health_status": "UNDERFED",
+      "generated_at": "2026-01-16T14:38:07.633346"
+    }
+  },
+  "chunks": [
+    {
+      "id": "2a7b220ecc422280",
+      "title": "Passive Voice - Definition",
+      "question": "What is the passive voice rule?",
+      "answer": "A sentence uses passive voice when the subject receives the action instead of performing it. Pattern: 'subject + be verb + past participle (+ by actor)'",
+      "knowledge_type": "rule",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "9d6c2bc17dd74b21",
+      "title": "Passive Voice - Importance",
+      "question": "Why does the passive voice rule matter?",
+      "answer": "Passive voice obscures responsibility and makes writing less direct. Active voice clarifies who does what, improving clarity and readability.",
+      "knowledge_type": "rule",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "c06a2293d199641f",
+      "title": "Passive Voice - Detection",
+      "question": "How is the passive voice rule detected?",
+      "answer": "Detected using spaCy dependency parsing looking for 'auxpass' dependencies, indicating passive auxiliary verbs like 'is done', 'was created', 'has been reviewed'.",
+      "knowledge_type": "rule",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "d67c7598bfcf1987",
+      "title": "Passive Voice - Exception",
+      "question": "When should the passive voice rule NOT be applied?",
+      "answer": "Passive voice is acceptable when: 1) The actor is unknown or irrelevant ('The building was constructed in 1920'), 2) In scientific writing where the process matters more than the actor, 3) When the object is more important than the subject, 4) In titles and headings.",
+      "knowledge_type": "exception",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "d9a58da3b990d4cd",
+      "title": "PASSIVE_VOICE - Rewrite Example",
+      "question": "How should text violating PASSIVE_VOICE be rewritten?",
+      "answer": "Before: The document was reviewed by the team.\n\nAfter: The team reviewed the document.\n\nWhy: Active voice makes the sentence more direct and identifies the actor clearly.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "a12a12c673402049",
+      "title": "Passive Voice - When NOT to Rewrite",
+      "question": "When should the passive voice rule NOT trigger a rewrite?",
+      "answer": "Example: \"The system was designed to handle multiple users.\"\n\nReason: When the designer is unknown or irrelevant, passive voice is acceptable.",
+      "knowledge_type": "exception",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "d8b1d40c25ccead7",
+      "title": "Long Sentences - Definition",
+      "question": "What is the long sentences rule?",
+      "answer": "Sentences exceeding 25 words are flagged as potentially difficult to read. Long sentences often contain multiple ideas that should be split.",
+      "knowledge_type": "rule",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "e8f1723facfad69a",
+      "title": "Long Sentences - Importance",
+      "question": "Why does the long sentences rule matter?",
+      "answer": "Long sentences reduce readability and comprehension. Readers must hold too much information in working memory. Breaking long sentences improves clarity and maintains reader engagement.",
+      "knowledge_type": "rule",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "d9e3ba455b97982e",
+      "title": "Long Sentences - Detection",
+      "question": "How is the long sentences rule detected?",
+      "answer": "Detected using spaCy sentence segmentation. Word count is calculated per sentence. Titles, headings, and markdown table separators are excluded.",
+      "knowledge_type": "rule",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "c1a0ecedb14f5b07",
+      "title": "Long Sentences - Exception",
+      "question": "When should the long sentences rule NOT be applied?",
+      "answer": "Long sentences acceptable when: 1) In titles or headings, 2) In markdown table rows, 3) When listing related items that form a coherent unit, 4) In legal or technical definitions where precision requires length.",
+      "knowledge_type": "exception",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "ef874e06056037ea",
+      "title": "LONG_SENTENCES - Rewrite Example",
+      "question": "How should text violating LONG_SENTENCES be rewritten?",
+      "answer": "Before: The system processes incoming requests by first validating the user credentials, then checking the request parameters against the schema, and finally forwarding the validated request to the appropriate handler for processing.\n\nAfter: The system processes incoming requests in three steps. First, it validates user credentials. Next, it checks request parameters against the schema. Finally, it forwards the validated request to the appropriate handler.\n\nWhy: Breaking the long sentence into clear steps improves readability and makes the process easier to follow.",
+      "knowledge_type": "example",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "2dff80f9dc06698a",
+      "title": "Long Sentences - When NOT to Rewrite",
+      "question": "When should the long sentences rule NOT trigger a rewrite?",
+      "answer": "Example: \"Configure the database connection string in the settings file.\"\n\nReason: This sentence is under 25 words and expresses a single, clear action.",
+      "knowledge_type": "exception",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "a404a6445c507e34",
+      "title": "Weak Adverbs - Definition",
+      "question": "What is the weak adverbs rule?",
+      "answer": "Adverbs ending in '-ly' often weaken writing by modifying verbs that could be stronger. Examples: very quickly, really important, extremely difficult.",
+      "knowledge_type": "rule",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "1f1d20c174573a55",
+      "title": "Weak Adverbs - Importance",
+      "question": "Why does the weak adverbs rule matter?",
+      "answer": "Adverbs can make writing imprecise and wordy. Choosing stronger, more specific verbs eliminates the need for adverbs and makes writing more powerful.",
+      "knowledge_type": "rule",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "low",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "fccd3a42fdf8ee73",
+      "title": "Weak Adverbs - Detection",
+      "question": "How is the weak adverbs rule detected?",
+      "answer": "Detected using spaCy POS tagging. Tokens tagged as 'ADV' and ending with 'ly' are flagged. Titles and headings are excluded.",
+      "knowledge_type": "rule",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "d772a378a7fec756",
+      "title": "Weak Adverbs - Exception",
+      "question": "When should the weak adverbs rule NOT be applied?",
+      "answer": "Adverbs acceptable when: 1) In titles or headings, 2) When precision requires degree specification ('approximately', 'roughly'), 3) In technical contexts where the adverb has specific meaning ('asynchronously', 'recursively'), 4) In quotations or UI labels.",
+      "knowledge_type": "exception",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "2d9f21f494b126ce",
+      "title": "ADVERBS - Rewrite Example",
+      "question": "How should text violating ADVERBS be rewritten?",
+      "answer": "Before: The application runs very quickly on modern hardware.\n\nAfter: The application runs fast on modern hardware.\n\nWhy: 'Very' is redundant - 'fast' is sufficient and more direct.",
+      "knowledge_type": "example",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "36bf37db13a6943b",
+      "title": "Weak Adverbs - When NOT to Rewrite",
+      "question": "When should the weak adverbs rule NOT trigger a rewrite?",
+      "answer": "Example: \"The function executes asynchronously.\"\n\nReason: 'Asynchronously' is a technical term with specific meaning that cannot be replaced.",
+      "knowledge_type": "exception",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "0cd9fcf8d31afbde",
+      "title": "Overuse of 'Very' - Definition",
+      "question": "What is the overuse of 'very' rule?",
+      "answer": "'Very' is often an intensifier that adds no real meaning. It typically indicates the writer should choose a more precise word.",
+      "knowledge_type": "rule",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "a7e647d62bb77bfd",
+      "title": "Overuse of 'Very' - Importance",
+      "question": "Why does the overuse of 'very' rule matter?",
+      "answer": "'Very' weakens writing by padding sentences without adding value. Removing 'very' or choosing stronger words makes writing more impactful.",
+      "knowledge_type": "rule",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "low",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "8d32b63f4282a39f",
+      "title": "Overuse of 'Very' - Detection",
+      "question": "How is the overuse of 'very' rule detected?",
+      "answer": "Detected using case-insensitive regex matching for the word 'very'. Excludes titles and headings.",
+      "knowledge_type": "rule",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "a7ebeef468854ce3",
+      "title": "Overuse of 'Very' - Exception",
+      "question": "When should the overuse of 'very' rule NOT be applied?",
+      "answer": "'Very' acceptable in: 1) Titles or headings, 2) Direct quotations, 3) UI labels or button text, 4) When part of a fixed expression ('very well', 'very best').",
+      "knowledge_type": "exception",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "e736604ea3faea39",
+      "title": "VERY - Rewrite Example",
+      "question": "How should text violating VERY be rewritten?",
+      "answer": "Before: This is a very important decision.\n\nAfter: This is a critical decision.\n\nWhy: 'Critical' is more precise and impactful than 'very important'.",
+      "knowledge_type": "example",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "e891dc627a86dacc",
+      "title": "Overuse of 'Very' - When NOT to Rewrite",
+      "question": "When should the overuse of 'very' rule NOT trigger a rewrite?",
+      "answer": "Example: \"Thank you very much.\"\n\nReason: Fixed expression where 'very much' is idiomatic and appropriate.",
+      "knowledge_type": "exception",
+      "rule_id": "VERY",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "05af8be84537cb16",
+      "title": "Basic Grammar - Definition",
+      "question": "What is the basic grammar rule?",
+      "answer": "Common grammar issues including: double spaces, lack of punctuation in complex sentences, and basic sentence structure problems.",
+      "knowledge_type": "rule",
+      "rule_id": "GRAMMAR_BASIC",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "dddc803361176d94",
+      "title": "Basic Grammar - Importance",
+      "question": "Why does the basic grammar rule matter?",
+      "answer": "Grammar errors reduce professionalism and clarity. They distract readers from content and reduce credibility.",
+      "knowledge_type": "rule",
+      "rule_id": "GRAMMAR_BASIC",
+      "rewrite_allowed": true,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "51dd03559d0549d2",
+      "title": "Basic Grammar - Detection",
+      "question": "How is the basic grammar rule detected?",
+      "answer": "Detected using regex patterns for double spaces and spaCy for sentence structure analysis.",
+      "knowledge_type": "rule",
+      "rule_id": "GRAMMAR_BASIC",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "919fe205528c9a0f",
+      "title": "Basic Grammar - Exception",
+      "question": "When should the basic grammar rule NOT be applied?",
+      "answer": "Some patterns acceptable in: 1) Code blocks or technical specifications, 2) Intentional formatting (like indentation), 3) UI mock-ups or wireframes.",
+      "knowledge_type": "exception",
+      "rule_id": "GRAMMAR_BASIC",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "aed1b5f58fe007f1",
+      "title": "GRAMMAR_BASIC - Rewrite Example",
+      "question": "How should text violating GRAMMAR_BASIC be rewritten?",
+      "answer": "Before: The  system handles  multiple requests.\n\nAfter: The system handles multiple requests.\n\nWhy: Removed double spaces for proper formatting.",
+      "knowledge_type": "example",
+      "rule_id": "GRAMMAR_BASIC",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "9c16ef1e06c5d562",
+      "title": "Basic Grammar - When NOT to Rewrite",
+      "question": "When should the basic grammar rule NOT trigger a rewrite?",
+      "answer": "Example: \"Code example with intentional  spacing.\"\n\nReason: Code blocks may require specific spacing for alignment.",
+      "knowledge_type": "exception",
+      "rule_id": "GRAMMAR_BASIC",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "4f4a5c41a54d4703",
+      "title": "Terminology Consistency - Definition",
+      "question": "What is the terminology consistency rule?",
+      "answer": "Using consistent terms throughout documentation prevents confusion. Synonyms should be avoided when referring to the same concept.",
+      "knowledge_type": "rule",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "40c8f142f46863dc",
+      "title": "Terminology Consistency - Importance",
+      "question": "Why does the terminology consistency rule matter?",
+      "answer": "Inconsistent terminology confuses readers and suggests imprecision. Technical documentation especially requires exact, consistent term usage.",
+      "knowledge_type": "rule",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "66ca4aa9d11c6ff2",
+      "title": "Terminology Consistency - Detection",
+      "question": "How is the terminology consistency rule detected?",
+      "answer": "Detected through term tracking and pattern matching. Looks for multiple terms referring to the same concept within a document.",
+      "knowledge_type": "rule",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "4134ae772ba843c9",
+      "title": "Terminology Consistency - Exception",
+      "question": "When should the terminology consistency rule NOT be applied?",
+      "answer": "Variation acceptable when: 1) Introducing a term ('user interface (UI)'), 2) Literary variation in non-technical content, 3) When terms have genuinely different meanings in context.",
+      "knowledge_type": "exception",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "e779b091b3729688",
+      "title": "CONSISTENCY - Rewrite Example",
+      "question": "How should text violating CONSISTENCY be rewritten?",
+      "answer": "Before: Click the button. Press the control to continue.\n\nAfter: Click the button. Click the button to continue.\n\nWhy: Consistent terminology ('button') prevents confusion about whether 'control' is different from 'button'.",
+      "knowledge_type": "example",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "9d103ed0391541df",
+      "title": "Terminology Consistency - When NOT to Rewrite",
+      "question": "When should the terminology consistency rule NOT trigger a rewrite?",
+      "answer": "Example: \"The user interface (UI) displays information.\"\n\nReason: Introducing an abbreviation requires showing both forms.",
+      "knowledge_type": "exception",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "0586df88fdded04b",
+      "title": "Readability - Definition",
+      "question": "What is the readability rule?",
+      "answer": "Complex words and jargon should be replaced with simpler alternatives when possible, without sacrificing precision.",
+      "knowledge_type": "rule",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "70b342565fd6f70f",
+      "title": "Readability - Importance",
+      "question": "Why does the readability rule matter?",
+      "answer": "Simpler language reaches a broader audience and improves comprehension. Unnecessary complexity alienates readers.",
+      "knowledge_type": "rule",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "3098b3bf89e7241e",
+      "title": "Readability - Detection",
+      "question": "How is the readability rule detected?",
+      "answer": "Detected using syllable counting and word frequency analysis. Flags words with 3+ syllables that have simpler alternatives.",
+      "knowledge_type": "rule",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "a716412367aeddda",
+      "title": "Readability - Exception",
+      "question": "When should the readability rule NOT be applied?",
+      "answer": "Complex words acceptable when: 1) Technical terms with no simpler equivalent, 2) Industry-standard terminology, 3) Legal or regulatory language, 4) Proper nouns or titles.",
+      "knowledge_type": "exception",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "0e9288916c453969",
+      "title": "READABILITY - Rewrite Example",
+      "question": "How should text violating READABILITY be rewritten?",
+      "answer": "Before: Utilize the functionality to accomplish the task.\n\nAfter: Use the feature to complete the task.\n\nWhy: 'Use', 'feature', and 'complete' are simpler and equally precise.",
+      "knowledge_type": "example",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "9df64c2b28c69c36",
+      "title": "Readability - When NOT to Rewrite",
+      "question": "When should the readability rule NOT trigger a rewrite?",
+      "answer": "Example: \"Configure the authentication parameters.\"\n\nReason: 'Authentication' is a standard technical term without a simpler alternative.",
+      "knowledge_type": "exception",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "b41f06992d42e60e",
+      "title": "Nominalizations - Definition",
+      "question": "What is the nominalizations rule?",
+      "answer": "Nominalizations are verbs turned into nouns (utilization → utilize, implementation → implement). They make writing wordier and less direct.",
+      "knowledge_type": "rule",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "6f54ffdcfee17745",
+      "title": "Nominalizations - Importance",
+      "question": "Why does the nominalizations rule matter?",
+      "answer": "Nominalizations add unnecessary words and obscure action. Converting them back to verbs creates clearer, more direct sentences.",
+      "knowledge_type": "rule",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "2db7895161eafade",
+      "title": "Nominalizations - Detection",
+      "question": "How is the nominalizations rule detected?",
+      "answer": "Detected using pattern matching for common nominalization suffixes (-tion, -ment, -ance, -ence) and checking if a verb form exists.",
+      "knowledge_type": "rule",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "6228f61208913c8f",
+      "title": "Nominalizations - Exception",
+      "question": "When should the nominalizations rule NOT be applied?",
+      "answer": "Nominalizations acceptable when: 1) They're established technical terms ('implementation plan'), 2) When used as subjects in sentences about concepts, 3) In titles or headings.",
+      "knowledge_type": "exception",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "c68aa44a1920e104",
+      "title": "NOMINALIZATIONS - Rewrite Example",
+      "question": "How should text violating NOMINALIZATIONS be rewritten?",
+      "answer": "Before: The implementation of the feature requires validation.\n\nAfter: Implementing the feature requires validation.\n\nWhy: Using the verb 'implementing' is more direct than the noun 'implementation'.",
+      "knowledge_type": "example",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "553b43e3b95b2688",
+      "title": "Nominalizations - When NOT to Rewrite",
+      "question": "When should the nominalizations rule NOT trigger a rewrite?",
+      "answer": "Example: \"The implementation plan outlines the approach.\"\n\nReason: 'Implementation plan' is an established term referring to a specific document type.",
+      "knowledge_type": "exception",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "6f751de55dc0c118",
+      "title": "Vague Terms - Definition",
+      "question": "What is the vague terms rule?",
+      "answer": "Vague terms like 'things', 'stuff', 'various', 'several' lack precision and should be replaced with specific details.",
+      "knowledge_type": "rule",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "360c8c3b68560f55",
+      "title": "Vague Terms - Importance",
+      "question": "Why does the vague terms rule matter?",
+      "answer": "Vague terms force readers to guess meaning. Specific language eliminates ambiguity and improves clarity.",
+      "knowledge_type": "rule",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "6b2bb3866ef982bd",
+      "title": "Vague Terms - Detection",
+      "question": "How is the vague terms rule detected?",
+      "answer": "Detected using pattern matching for common vague terms. Context analysis determines if specificity is missing.",
+      "knowledge_type": "rule",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "18448db8cd216327",
+      "title": "Vague Terms - Exception",
+      "question": "When should the vague terms rule NOT be applied?",
+      "answer": "Vague terms acceptable when: 1) Specificity is genuinely not available, 2) In casual communication, 3) When listing examples where exhaustive detail is unnecessary.",
+      "knowledge_type": "exception",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "cf60c02cfdb17dd7",
+      "title": "VAGUE_TERMS - Rewrite Example",
+      "question": "How should text violating VAGUE_TERMS be rewritten?",
+      "answer": "Before: The system handles various types of requests.\n\nAfter: The system handles GET, POST, and DELETE requests.\n\nWhy: Specific request types are more informative than 'various types'.",
+      "knowledge_type": "example",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "2b91c365558e8ebb",
+      "title": "Vague Terms - When NOT to Rewrite",
+      "question": "When should the vague terms rule NOT trigger a rewrite?",
+      "answer": "Example: \"Results may vary based on configuration.\"\n\nReason: When outcomes genuinely depend on many factors, 'vary' is acceptable.",
+      "knowledge_type": "exception",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "711f266db206be65",
+      "title": "Verb Tense Consistency - Definition",
+      "question": "What is the verb tense consistency rule?",
+      "answer": "Inconsistent verb tenses within a paragraph or section confuse readers about timing and sequence.",
+      "knowledge_type": "rule",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "f3b350a4681e8975",
+      "title": "Verb Tense Consistency - Importance",
+      "question": "Why does the verb tense consistency rule matter?",
+      "answer": "Tense shifts make it unclear when actions occur. Consistent tense maintains clear temporal relationships.",
+      "knowledge_type": "rule",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "c9ff47fe5acd4606",
+      "title": "Verb Tense Consistency - Detection",
+      "question": "How is the verb tense consistency rule detected?",
+      "answer": "Detected using spaCy POS tagging to track verb tenses within sentences and paragraphs.",
+      "knowledge_type": "rule",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "52033fd98b1ec2d2",
+      "title": "Verb Tense Consistency - Exception",
+      "question": "When should the verb tense consistency rule NOT be applied?",
+      "answer": "Tense changes acceptable when: 1) Describing events at genuinely different times, 2) In conditional statements, 3) When quoting or referencing other sources.",
+      "knowledge_type": "exception",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "acf03f9d552c2ae4",
+      "title": "VERB_TENSE - Rewrite Example",
+      "question": "How should text violating VERB_TENSE be rewritten?",
+      "answer": "Before: The user clicks the button and the system displayed the result.\n\nAfter: The user clicks the button and the system displays the result.\n\nWhy: Consistent present tense maintains clear action sequence.",
+      "knowledge_type": "example",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "e2ebd338711d9b1d",
+      "title": "Verb Tense Consistency - When NOT to Rewrite",
+      "question": "When should the verb tense consistency rule NOT trigger a rewrite?",
+      "answer": "Example: \"The system now displays results, but previously it showed errors.\"\n\nReason: Tense change appropriately indicates different time periods.",
+      "knowledge_type": "exception",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": false,
+      "severity": "medium",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.619289"
+    },
+    {
+      "id": "3808c784f2b726dc",
+      "title": "Bad Example: PASSIVE_VOICE",
+      "question": "What is wrong with this sentence: 'The document was reviewed by the team.'?",
+      "answer": "This sentence violates the PASSIVE_VOICE rule. Converted from passive to active voice to identify the actor and make the sentence more direct.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_001",
+        "example_type": "bad",
+        "context": "Technical documentation",
+        "timestamp": "2025-01-10T10:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "9aaafaea77227004",
+      "title": "Corrected Example: PASSIVE_VOICE",
+      "question": "How should this be written correctly: 'The document was reviewed by the team.'?",
+      "answer": "Correct version: 'The team reviewed the document.'. Converted from passive to active voice to identify the actor and make the sentence more direct.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_001",
+        "example_type": "corrected",
+        "context": "Technical documentation",
+        "timestamp": "2025-01-10T10:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "5728735d188225c4",
+      "title": "Why Rewrite: PASSIVE_VOICE",
+      "question": "Why was 'The document was reviewed by the team.' rewritten to 'The team reviewed the document.'?",
+      "answer": "Converted from passive to active voice to identify the actor and make the sentence more direct.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_001",
+        "example_type": "justification",
+        "context": "Technical documentation",
+        "timestamp": "2025-01-10T10:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "f3fa7424a53646f7",
+      "title": "Bad Example: LONG_SENTENCES",
+      "question": "What is wrong with this sentence: 'The system processes incoming requests by first validating the user credentials, then checking the request parameters against the schema, and finally forwarding the validated request to the appropriate handler for processing.'?",
+      "answer": "This sentence violates the LONG_SENTENCES rule. Broke long 42-word sentence into 4 shorter sentences to improve readability and comprehension.",
+      "knowledge_type": "example",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_002",
+        "example_type": "bad",
+        "context": "API documentation",
+        "timestamp": "2025-01-10T11:15:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "f6777dd563e22f6c",
+      "title": "Corrected Example: LONG_SENTENCES",
+      "question": "How should this be written correctly: 'The system processes incoming requests by first validating the user credentials, then checking the request parameters against the schema, and finally forwarding the validated request to the appropriate handler for processing.'?",
+      "answer": "Correct version: 'The system processes incoming requests in three steps. First, it validates user credentials. Next, it checks request parameters against the schema. Finally, it forwards the validated request to the appropriate handler.'. Broke long 42-word sentence into 4 shorter sentences to improve readability and comprehension.",
+      "knowledge_type": "example",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_002",
+        "example_type": "corrected",
+        "context": "API documentation",
+        "timestamp": "2025-01-10T11:15:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "12c9463394d9f4b8",
+      "title": "Why Rewrite: LONG_SENTENCES",
+      "question": "Why was 'The system processes incoming requests by first validating the user credentials, then checking the request parameters against the schema, and finally forwarding the validated request to the appropriate handler for processing.' rewritten to 'The system processes incoming requests in three steps. First, it validates user credentials. Next, it checks request parameters against the schema. Finally, it forwards the validated request to the appropriate handler.'?",
+      "answer": "Broke long 42-word sentence into 4 shorter sentences to improve readability and comprehension.",
+      "knowledge_type": "example",
+      "rule_id": "LONG_SENTENCES",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_002",
+        "example_type": "justification",
+        "context": "API documentation",
+        "timestamp": "2025-01-10T11:15:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "56d41a76dedd4324",
+      "title": "Bad Example: ADVERBS",
+      "question": "What is wrong with this sentence: 'The application runs very quickly on modern hardware.'?",
+      "answer": "This sentence violates the ADVERBS rule. Removed unnecessary 'very' - the word 'quickly' already conveys speed, and 'fast' is more direct.",
+      "knowledge_type": "example",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_003",
+        "example_type": "bad",
+        "context": "Product description",
+        "timestamp": "2025-01-10T14:20:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "6755fafe26f9beb4",
+      "title": "Corrected Example: ADVERBS",
+      "question": "How should this be written correctly: 'The application runs very quickly on modern hardware.'?",
+      "answer": "Correct version: 'The application runs fast on modern hardware.'. Removed unnecessary 'very' - the word 'quickly' already conveys speed, and 'fast' is more direct.",
+      "knowledge_type": "example",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_003",
+        "example_type": "corrected",
+        "context": "Product description",
+        "timestamp": "2025-01-10T14:20:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "0a9993f1395c890a",
+      "title": "Why Rewrite: ADVERBS",
+      "question": "Why was 'The application runs very quickly on modern hardware.' rewritten to 'The application runs fast on modern hardware.'?",
+      "answer": "Removed unnecessary 'very' - the word 'quickly' already conveys speed, and 'fast' is more direct.",
+      "knowledge_type": "example",
+      "rule_id": "ADVERBS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_003",
+        "example_type": "justification",
+        "context": "Product description",
+        "timestamp": "2025-01-10T14:20:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "f69b06821604859e",
+      "title": "Bad Example: NOMINALIZATIONS",
+      "question": "What is wrong with this sentence: 'The implementation of the new feature requires validation of user input.'?",
+      "answer": "This sentence violates the NOMINALIZATIONS rule. Converted nominalizations 'implementation' and 'validation' to verb forms for more direct writing.",
+      "knowledge_type": "example",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_004",
+        "example_type": "bad",
+        "context": "Technical specification",
+        "timestamp": "2025-01-11T09:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "92c10b0691d85879",
+      "title": "Corrected Example: NOMINALIZATIONS",
+      "question": "How should this be written correctly: 'The implementation of the new feature requires validation of user input.'?",
+      "answer": "Correct version: 'Implementing the new feature requires validating user input.'. Converted nominalizations 'implementation' and 'validation' to verb forms for more direct writing.",
+      "knowledge_type": "example",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_004",
+        "example_type": "corrected",
+        "context": "Technical specification",
+        "timestamp": "2025-01-11T09:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "0a0307c167ded76d",
+      "title": "Why Rewrite: NOMINALIZATIONS",
+      "question": "Why was 'The implementation of the new feature requires validation of user input.' rewritten to 'Implementing the new feature requires validating user input.'?",
+      "answer": "Converted nominalizations 'implementation' and 'validation' to verb forms for more direct writing.",
+      "knowledge_type": "example",
+      "rule_id": "NOMINALIZATIONS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_004",
+        "example_type": "justification",
+        "context": "Technical specification",
+        "timestamp": "2025-01-11T09:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "ee201c1eb419cbdf",
+      "title": "Bad Example: VAGUE_TERMS",
+      "question": "What is wrong with this sentence: 'The system handles various types of requests.'?",
+      "answer": "This sentence violates the VAGUE_TERMS rule. Replaced vague 'various types' with specific request types for clarity.",
+      "knowledge_type": "example",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_005",
+        "example_type": "bad",
+        "context": "API documentation",
+        "timestamp": "2025-01-11T10:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "e0f52f4733cbe22c",
+      "title": "Corrected Example: VAGUE_TERMS",
+      "question": "How should this be written correctly: 'The system handles various types of requests.'?",
+      "answer": "Correct version: 'The system handles GET, POST, PUT, and DELETE requests.'. Replaced vague 'various types' with specific request types for clarity.",
+      "knowledge_type": "example",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_005",
+        "example_type": "corrected",
+        "context": "API documentation",
+        "timestamp": "2025-01-11T10:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "869c8c7ef59b5482",
+      "title": "Why Rewrite: VAGUE_TERMS",
+      "question": "Why was 'The system handles various types of requests.' rewritten to 'The system handles GET, POST, PUT, and DELETE requests.'?",
+      "answer": "Replaced vague 'various types' with specific request types for clarity.",
+      "knowledge_type": "example",
+      "rule_id": "VAGUE_TERMS",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_005",
+        "example_type": "justification",
+        "context": "API documentation",
+        "timestamp": "2025-01-11T10:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "710d1f33b3cbee70",
+      "title": "Bad Example: VERY",
+      "question": "What is wrong with this sentence: 'This is a very important security consideration.'?",
+      "answer": "This sentence violates the VERY rule. Replaced 'very important' with more precise word 'critical'.",
+      "knowledge_type": "example",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_006",
+        "example_type": "bad",
+        "context": "Security documentation",
+        "timestamp": "2025-01-11T11:45:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "499d987392a8c47f",
+      "title": "Corrected Example: VERY",
+      "question": "How should this be written correctly: 'This is a very important security consideration.'?",
+      "answer": "Correct version: 'This is a critical security consideration.'. Replaced 'very important' with more precise word 'critical'.",
+      "knowledge_type": "example",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_006",
+        "example_type": "corrected",
+        "context": "Security documentation",
+        "timestamp": "2025-01-11T11:45:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "b9ff9bd040916257",
+      "title": "Why Rewrite: VERY",
+      "question": "Why was 'This is a very important security consideration.' rewritten to 'This is a critical security consideration.'?",
+      "answer": "Replaced 'very important' with more precise word 'critical'.",
+      "knowledge_type": "example",
+      "rule_id": "VERY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_006",
+        "example_type": "justification",
+        "context": "Security documentation",
+        "timestamp": "2025-01-11T11:45:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "6db5e89afe942fe1",
+      "title": "Bad Example: PASSIVE_VOICE",
+      "question": "What is wrong with this sentence: 'Errors are logged by the monitoring system.'?",
+      "answer": "This sentence violates the PASSIVE_VOICE rule. Active voice clearly identifies what performs the action.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_007",
+        "example_type": "bad",
+        "context": "System documentation",
+        "timestamp": "2025-01-12T08:15:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "4074764220f02441",
+      "title": "Corrected Example: PASSIVE_VOICE",
+      "question": "How should this be written correctly: 'Errors are logged by the monitoring system.'?",
+      "answer": "Correct version: 'The monitoring system logs errors.'. Active voice clearly identifies what performs the action.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_007",
+        "example_type": "corrected",
+        "context": "System documentation",
+        "timestamp": "2025-01-12T08:15:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "7ec2a5091b9a4b39",
+      "title": "Why Rewrite: PASSIVE_VOICE",
+      "question": "Why was 'Errors are logged by the monitoring system.' rewritten to 'The monitoring system logs errors.'?",
+      "answer": "Active voice clearly identifies what performs the action.",
+      "knowledge_type": "example",
+      "rule_id": "PASSIVE_VOICE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_007",
+        "example_type": "justification",
+        "context": "System documentation",
+        "timestamp": "2025-01-12T08:15:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "c2fd1a7a52f4f8dd",
+      "title": "Bad Example: READABILITY",
+      "question": "What is wrong with this sentence: 'Utilize the functionality to accomplish the task.'?",
+      "answer": "This sentence violates the READABILITY rule. Replaced complex words with simpler alternatives: 'utilize'→'use', 'functionality'→'feature', 'accomplish'→'complete'.",
+      "knowledge_type": "example",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_008",
+        "example_type": "bad",
+        "context": "User guide",
+        "timestamp": "2025-01-12T09:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "1836726c41e910d8",
+      "title": "Corrected Example: READABILITY",
+      "question": "How should this be written correctly: 'Utilize the functionality to accomplish the task.'?",
+      "answer": "Correct version: 'Use the feature to complete the task.'. Replaced complex words with simpler alternatives: 'utilize'→'use', 'functionality'→'feature', 'accomplish'→'complete'.",
+      "knowledge_type": "example",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_008",
+        "example_type": "corrected",
+        "context": "User guide",
+        "timestamp": "2025-01-12T09:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "b4967ec3c90aed2d",
+      "title": "Why Rewrite: READABILITY",
+      "question": "Why was 'Utilize the functionality to accomplish the task.' rewritten to 'Use the feature to complete the task.'?",
+      "answer": "Replaced complex words with simpler alternatives: 'utilize'→'use', 'functionality'→'feature', 'accomplish'→'complete'.",
+      "knowledge_type": "example",
+      "rule_id": "READABILITY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_008",
+        "example_type": "justification",
+        "context": "User guide",
+        "timestamp": "2025-01-12T09:30:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "d4f90172c0e82ade",
+      "title": "Bad Example: CONSISTENCY",
+      "question": "What is wrong with this sentence: 'Click the button. Press the control to continue. Hit the switch to finalize.'?",
+      "answer": "This sentence violates the CONSISTENCY rule. Used consistent terminology 'button' throughout instead of mixing 'button', 'control', 'switch'.",
+      "knowledge_type": "example",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_009",
+        "example_type": "bad",
+        "context": "UI documentation",
+        "timestamp": "2025-01-12T13:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "5564eb6824a9bf1f",
+      "title": "Corrected Example: CONSISTENCY",
+      "question": "How should this be written correctly: 'Click the button. Press the control to continue. Hit the switch to finalize.'?",
+      "answer": "Correct version: 'Click the button. Click the button to continue. Click the button to finalize.'. Used consistent terminology 'button' throughout instead of mixing 'button', 'control', 'switch'.",
+      "knowledge_type": "example",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_009",
+        "example_type": "corrected",
+        "context": "UI documentation",
+        "timestamp": "2025-01-12T13:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "3bf05f282ff4e529",
+      "title": "Why Rewrite: CONSISTENCY",
+      "question": "Why was 'Click the button. Press the control to continue. Hit the switch to finalize.' rewritten to 'Click the button. Click the button to continue. Click the button to finalize.'?",
+      "answer": "Used consistent terminology 'button' throughout instead of mixing 'button', 'control', 'switch'.",
+      "knowledge_type": "example",
+      "rule_id": "CONSISTENCY",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_009",
+        "example_type": "justification",
+        "context": "UI documentation",
+        "timestamp": "2025-01-12T13:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "6b97403ea1a24c94",
+      "title": "Bad Example: VERB_TENSE",
+      "question": "What is wrong with this sentence: 'The user clicks the button and the system displayed the result.'?",
+      "answer": "This sentence violates the VERB_TENSE rule. Maintained consistent present tense throughout the sentence.",
+      "knowledge_type": "example",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_010",
+        "example_type": "bad",
+        "context": "Process description",
+        "timestamp": "2025-01-13T10:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "9ffb91912d1f8df6",
+      "title": "Corrected Example: VERB_TENSE",
+      "question": "How should this be written correctly: 'The user clicks the button and the system displayed the result.'?",
+      "answer": "Correct version: 'The user clicks the button and the system displays the result.'. Maintained consistent present tense throughout the sentence.",
+      "knowledge_type": "example",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_010",
+        "example_type": "corrected",
+        "context": "Process description",
+        "timestamp": "2025-01-13T10:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "dfc4ce95972de859",
+      "title": "Why Rewrite: VERB_TENSE",
+      "question": "Why was 'The user clicks the button and the system displayed the result.' rewritten to 'The user clicks the button and the system displays the result.'?",
+      "answer": "Maintained consistent present tense throughout the sentence.",
+      "knowledge_type": "example",
+      "rule_id": "VERB_TENSE",
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "rewrite_history",
+      "metadata": {
+        "rewrite_id": "rewrite_010",
+        "example_type": "justification",
+        "context": "Process description",
+        "timestamp": "2025-01-13T10:00:00"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "b61b2f3c93d70125",
+      "title": "Do NOT rewrite: UI button labels",
+      "question": "Should UI button labels be rewritten?",
+      "answer": "NO. UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "fc0d67ef0db23711",
+      "title": "Do NOT rewrite: UI button labels - Example 1",
+      "question": "Should this UI button labels be rewritten: 'Save'?",
+      "answer": "NO. Never rewrite UI button labels. They must remain exactly as shown. Reason: UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Save",
+        "category": "UI button labels"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "4c0d03ba8b916336",
+      "title": "Do NOT rewrite: UI button labels - Example 2",
+      "question": "Should this UI button labels be rewritten: 'Cancel'?",
+      "answer": "NO. Never rewrite UI button labels. They must remain exactly as shown. Reason: UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Cancel",
+        "category": "UI button labels"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "db12db8d546d36a8",
+      "title": "Do NOT rewrite: UI button labels - Example 3",
+      "question": "Should this UI button labels be rewritten: 'Submit'?",
+      "answer": "NO. Never rewrite UI button labels. They must remain exactly as shown. Reason: UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Submit",
+        "category": "UI button labels"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "270a408b0a5609f5",
+      "title": "Do NOT rewrite: UI button labels - Example 4",
+      "question": "Should this UI button labels be rewritten: 'Delete'?",
+      "answer": "NO. Never rewrite UI button labels. They must remain exactly as shown. Reason: UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Delete",
+        "category": "UI button labels"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "618fe546d6b120a1",
+      "title": "Do NOT rewrite: UI button labels - Example 5",
+      "question": "Should this UI button labels be rewritten: 'OK'?",
+      "answer": "NO. Never rewrite UI button labels. They must remain exactly as shown. Reason: UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "OK",
+        "category": "UI button labels"
+      },
+      "created_at": "2026-01-16T14:38:07.622505"
+    },
+    {
+      "id": "1c9bd4be1f8c9161",
+      "title": "Do NOT rewrite: UI button labels - Example 6",
+      "question": "Should this UI button labels be rewritten: 'Apply'?",
+      "answer": "NO. Never rewrite UI button labels. They must remain exactly as shown. Reason: UI labels must match the actual interface exactly. Rewriting them will confuse users who cannot find the button you describe.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Apply",
+        "category": "UI button labels"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "c4c361e4caf739cc",
+      "title": "Do NOT rewrite: menu items",
+      "question": "Should menu items be rewritten?",
+      "answer": "NO. Menu items must match the product interface exactly. Users follow documentation to find specific menus.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "b0840146f2c96ed8",
+      "title": "Do NOT rewrite: menu items - Example 1",
+      "question": "Should this menu items be rewritten: 'File > Open'?",
+      "answer": "NO. Never rewrite menu items. They must remain exactly as shown. Reason: Menu items must match the product interface exactly. Users follow documentation to find specific menus.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "File > Open",
+        "category": "menu items"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "d9e4b99657533cdf",
+      "title": "Do NOT rewrite: menu items - Example 2",
+      "question": "Should this menu items be rewritten: 'Edit > Preferences'?",
+      "answer": "NO. Never rewrite menu items. They must remain exactly as shown. Reason: Menu items must match the product interface exactly. Users follow documentation to find specific menus.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Edit > Preferences",
+        "category": "menu items"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "5c5b9677d55aff83",
+      "title": "Do NOT rewrite: menu items - Example 3",
+      "question": "Should this menu items be rewritten: 'View > Toolbar'?",
+      "answer": "NO. Never rewrite menu items. They must remain exactly as shown. Reason: Menu items must match the product interface exactly. Users follow documentation to find specific menus.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "View > Toolbar",
+        "category": "menu items"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "0246288f45bbb260",
+      "title": "Do NOT rewrite: field labels in forms",
+      "question": "Should field labels in forms be rewritten?",
+      "answer": "NO. Field labels must match the UI exactly so users can locate the correct input field.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "9a636de05dd2bc92",
+      "title": "Do NOT rewrite: field labels in forms - Example 1",
+      "question": "Should this field labels in forms be rewritten: 'Username'?",
+      "answer": "NO. Never rewrite field labels in forms. They must remain exactly as shown. Reason: Field labels must match the UI exactly so users can locate the correct input field.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Username",
+        "category": "field labels in forms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "f1bc7c8d72b2cf3c",
+      "title": "Do NOT rewrite: field labels in forms - Example 2",
+      "question": "Should this field labels in forms be rewritten: 'Email Address'?",
+      "answer": "NO. Never rewrite field labels in forms. They must remain exactly as shown. Reason: Field labels must match the UI exactly so users can locate the correct input field.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Email Address",
+        "category": "field labels in forms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "a2f6d361e49edf1e",
+      "title": "Do NOT rewrite: field labels in forms - Example 3",
+      "question": "Should this field labels in forms be rewritten: 'Password'?",
+      "answer": "NO. Never rewrite field labels in forms. They must remain exactly as shown. Reason: Field labels must match the UI exactly so users can locate the correct input field.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Password",
+        "category": "field labels in forms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "892cfd49ddaaec87",
+      "title": "Do NOT rewrite: field labels in forms - Example 4",
+      "question": "Should this field labels in forms be rewritten: 'Confirm Password'?",
+      "answer": "NO. Never rewrite field labels in forms. They must remain exactly as shown. Reason: Field labels must match the UI exactly so users can locate the correct input field.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Confirm Password",
+        "category": "field labels in forms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "511074c0203a2661",
+      "title": "Do NOT rewrite: dialog box titles",
+      "question": "Should dialog box titles be rewritten?",
+      "answer": "NO. Dialog titles must match exactly so users can identify which window the documentation refers to.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "ad20b29bf2511adf",
+      "title": "Do NOT rewrite: dialog box titles - Example 1",
+      "question": "Should this dialog box titles be rewritten: 'Save As'?",
+      "answer": "NO. Never rewrite dialog box titles. They must remain exactly as shown. Reason: Dialog titles must match exactly so users can identify which window the documentation refers to.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Save As",
+        "category": "dialog box titles"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "1be0471e5fd9dee5",
+      "title": "Do NOT rewrite: dialog box titles - Example 2",
+      "question": "Should this dialog box titles be rewritten: 'Preferences'?",
+      "answer": "NO. Never rewrite dialog box titles. They must remain exactly as shown. Reason: Dialog titles must match exactly so users can identify which window the documentation refers to.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Preferences",
+        "category": "dialog box titles"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "5d76417d14ff941a",
+      "title": "Do NOT rewrite: dialog box titles - Example 3",
+      "question": "Should this dialog box titles be rewritten: 'Error'?",
+      "answer": "NO. Never rewrite dialog box titles. They must remain exactly as shown. Reason: Dialog titles must match exactly so users can identify which window the documentation refers to.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Error",
+        "category": "dialog box titles"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "0400f55543482868",
+      "title": "Do NOT rewrite: dialog box titles - Example 4",
+      "question": "Should this dialog box titles be rewritten: 'Warning'?",
+      "answer": "NO. Never rewrite dialog box titles. They must remain exactly as shown. Reason: Dialog titles must match exactly so users can identify which window the documentation refers to.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Warning",
+        "category": "dialog box titles"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "bebcf9a0ceb41cd8",
+      "title": "Do NOT rewrite: tab names",
+      "question": "Should tab names be rewritten?",
+      "answer": "NO. Tab names must be exact matches to help users navigate multi-tab interfaces.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "d7143586e323deca",
+      "title": "Do NOT rewrite: tab names - Example 1",
+      "question": "Should this tab names be rewritten: 'General'?",
+      "answer": "NO. Never rewrite tab names. They must remain exactly as shown. Reason: Tab names must be exact matches to help users navigate multi-tab interfaces.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "General",
+        "category": "tab names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "012141b1f7dc20f3",
+      "title": "Do NOT rewrite: tab names - Example 2",
+      "question": "Should this tab names be rewritten: 'Advanced'?",
+      "answer": "NO. Never rewrite tab names. They must remain exactly as shown. Reason: Tab names must be exact matches to help users navigate multi-tab interfaces.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Advanced",
+        "category": "tab names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "4aa8d3937f167785",
+      "title": "Do NOT rewrite: tab names - Example 3",
+      "question": "Should this tab names be rewritten: 'Network'?",
+      "answer": "NO. Never rewrite tab names. They must remain exactly as shown. Reason: Tab names must be exact matches to help users navigate multi-tab interfaces.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Network",
+        "category": "tab names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "9755cb108c74fd69",
+      "title": "Do NOT rewrite: tab names - Example 4",
+      "question": "Should this tab names be rewritten: 'Security'?",
+      "answer": "NO. Never rewrite tab names. They must remain exactly as shown. Reason: Tab names must be exact matches to help users navigate multi-tab interfaces.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "ui",
+      "metadata": {
+        "example": "Security",
+        "category": "tab names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "5ed35ff591fcfa2e",
+      "title": "Do NOT rewrite: error codes",
+      "question": "Should error codes be rewritten?",
+      "answer": "NO. Error codes are exact identifiers used for troubleshooting. Changing them prevents users from finding solutions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "a27035f6c66ebd6a",
+      "title": "Do NOT rewrite: error codes - Example 1",
+      "question": "Should this error codes be rewritten: 'ERROR_404'?",
+      "answer": "NO. Never rewrite error codes. They must remain exactly as shown. Reason: Error codes are exact identifiers used for troubleshooting. Changing them prevents users from finding solutions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "ERROR_404",
+        "category": "error codes"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "9fde2bd26f6fbb99",
+      "title": "Do NOT rewrite: error codes - Example 2",
+      "question": "Should this error codes be rewritten: 'ERR_CONNECTION_REFUSED'?",
+      "answer": "NO. Never rewrite error codes. They must remain exactly as shown. Reason: Error codes are exact identifiers used for troubleshooting. Changing them prevents users from finding solutions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "ERR_CONNECTION_REFUSED",
+        "category": "error codes"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "5150cfc376d7a28a",
+      "title": "Do NOT rewrite: error codes - Example 3",
+      "question": "Should this error codes be rewritten: '0x80070005'?",
+      "answer": "NO. Never rewrite error codes. They must remain exactly as shown. Reason: Error codes are exact identifiers used for troubleshooting. Changing them prevents users from finding solutions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "0x80070005",
+        "category": "error codes"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "d941c897e1402f7a",
+      "title": "Do NOT rewrite: HTTP status codes",
+      "question": "Should HTTP status codes be rewritten?",
+      "answer": "NO. HTTP status codes are international standards. They must be exact (200, 404, 500, etc.).",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "e9fd0ee03e69bf6e",
+      "title": "Do NOT rewrite: HTTP status codes - Example 1",
+      "question": "Should this HTTP status codes be rewritten: '200 OK'?",
+      "answer": "NO. Never rewrite HTTP status codes. They must remain exactly as shown. Reason: HTTP status codes are international standards. They must be exact (200, 404, 500, etc.).",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "200 OK",
+        "category": "HTTP status codes"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "7c06bc90849f511c",
+      "title": "Do NOT rewrite: HTTP status codes - Example 2",
+      "question": "Should this HTTP status codes be rewritten: '404 Not Found'?",
+      "answer": "NO. Never rewrite HTTP status codes. They must remain exactly as shown. Reason: HTTP status codes are international standards. They must be exact (200, 404, 500, etc.).",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "404 Not Found",
+        "category": "HTTP status codes"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "adc8bfc470196e79",
+      "title": "Do NOT rewrite: HTTP status codes - Example 3",
+      "question": "Should this HTTP status codes be rewritten: '500 Internal Server Error'?",
+      "answer": "NO. Never rewrite HTTP status codes. They must remain exactly as shown. Reason: HTTP status codes are international standards. They must be exact (200, 404, 500, etc.).",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "500 Internal Server Error",
+        "category": "HTTP status codes"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "8787ec836f4df640",
+      "title": "Do NOT rewrite: copyright notices",
+      "question": "Should copyright notices be rewritten?",
+      "answer": "NO. Copyright notices are legal text that must remain exactly as written. Changes can invalidate legal protections.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "36fd5d094c379573",
+      "title": "Do NOT rewrite: copyright notices - Example 1",
+      "question": "Should this copyright notices be rewritten: 'Copyright © 2025'?",
+      "answer": "NO. Never rewrite copyright notices. They must remain exactly as shown. Reason: Copyright notices are legal text that must remain exactly as written. Changes can invalidate legal protections.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "Copyright © 2025",
+        "category": "copyright notices"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "22f16f00b21ecc8e",
+      "title": "Do NOT rewrite: copyright notices - Example 2",
+      "question": "Should this copyright notices be rewritten: 'All rights reserved'?",
+      "answer": "NO. Never rewrite copyright notices. They must remain exactly as shown. Reason: Copyright notices are legal text that must remain exactly as written. Changes can invalidate legal protections.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "All rights reserved",
+        "category": "copyright notices"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "9aef3dfcc476bf37",
+      "title": "Do NOT rewrite: copyright notices - Example 3",
+      "question": "Should this copyright notices be rewritten: 'Patent pending'?",
+      "answer": "NO. Never rewrite copyright notices. They must remain exactly as shown. Reason: Copyright notices are legal text that must remain exactly as written. Changes can invalidate legal protections.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "Patent pending",
+        "category": "copyright notices"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "58f9cd8d6c3b2bc1",
+      "title": "Do NOT rewrite: safety warnings",
+      "question": "Should safety warnings be rewritten?",
+      "answer": "NO. Safety warnings are legally required text that cannot be modified without legal review. They protect users and the company.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "safety",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "1d9d41f0f0a7a541",
+      "title": "Do NOT rewrite: safety warnings - Example 1",
+      "question": "Should this safety warnings be rewritten: 'WARNING'?",
+      "answer": "NO. Never rewrite safety warnings. They must remain exactly as shown. Reason: Safety warnings are legally required text that cannot be modified without legal review. They protect users and the company.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "safety",
+      "metadata": {
+        "example": "WARNING",
+        "category": "safety warnings"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "54e7daa473648070",
+      "title": "Do NOT rewrite: safety warnings - Example 2",
+      "question": "Should this safety warnings be rewritten: 'DANGER'?",
+      "answer": "NO. Never rewrite safety warnings. They must remain exactly as shown. Reason: Safety warnings are legally required text that cannot be modified without legal review. They protect users and the company.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "safety",
+      "metadata": {
+        "example": "DANGER",
+        "category": "safety warnings"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "f77b387202128a44",
+      "title": "Do NOT rewrite: safety warnings - Example 3",
+      "question": "Should this safety warnings be rewritten: 'CAUTION'?",
+      "answer": "NO. Never rewrite safety warnings. They must remain exactly as shown. Reason: Safety warnings are legally required text that cannot be modified without legal review. They protect users and the company.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "safety",
+      "metadata": {
+        "example": "CAUTION",
+        "category": "safety warnings"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "c7cac11bc544af99",
+      "title": "Do NOT rewrite: safety warnings - Example 4",
+      "question": "Should this safety warnings be rewritten: 'NOTICE'?",
+      "answer": "NO. Never rewrite safety warnings. They must remain exactly as shown. Reason: Safety warnings are legally required text that cannot be modified without legal review. They protect users and the company.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "safety",
+      "metadata": {
+        "example": "NOTICE",
+        "category": "safety warnings"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "b30fc53aebaf9510",
+      "title": "Do NOT rewrite: warranty disclaimers",
+      "question": "Should warranty disclaimers be rewritten?",
+      "answer": "NO. Warranty text is legal language reviewed by lawyers. Changing it can affect legal liability.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "db6c40196dfba65d",
+      "title": "Do NOT rewrite: warranty disclaimers - Example 1",
+      "question": "Should this warranty disclaimers be rewritten: 'AS IS'?",
+      "answer": "NO. Never rewrite warranty disclaimers. They must remain exactly as shown. Reason: Warranty text is legal language reviewed by lawyers. Changing it can affect legal liability.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "AS IS",
+        "category": "warranty disclaimers"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "f1b7f3cbda9d8a55",
+      "title": "Do NOT rewrite: warranty disclaimers - Example 2",
+      "question": "Should this warranty disclaimers be rewritten: 'WITHOUT WARRANTY'?",
+      "answer": "NO. Never rewrite warranty disclaimers. They must remain exactly as shown. Reason: Warranty text is legal language reviewed by lawyers. Changing it can affect legal liability.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "WITHOUT WARRANTY",
+        "category": "warranty disclaimers"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "580f22a5477f7392",
+      "title": "Do NOT rewrite: warranty disclaimers - Example 3",
+      "question": "Should this warranty disclaimers be rewritten: 'LIMITED WARRANTY'?",
+      "answer": "NO. Never rewrite warranty disclaimers. They must remain exactly as shown. Reason: Warranty text is legal language reviewed by lawyers. Changing it can affect legal liability.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "LIMITED WARRANTY",
+        "category": "warranty disclaimers"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "88db00f3cfd1edd8",
+      "title": "Do NOT rewrite: regulatory compliance statements",
+      "question": "Should regulatory compliance statements be rewritten?",
+      "answer": "NO. Compliance statements must match regulatory requirements exactly. Changes can void certifications.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "d0b41c74306613d3",
+      "title": "Do NOT rewrite: regulatory compliance statements - Example 1",
+      "question": "Should this regulatory compliance statements be rewritten: 'FCC Compliance'?",
+      "answer": "NO. Never rewrite regulatory compliance statements. They must remain exactly as shown. Reason: Compliance statements must match regulatory requirements exactly. Changes can void certifications.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "FCC Compliance",
+        "category": "regulatory compliance statements"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "74f0840accc4fdf9",
+      "title": "Do NOT rewrite: regulatory compliance statements - Example 2",
+      "question": "Should this regulatory compliance statements be rewritten: 'CE Mark'?",
+      "answer": "NO. Never rewrite regulatory compliance statements. They must remain exactly as shown. Reason: Compliance statements must match regulatory requirements exactly. Changes can void certifications.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "CE Mark",
+        "category": "regulatory compliance statements"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "ea2cd99c8955f0a1",
+      "title": "Do NOT rewrite: regulatory compliance statements - Example 3",
+      "question": "Should this regulatory compliance statements be rewritten: 'ISO 9001 Certified'?",
+      "answer": "NO. Never rewrite regulatory compliance statements. They must remain exactly as shown. Reason: Compliance statements must match regulatory requirements exactly. Changes can void certifications.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "legal",
+      "metadata": {
+        "example": "ISO 9001 Certified",
+        "category": "regulatory compliance statements"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "cacb8c7b71549eaf",
+      "title": "Do NOT rewrite: standard references",
+      "question": "Should standard references be rewritten?",
+      "answer": "NO. Standards have exact identifiers. Changing them makes it impossible to find the correct standard.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "02e269d5b9f4c19d",
+      "title": "Do NOT rewrite: standard references - Example 1",
+      "question": "Should this standard references be rewritten: 'ISO 8601'?",
+      "answer": "NO. Never rewrite standard references. They must remain exactly as shown. Reason: Standards have exact identifiers. Changing them makes it impossible to find the correct standard.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "ISO 8601",
+        "category": "standard references"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "2d1e75870d9ec23f",
+      "title": "Do NOT rewrite: standard references - Example 2",
+      "question": "Should this standard references be rewritten: 'RFC 2616'?",
+      "answer": "NO. Never rewrite standard references. They must remain exactly as shown. Reason: Standards have exact identifiers. Changing them makes it impossible to find the correct standard.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "RFC 2616",
+        "category": "standard references"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "bf7a34b0d7fc60fa",
+      "title": "Do NOT rewrite: standard references - Example 3",
+      "question": "Should this standard references be rewritten: 'IEEE 802.11'?",
+      "answer": "NO. Never rewrite standard references. They must remain exactly as shown. Reason: Standards have exact identifiers. Changing them makes it impossible to find the correct standard.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "IEEE 802.11",
+        "category": "standard references"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "54a014125ceeb17c",
+      "title": "Do NOT rewrite: API endpoints",
+      "question": "Should API endpoints be rewritten?",
+      "answer": "NO. API endpoints must be character-perfect. Any change breaks code examples and integration.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "5bb428724325375c",
+      "title": "Do NOT rewrite: API endpoints - Example 1",
+      "question": "Should this API endpoints be rewritten: '/api/v1/users'?",
+      "answer": "NO. Never rewrite API endpoints. They must remain exactly as shown. Reason: API endpoints must be character-perfect. Any change breaks code examples and integration.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "/api/v1/users",
+        "category": "API endpoints"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "fef6c0ce4de7a3b3",
+      "title": "Do NOT rewrite: API endpoints - Example 2",
+      "question": "Should this API endpoints be rewritten: 'GET /posts/{id}'?",
+      "answer": "NO. Never rewrite API endpoints. They must remain exactly as shown. Reason: API endpoints must be character-perfect. Any change breaks code examples and integration.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "GET /posts/{id}",
+        "category": "API endpoints"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "61e555c85a013455",
+      "title": "Do NOT rewrite: API endpoints - Example 3",
+      "question": "Should this API endpoints be rewritten: 'https://api.example.com'?",
+      "answer": "NO. Never rewrite API endpoints. They must remain exactly as shown. Reason: API endpoints must be character-perfect. Any change breaks code examples and integration.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "https://api.example.com",
+        "category": "API endpoints"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "1ee4c71b65979c57",
+      "title": "Do NOT rewrite: code snippets",
+      "question": "Should code snippets be rewritten?",
+      "answer": "NO. Code must be syntactically correct. Rewriting for style breaks functionality.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "1291a5ae5f192f38",
+      "title": "Do NOT rewrite: code snippets - Example 1",
+      "question": "Should this code snippets be rewritten: 'import sys'?",
+      "answer": "NO. Never rewrite code snippets. They must remain exactly as shown. Reason: Code must be syntactically correct. Rewriting for style breaks functionality.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "import sys",
+        "category": "code snippets"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "46480f49f57930f9",
+      "title": "Do NOT rewrite: code snippets - Example 2",
+      "question": "Should this code snippets be rewritten: 'function getData()'?",
+      "answer": "NO. Never rewrite code snippets. They must remain exactly as shown. Reason: Code must be syntactically correct. Rewriting for style breaks functionality.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "function getData()",
+        "category": "code snippets"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "b02b88a36cecb73d",
+      "title": "Do NOT rewrite: code snippets - Example 3",
+      "question": "Should this code snippets be rewritten: 'SELECT * FROM users'?",
+      "answer": "NO. Never rewrite code snippets. They must remain exactly as shown. Reason: Code must be syntactically correct. Rewriting for style breaks functionality.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "api",
+      "metadata": {
+        "example": "SELECT * FROM users",
+        "category": "code snippets"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "9f9f0019bb59e665",
+      "title": "Do NOT rewrite: version numbers",
+      "question": "Should version numbers be rewritten?",
+      "answer": "NO. Version numbers are exact specifications. Changing them refers to wrong software versions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "c0ad5d976c10bca7",
+      "title": "Do NOT rewrite: version numbers - Example 1",
+      "question": "Should this version numbers be rewritten: 'v2.5.1'?",
+      "answer": "NO. Never rewrite version numbers. They must remain exactly as shown. Reason: Version numbers are exact specifications. Changing them refers to wrong software versions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "v2.5.1",
+        "category": "version numbers"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "1c1e6e783bec445e",
+      "title": "Do NOT rewrite: version numbers - Example 2",
+      "question": "Should this version numbers be rewritten: 'Version 3.0'?",
+      "answer": "NO. Never rewrite version numbers. They must remain exactly as shown. Reason: Version numbers are exact specifications. Changing them refers to wrong software versions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Version 3.0",
+        "category": "version numbers"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "fb448270052f9862",
+      "title": "Do NOT rewrite: version numbers - Example 3",
+      "question": "Should this version numbers be rewritten: 'Build 12345'?",
+      "answer": "NO. Never rewrite version numbers. They must remain exactly as shown. Reason: Version numbers are exact specifications. Changing them refers to wrong software versions.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Build 12345",
+        "category": "version numbers"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "2a7c53584cb4b078",
+      "title": "Do NOT rewrite: file paths and names",
+      "question": "Should file paths and names be rewritten?",
+      "answer": "NO. File paths must be exact for users to locate files and folders correctly.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "a6b03217a3885de6",
+      "title": "Do NOT rewrite: file paths and names - Example 1",
+      "question": "Should this file paths and names be rewritten: '/etc/config.yaml'?",
+      "answer": "NO. Never rewrite file paths and names. They must remain exactly as shown. Reason: File paths must be exact for users to locate files and folders correctly.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "/etc/config.yaml",
+        "category": "file paths and names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "41a13b06abb3fbc1",
+      "title": "Do NOT rewrite: file paths and names - Example 2",
+      "question": "Should this file paths and names be rewritten: 'C:\\Program Files\\'?",
+      "answer": "NO. Never rewrite file paths and names. They must remain exactly as shown. Reason: File paths must be exact for users to locate files and folders correctly.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "C:\\Program Files\\",
+        "category": "file paths and names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "49630d6aad3768ac",
+      "title": "Do NOT rewrite: file paths and names - Example 3",
+      "question": "Should this file paths and names be rewritten: '~/.bashrc'?",
+      "answer": "NO. Never rewrite file paths and names. They must remain exactly as shown. Reason: File paths must be exact for users to locate files and folders correctly.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "~/.bashrc",
+        "category": "file paths and names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "1c8d00f9bc82f803",
+      "title": "Do NOT rewrite: product names",
+      "question": "Should product names be rewritten?",
+      "answer": "NO. Product names are trademarks with specific capitalization and spacing. Changes violate brand guidelines.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "5ad6dfaacfaa9923",
+      "title": "Do NOT rewrite: product names - Example 1",
+      "question": "Should this product names be rewritten: 'Microsoft Windows'?",
+      "answer": "NO. Never rewrite product names. They must remain exactly as shown. Reason: Product names are trademarks with specific capitalization and spacing. Changes violate brand guidelines.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Microsoft Windows",
+        "category": "product names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "17b4da567e418fa4",
+      "title": "Do NOT rewrite: product names - Example 2",
+      "question": "Should this product names be rewritten: 'iPhone'?",
+      "answer": "NO. Never rewrite product names. They must remain exactly as shown. Reason: Product names are trademarks with specific capitalization and spacing. Changes violate brand guidelines.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "iPhone",
+        "category": "product names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "408a39585a049467",
+      "title": "Do NOT rewrite: product names - Example 3",
+      "question": "Should this product names be rewritten: 'PostgreSQL'?",
+      "answer": "NO. Never rewrite product names. They must remain exactly as shown. Reason: Product names are trademarks with specific capitalization and spacing. Changes violate brand guidelines.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "PostgreSQL",
+        "category": "product names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "ce9e61cc20ad9c4c",
+      "title": "Do NOT rewrite: trademarked terms",
+      "question": "Should trademarked terms be rewritten?",
+      "answer": "NO. Trademarks must use exact spelling and capitalization to maintain legal protection.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "6887e084d440ac49",
+      "title": "Do NOT rewrite: trademarked terms - Example 1",
+      "question": "Should this trademarked terms be rewritten: 'Bluetooth®'?",
+      "answer": "NO. Never rewrite trademarked terms. They must remain exactly as shown. Reason: Trademarks must use exact spelling and capitalization to maintain legal protection.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Bluetooth®",
+        "category": "trademarked terms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "b87c1e72631da994",
+      "title": "Do NOT rewrite: trademarked terms - Example 2",
+      "question": "Should this trademarked terms be rewritten: 'Wi-Fi™'?",
+      "answer": "NO. Never rewrite trademarked terms. They must remain exactly as shown. Reason: Trademarks must use exact spelling and capitalization to maintain legal protection.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Wi-Fi™",
+        "category": "trademarked terms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "6eb00ea7711ab4fc",
+      "title": "Do NOT rewrite: trademarked terms - Example 3",
+      "question": "Should this trademarked terms be rewritten: 'UNIX®'?",
+      "answer": "NO. Never rewrite trademarked terms. They must remain exactly as shown. Reason: Trademarks must use exact spelling and capitalization to maintain legal protection.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "UNIX®",
+        "category": "trademarked terms"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "6c27c0097786e9f7",
+      "title": "Do NOT rewrite: company names",
+      "question": "Should company names be rewritten?",
+      "answer": "NO. Company names have official spellings that must be preserved for legal and brand reasons.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "e2b2828a957dc422",
+      "title": "Do NOT rewrite: company names - Example 1",
+      "question": "Should this company names be rewritten: 'Microsoft Corporation'?",
+      "answer": "NO. Never rewrite company names. They must remain exactly as shown. Reason: Company names have official spellings that must be preserved for legal and brand reasons.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Microsoft Corporation",
+        "category": "company names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "3ad922d8b8931b5a",
+      "title": "Do NOT rewrite: company names - Example 2",
+      "question": "Should this company names be rewritten: 'Apple Inc.'?",
+      "answer": "NO. Never rewrite company names. They must remain exactly as shown. Reason: Company names have official spellings that must be preserved for legal and brand reasons.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Apple Inc.",
+        "category": "company names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "2e7070b41e01283d",
+      "title": "Do NOT rewrite: company names - Example 3",
+      "question": "Should this company names be rewritten: 'Google LLC'?",
+      "answer": "NO. Never rewrite company names. They must remain exactly as shown. Reason: Company names have official spellings that must be preserved for legal and brand reasons.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "Google LLC",
+        "category": "company names"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "9afa1e7fb4ad168d",
+      "title": "Do NOT rewrite: units of measurement",
+      "question": "Should units of measurement be rewritten?",
+      "answer": "NO. Units must be standard abbreviations (kg, m, GB) for technical accuracy.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "83cd44a2427dab17",
+      "title": "Do NOT rewrite: units of measurement - Example 1",
+      "question": "Should this units of measurement be rewritten: '5 GB'?",
+      "answer": "NO. Never rewrite units of measurement. They must remain exactly as shown. Reason: Units must be standard abbreviations (kg, m, GB) for technical accuracy.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "5 GB",
+        "category": "units of measurement"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "a25bddfcce2bc4b8",
+      "title": "Do NOT rewrite: units of measurement - Example 2",
+      "question": "Should this units of measurement be rewritten: '100 MHz'?",
+      "answer": "NO. Never rewrite units of measurement. They must remain exactly as shown. Reason: Units must be standard abbreviations (kg, m, GB) for technical accuracy.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "100 MHz",
+        "category": "units of measurement"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "8f3f25c3b2c3b86a",
+      "title": "Do NOT rewrite: units of measurement - Example 3",
+      "question": "Should this units of measurement be rewritten: '25°C'?",
+      "answer": "NO. Never rewrite units of measurement. They must remain exactly as shown. Reason: Units must be standard abbreviations (kg, m, GB) for technical accuracy.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "25°C",
+        "category": "units of measurement"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "da30514378b451b6",
+      "title": "Do NOT rewrite: units of measurement - Example 4",
+      "question": "Should this units of measurement be rewritten: '10 km/h'?",
+      "answer": "NO. Never rewrite units of measurement. They must remain exactly as shown. Reason: Units must be standard abbreviations (kg, m, GB) for technical accuracy.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "high",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "10 km/h",
+        "category": "units of measurement"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "7ca9841317423bd0",
+      "title": "Do NOT rewrite: mathematical formulas",
+      "question": "Should mathematical formulas be rewritten?",
+      "answer": "NO. Formulas must be mathematically exact. Rewriting changes meaning and results.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "8d8fa17277c40546",
+      "title": "Do NOT rewrite: mathematical formulas - Example 1",
+      "question": "Should this mathematical formulas be rewritten: 'E = mc²'?",
+      "answer": "NO. Never rewrite mathematical formulas. They must remain exactly as shown. Reason: Formulas must be mathematically exact. Rewriting changes meaning and results.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "E = mc²",
+        "category": "mathematical formulas"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "2e42ed70745c1484",
+      "title": "Do NOT rewrite: mathematical formulas - Example 2",
+      "question": "Should this mathematical formulas be rewritten: 'a² + b² = c²'?",
+      "answer": "NO. Never rewrite mathematical formulas. They must remain exactly as shown. Reason: Formulas must be mathematically exact. Rewriting changes meaning and results.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "a² + b² = c²",
+        "category": "mathematical formulas"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "f3862c4d6ffbc48d",
+      "title": "Do NOT rewrite: mathematical formulas - Example 3",
+      "question": "Should this mathematical formulas be rewritten: '∫ f(x) dx'?",
+      "answer": "NO. Never rewrite mathematical formulas. They must remain exactly as shown. Reason: Formulas must be mathematically exact. Rewriting changes meaning and results.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "∫ f(x) dx",
+        "category": "mathematical formulas"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "c0e6d79bb00762da",
+      "title": "Do NOT rewrite: chemical formulas",
+      "question": "Should chemical formulas be rewritten?",
+      "answer": "NO. Chemical formulas are exact scientific notation. Changes refer to different substances.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {},
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "01b43a3c3b51b5ba",
+      "title": "Do NOT rewrite: chemical formulas - Example 1",
+      "question": "Should this chemical formulas be rewritten: 'H₂O'?",
+      "answer": "NO. Never rewrite chemical formulas. They must remain exactly as shown. Reason: Chemical formulas are exact scientific notation. Changes refer to different substances.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "H₂O",
+        "category": "chemical formulas"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "626cc7cc9f5aaf51",
+      "title": "Do NOT rewrite: chemical formulas - Example 2",
+      "question": "Should this chemical formulas be rewritten: 'CO₂'?",
+      "answer": "NO. Never rewrite chemical formulas. They must remain exactly as shown. Reason: Chemical formulas are exact scientific notation. Changes refer to different substances.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "CO₂",
+        "category": "chemical formulas"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "956324ba96dcc17d",
+      "title": "Do NOT rewrite: chemical formulas - Example 3",
+      "question": "Should this chemical formulas be rewritten: 'C₆H₁₂O₆'?",
+      "answer": "NO. Never rewrite chemical formulas. They must remain exactly as shown. Reason: Chemical formulas are exact scientific notation. Changes refer to different substances.",
+      "knowledge_type": "negative",
+      "rule_id": null,
+      "rewrite_allowed": false,
+      "severity": "critical",
+      "doc_type": "manual",
+      "metadata": {
+        "example": "C₆H₁₂O₆",
+        "category": "chemical formulas"
+      },
+      "created_at": "2026-01-16T14:38:07.624535"
+    },
+    {
+      "id": "cb5a15ea623f6af2",
+      "title": "Procedure Structure - Rule 1",
+      "question": "How should a procedure be structured?",
+      "answer": "A procedure should have: 1) Clear title stating the goal, 2) Prerequisites or preconditions, 3) Numbered steps in sequential order, 4) Expected result or outcome.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Procedure Structure",
+        "category": "procedures",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "8c1605574421462f",
+      "title": "Procedure Structure - Rule 2",
+      "question": "When should procedure steps be numbered?",
+      "answer": "Use numbered steps when order matters. Steps must be performed in sequence. If steps can be done in any order, use bullets instead.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Procedure Structure",
+        "category": "procedures",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "fc7fd1ce64fb29fb",
+      "title": "Procedure Structure - Rule 3",
+      "question": "How long should a procedure step be?",
+      "answer": "Each step should be one action. If a step requires multiple actions, break it into substeps. Maximum one sentence per step.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Procedure Structure",
+        "category": "procedures",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "c69118cb112f35be",
+      "title": "Procedure Structure - Rule 4",
+      "question": "Should procedures include explanations?",
+      "answer": "Procedures should focus on actions. Keep explanations brief. If extensive explanation needed, add a separate 'About' section before the procedure.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Procedure Structure",
+        "category": "procedures",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "207c6d4de386e228",
+      "title": "Procedure Structure - Rule 5",
+      "question": "How should procedure preconditions be presented?",
+      "answer": "List preconditions before step 1 using a 'Before you begin' or 'Prerequisites' section. Use bullets for multiple preconditions.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Procedure Structure",
+        "category": "procedures",
+        "pattern_index": 4
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "d04292e40f7a375c",
+      "title": "List Formatting - Rule 1",
+      "question": "When should I use bulleted lists?",
+      "answer": "Use bullets for items without sequence or priority. All items are equal in importance and can be read in any order.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "List Formatting",
+        "category": "lists",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "7a9f3dd14ba258b6",
+      "title": "List Formatting - Rule 2",
+      "question": "When should I use numbered lists?",
+      "answer": "Use numbers for: 1) Sequential steps, 2) Ranked items (first, second, third), 3) Items that will be referenced by number.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "List Formatting",
+        "category": "lists",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "e42847430a4ba4b3",
+      "title": "List Formatting - Rule 3",
+      "question": "How should list items be capitalized?",
+      "answer": "If list items are complete sentences, capitalize first word and use end punctuation. If fragments, use lowercase (unless proper noun) and no punctuation.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "List Formatting",
+        "category": "lists",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "dc11eb855fadfcad",
+      "title": "List Formatting - Rule 4",
+      "question": "Should list items be parallel in structure?",
+      "answer": "Yes. All items in a list must use parallel grammatical structure. If first item starts with a verb, all items must start with verbs.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "List Formatting",
+        "category": "lists",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "cd71e4dd649ef96a",
+      "title": "List Formatting - Rule 5",
+      "question": "How many items should a list have?",
+      "answer": "Minimum 2 items for a list. If more than 7-9 items, consider grouping into categories or splitting into multiple lists.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "List Formatting",
+        "category": "lists",
+        "pattern_index": 4
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "431f93981fd67b0d",
+      "title": "Table Structure - Rule 1",
+      "question": "When should information be presented in a table?",
+      "answer": "Use tables for: 1) Comparing multiple items across same attributes, 2) Reference data, 3) Specifications, 4) Configurations. Avoid tables for simple lists.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Table Structure",
+        "category": "tables",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "38adf989abb8eec3",
+      "title": "Table Structure - Rule 2",
+      "question": "How should table headers be formatted?",
+      "answer": "Table headers should be concise (1-3 words), use title case, and clearly identify column content. First column typically identifies rows.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Table Structure",
+        "category": "tables",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "8b29854733b7278a",
+      "title": "Table Structure - Rule 3",
+      "question": "Should tables have descriptions?",
+      "answer": "Yes. Introduce every table with a sentence explaining its purpose. Use 'The following table...' or 'Table X shows...'.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Table Structure",
+        "category": "tables",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "e3107bb4fd9822a1",
+      "title": "Table Structure - Rule 4",
+      "question": "How should table cells be formatted?",
+      "answer": "Keep cell content concise. Use sentence fragments, not full sentences. Align text left, numbers right. Use consistent formatting within columns.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Table Structure",
+        "category": "tables",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "cab9019b7183b001",
+      "title": "Table Structure - Rule 5",
+      "question": "When should a table be split?",
+      "answer": "Split tables that: 1) Don't fit on one page/screen, 2) Have more than 7-8 columns, 3) Mix different types of information.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Table Structure",
+        "category": "tables",
+        "pattern_index": 4
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "a308f6160c5a13a0",
+      "title": "Heading Hierarchy - Rule 1",
+      "question": "How should heading levels be used?",
+      "answer": "Use heading hierarchy to show document structure. H1 for main title, H2 for major sections, H3 for subsections. Never skip levels (H1 to H3).",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Heading Hierarchy",
+        "category": "headings",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "4f452981b7bc9c62",
+      "title": "Heading Hierarchy - Rule 2",
+      "question": "How should headings be capitalized?",
+      "answer": "Use sentence case (capitalize first word only) or title case (capitalize major words). Be consistent throughout the document. Sentence case is more modern and readable.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Heading Hierarchy",
+        "category": "headings",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "2d960b8d7e87dfbb",
+      "title": "Heading Hierarchy - Rule 3",
+      "question": "Should headings be numbered?",
+      "answer": "Number headings when: 1) Document will be referenced by section number, 2) Formal technical or legal document, 3) Multi-level TOC needed. Otherwise, use unnumbered.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Heading Hierarchy",
+        "category": "headings",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "50828f0ef8103441",
+      "title": "Heading Hierarchy - Rule 4",
+      "question": "How long should a heading be?",
+      "answer": "Headings should be concise: 2-8 words. Use nouns and verbs, avoid articles (a, an, the). Heading should clearly identify section content.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Heading Hierarchy",
+        "category": "headings",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "2f3442b625a2e29c",
+      "title": "Heading Hierarchy - Rule 5",
+      "question": "Should headings be complete sentences?",
+      "answer": "No. Headings should be phrases, not sentences. No end punctuation (unless question). Exception: FAQ sections can use questions as headings.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Heading Hierarchy",
+        "category": "headings",
+        "pattern_index": 4
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "eb8c2e96c3d2c15f",
+      "title": "Notes and Warnings - Rule 1",
+      "question": "When should I use a Note?",
+      "answer": "Use NOTE for helpful supplementary information that enhances understanding but isn't critical. Reader can skip without losing comprehension.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Notes and Warnings",
+        "category": "admonitions",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "c02632b24b3eecd2",
+      "title": "Notes and Warnings - Rule 2",
+      "question": "When should I use a Warning?",
+      "answer": "Use WARNING for actions that could cause data loss, system damage, or safety issues. Warnings are critical and must not be ignored.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Notes and Warnings",
+        "category": "admonitions",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "2139946ec583fbdf",
+      "title": "Notes and Warnings - Rule 3",
+      "question": "When should I use a Caution?",
+      "answer": "Use CAUTION for actions that could cause unexpected results or minor problems. Less severe than warning but more important than note.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Notes and Warnings",
+        "category": "admonitions",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "ba41cac4ae23cd1c",
+      "title": "Notes and Warnings - Rule 4",
+      "question": "When should I use a Tip?",
+      "answer": "Use TIP for best practices, shortcuts, or expert advice that improves efficiency or quality. Tips add value but aren't required knowledge.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Notes and Warnings",
+        "category": "admonitions",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "bada666bf69d79ff",
+      "title": "Notes and Warnings - Rule 5",
+      "question": "How should admonitions be formatted?",
+      "answer": "Place admonitions before the step or paragraph they relate to. Keep text concise (1-3 sentences). Use specific, actionable language.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Notes and Warnings",
+        "category": "admonitions",
+        "pattern_index": 4
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "fbef7cbf95d9afbf",
+      "title": "Code Examples - Rule 1",
+      "question": "How should code examples be introduced?",
+      "answer": "Introduce code with a sentence explaining what it does and when to use it. Example: 'The following code authenticates the user:'",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Code Examples",
+        "category": "code",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "ce5d8efd9c1a9e66",
+      "title": "Code Examples - Rule 2",
+      "question": "Should code examples be complete or excerpts?",
+      "answer": "Provide complete, runnable examples when possible. If showing excerpt, indicate with comments where omitted code goes: '// ... rest of function'",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Code Examples",
+        "category": "code",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "37b3f06639a12d2b",
+      "title": "Code Examples - Rule 3",
+      "question": "Should code examples include comments?",
+      "answer": "Yes. Comment non-obvious code. Explain why, not what (code shows what). Focus comments on business logic and key decisions.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Code Examples",
+        "category": "code",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "190af00a2f7aeba8",
+      "title": "Code Examples - Rule 4",
+      "question": "How should code examples be tested?",
+      "answer": "All code examples must be tested and verified to work. Broken examples destroy user trust and waste debugging time.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Code Examples",
+        "category": "code",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "183591c7616c22bc",
+      "title": "Code Examples - Rule 5",
+      "question": "Should inline code use different formatting than code blocks?",
+      "answer": "Yes. Use inline code for: single keywords, short expressions, function names. Use code blocks for: multiple lines, complete functions, runnable examples.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Code Examples",
+        "category": "code",
+        "pattern_index": 4
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "3b6520987188df67",
+      "title": "Cross-references - Rule 1",
+      "question": "How should I write cross-references?",
+      "answer": "Use descriptive link text that works out of context. Avoid 'click here' or 'this link'. Example: 'See the Installation Guide' not 'See this page'.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Cross-references",
+        "category": "links",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "2c0c333c8db26d57",
+      "title": "Cross-references - Rule 2",
+      "question": "When should I link to other sections?",
+      "answer": "Link when: 1) Referenced topic explained elsewhere, 2) User needs prerequisite knowledge, 3) Avoiding duplication. Don't link for common knowledge.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Cross-references",
+        "category": "links",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "09e1cd92850014e1",
+      "title": "Cross-references - Rule 3",
+      "question": "Should external links be marked differently?",
+      "answer": "Yes. Indicate external links (to other sites) with icon or text. Users need to know when they're leaving your documentation.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Cross-references",
+        "category": "links",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "70842a39d60a8ce0",
+      "title": "Cross-references - Rule 4",
+      "question": "How should I reference figures and tables?",
+      "answer": "Reference by number and type: 'Figure 1 shows...', 'See Table 2'. Place reference before the figure/table, never after.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Cross-references",
+        "category": "links",
+        "pattern_index": 3
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "ce3ba95f257f3cf9",
+      "title": "Error Message Documentation - Rule 1",
+      "question": "How should error messages be documented?",
+      "answer": "Document errors with: 1) Exact error text (in code format), 2) What causes the error, 3) How to fix it, 4) How to prevent it.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Error Message Documentation",
+        "category": "errors",
+        "pattern_index": 0
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "9a6172fe83dd7222",
+      "title": "Error Message Documentation - Rule 2",
+      "question": "Should error documentation include error codes?",
+      "answer": "Yes. Include exact error code if system generates one. Users search for error codes when troubleshooting.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Error Message Documentation",
+        "category": "errors",
+        "pattern_index": 1
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    },
+    {
+      "id": "5574bbc7f3e4922a",
+      "title": "Error Message Documentation - Rule 3",
+      "question": "How should troubleshooting steps be presented?",
+      "answer": "Present troubleshooting as: 1) Check this first (most common cause), 2) Check this next, 3) Last resort steps. Order by likelihood.",
+      "knowledge_type": "pattern",
+      "rule_id": null,
+      "rewrite_allowed": true,
+      "severity": "medium",
+      "doc_type": "pattern",
+      "metadata": {
+        "pattern_name": "Error Message Documentation",
+        "category": "errors",
+        "pattern_index": 2
+      },
+      "created_at": "2026-01-16T14:38:07.626548"
+    }
+  ]
+}

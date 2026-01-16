@@ -2239,7 +2239,7 @@
                             <div class="feedback-item p-3 mb-2 border rounded" data-sentence-index="${index}">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
-                                        <strong>Sentence ${index + 1}:</strong> "${sentence.sentence.substring(0, 100)}${sentence.sentence.length > 100 ? '...' : ''}"
+                                        <span class="badge bg-primary me-2">Sentence ${index + 1}</span> "${sentence.sentence.substring(0, 100)}${sentence.sentence.length > 100 ? '...' : ''}"
                                         <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> ${feedback.message || feedback.text || feedback}</small>
                                     </div>
                                     <button class="btn btn-outline-primary btn-sm ai-suggestion-btn" 

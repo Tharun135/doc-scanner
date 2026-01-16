@@ -1,0 +1,11 @@
+[
+  {
+    "total_cases": 10,
+    "hits": 3,
+    "misses": 7,
+    "hit_rate": 0.3,
+    "average_retrieval_score": 0.18333333333333332,
+    "rewrite_accuracy": 0.6,
+    "timestamp": "2026-01-16T14:38:27.411144"
+  }
+]
