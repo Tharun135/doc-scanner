@@ -939,6 +939,33 @@ Focus on using examples and guidance from the provided documents.
                 if sentence_clean.lower().strip() == passive_example.lower().strip():
                     return active_example.strip()
             
+            # 6.5. Handle "is based on" pattern (common and often acceptable)
+            # "It is based on X" -> "It uses X" or "This uses X"
+            if re.search(r'\b(?:it|this|that)\s+is\s+based\s+on\b', sentence_lower):
+                match = re.search(r'\b(it|this|that)\s+is\s+based\s+on\s+(.+)', sentence_lower)
+                if match:
+                    pronoun = match.group(1).strip()
+                    basis = match.group(2).strip().rstrip('.')
+                    # Use "uses" for technical components
+                    if pronoun == "it":
+                        return f"It uses {basis}."
+                    elif pronoun == "this":
+                        return f"This uses {basis}."
+                    else:
+                        return f"That uses {basis}."
+            
+            # General "X is based on Y" pattern
+            elif "is based on" in sentence_lower:
+                match = re.search(r'(.+?)\s+is\s+based\s+on\s+(.+)', sentence_lower)
+                if match:
+                    subject = match.group(1).strip()
+                    basis = match.group(2).strip().rstrip('.')
+                    # Remove article from subject
+                    if subject.startswith("the "):
+                        subject = subject[4:]
+                    # Use "uses" for technical contexts
+                    return f"{subject.capitalize()} uses {basis}."
+            
             # 7. Handle general "is/are + past participle" patterns
             general_passive = re.search(r'(.+?)\s+(?:is|are)\s+(\w+ed|\w+n|\w+t)\b(.*)$', sentence_lower)
             if general_passive:

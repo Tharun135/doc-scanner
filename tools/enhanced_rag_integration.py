@@ -11,6 +11,15 @@ from typing import Dict, Any, Optional, List
 # Add enhanced_rag to path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'enhanced_rag'))
 
+# Import deterministic suggestion system (NEW - always use code decisions, not LLM decisions)
+try:
+    from core.deterministic_suggestions import DeterministicSuggestionGenerator
+    from core.issue_resolution_engine import classify_issue
+    DETERMINISTIC_SYSTEM_AVAILABLE = True
+except ImportError as e:
+    DETERMINISTIC_SYSTEM_AVAILABLE = False
+    logging.warning(f"Deterministic system not available: {e}")
+
 try:
     from enhanced_rag import (
         get_enhanced_rag_system,
@@ -275,6 +284,40 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
     
     logger.info(f"[ENHANCED RAG] Processing: {feedback_text[:50]}... | Context: {sentence_context[:50]}...")
     
+    # CRITICAL: Use deterministic system for known issues (never let LLM decide what to do)
+    if DETERMINISTIC_SYSTEM_AVAILABLE:
+        try:
+            # Create issue format for deterministic system
+            issue_data = {
+                'feedback': feedback_text,
+                'context': sentence_context,
+                'rule_id': rule_id,
+                'document_type': 'technical'
+            }
+            
+            # Classify issue deterministically
+            issue_type = classify_issue(feedback_text, sentence_context)
+            
+            if issue_type:  # Known issue - use deterministic system
+                logger.info(f"[DETERMINISTIC] Classified as: {issue_type} - using code-driven solution")
+                
+                generator = DeterministicSuggestionGenerator()
+                result = generator.generate_suggestion(issue_data)
+                
+                if result and result.get('guidance'):
+                    # Deterministic system produced good output
+                    issue['solution_text'] = result['guidance']
+                    issue['proposed_rewrite'] = result.get('rewrite', sentence_context)
+                    issue['sources'] = [{'source': 'deterministic', 'type': result.get('resolution_class', 'unknown')}]
+                    issue['method'] = 'deterministic'
+                    issue['confidence'] = 'high'
+                    issue['severity'] = result.get('severity', 'advisory')
+                    
+                    logger.info(f"[DETERMINISTIC] ✅ Generated: {result.get('rewrite', '')[:50]}...")
+                    return issue
+        except Exception as e:
+            logger.warning(f"[DETERMINISTIC] Failed: {e} - falling back to RAG")
+    
     # Step 1: Try ChromaDB + Ollama RAG (the real RAG system)
     try:
         # Connect to ChromaDB
@@ -295,12 +338,44 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
             if collection_name:
                 collection = client.get_collection(collection_name)
                 
-                # Query ChromaDB for relevant writing rules
+                # Determine issue type for filtering - comprehensive mapping
+                issue_type_filter = None
+                feedback_lower = feedback_text.lower()
+                
+                if "passive" in feedback_lower or "passive voice" in feedback_lower:
+                    issue_type_filter = "passive_voice"
+                elif "long" in feedback_lower and "sentence" in feedback_lower:
+                    issue_type_filter = "long_sentence"
+                elif "vague" in feedback_lower or "various" in feedback_lower or "some" in feedback_lower or "several" in feedback_lower:
+                    issue_type_filter = "vague_term"
+                elif "prerequisite" in feedback_lower or "missing prerequisite" in feedback_lower:
+                    issue_type_filter = "missing_prerequisite"
+                elif "acronym" in feedback_lower or "undefined acronym" in feedback_lower:
+                    issue_type_filter = "undefined_acronym"
+                elif "terminology" in feedback_lower or "inconsistent" in feedback_lower:
+                    issue_type_filter = "inconsistent_terminology"
+                elif "tense" in feedback_lower or "mixed tense" in feedback_lower:
+                    issue_type_filter = "mixed_tense"
+                elif "dense" in feedback_lower or "multiple actions" in feedback_lower:
+                    issue_type_filter = "dense_step"
+                elif "order" in feedback_lower and "step" in feedback_lower:
+                    issue_type_filter = "step_order_problem"
+                
+                # Query ChromaDB with issue type filtering
                 query_text = f"{feedback_text} {sentence_context} {rule_id}"
-                results = collection.query(
-                    query_texts=[query_text],
-                    n_results=3
-                )
+                query_params = {
+                    "query_texts": [query_text],
+                    "n_results": 5  # Get more results when filtering
+                }
+                
+                # Add metadata filter if we know the issue type
+                if issue_type_filter:
+                    query_params["where"] = {"issue_type": issue_type_filter}
+                    logger.info(f"[ENHANCED RAG] Filtering by issue_type={issue_type_filter}")
+                else:
+                    logger.info(f"[ENHANCED RAG] No filter - searching all issue types")
+                
+                results = collection.query(**query_params)
                 
                 if results and results.get('documents') and results['documents'][0]:
                     # Got relevant documents from ChromaDB
@@ -314,7 +389,7 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
                     rag_context = ""
                     sources = []
                     
-                    for i, (doc, meta, dist) in enumerate(zip(documents[:2], metadatas[:2], distances[:2])):
+                    for i, (doc, meta, dist) in enumerate(zip(documents[:3], metadatas[:3], distances[:3])):  # Use top 3
                         rule_name = meta.get('rule_id', f'rule_{i+1}')
                         rag_context += f"Rule {i+1} ({rule_name}):\n{doc[:300]}\n\n"
                         sources.append({
@@ -411,6 +486,44 @@ IMPROVED: """
                                     
                                     if sent1 and sent2:
                                         proposed_rewrite = f"{sent1}. {sent2}"
+                                else:
+                                    # LLM didn't follow the format - try to extract the first meaningful sentence
+                                    # that's similar to the original
+                                    lines = ai_response.split('\n')
+                                    for line in lines:
+                                        line = line.strip().strip('"').strip()
+                                        # Check if line is similar enough to original (shares key words)
+                                        if line and len(line) > 10:
+                                            orig_words = set(sentence_context.lower().split()[:5])
+                                            line_words = set(line.lower().split()[:5])
+                                            # If at least 2 words match from first 5, likely the rewrite
+                                            if len(orig_words & line_words) >= 2:
+                                                proposed_rewrite = line
+                                                break
+                                
+                                # Validate: rewrite must share key terms with original
+                                # Otherwise it's garbage from the LLM
+                                def shares_key_terms(orig, rewrite):
+                                    """Check if rewrite shares meaningful words with original."""
+                                    # Extract key nouns/verbs (not common words)
+                                    import re
+                                    common = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'to', 'of', 'in', 'on', 'at', 'by', 'for', 'with', 'as', 'this', 'that', 'these', 'those', 'can', 'will', 'should', 'must', 'may', 'it', 'its', 'they', 'their', 'you', 'your'}
+                                    
+                                    orig_words = set(re.findall(r'\b\w{3,}\b', orig.lower())) - common
+                                    rewrite_words = set(re.findall(r'\b\w{3,}\b', rewrite.lower())) - common
+                                    
+                                    if not orig_words:  # Original too short
+                                        return True
+                                    
+                                    overlap = len(orig_words & rewrite_words)
+                                    # Require at least 30% word overlap
+                                    return overlap >= max(2, len(orig_words) * 0.3)
+                                
+                                if not shares_key_terms(sentence_context, proposed_rewrite):
+                                    logger.warning(f"[ENHANCED RAG] AI response doesn't match original context. Discarding.")
+                                    logger.warning(f"  Original: {sentence_context[:80]}")
+                                    logger.warning(f"  AI gave: {proposed_rewrite[:80]}")
+                                    proposed_rewrite = sentence_context  # Reset to original
                                 
                                 # Apply simple deterministic fixes if AI didn't provide good correction
                                 if proposed_rewrite == sentence_context or not proposed_rewrite.strip():

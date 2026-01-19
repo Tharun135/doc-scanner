@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Doc Scanner – Advanced Analysis</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -176,6 +179,52 @@
         .sentence-highlight.has-feedback:hover {
             background-color: rgba(255, 193, 7, 0.3);
             border-bottom-color: #f57c00;
+        }
+
+        /* Section link styling */
+        .section-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .section-link:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .section-link i {
+            font-size: 0.75em;
+            margin-right: 2px;
+        }
+
+        /* Highlight flash animation for sections */
+        .highlight-flash {
+            animation: highlightPulse 2s ease-in-out;
+        }
+
+        @keyframes highlightPulse {
+            0% { 
+                background-color: transparent;
+                transform: scale(1);
+            }
+            25% { 
+                background-color: rgba(255, 193, 7, 0.4);
+                transform: scale(1.02);
+            }
+            50% { 
+                background-color: rgba(255, 193, 7, 0.6);
+                transform: scale(1.02);
+            }
+            75% { 
+                background-color: rgba(255, 193, 7, 0.4);
+                transform: scale(1.02);
+            }
+            100% { 
+                background-color: transparent;
+                transform: scale(1);
+            }
         }
 
         .sentence-highlight.sentence-not-found {
@@ -1090,18 +1139,20 @@
                             <!-- Tab Container -->
                             <div class="tab-container">
                                 <div class="tab-header">
-                                    <button class="tab-button active" onclick="switchTab('feedback')">
+                                    <button class="tab-button active" onclick="switchTab('feedback'); return false;">
                                         <i class="fas fa-exclamation-triangle me-1"></i>
                                         Issues
                                     </button>
-                                    <button class="tab-button" onclick="switchTab('ai-feedback')">
+                                    <button class="tab-button" onclick="switchTab('ai-feedback'); return false;">
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
                                 </div>
                                 <div class="tab-content active" id="feedbackContent">
                                     <h5 class="mb-3">Document Issues</h5>
-                                    <!-- Feedback content will be populated here -->
+                                    <!-- Document-level findings will be shown first -->
+                                    <div id="documentFindingsSection"></div>
+                                    <!-- Sentence-level feedback will be shown below -->
                                 </div>
                                 <div class="tab-content" id="aiFeedbackContent">
                                     <h5 class="mb-3">AI-Powered Suggestions</h5>
@@ -1119,12 +1170,49 @@
     </div>
 
     <script>
+        console.log('🎯 JAVASCRIPT LOADED - VERSION 2.0 - Timestamp:', new Date().toISOString());
+        
         // WebSocket connection for real-time progress with fallback
         let socket = null;
         let socketConnected = false;
         let currentRoomId = null;
         let isRealTimeProgress = false;
         
+        // CRITICAL: Wait for DOM to be fully loaded before accessing elements
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM fully loaded, initializing app...');
+            console.log('🎯 DOMContentLoaded VERSION 2.0 - Timestamp:', new Date().toISOString());
+            
+            // Verify critical elements exist
+            const criticalElements = {
+                dropzone: document.getElementById('dropzone'),
+                fileInput: document.getElementById('fileInput'),
+                batchFileInput: document.getElementById('batchFileInput'),
+                multiFileInput: document.getElementById('multiFileInput'),
+                fileList: document.getElementById('fileList'),
+                fileListItems: document.getElementById('fileListItems'),
+                uploadBtnText: document.getElementById('uploadBtnText'),
+                uploadForm: document.getElementById('uploadForm')
+            };
+            
+            console.log('🔍 Critical elements check:', Object.keys(criticalElements).reduce((acc, key) => {
+                acc[key] = !!criticalElements[key];
+                return acc;
+            }, {}));
+            
+            const missingElements = Object.keys(criticalElements).filter(key => !criticalElements[key]);
+            if (missingElements.length > 0) {
+                console.error('❌ CRITICAL: Missing elements:', missingElements);
+                alert('Page load error: Some elements are missing. Please refresh the page (Ctrl+F5).');
+                return;
+            }
+            
+            console.log('✅ All critical elements found, continuing initialization...');
+            
+            initializeApp();
+        });
+        
+        function initializeApp() {
         // Initialize WebSocket with error handling
         try {
             socket = io({
@@ -1161,6 +1249,18 @@
         const browseBtn = document.getElementById('browseBtn');
         const browseBatchBtn = document.getElementById('browseBatchBtn');
         const uploadForm = document.getElementById('uploadForm');
+        
+        // Store references to file list elements for reuse
+        const fileListElement = document.getElementById('fileList');
+        const fileListItemsElement = document.getElementById('fileListItems');
+        const uploadBtnTextElement = document.getElementById('uploadBtnText');
+        
+        console.log('📦 VERSION 2.0 - Stored element references:', {
+            fileListElement: !!fileListElement,
+            fileListItemsElement: !!fileListItemsElement,
+            uploadBtnTextElement: !!uploadBtnTextElement
+        });
+        
         let analysisChart;
         let selectedFiles = [];
         let batchResults = [];
@@ -1354,12 +1454,18 @@
 
         // Handle browse button clicks using event delegation
         document.addEventListener('click', (e) => {
-            if (e.target.id === 'browseBtn') {
+            // Check if the clicked element or its parent is browseBtn
+            const browseButton = e.target.id === 'browseBtn' ? e.target : e.target.closest('#browseBtn');
+            const batchButton = e.target.id === 'browseBatchBtn' ? e.target : e.target.closest('#browseBatchBtn');
+            
+            if (browseButton) {
                 e.preventDefault();
+                e.stopPropagation();
                 console.log('Browse button clicked, triggering file input');
                 multiFileInput.click();
-            } else if (e.target.id === 'browseBatchBtn') {
+            } else if (batchButton) {
                 e.preventDefault();
+                e.stopPropagation();
                 console.log('Browse batch button clicked, triggering batch file input');
                 console.log('Batch file input element:', batchFileInput);
                 console.log('Batch file input accept attribute:', batchFileInput.accept);
@@ -1379,10 +1485,12 @@
         });
 
         multiFileInput.addEventListener('change', (e) => {
+            console.log('📁 File input changed, files:', e.target.files.length);
             const files = e.target.files;
             if (files.length > 0) {
                 // Add new files to existing selection instead of replacing
                 const newFiles = Array.from(files);
+                console.log('📁 New files:', newFiles.map(f => f.name));
                 
                 // Filter out duplicates based on file name and size
                 const filteredNewFiles = newFiles.filter(newFile => {
@@ -1391,8 +1499,10 @@
                     );
                 });
                 
+                console.log('📁 After duplicate filter:', filteredNewFiles.length);
                 if (filteredNewFiles.length > 0) {
                     selectedFiles = [...selectedFiles, ...filteredNewFiles];
+                    console.log('📁 Total selected files:', selectedFiles.length);
                     updateFileList();
                 }
                 
@@ -1450,21 +1560,33 @@
 
         // Update file list display
         function updateFileList() {
-            const fileList = document.getElementById('fileList');
-            const fileListItems = document.getElementById('fileListItems');
-            const uploadBtnText = document.getElementById('uploadBtnText');
+            console.log('📝 VERSION 2.0 - updateFileList called, selectedFiles:', selectedFiles.length);
+            
+            // Use stored element references instead of querying again
+            console.log('📝 VERSION 2.0 - Using stored elements:', {
+                fileListElement: !!fileListElement,
+                fileListItemsElement: !!fileListItemsElement,
+                uploadBtnTextElement: !!uploadBtnTextElement
+            });
+            
+            if (!fileListElement || !fileListItemsElement || !uploadBtnTextElement) {
+                console.error('❌ CRITICAL: Element references not available in updateFileList');
+                return;
+            }
             
             if (selectedFiles.length === 0) {
-                fileList.style.display = 'none';
-                uploadBtnText.textContent = 'Upload & Analyze';
+                fileListElement.style.display = 'none';
+                uploadBtnTextElement.textContent = 'Upload & Analyze';
                 resetDropzone();
                 return;
             }
 
-            fileList.style.display = 'block';
-            fileListItems.innerHTML = '';
+            console.log('📝 Displaying file list...');
+            fileListElement.style.display = 'block';
+            fileListItemsElement.innerHTML = '';
             
             selectedFiles.forEach((file, index) => {
+                console.log(`📝 Adding file ${index + 1}:`, file.name);
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-list-item';
                 
@@ -1482,14 +1604,16 @@
                     </button>
                 `;
                 
-                fileListItems.appendChild(fileItem);
+                fileListItemsElement.appendChild(fileItem);
             });
+
+            console.log('📝 File list updated successfully');
 
             // Update upload button text
             if (selectedFiles.length === 1) {
-                uploadBtnText.textContent = 'Upload & Analyze 1 File';
+                uploadBtnTextElement.textContent = 'Upload & Analyze 1 File';
             } else {
-                uploadBtnText.textContent = `Upload & Analyze ${selectedFiles.length} Files`;
+                uploadBtnTextElement.textContent = `Upload & Analyze ${selectedFiles.length} Files`;
             }
 
             // Update dropzone display
@@ -1523,12 +1647,12 @@
                 <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
                 <p>Drag & Drop files here or</p>
                 <div class="d-flex justify-content-center gap-3 mt-2">
-                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn">Browse Files</button>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn">Browse Zip</button>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn" onclick="document.getElementById('multiFileInput').click()">Browse Files</button>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" onclick="document.getElementById('batchFileInput').click()">Browse Zip</button>
                 </div>
             `;
             
-            // No need to re-attach event listeners since we're using event delegation
+            // No need to re-attach event listeners since we're using inline onclick
         }
 
         function getFileIcon(filename) {
@@ -1869,6 +1993,12 @@
                 console.log('🚀 Immediately displaying results...');
                 renderChart(result.report || {}, result.sentences || []);
                 renderContent(result.content || '', result.sentences || []);
+                
+                // Display document-level findings if available
+                if (result.document_findings && result.document_findings.length > 0) {
+                    console.log('📋 Displaying document-level findings:', result.document_findings.length);
+                    displayDocumentFindings(result.document_findings, result.document_context);
+                }
                 
                 // For WebSocket mode, progress will continue but results are already shown
                 // For fallback mode, results are already shown but continue progress simulation
@@ -2268,6 +2398,174 @@
             feedbackContent.innerHTML = issueHTML;
             console.log(`✅ Displayed ${totalIssues} issues immediately`);
         }
+        
+        // Function to display document-level findings (PASS 0 results)
+        function displayDocumentFindings(findings, documentContext) {
+            console.log('📋 Rendering document-level analysis');
+            const findingsSection = document.getElementById('documentFindingsSection');
+            
+            if (!findings || findings.length === 0) {
+                findingsSection.innerHTML = '';
+                return;
+            }
+            
+            // Group findings by severity
+            const errors = findings.filter(f => f.severity === 'error');
+            const warnings = findings.filter(f => f.severity === 'warning');
+            const info = findings.filter(f => f.severity === 'info');
+            
+            let findingsHTML = '<div class="mb-4"><h6 class="text-primary"><i class="fas fa-file-alt"></i> Document-Level Issues</h6>';
+            
+            // Helper function to create clickable section link
+            const createSectionLink = (sectionName) => {
+                // Create data attribute for scrolling
+                return `<a href="#" class="section-link" data-section="${sectionName}" onclick="scrollToSection(event, '${sectionName}')"><i class="fas fa-external-link-alt"></i> ${sectionName}</a>`;
+            };
+            
+            // Helper function to render finding cards
+            const renderFindings = (findingList, severityClass, icon) => {
+                if (findingList.length === 0) return '';
+                
+                let html = '';
+                findingList.forEach(finding => {
+                    // Create section links
+                    let sectionLinks = '';
+                    if (finding.affected_sections && finding.affected_sections.length > 0) {
+                        sectionLinks = finding.affected_sections.map(section => createSectionLink(section)).join(', ');
+                    }
+                    
+                    html += `
+                        <div class="feedback-item bg-dark bg-opacity-25 border-${severityClass} mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="feedback-header">
+                                        <i class="fas ${icon} text-${severityClass}"></i>
+                                        <strong>${finding.title}</strong>
+                                        <span class="badge bg-${severityClass} ms-2">${finding.category}</span>
+                                    </div>
+                                    <div class="feedback-message mt-2">${finding.description}</div>
+                                    ${finding.guidance ? `
+                                        <div class="alert alert-secondary mt-2 py-2 px-3 mb-0">
+                                            <small><strong><i class="fas fa-lightbulb"></i> How to fix:</strong> ${finding.guidance}</small>
+                                        </div>
+                                    ` : ''}
+                                    ${sectionLinks ? `
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-map-marker-alt"></i> Affected sections: ${sectionLinks}
+                                            </small>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                return html;
+            };
+            
+            findingsHTML += renderFindings(errors, 'danger', 'fa-times-circle');
+            findingsHTML += renderFindings(warnings, 'warning', 'fa-exclamation-triangle');
+            findingsHTML += renderFindings(info, 'info', 'fa-info-circle');
+            findingsHTML += '</div><hr class="my-3">';
+            
+            findingsSection.innerHTML = findingsHTML;
+            console.log(`✅ Displayed ${findings.length} document-level findings in Issues tab`);
+        }
+        
+        // Function to scroll to a section in the document
+        function scrollToSection(event, sectionName) {
+            event.preventDefault();
+            console.log('🔍 Searching for section:', sectionName);
+            
+            const documentContent = document.getElementById('documentContent');
+            if (!documentContent) return;
+            
+            // Find the heading that matches the section name
+            const headings = documentContent.querySelectorAll('h1, h2, h3, h4, h5, h6');
+            let targetHeading = null;
+            
+            for (const heading of headings) {
+                const headingText = heading.textContent.trim().toLowerCase();
+                const searchText = sectionName.toLowerCase();
+                
+                // Check for exact or partial match
+                if (headingText === searchText || headingText.includes(searchText) || searchText.includes(headingText)) {
+                    targetHeading = heading;
+                    break;
+                }
+            }
+            
+            if (targetHeading) {
+                // Scroll to the heading with smooth animation
+                targetHeading.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Highlight the section briefly
+                targetHeading.classList.add('highlight-flash');
+                setTimeout(() => {
+                    targetHeading.classList.remove('highlight-flash');
+                }, 2000);
+                
+                console.log('✅ Scrolled to section:', sectionName);
+            } else {
+                console.log('⚠️ Section not found:', sectionName);
+                alert(`Section "${sectionName}" not found in document. It may have been removed or renamed.`);
+            }
+        }
+
+        function displayDocumentFindings(findings) {
+            if (!findings || findings.length === 0) return '';
+            
+            const analysisContent = document.getElementById('analysisContent');
+            if (!analysisContent) return '';
+            
+            // Group findings by severity
+            const errors = findings.filter(f => f.severity === 'error');
+            const warnings = findings.filter(f => f.severity === 'warning');
+            const info = findings.filter(f => f.severity === 'info');
+            
+            let findingsHTML = '<div class="document-findings-section"><h5><i class="fas fa-file-alt"></i> Document-Level Issues</h5>';
+            
+            const renderFindings = (items, title, severityClass, icon) => {
+                if (items.length === 0) return '';
+                
+                let html = `<div class="findings-group"><h6><i class="fas ${icon}"></i> ${title}</h6>`;
+                
+                items.forEach((finding) => {
+                    const sectionInfo = finding.section ? `<br><small class="text-muted">Section: ${finding.section}</small>` : '';
+                    const sectionLink = finding.section ? 
+                        `<button class="btn btn-link btn-sm section-link" onclick="scrollToSection('${finding.section.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-arrow-right"></i> Go to section
+                        </button>` : '';
+                    
+                    html += `
+                        <div class="card mb-2 finding-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <strong>${finding.message}</strong>
+                                        ${sectionInfo}
+                                        ${sectionLink}
+                                    </div>
+                                    <span class="badge bg-${severityClass}">${finding.category}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                return html;
+            };
+            
+            findingsHTML += renderFindings(errors, 'Errors', 'danger', 'fa-times-circle');
+            findingsHTML += renderFindings(warnings, 'Warnings', 'warning', 'fa-exclamation-triangle');
+            findingsHTML += renderFindings(info, 'Suggestions', 'info', 'fa-info-circle');
+            
+            analysisContent.innerHTML = findingsHTML;
+            console.log(`✅ Displayed ${findings.length} document-level findings`);
+        }
 
         // Enhanced AI functionality
         let currentSuggestionId = null;
@@ -2304,12 +2602,14 @@
         });
         
         // Tab switching functionality
-        function switchTab(tabName) {
+        function switchTab(tabName, skipButtonUpdate = false) {
             // Update tab buttons
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
+                if (btn.getAttribute('onclick').includes(`'${tabName}'`)) {
+                    btn.classList.add('active');
+                }
             });
-            event.target.classList.add('active');
             
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -2341,12 +2641,17 @@
             aiDiv.setAttribute('data-feedback-type', feedback);
             
             aiDiv.innerHTML = `
-                <div class="d-flex align-items-center mb-3">
-                    <i class="fas fa-robot me-2"></i>
-                    <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
-                    <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
-                    <span class="ai-enhancement-badge ms-2">${aiSuggestion.method}</span>
-                    ${aiSuggestion.method && aiSuggestion.method.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-robot me-2"></i>
+                        <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
+                        <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
+                        <span class="ai-enhancement-badge ms-2">${aiSuggestion.method}</span>
+                        ${aiSuggestion.method && aiSuggestion.method.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
+                    </div>
+                    <button class="btn btn-sm btn-outline-light" onclick="switchTab('feedback'); return false;" title="Back to all issues">
+                        <i class="fas fa-arrow-left me-1"></i> Back to Issues
+                    </button>
                 </div>
                 
                 <div class="mb-3">
@@ -3001,7 +3306,7 @@
             let processedContent = htmlContent;
             
             console.log('Processing sentences for highlighting:', sentences.length);
-            console.log('Original HTML content:', htmlContent);
+            console.log('Original HTML content (length):', htmlContent.length);
             
             // Debug: Check if any sentences contain problematic content
             sentences.forEach((sentenceData, idx) => {
@@ -3013,164 +3318,103 @@
                 }
             });
             
-            // First, try to get plain text equivalent of HTML for better matching
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlContent;
-            const plainTextContent = tempDiv.textContent || tempDiv.innerText || '';
-            console.log('Plain text content:', plainTextContent);
+            // Track already-replaced content to avoid duplicate matches
+            const replacedSentences = [];
             
             sentences.forEach((sentenceData, index) => {
-                // Clean the sentence text - remove any HTML tags that might have leaked in
-                let sentence = sentenceData.sentence.trim();
+                // Use html_sentence if available (preserves HTML structure), otherwise use plain sentence
+                let sentence = (sentenceData.html_sentence || sentenceData.sentence).trim();
                 
                 // AGGRESSIVE CLEANING: Check for malformed HTML attributes
                 if (sentence.includes('="') && (sentence.includes('sentence-highlight') || sentence.includes('data-sentence-index'))) {
                     console.error(`🚨 MALFORMED HTML ATTRIBUTES in sentence ${index}:`, sentence);
-                    // Remove malformed HTML attribute patterns
-                    sentence = sentence.replace(/=["'][^"']*["'][^>]*>/g, '');
-                    sentence = sentence.replace(/\s*(?:id|class|data-[\w-]+)\s*=\s*["'][^"']*["']/g, '');
-                    sentence = sentence.replace(/<\/?[^>]*>/g, '');
-                    sentence = sentence.trim();
-                    console.warn(`🧹 Cleaned malformed attributes:`, sentence);
+                    // Skip this sentence completely - it's already been processed or is malformed
+                    return;
                 }
                 
-                // Extra safety: If sentence contains HTML tags, extract only the text content
-                if (sentence.includes('<') && sentence.includes('>')) {
-                    console.warn(`⚠️ Sentence ${index} contains HTML tags, cleaning:`, sentence);
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = sentence;
-                    sentence = (tempDiv.textContent || tempDiv.innerText || '').trim();
-                    console.log(`Cleaned sentence ${index}:`, sentence);
+                // Extra safety: If sentence contains HTML tags, check if it's already highlighted
+                if (sentence.includes('sentence-highlight')) {
+                    console.error(`🔥 Sentence ${index} already contains highlighting, skipping`);
+                    return;
                 }
                 
                 if (sentence) {
-                    console.log(`Processing sentence ${index}:`, sentence);
+                    console.log(`Processing sentence ${index}:`, sentence.substring(0, 100));
                     
                     let found = false;
                     const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
                     const feedbackClass = hasFeedback ? ' has-feedback' : '';
                     
-                    // Approach 1: Direct HTML match (works for simple cases)
-                    if (processedContent.includes(sentence)) {
-                        // Safety check: ensure sentence doesn't contain problematic patterns
-                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
-                            console.error(`🚨 Skipping direct replacement for sentence ${index} - contains problematic patterns:`, sentence);
-                        } else {
-                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                            processedContent = processedContent.replace(sentence, replacement);
-                            found = true;
-                            console.log(`✓ Direct HTML match for sentence ${index}`);
-                        }
-                    }
+                    // IMPORTANT: Use indexOf to find the FIRST unprocessed occurrence
+                    // This prevents matching already-wrapped sentences
+                    const sentenceIndex = processedContent.indexOf(sentence);
                     
-                    // Approach 2: Try to find sentence in plain text and map back to HTML
-                    if (!found && plainTextContent.includes(sentence)) {
-                        // Special handling for sentences with angle brackets (URLs, etc.)
-                        if (sentence.includes('<') && sentence.includes('>')) {
-                            // For sentences with angle brackets, try direct text match first
-                            if (processedContent.includes(sentence)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                                processedContent = processedContent.replace(sentence, replacement);
-                                found = true;
-                                console.log(`✓ Direct text match for sentence with angle brackets ${index}`);
-                            }
-                        }
-                        
-                        // Standard word-based pattern matching
-                        if (!found) {
-                            // Find all words in the sentence
-                            const words = sentence.split(/\s+/).filter(word => word.length > 2);
-                            
-                            if (words.length > 0) {
-                                // Create a regex that finds the sentence allowing for HTML tags between words
-                                const wordPattern = words.map(word => 
-                                    word.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
-                                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
+                    if (sentenceIndex !== -1) {
+                        // Check if this position has already been highlighted
+                        const beforeSentence = processedContent.substring(Math.max(0, sentenceIndex - 50), sentenceIndex);
+                        if (beforeSentence.includes('sentence-highlight')) {
+                            console.warn(`Position already highlighted, searching for next occurrence of sentence ${index}`);
+                            // Find next occurrence that hasn't been highlighted
+                            let searchStart = 0;
+                            let foundUnhighlighted = false;
+                            while (searchStart < processedContent.length) {
+                                const nextIndex = processedContent.indexOf(sentence, searchStart);
+                                if (nextIndex === -1) break;
                                 
-                                const regex = new RegExp(wordPattern, 'i');
-                                const match = processedContent.match(regex);
-                                
-                                if (match) {
-                                    const matchedText = match[0];
-                                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
-                                    processedContent = processedContent.replace(matchedText, replacement);
+                                const checkBefore = processedContent.substring(Math.max(0, nextIndex - 100), nextIndex);
+                                if (!checkBefore.includes('sentence-highlight') || checkBefore.lastIndexOf('</span>') > checkBefore.lastIndexOf('sentence-highlight')) {
+                                    // This occurrence is not yet highlighted
+                                    const before = processedContent.substring(0, nextIndex);
+                                    const after = processedContent.substring(nextIndex + sentence.length);
+                                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                                    processedContent = before + replacement + after;
                                     found = true;
-                                    console.log(`✓ HTML pattern match for sentence ${index}`);
+                                    foundUnhighlighted = true;
+                                    console.log(`✓ Found unhighlighted occurrence for sentence ${index} at position ${nextIndex}`);
+                                    break;
                                 }
+                                searchStart = nextIndex + 1;
                             }
-                        }
-                    }
-                    
-                    // Approach 3: Fuzzy text-only match (last resort)
-                    if (!found) {
-                        // Try to find just the key parts of the sentence
-                        const significantWords = sentence.split(/\s+/).filter(word => 
-                            word.length > 3 && !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'was', 'one', 'our', 'out', 'day', 'get', 'use', 'man', 'new', 'now', 'old', 'see', 'him', 'two', 'how', 'its', 'who', 'oil', 'sit', 'set'].includes(word.toLowerCase())
-                        );
-                        
-                        if (significantWords.length >= 2) {
-                            let bestMatch = null;
-                            let bestMatchLength = 0;
                             
-                            // Look for the longest substring that contains significant words
-                            const tempDiv2 = document.createElement('div');
-                            tempDiv2.innerHTML = processedContent;
-                            const textContent = tempDiv2.textContent;
-                            
-                            significantWords.forEach(word => {
-                                const wordRegex = new RegExp(`[^.!?]*${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.!?]*[.!?]`, 'gi');
-                                const matches = textContent.match(wordRegex);
-                                if (matches) {
-                                    matches.forEach(match => {
-                                        if (match.length > bestMatchLength) {
-                                            bestMatch = match.trim();
-                                            bestMatchLength = match.length;
-                                        }
-                                    });
-                                }
-                            });
-                            
-                            if (bestMatch && processedContent.includes(bestMatch)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${bestMatch}</span>`;
-                                processedContent = processedContent.replace(bestMatch, replacement);
-                                found = true;
-                                console.log(`✓ Fuzzy match for sentence ${index}: "${bestMatch}"`);
-                            }
-                        }
-                    }
-                    
-                    if (!found) {
-                        console.warn(`✗ Could not find sentence ${index} in content:`, sentence);
-                        
-                        // SAFETY: Don't create markers for sentences that already contain problematic HTML
-                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
-                            console.error(`🚨 BLOCKING marker creation for sentence ${index} - contains malformed HTML:`, sentence);
-                            // Add a safe text-only marker instead
-                            const safeText = sentence.replace(/<[^>]*>/g, '').replace(/['"=]/g, '').trim();
-                            if (safeText) {
-                                const safeMarker = `<div class="sentence-not-found-safe" data-index="${index}">⚠️ Sentence ${index + 1}: ${safeText.substring(0, 50)}...</div>`;
-                                processedContent += safeMarker;
-                                console.log(`✅ Added safe marker for sentence ${index}`);
+                            if (!foundUnhighlighted) {
+                                console.warn(`✗ All occurrences of sentence ${index} are already highlighted`);
                             }
                         } else {
-                            // Clean the sentence text for title attribute - remove HTML tags and attributes
-                            const cleanSentence = sentence.replace(/<[^>]*>/g, '').replace(/['"]/g, '').trim();
-                            const truncatedSentence = cleanSentence.length > 100 ? cleanSentence.substring(0, 100) + '...' : cleanSentence;
-                            
-                            // As absolute last resort, just add a marker
-                            const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${truncatedSentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
-                            
-                            // Try to insert the marker near related content
-                            const firstWords = cleanSentence.split(' ').slice(0, 3).join(' ');
-                            if (firstWords && processedContent.includes(firstWords)) {
-                                processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
-                                console.log(`Added fallback marker for sentence ${index}`);
-                            } else {
-                                // If we can't find the first words, just append the marker at the end
-                                processedContent += '<br>' + marker;
-                                console.log(`Added fallback marker at end for sentence ${index}`);
+                            // First occurrence and not yet highlighted
+                            const before = processedContent.substring(0, sentenceIndex);
+                            const after = processedContent.substring(sentenceIndex + sentence.length);
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                            processedContent = before + replacement + after;
+                            found = true;
+                            console.log(`✓ Direct match for sentence ${index} at position ${sentenceIndex}`);
+                        }
+                    }
+                    
+                    // Approach 2: Try to find sentence allowing for whitespace differences
+                    // Approach 2: Try to find sentence allowing for whitespace differences
+                    if (!found) {
+                        // Normalize whitespace and try again
+                        const normalizedSentence = sentence.replace(/\s+/g, ' ').trim();
+                        const normalizedContent = processedContent.replace(/\s+/g, ' ');
+                        const normIndex = normalizedContent.indexOf(normalizedSentence);
+                        
+                        if (normIndex !== -1) {
+                            console.log(`✓ Found with normalized whitespace for sentence ${index}`);
+                            // This is harder to replace precisely, so we use the original approach
+                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
+                            if (processedContent.includes(sentence)) {
+                                const pos = processedContent.indexOf(sentence);
+                                const before = processedContent.substring(0, pos);
+                                const after = processedContent.substring(pos + sentence.length);
+                                processedContent = before + replacement + after;
+                                found = true;
                             }
                         }
+                    }
+                    
+                    if (!found) {
+                        console.warn(`✗ Could not find sentence ${index} in content (first 100 chars):`, sentence.substring(0, 100));
+                        // Don't add fallback markers - they cause more confusion
                     }
                 }
             });
@@ -3631,15 +3875,27 @@
             const statusText = document.getElementById('hybridStatusText');
             const statusIndicator = document.getElementById('hybridStatusIndicator');
             
-            if (!statusText || !statusIndicator) return;
+            if (!statusText || !statusIndicator) {
+                console.warn('Hybrid intelligence status elements not found');
+                return;
+            }
+            
+            console.log('🔍 Checking hybrid intelligence status...');
             
             // Set checking state
             statusText.textContent = 'Checking...';
             statusIndicator.style.backgroundColor = '#6c757d'; // Gray
             
             fetch('/hybrid_intelligence/status')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('✅ Hybrid status response:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('📊 Hybrid status data:', data);
                     if (data.hybrid_ready) {
                         statusText.textContent = 'Ready';
                         statusIndicator.style.backgroundColor = '#28a745'; // Green
@@ -3655,14 +3911,14 @@
                     } else {
                         statusText.textContent = 'Offline';
                         statusIndicator.style.backgroundColor = '#dc3545'; // Red
-                        statusIndicator.title = 'Ollama service not running';
+                        statusIndicator.title = data.error || 'Hybrid intelligence not available';
                     }
                 })
                 .catch(error => {
-                    console.error('Error checking hybrid intelligence status:', error);
-                    statusText.textContent = 'Error';
+                    console.error('❌ Error checking hybrid intelligence status:', error);
+                    statusText.textContent = 'Offline';
                     statusIndicator.style.backgroundColor = '#dc3545'; // Red
-                    statusIndicator.title = 'Error checking status';
+                    statusIndicator.title = 'Hybrid intelligence not available';
                 });
         }
 
@@ -4015,6 +4271,8 @@
                 });
             }
         }
+        
+        } // End of initializeApp function
     </script>
     <div id="loadingOverlay" style="display:none;">
       <div class="progress-container">

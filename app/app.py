@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, make_response
 import os
 import re
 import subprocess
@@ -12,6 +12,20 @@ import sys
 import textstat
 import time
 from dataclasses import asdict
+
+# Document-level analysis (PASS 0)
+try:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from core.document_analyzer import DocumentAnalyzer
+    from core.document_context import DocumentContext
+    from core.document_rule import evaluate_document_rules
+    DOCUMENT_ANALYSIS_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info("✅ Document-level analysis enabled")
+except ImportError as e:
+    DOCUMENT_ANALYSIS_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning(f"⚠️ Document-level analysis not available: {e}")
 
 # Try to import spacy but handle import errors gracefully
 try:
@@ -38,6 +52,9 @@ main = Blueprint('main', __name__)
 
 logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug messages
 logger = logging.getLogger(__name__)
+
+# Global state for document-level context
+current_document_context = None
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
 if SPACY_IMPORT_SUCCESS:
@@ -444,7 +461,16 @@ def review_document(content, rules):
                     })
     return {"issues": suggestions, "summary": "Review completed."}
 
-def analyze_sentence(sentence, rules):
+def analyze_sentence(sentence, rules, document_context=None, sentence_position=0):
+    """
+    PASS 1: Sentence-level rule enforcement.
+    
+    Args:
+        sentence: The sentence text to analyze
+        rules: List of rule functions to apply
+        document_context: Optional DocumentContext from PASS 0
+        sentence_position: Position in document for context-aware checks
+    """
     feedback = []
     readability_scores = {
         "flesch_reading_ease": textstat.flesch_reading_ease(sentence),
@@ -502,7 +528,15 @@ def calculate_quality_index(total_sentences, total_errors):
 
 @main.route('/')
 def index():
-    return render_template('index.html')
+    import time
+    # Add cache busting parameter
+    cache_buster = int(time.time())
+    response = make_response(render_template('index.html', cache_buster=cache_buster))
+    # Prevent caching
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 @main.route('/start_upload', methods=['POST'])
 def start_upload():
@@ -795,6 +829,43 @@ def upload_file():
         global current_sentences_list
         current_sentences_list = sentences
 
+        # ==========================================
+        # PASS 0: DOCUMENT-LEVEL ANALYSIS
+        # ==========================================
+        global current_document_context
+        document_findings = []
+        
+        if DOCUMENT_ANALYSIS_AVAILABLE:
+            logger.info("🔍 PASS 0: Analyzing document structure and context...")
+            try:
+                analyzer = DocumentAnalyzer()
+                current_document_context = analyzer.analyze(plain_text, html_content)
+                
+                # Evaluate document-level rules
+                document_findings = evaluate_document_rules(
+                    current_document_context,
+                    plain_text,
+                    sentences
+                )
+                
+                logger.info(f"📋 Document Analysis Complete:")
+                logger.info(f"  - Type: {current_document_context.doc_type}")
+                logger.info(f"  - Goal: {current_document_context.primary_goal}")
+                logger.info(f"  - Sensitivity: {current_document_context.rewrite_sensitivity}")
+                logger.info(f"  - Forbidden Sections: {len(current_document_context.forbidden_sections)}")
+                logger.info(f"  - Document Findings: {len(document_findings)}")
+                
+                if document_findings:
+                    logger.info("  Document-level issues found:")
+                    for finding in document_findings:
+                        logger.info(f"    • [{finding.severity}] {finding.title}")
+            except Exception as e:
+                logger.warning(f"⚠️ Document-level analysis failed: {e}")
+                current_document_context = None
+        else:
+            logger.info("⚠️ Document-level analysis not available, using sentence-only mode")
+            current_document_context = None
+
         # Stage 4: Analyzing with Rules (80%)
         if progress_tracker and room_id:
             progress_tracker.update_stage(room_id, 3, "Applying grammar, style, and readability rules...")
@@ -834,7 +905,13 @@ def upload_file():
                 logger.warning(f"✅ Cleaned sentence {index}: '{clean_text[:100]}...'")
                 plain_text_sentence = clean_text
             
-            feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
+            # PASS 1: Sentence-level rule enforcement (with document context)
+            feedback, readability_scores, quality_score = analyze_sentence(
+                plain_text_sentence, 
+                rules,
+                document_context=current_document_context,
+                sentence_position=index
+            )
             
             # Add sentence index to each feedback item for UI linking
             enhanced_feedback = []
@@ -898,12 +975,24 @@ def upload_file():
             progress_tracker.complete_session(room_id, success=True, 
                 final_message=f"Analysis complete! Found {total_errors} issues in {total_sentences} sentences.")
 
+        # Prepare document findings for response
+        document_findings_data = []
+        if document_findings:
+            document_findings_data = [finding.to_dict() for finding in document_findings]
+        
+        # Prepare document context summary for response
+        document_context_summary = None
+        if current_document_context:
+            document_context_summary = current_document_context.to_dict()
+
         # Return the result
         return jsonify({
             "content": html_content,  # For display
             "sentences": sentence_data,
             "report": aggregated_report,
-            "room_id": room_id  # Include room_id in response
+            "room_id": room_id,  # Include room_id in response
+            "document_context": document_context_summary,  # NEW: Document-level context
+            "document_findings": document_findings_data  # NEW: Document-level findings (separate from rewrites)
         })
 
     except Exception as e:
@@ -950,7 +1039,8 @@ def get_feedbacks():
 def ai_suggestion():
     """
     Returns an AI-powered suggestion for a single sentence:
-    - NEW: Tries hybrid intelligence (phi3:mini + llama3:8b) first
+    - FIRST: Tries deterministic system for known issues (passive voice, long sentences, etc.)
+    - THEN: Tries hybrid intelligence (phi3:mini + llama3:8b) for complex cases
     - Falls back to vector-DB solutions (polished by LLM) when hybrid unavailable  
     - Final fallback to deterministic rewrite
     - Always returns a concrete rewrite + short guidance + sources
@@ -998,7 +1088,57 @@ def ai_suggestion():
     suggestion_id = str(uuid.uuid4())
     start_time = time.time()
 
-    # 🧠 NEW: Try hybrid intelligence first (phi3:mini + llama3:8b)
+    # 🎯 PRIORITY 1: Try deterministic system for known issues
+    try:
+        from core.deterministic_suggestions import DeterministicSuggestionGenerator
+        from core.issue_resolution_engine import IssueResolutionEngine
+        
+        logger.info("🎯 Trying deterministic system (code-driven decisions)...")
+        
+        # Build issue object for deterministic system
+        issue_data = {
+            'feedback': feedback_text,
+            'context': sentence_context,
+            'rule_id': data.get('issue_type', 'unknown'),
+            'document_type': document_type
+        }
+        
+        # Check if this is a known issue type
+        engine = IssueResolutionEngine()
+        issue_type = engine.classify_issue(issue_data)
+        
+        if issue_type:
+            logger.info(f"✓ Classified as {issue_type} - using deterministic resolution")
+            
+            generator = DeterministicSuggestionGenerator()
+            det_result = generator.generate_suggestion(issue_data)
+            
+            if det_result and det_result.get('guidance'):
+                response_time = time.time() - start_time
+                track_suggestion(suggestion_id, feedback_text, sentence_context,
+                               document_type, 'deterministic', response_time)
+                
+                logger.info(f"✅ Deterministic system success: {det_result.get('rewrite', '')[:50]}...")
+                
+                return jsonify({
+                    "suggestion": det_result.get('rewrite', sentence_context),
+                    "ai_answer": det_result.get('guidance', ''),
+                    "confidence": det_result.get('confidence', 'high'),
+                    "method": "deterministic",
+                    "suggestion_id": suggestion_id,
+                    "sources": [{"source": "code_driven", "type": det_result.get('resolution_class', 'unknown')}],
+                    "context_used": {"document_type": document_type, "issue_type": str(issue_type)},
+                    "severity": det_result.get('severity', 'advisory'),
+                    "processing_time": response_time,
+                    "note": "Code-driven suggestion (guaranteed actionable)"
+                })
+        else:
+            logger.info("✗ Not a known issue type - trying other methods")
+    
+    except Exception as e:
+        logger.warning(f"Deterministic system failed: {str(e)}")
+
+    # 🧠 PRIORITY 2: Try hybrid intelligence (phi3:mini + llama3:8b)
     try:
         from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
         
@@ -1460,10 +1600,21 @@ def ai_configuration():
 def hybrid_intelligence_status():
     """Get hybrid intelligence system status for UI dashboard"""
     try:
-        from .hybrid_intelligence_integration import get_hybrid_system_status
-        
-        status = get_hybrid_system_status()
-        return jsonify(status)
+        # Try to import the hybrid system status function
+        try:
+            from .hybrid_intelligence_integration import get_hybrid_system_status
+            status = get_hybrid_system_status()
+            return jsonify(status)
+        except ImportError as e:
+            # Module not available, return offline status
+            return jsonify({
+                'ollama_running': False,
+                'phi3_available': False,
+                'llama3_available': False,
+                'hybrid_ready': False,
+                'error': 'Hybrid intelligence module not configured',
+                'system_available': False
+            })
         
     except Exception as e:
         logger.error(f"Error getting hybrid intelligence status: {str(e)}")
@@ -1472,7 +1623,8 @@ def hybrid_intelligence_status():
             'ollama_running': False,
             'phi3_available': False,
             'llama3_available': False,
-            'hybrid_ready': False
+            'hybrid_ready': False,
+            'system_available': False
         })
 
 @main.route('/hybrid_intelligence/batch', methods=['POST'])

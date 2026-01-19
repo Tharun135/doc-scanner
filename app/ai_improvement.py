@@ -55,19 +55,6 @@ class AISuggestionEngine:
         option_number: int = 1,
         issue: Optional[Dict[str, Any]] = None,   # <-- supports full issue dict
     ) -> Dict[str, Any]:
-        # RAG-based rewrite for long sentence splitting (disabled to prevent hanging)
-        if feedback_text.strip().lower().startswith("consider breaking this long sentence into shorter ones"):
-            # Temporarily disabled ChromaDB operations that cause hanging
-            # Provide a simple fallback suggestion instead
-            return {
-                "suggestion": sentence_context,
-                "ai_answer": "Consider breaking this long sentence into 2-3 shorter sentences. Each sentence should focus on one main idea. Use connecting words like 'Then', 'Next', or 'Additionally' to maintain flow between sentences.",
-                "confidence": "medium",
-                "method": "simple_rule_based",
-                "sources": ["Writing Guidelines: Keep sentences concise"],
-                "original_sentence": sentence_context,
-                "success": True
-            }
         # Hardcode: if the adverb flagged is 'properly', replace it with 'as intended'
         if feedback_text.strip().lower().startswith("check use of adverb: 'properly'"):
             import re
@@ -244,6 +231,30 @@ class AISuggestionEngine:
                 out = _cleanup("Remove unnecessary adverbs like 'very' for conciseness.")
             return f"{out}\nWHY: Removes 'very' for concise, direct writing."
 
+        # 1.5) Vague terms like "some", "several", "various", "certain"
+        vague_issue = re.search(r"(?i)\bvague term\b", feedback_text) or re.search(r"(?i)\b(some|several|various|certain)\b", text)
+        if vague_issue:
+            s = text
+            # Replace vague terms with specific ones
+            s = re.sub(r"(?i)\bsome situations\b", "specific situations", s)
+            s = re.sub(r"(?i)\bsome cases\b", "specific cases", s)
+            s = re.sub(r"(?i)\bsome\b", "specific", s)
+            s = re.sub(r"(?i)\bseveral\b", "multiple", s)
+            s = re.sub(r"(?i)\bvarious\b", "different", s)
+            s = re.sub(r"(?i)\bcertain\b", "specific", s)
+            out = _cleanup(s)
+            if not _differs(text, out):
+                out = _cleanup("Replace vague terms with precise descriptors.")
+            return {
+                "suggestion": out,
+                "ai_answer": f"Replaced vague quantifiers with precise terms. Technical documentation requires specific, measurable language. Changed imprecise terms like 'some' to concrete descriptors like 'specific' for better clarity.",
+                "confidence": "high",
+                "method": "vague_term_replacement",
+                "sources": ["Siemens Style Guide: Use precise, measurable terms"],
+                "original_sentence": text,
+                "success": True
+            }
+
         # 2) Passive voice → provide smart guidance instead of broken conversions
         passive_issue = re.search(r"(?i)passive voice|active voice|is displayed|are displayed|is shown|are shown|was|were", feedback_text) \
                         or re.search(r"(?i)\b(is|are|was|were)\s+[a-z]+ed\b|\bby the\b", text)
@@ -279,6 +290,28 @@ class AISuggestionEngine:
                     "success": True
                 }
             
+            # Pattern: "X are/is provided" → "X provides" or describe what provides it
+            elif re.search(r"(?i)(is|are)\s+provided", text):
+                # Try to identify what provides it from context
+                match = re.search(r"(?i)the ([^,]+) (is|are) provided (as|by|in) (a|an|the)?\s*([^.]+)", text)
+                if match:
+                    item = match.group(1).strip()
+                    provider = match.group(5).strip()
+                    # Try active form: "The Docker image provides the scripts"
+                    suggestion = f"The {provider} provides {item}."
+                else:
+                    # Fallback: just state availability
+                    suggestion = re.sub(r"(?i)(is|are)\s+provided", "is available", text)
+                
+                return {
+                    "suggestion": suggestion,
+                    "ai_answer": "Converted passive 'are provided' to active voice. Identify who/what provides the item and make that the subject: 'The provider provides X' instead of 'X is provided by the provider.'",
+                    "confidence": "medium",
+                    "method": "smart_passive_conversion",
+                    "sources": ["Siemens Style Guide: Use active voice for clarity"],
+                    "original_sentence": text,
+                    "success": True
+                }
 
             
             # General passive voice guidance without broken automatic conversion
@@ -597,8 +630,19 @@ def get_enhanced_ai_suggestion(
             )
             
             if advanced_result and advanced_result.get('suggestion'):
-                logger.info("✅ Using advanced RAG fallback")
-                return advanced_result
+                # Check if RAG actually changed the sentence
+                advanced_suggestion = advanced_result.get('suggestion', '').strip()
+                original = sentence_context.strip()
+                
+                # Normalize for comparison
+                normalized_advanced = ' '.join(advanced_suggestion.split()).lower()
+                normalized_original = ' '.join(original.split()).lower()
+                
+                if normalized_advanced != normalized_original:
+                    logger.info("✅ Using advanced RAG fallback (sentence was changed)")
+                    return advanced_result
+                else:
+                    logger.warning("⚠️ Advanced RAG returned unchanged sentence, trying other fallbacks")
                 
         except Exception as e:
             logger.warning(f"Advanced RAG fallback failed: {e}")
@@ -609,8 +653,19 @@ def get_enhanced_ai_suggestion(
             logger.info("🔄 Trying legacy RAG system")
             rag_result = get_rag_suggestion(feedback_text, sentence_context, document_type)
             if rag_result and rag_result.get('suggestion'):
-                logger.info("✅ Using legacy RAG suggestion")
-                return rag_result
+                # Check if RAG actually changed the sentence
+                rag_suggestion = rag_result.get('suggestion', '').strip()
+                original = sentence_context.strip()
+                
+                # Normalize for comparison (remove extra whitespace, lowercase)
+                normalized_rag = ' '.join(rag_suggestion.split()).lower()
+                normalized_original = ' '.join(original.split()).lower()
+                
+                if normalized_rag != normalized_original:
+                    logger.info("✅ Using legacy RAG suggestion (sentence was changed)")
+                    return rag_result
+                else:
+                    logger.warning("⚠️ RAG returned unchanged sentence, falling back to smart rules")
         except Exception as e:
             logger.warning(f"Legacy RAG failed: {e}")
     

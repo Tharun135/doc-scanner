@@ -9,6 +9,45 @@ import os
 
 logger = logging.getLogger(__name__)
 
+def _force_change(original: str, proposed: str) -> str:
+    """
+    Force a change when RAG returns the original sentence unchanged.
+    Applies minimal deterministic edits based on common patterns.
+    """
+    import re
+    
+    # If they're already different, return proposed
+    if original.strip() != proposed.strip():
+        return proposed
+    
+    # Apply minimal changes to avoid returning identical text
+    text = original
+    
+    # Remove filler words
+    text = re.sub(r'\b(basically|actually|simply|just)\b\s*', '', text, flags=re.IGNORECASE)
+    
+    # Replace vague terms
+    text = re.sub(r'\bsome\b', 'specific', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bseveral\b', 'multiple', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bvarious\b', 'different', text, flags=re.IGNORECASE)
+    
+    # Remove "very"
+    text = re.sub(r'\bvery\b\s*', '', text, flags=re.IGNORECASE)
+    
+    # Simplify wordy phrases
+    text = re.sub(r'\bin order to\b', 'to', text, flags=re.IGNORECASE)
+    text = re.sub(r'\bclick on\b', 'click', text, flags=re.IGNORECASE)
+    
+    # Clean up spacing
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    # If still unchanged, add a generic improvement marker
+    if text.strip() == original.strip():
+        logger.warning(f"[FORCE_CHANGE] Could not generate change for: {original[:50]}...")
+        return original  # Return original rather than break
+    
+    return text
+
 def enrich_issue_with_solution(issue):
     """
     Enhanced enrichment function that uses the comprehensive rule engine
@@ -50,6 +89,28 @@ def enrich_issue_with_solution(issue):
         issue["method"] = "error_fallback"
         
         return issue
+
+def enrich_issues_with_rag(issues):
+    """
+    Batch enrich multiple issues with deterministic suggestions.
+    
+    Args:
+        issues: List of issue dictionaries
+    
+    Returns:
+        List of enriched issue dictionaries
+    """
+    enriched_issues = []
+    for issue in issues:
+        try:
+            enriched = enrich_issue_with_solution(issue)
+            enriched_issues.append(enriched)
+        except Exception as e:
+            logger.error(f"[ENRICH_BATCH] Failed to enrich issue: {e}")
+            # Return original issue if enrichment fails
+            enriched_issues.append(issue)
+    
+    return enriched_issues
 
 # Test function when run directly
 if __name__ == "__main__":
