@@ -484,7 +484,8 @@
                 return;
             }
             
-            document.getElementById('searchResults').innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</p>';
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</p>';
             
             // Perform search
             fetch('/rag/api/search', {
@@ -497,13 +498,29 @@
                     top_k: 3
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Search failed');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
-                displaySearchResults(data);
+                if (data.success === false) {
+                    resultsDiv.innerHTML = `<div class="alert alert-warning small mb-0">${data.error || 'Search failed'}</div>`;
+                } else {
+                    displaySearchResults(data);
+                }
             })
             .catch(error => {
-                document.getElementById('searchResults').innerHTML = '<p class="text-danger">Search failed. Please try again.</p>';
                 console.error('Search error:', error);
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-warning small mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        ${error.message || 'Search failed. The RAG system may not be fully initialized yet.'}
+                    </div>
+                `;
             });
         }
 

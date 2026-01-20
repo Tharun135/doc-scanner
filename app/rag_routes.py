@@ -307,8 +307,9 @@ def init_rag_system():
 @rag.route('/')
 def knowledge_base_dashboard():
     """Main knowledge base management dashboard."""
-    # Check dependencies and initialize RAG modules
-    deps_available = check_rag_dependencies()
+    # Check dependencies - returns (bool, str) tuple
+    deps_check = check_rag_dependencies()
+    deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
     
     # Provide default stats structure
     stats = {
@@ -385,7 +386,11 @@ def knowledge_base_dashboard():
 
 def get_supported_formats_safe():
     """Safely get supported formats with fallback"""
-    if check_rag_dependencies() and get_supported_formats is not None:
+    # Check dependencies - returns (bool, str) tuple
+    deps_check = check_rag_dependencies()
+    deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
+    
+    if deps_available and get_supported_formats is not None:
         try:
             return get_supported_formats()
         except Exception as e:
@@ -436,7 +441,8 @@ def rag_dashboard():
                     logger.warning(f"Background initialization failed: {bg_e}")
         else:
             # Fallback: Use standard dependency check
-            deps_available = check_rag_dependencies()
+            deps_check = check_rag_dependencies()
+            deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
             stats = {
                 'total_chunks': 0,
                 'total_queries': 0,
@@ -520,8 +526,9 @@ def rag_dashboard():
 @rag.route('/upload_knowledge', methods=['GET', 'POST'])
 def upload_knowledge():
     """Upload documents to the knowledge base."""
-    # Check dependencies dynamically instead of using static RAG_AVAILABLE
-    deps_available = check_rag_dependencies()
+    # Check dependencies dynamically - returns (bool, str) tuple
+    deps_check = check_rag_dependencies()
+    deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
     
     if not deps_available:
         if request.method == 'POST':
@@ -639,7 +646,11 @@ def upload_knowledge():
 @rag.route('/upload_folder', methods=['POST'])
 def upload_folder():
     """Upload an entire folder to the knowledge base."""
-    if not check_rag_dependencies() or not init_rag_modules() or not init_rag_system():
+    # Check dependencies - returns (bool, str) tuple
+    deps_check = check_rag_dependencies()
+    deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
+    
+    if not deps_available or not init_rag_modules() or not init_rag_system():
         return jsonify({"error": "RAG system not available"}), 503
     
     data = request.get_json()
@@ -684,7 +695,10 @@ def upload_folder():
 @rag.route('/search', methods=['POST'])
 def search_knowledge_base():
     """Search the knowledge base."""
-    if not check_rag_dependencies() or not init_rag_modules() or not retriever:
+    deps_check = check_rag_dependencies()
+    deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
+    
+    if not deps_available or not init_rag_modules() or not retriever:
         return jsonify({"error": "RAG system not available"}), 503
     
     data = request.get_json()
@@ -818,8 +832,11 @@ def get_stats():
             stats["rag_available"] = rag_status['rag_available']
         else:
             # Fallback: Use basic stats
+            deps_check = check_rag_dependencies()
+            deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
+            
             stats = {
-                "rag_available": check_rag_dependencies(),
+                "rag_available": deps_available,
                 "total_chunks": 0,
                 "total_queries": 0,
                 "avg_relevance": 0.0,
@@ -1312,13 +1329,22 @@ def api_upload():
 def api_search():
     """Search knowledge base via API"""
     try:
-        init_rag_modules()
-        deps_available, _ = check_rag_dependencies()
+        # Check dependencies - returns (bool, str) tuple
+        deps_check = check_rag_dependencies()
+        deps_available = deps_check[0] if isinstance(deps_check, tuple) else deps_check
         
         if not deps_available:
             return jsonify({
                 "success": False,
-                "error": "RAG system not available",
+                "error": "RAG system not available. Install required dependencies.",
+                "results": []
+            }), 503
+        
+        # Try to initialize RAG modules
+        if not init_rag_modules():
+            return jsonify({
+                "success": False,
+                "error": "RAG modules failed to initialize",
                 "results": []
             }), 503
         
