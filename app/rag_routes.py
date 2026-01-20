@@ -52,6 +52,164 @@ def check_rag_dependencies():
     except Exception as e:
         return False, f"Dependency check failed: {e}"
 
+def assess_reviewer_knowledge_health(stats):
+    """
+    Assess the health of the reviewer knowledge base from a product perspective.
+    Returns qualitative insights instead of raw metrics.
+    
+    **Design principle: If a metric does not help the user decide their next action,
+    it does not belong on the dashboard.**
+    
+    Returns dict with:
+    - health_status: 'early_stage' | 'healthy' | 'needs_attention'
+    - health_badge: 'warning' | 'success' | 'danger'
+    - health_message: User-facing explanation
+    - coverage: 'limited' | 'moderate' | 'strong'
+    - coverage_explanation: What this means
+    - confidence: 'low' | 'medium' | 'high'
+    - confidence_explanation: What this means
+    - fallback_usage: 'frequent' | 'occasional' | 'rare'
+    - fallback_explanation: What this means
+    - knowledge_description: What the reviewer currently knows (qualitative)
+    - improvement_areas: List of specific missing knowledge areas
+    - recommendations: List of 1-3 clear next actions
+    """
+    
+    total_chunks = stats.get('total_chunks', 0)
+    total_queries = stats.get('total_queries', 0)
+    avg_relevance = stats.get('avg_relevance', 0.0)
+    success_rate = stats.get('success_rate', 0.0)
+    documents_count = stats.get('documents_count', 0)
+    
+    # Determine overall health status
+    if total_queries < 5 or total_chunks < 100:
+        health_status = 'early_stage'
+        health_badge = 'warning'
+        health_message = "Your knowledge base is set up but hasn't been used enough to evaluate usefulness yet."
+    elif avg_relevance >= 0.75 and success_rate >= 0.80:
+        health_status = 'healthy'
+        health_badge = 'success'
+        health_message = "The reviewer is consistently finding relevant guidance from your knowledge base."
+    else:
+        health_status = 'needs_attention'
+        health_badge = 'danger'
+        health_message = "The reviewer often falls back to generic guidance. Adding better examples may help."
+    
+    # Assess coverage (how complete is the knowledge base)
+    if total_chunks < 200:
+        coverage = 'limited'
+        coverage_explanation = "The knowledge base has basic content but lacks depth."
+    elif total_chunks < 500:
+        coverage = 'moderate'
+        coverage_explanation = "The knowledge base covers common scenarios adequately."
+    else:
+        coverage = 'strong'
+        coverage_explanation = "The knowledge base has extensive coverage across multiple areas."
+    
+    # Assess confidence (how often reviewer finds specific guidance)
+    if health_status == 'early_stage':
+        confidence = 'low'
+        confidence_explanation = "Not enough usage data to assess confidence."
+    elif avg_relevance >= 0.80:
+        confidence = 'high'
+        confidence_explanation = "Feedback is usually backed by specific examples from the knowledge base."
+    elif avg_relevance >= 0.60:
+        confidence = 'medium'
+        confidence_explanation = "Feedback sometimes includes specific guidance, sometimes general advice."
+    else:
+        confidence = 'low'
+        confidence_explanation = "Feedback rarely includes specific supporting knowledge."
+    
+    # Assess fallback usage (how often generic responses are used)
+    if health_status == 'early_stage':
+        fallback_usage = 'unknown'
+        fallback_explanation = "Not enough usage data yet."
+    elif success_rate >= 0.85:
+        fallback_usage = 'rare'
+        fallback_explanation = "The reviewer rarely needs to rely on default guidance."
+    elif success_rate >= 0.65:
+        fallback_usage = 'occasional'
+        fallback_explanation = "The reviewer sometimes falls back to generic guidance."
+    else:
+        fallback_usage = 'frequent'
+        fallback_explanation = "The reviewer often cannot find supporting knowledge."
+    
+    # Generate knowledge description (qualitative, not just chunk count)
+    knowledge_items = []
+    if total_chunks > 0:
+        knowledge_items.append("Writing rules and reviewer guidance")
+    if documents_count > 5:
+        knowledge_items.append("Examples from uploaded documents")
+    if total_chunks > 200:
+        knowledge_items.append("Structural patterns for procedures and manuals")
+    
+    if knowledge_items:
+        knowledge_description = knowledge_items
+        knowledge_summary = f"Based on {total_chunks} indexed knowledge items"
+    else:
+        knowledge_description = ["No knowledge uploaded yet"]
+        knowledge_summary = "Knowledge base is empty"
+    
+    # Identify improvement areas
+    improvement_areas = []
+    if health_status == 'early_stage':
+        improvement_areas.append("No usage data yet. Run a few reviews to see where knowledge is missing.")
+    elif health_status == 'needs_attention':
+        if avg_relevance < 0.65:
+            improvement_areas.append("Retrieved content often doesn't match reviewer needs")
+        if success_rate < 0.70:
+            improvement_areas.append("Many queries return insufficient guidance")
+        if total_chunks < 300:
+            improvement_areas.append("Limited knowledge base size may be causing gaps")
+    else:
+        # Even healthy systems can improve
+        if documents_count < 10:
+            improvement_areas.append("Adding more diverse examples could improve coverage")
+    
+    if not improvement_areas:
+        improvement_areas.append("Knowledge base is performing well. Continue monitoring usage patterns.")
+    
+    # Generate specific recommendations (max 3, always actionable)
+    recommendations = []
+    if health_status == 'early_stage':
+        recommendations.append("Run a few test reviews to evaluate usefulness")
+        if documents_count < 5:
+            recommendations.append("Upload more real procedure examples")
+    elif health_status == 'needs_attention':
+        if avg_relevance < 0.65:
+            recommendations.append("Review and improve document quality")
+        if documents_count < 10:
+            recommendations.append("Add more diverse examples and guidelines")
+        if success_rate < 0.70:
+            recommendations.append("Add reviewer notes for common issues")
+    else:
+        recommendations.append("Continue monitoring reviewer usage patterns")
+        if total_chunks < 500:
+            recommendations.append("Consider expanding knowledge base for edge cases")
+    
+    # Limit to 3 recommendations
+    recommendations = recommendations[:3]
+    
+    return {
+        'health_status': health_status,
+        'health_badge': health_badge,
+        'health_message': health_message,
+        'coverage': coverage,
+        'coverage_explanation': coverage_explanation,
+        'confidence': confidence,
+        'confidence_explanation': confidence_explanation,
+        'fallback_usage': fallback_usage,
+        'fallback_explanation': fallback_explanation,
+        'knowledge_description': knowledge_description,
+        'knowledge_summary': knowledge_summary,
+        'improvement_areas': improvement_areas,
+        'recommendations': recommendations,
+        # Keep some raw stats for internal use
+        'raw_total_chunks': total_chunks,
+        'raw_total_queries': total_queries,
+        'raw_documents_count': documents_count
+    }
+
 def init_rag_modules():
     """Initialize RAG modules only when needed"""
     global RAG_AVAILABLE, DocumentLoader, TextChunker, AdvancedRetriever, get_rag_evaluator
@@ -216,8 +374,12 @@ def knowledge_base_dashboard():
             'success_rate': eval_stats.success_rate
         })
     
+    # Generate Reviewer Knowledge Health assessment
+    health_assessment = assess_reviewer_knowledge_health(stats)
+    
     return render_template('rag/dashboard.html', 
                          stats=stats, 
+                         health=health_assessment,
                          supported_formats=get_supported_formats_safe(),
                          rag_available=deps_available)
 
@@ -309,6 +471,9 @@ def rag_dashboard():
         load_time = time.time() - start_time
         logger.info(f"✅ RAG dashboard loaded in {load_time:.2f}s (OPTIMIZED)")
         
+        # Generate Reviewer Knowledge Health assessment
+        health_assessment = assess_reviewer_knowledge_health(stats)
+        
         # Generate sample recent queries for demo
         recent_queries = [
             {"query": "What are the key features of the PROFINET protocol?", "score": 0.92, "time": "2 hours ago"},
@@ -327,7 +492,8 @@ def rag_dashboard():
         }
         
         return render_template('rag/dashboard.html', 
-                             stats=stats, 
+                             stats=stats,
+                             health=health_assessment,
                              supported_formats=['pdf', 'docx', 'txt', 'md'],
                              rag_available=deps_available,
                              dependencies_missing=not deps_available,
