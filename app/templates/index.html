@@ -1611,7 +1611,8 @@
             clearInterval(progressInterval);
             document.getElementById('loadingOverlay').style.display = 'none';
             isRealTimeProgress = false;
-            currentRoomId = null;
+            // Don't clear currentRoomId here - it's needed for subsequent uploads in the same session
+            // currentRoomId = null;  // REMOVED - causes bug with multiple file uploads
             resetProgress();
         }
 
@@ -1817,6 +1818,7 @@
         async function processSingleFile(file) {
             let uploadCompleted = false;
             let resultData = null;
+            let fileRoomId = null;  // Local room ID for this specific file upload
             
             try {
                 // Step 1: Get room ID for progress tracking
@@ -1829,16 +1831,17 @@
                 }
                 
                 const roomData = await roomResponse.json();
-                currentRoomId = roomData.room_id;
-                console.log('📋 Upload session started:', currentRoomId);
+                fileRoomId = roomData.room_id;  // Use local variable instead of global
+                currentRoomId = fileRoomId;  // Update global for UI display
+                console.log('📋 Upload session started:', fileRoomId);
                 
                 // Join the progress room for WebSocket updates (if available)
                 if (socket && socketConnected) {
                     console.log('🔌 Using WebSocket for progress tracking');
-                    socket.emit('join_progress_room', { room_id: currentRoomId });
+                    socket.emit('join_progress_room', { room_id: fileRoomId });
                 } else {
                     console.log('🔄 WebSocket unavailable, using fallback progress');
-                    simulateFallbackProgress(currentRoomId, () => {
+                    simulateFallbackProgress(fileRoomId, () => {
                         if (uploadCompleted && resultData) {
                             console.log('✅ Fallback progress complete, showing results');
                             renderChart(resultData.report || {}, resultData.sentences || []);
@@ -1849,7 +1852,7 @@
                 // Step 2: Upload file with room ID
                 const formData = new FormData();
                 formData.append('file', file);
-                formData.append('room_id', currentRoomId);
+                formData.append('room_id', fileRoomId);  // Use local room ID
 
                 console.log('📤 Starting file upload...');
                 const response = await fetch('/upload', {
@@ -2279,27 +2282,47 @@
             console.log('🔍 Click detected on:', e.target);
             console.log('🔍 Closest ai-feedback-icon:', e.target.closest('.ai-feedback-icon'));
             
-            if (e.target.closest('.ai-feedback-icon')) {
+            const button = e.target.closest('.ai-feedback-icon');
+            if (button) {
                 e.preventDefault();  // Prevent any default behavior
                 e.stopPropagation();  // Stop event from bubbling
                 
-                const button = e.target.closest('.ai-feedback-icon');
                 const sentenceIndex = parseInt(button.getAttribute('data-sentence-index'));
-                const feedback = decodeURIComponent(button.getAttribute('data-feedback'));
-                const sentence = decodeURIComponent(button.getAttribute('data-sentence'));
-                const fullSuggestion = button.getAttribute('data-full-suggestion') ? 
-                    decodeURIComponent(button.getAttribute('data-full-suggestion')) : '';
+                const feedback = button.getAttribute('data-feedback');
+                const sentence = button.getAttribute('data-sentence');
+                const fullSuggestion = button.getAttribute('data-full-suggestion') || '';
                 
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
-                console.log('Decoded attributes:', {
-                    sentenceIndex: sentenceIndex,
+                console.log('Raw attributes:', {
+                    sentenceIndex: button.getAttribute('data-sentence-index'),
                     feedback: feedback,
-                    sentence: sentence,
-                    fullSuggestion: fullSuggestion
+                    sentence: sentence
                 });
                 
-                showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion);
+                // Validate we have required data
+                if (isNaN(sentenceIndex) || !feedback || !sentence) {
+                    console.error('❌ Missing required data attributes on AI button:', {
+                        sentenceIndexValid: !isNaN(sentenceIndex),
+                        feedbackValid: !!feedback,
+                        sentenceValid: !!sentence
+                    });
+                    return;
+                }
+                
+                // Decode attributes
+                const decodedFeedback = decodeURIComponent(feedback);
+                const decodedSentence = decodeURIComponent(sentence);
+                const decodedFullSuggestion = fullSuggestion ? decodeURIComponent(fullSuggestion) : '';
+                
+                console.log('Decoded attributes:', {
+                    sentenceIndex: sentenceIndex,
+                    feedback: decodedFeedback,
+                    sentence: decodedSentence,
+                    fullSuggestion: decodedFullSuggestion
+                });
+                
+                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion);
             }
         });
         
@@ -2323,6 +2346,22 @@
             }
         }
         
+        // Helper function to get user-friendly method label
+        function getMethodLabel(method) {
+            const methodLabels = {
+                'reviewer_guidance': 'reviewer_guidance',
+                'manual_review': 'manual_review',
+                'validation_failed_no_value': 'reviewer_guidance',
+                'validation_failed_empty': 'manual_review',
+                'ollama_rag': 'ai_enhanced',
+                'vector_openai': 'ai_enhanced',
+                'advanced_rag': 'rag_enhanced',
+                'intelligent_analysis': 'ai_analysis',
+                'intelligent_pattern_match': 'smart_rewrite'
+            };
+            return methodLabels[method] || method;
+        }
+        
         // Function to add AI feedback to the AI tab
         function addToAITab(sentenceIndex, feedback, sentence, aiSuggestion, feedbackKey) {
             const aiFeedbackContainer = document.getElementById('aiFeedbackContent');
@@ -2340,13 +2379,14 @@
             aiDiv.setAttribute('data-feedback-key', feedbackKey);
             aiDiv.setAttribute('data-feedback-type', feedback);
             
+            const methodLabel = getMethodLabel(aiSuggestion.method);
             aiDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-3">
                     <i class="fas fa-robot me-2"></i>
                     <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
                     <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
-                    <span class="ai-enhancement-badge ms-2">${aiSuggestion.method}</span>
-                    ${aiSuggestion.method && aiSuggestion.method.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
+                    <span class="ai-enhancement-badge ms-2">${methodLabel}</span>
+                    ${methodLabel && methodLabel.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
                 </div>
                 
                 <div class="mb-3">
@@ -2361,16 +2401,41 @@
                 
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="text-light"><strong>AI Suggestion:</strong></div>
+                        <div class="text-light"><strong>${
+                            aiSuggestion.is_semantic_explanation ? 
+                            '🧠 Semantic Explanation (AI-Assisted)' :
+                            (aiSuggestion.is_guidance_only ? 
+                            '📋 Reviewer Guidance' : 
+                            (aiSuggestion.decision_type === 'always_split' ? 
+                            '✅ Suggested Rewrite (Reviewer-Approved)' : 
+                            '💡 AI Suggestion'))
+                        }</strong></div>
                         <button class="btn btn-outline-info btn-sm regenerate-btn" 
                                 onclick="regenerateAISuggestion(${sentenceIndex}, \`${feedback.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, \`${sentence.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, '${feedbackKey}')"
                                 title="Get a different suggestion">
                             <i class="fas fa-sync-alt"></i> Regenerate
                         </button>
                     </div>
+                    ${aiSuggestion.is_semantic_explanation ? `
+                    <div class="alert alert-info mb-3">
+                        <div class="semantic-explanation bg-info bg-opacity-10 p-3 rounded">
+                            <strong>Semantic Analysis:</strong>
+                            <p class="mb-0 mt-2">${aiSuggestion.semantic_explanation || 'AI explains the meaning and logical structure of this sentence.'}</p>
+                        </div>
+                        <div class="text-muted mt-2">
+                            <small><i class="fas fa-info-circle"></i> No changes are suggested because this sentence contains complex logic requiring manual review.</small>
+                        </div>
+                    </div>
+                    ` : (aiSuggestion.suggestion && aiSuggestion.suggestion.trim() && !aiSuggestion.is_guidance_only ? `
                     <div class="suggestion-text bg-light text-dark p-3 rounded">
                         ${formatAISuggestion(aiSuggestion.suggestion)}
                     </div>
+                    ` : `
+                    <div class="suggestion-text ${aiSuggestion.is_guidance_only ? 'bg-info bg-opacity-10 border-info' : 'bg-warning bg-opacity-10 border-warning'} text-light p-3 rounded border">
+                        <i class="fas ${aiSuggestion.is_guidance_only ? 'fa-user-edit' : 'fa-info-circle'} me-2"></i>
+                        ${aiSuggestion.ai_answer || 'No specific suggestion available. Please review manually.'}
+                    </div>
+                    `)}
                 </div>
                 
                 ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
@@ -2436,25 +2501,17 @@
         async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '') {
             try {
                 console.log('=== SHOW AI FEEDBACK DEBUG ===');
-                console.log('Raw parameters:', {
+                console.log('Parameters received:', {
                     sentenceIndex: sentenceIndex,
                     feedback: feedback,
                     sentence: sentence,
-                    fullSuggestion: fullSuggestion,
-                    feedbackType: typeof feedback,
-                    sentenceType: typeof sentence
+                    fullSuggestion: fullSuggestion
                 });
                 
-                // Decode the parameters since they were encoded in the HTML
-                const decodedFeedback = decodeURIComponent(feedback);
-                const decodedSentence = decodeURIComponent(sentence);
-                const decodedFullSuggestion = decodeURIComponent(fullSuggestion);
-                
-                console.log('Decoded parameters:', {
-                    decodedFeedback: decodedFeedback,
-                    decodedSentence: decodedSentence,
-                    decodedFullSuggestion: decodedFullSuggestion
-                });
+                // Parameters are already decoded by the click handler
+                const decodedFeedback = feedback;
+                const decodedSentence = sentence;
+                const decodedFullSuggestion = fullSuggestion;
                 
                 // Create a unique key for this specific feedback type and sentence combination
                 // Use encodeURIComponent instead of btoa to handle Unicode characters safely
@@ -2483,13 +2540,39 @@
                 
                 const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
                 console.log('getAISuggestion returned:', aiSuggestion);
+                console.log('🔍 Response structure check:', {
+                    hasSuggestion: aiSuggestion?.suggestion,
+                    suggestionLength: aiSuggestion?.suggestion?.length,
+                    hasAIAnswer: aiSuggestion?.ai_answer,
+                    validationFailed: aiSuggestion?.validation_failed,
+                    hasFallbackGuidance: aiSuggestion?.fallback_guidance,
+                    method: aiSuggestion?.method
+                });
                 
                 // Hide loading
                 hideLoadingToast(loadingToast);
                 
-                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion && aiSuggestion.suggestion.trim()) {
-                    console.log('✅ AI suggestion success, adding to tab');
+                // Check if we have a valid response (either AI suggestion or validation fallback guidance)
+                const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' && 
+                                       aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
+                const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' && 
+                                             (aiSuggestion.validation_failed || 
+                                              (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
+                
+                if (hasAISuggestion || hasValidationFallback) {
+                    console.log('✅ AI response received, adding to tab');
                     console.log('AI suggestion object:', aiSuggestion);
+                    
+                    // If validation failed, enhance the display
+                    if (hasValidationFallback && !hasAISuggestion) {
+                        console.log('ℹ️ Validation fallback - showing guidance instead of AI suggestion');
+                        // Ensure we have guidance text in ai_answer field
+                        if (!aiSuggestion.ai_answer && aiSuggestion.fallback_guidance) {
+                            aiSuggestion.ai_answer = aiSuggestion.fallback_guidance.guidance || 
+                                                     'Consider addressing this issue manually.';
+                        }
+                    }
+                    
                     // Add to AI tab
                     addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion, feedbackKey);
                     
@@ -2547,8 +2630,15 @@
                 // Hide loading
                 hideLoadingToast(loadingToast);
                 
-                if (aiSuggestion && typeof aiSuggestion === 'object' && aiSuggestion.suggestion && aiSuggestion.suggestion.trim()) {
-                    console.log('✅ Regenerated AI suggestion success');
+                // Check if we have a valid response (either AI suggestion or validation fallback guidance)
+                const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' && 
+                                       aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
+                const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' && 
+                                             (aiSuggestion.validation_failed || 
+                                              (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
+                
+                if (hasAISuggestion || hasValidationFallback) {
+                    console.log('✅ Regenerated AI response received');
                     
                     // Find and update the existing AI feedback item
                     const existingItem = document.querySelector(`[data-feedback-key="${feedbackKey}"]`);
@@ -2556,7 +2646,15 @@
                         // Update the suggestion content in the existing item
                         const suggestionDiv = existingItem.querySelector('.suggestion-text');
                         if (suggestionDiv) {
-                            suggestionDiv.innerHTML = formatAISuggestion(aiSuggestion.suggestion);
+                            if (hasAISuggestion) {
+                                // Update with new suggestion
+                                suggestionDiv.className = 'suggestion-text bg-light text-dark p-3 rounded';
+                                suggestionDiv.innerHTML = formatAISuggestion(aiSuggestion.suggestion);
+                            } else {
+                                // Update with validation fallback guidance
+                                suggestionDiv.className = 'suggestion-text bg-warning bg-opacity-10 text-light p-3 rounded border border-warning';
+                                suggestionDiv.innerHTML = `<i class="fas fa-info-circle me-2"></i>${aiSuggestion.ai_answer || 'No specific suggestion available. Please review manually.'}`;
+                            }
                         }
                         
                         // Update stored data
@@ -2571,7 +2669,7 @@
                     }
                 } else {
                     console.error('❌ Regenerate AI suggestion failed - invalid response');
-                    showErrorToast('Failed to generate alternative suggestion. Please try again.');
+                    showErrorToast('Could not generate alternative suggestion at this time. Please try again or review manually.');
                 }
                 
             } catch (error) {
@@ -3374,17 +3472,22 @@
                     console.log('Suggestion property type:', typeof result.suggestion);
                     console.log('Suggestion property length:', result.suggestion?.length);
                     console.log('Suggestion is truthy:', !!result.suggestion);
+                    console.log('Has ai_answer:', !!result.ai_answer);
+                    console.log('Validation failed flag:', result.validation_failed);
                     
-                    // Extra validation to ensure we have a valid result
-                    if (result && typeof result === 'object' && result.suggestion) {
-                        console.log('✅ Valid AI suggestion object confirmed - validation passed');
+                    // Accept response if it has suggestion OR ai_answer (for validation fallback cases)
+                    if (result && typeof result === 'object' && 
+                        ('suggestion' in result || 'ai_answer' in result)) {
+                        console.log('✅ Valid AI response object confirmed - validation passed');
                         return result;
                     } else {
                         console.error('❌ Invalid AI suggestion response structure - validation failed:');
                         console.error('  - result exists:', !!result);
                         console.error('  - result is object:', typeof result === 'object');
-                        console.error('  - suggestion exists:', !!result.suggestion);
+                        console.error('  - has suggestion field:', 'suggestion' in result);
+                        console.error('  - has ai_answer field:', 'ai_answer' in result);
                         console.error('  - suggestion value:', result.suggestion);
+                        console.error('  - ai_answer value:', result.ai_answer);
                         return null;
                     }
                 } else {

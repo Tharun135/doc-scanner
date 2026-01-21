@@ -282,7 +282,18 @@ def parse_file(file):
         return f"Error parsing {filename}: {str(e)}"
 
 def parse_zip(file_stream):
-    """Parse ZIP file and extract text content from supported documents inside"""
+    """Parse ZIP file and extract text content from supported documents inside
+    
+    ⚠️ REVIEWER DECISION NEEDED:
+    Current behavior: Merges all files into one document for review.
+    Alternative: Review each file separately.
+    
+    Question: Are these separate documents or one review unit?
+    - If separate: Need to review each with its own document gate
+    - If collection: Need summary of collection-level issues
+    
+    DO NOT: Blend feedback silently across files without clarifying this to users.
+    """
     import zipfile
     import io
     
@@ -760,9 +771,45 @@ def upload_file():
                 progress_tracker.fail_session(room_id, error_msg)
             return jsonify({"error": error_msg}), 400
         
-        # Stage 3: Breaking into Sentences (50%)
+        # 🚧 DOCUMENT REVIEW GATE - Reviewer-first analysis
+        # ⚠️ NON-NEGOTIABLE: This must happen AFTER parsing, BEFORE sentence extraction
+        # 
+        # DO NOT move this earlier "for convenience" - that breaks the reviewer-first architecture.
+        # Extracting sentences before this gate reintroduces sentence-first bias.
+        # 
+        # This gate determines whether sentence-level analysis is warranted.
+        # It answers: "Would a human reviewer pause here?"
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 2, "Identifying sentence boundaries and structure...")
+            progress_tracker.update_stage(room_id, 2, "Understanding document structure and goal...")
+        
+        from core.document_review_gate import run_document_review_gate
+        document_review = run_document_review_gate(html_content, file.filename)
+        
+        # If document has blocking issues, return early with document-level feedback
+        if document_review.blocking:
+            logger.warning(f"🚫 Document has blocking issues - stopping detailed analysis")
+            if progress_tracker and room_id:
+                progress_tracker.complete_session(room_id, success=True,
+                    final_message="Document review complete - structural issues found")
+            
+            return jsonify({
+                "content": html_content,
+                "document_review": document_review.to_ui(),
+                "sentences": [],
+                "report": {
+                    "totalSentences": 0,
+                    "totalWords": len(html_content.split()),
+                    "avgQualityScore": 0,
+                    "message": "Document-level review complete. Please address structural issues first."
+                },
+                "review_complete": False,
+                "room_id": room_id
+            })
+        
+        # Stage 3: Breaking into Sentences (50%)
+        # Only proceed if document structure is sound
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 3, "Identifying sentence boundaries and structure...")
         
         # Store the original HTML content for highlighting
         # Extract sentences that preserve HTML structure while also having plain text for analysis
@@ -796,11 +843,22 @@ def upload_file():
         current_sentences_list = sentences
 
         # Stage 4: Analyzing with Rules (80%)
+        # CONDITIONAL ANALYSIS - Only analyze sentences that need it
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 3, "Applying grammar, style, and readability rules...")
+            analysis_scope = document_review.analysis_scope
+            if analysis_scope == "minimal":
+                progress_tracker.update_stage(room_id, 4, "Spot-checking document clarity...")
+            elif analysis_scope == "targeted":
+                progress_tracker.update_stage(room_id, 4, "Analyzing flagged sections for clarity...")
+            else:
+                progress_tracker.update_stage(room_id, 4, "Applying grammar, style, and readability rules...")
         
         sentence_data = []
         total_sentences = len(sentences)
+        analyzed_count = 0  # Track how many sentences we actually analyze
+        
+        # Import the gating function
+        from core.document_review_gate import should_analyze_sentence
         
         for index, sent in enumerate(sentences):
             # Update substep progress for analysis
@@ -812,8 +870,17 @@ def upload_file():
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
             
+            # 🚧 GATED ANALYSIS - Only analyze if needed
+            should_analyze = should_analyze_sentence(index, plain_text_sentence, document_review)
+            
+            if should_analyze:
+                analyzed_count += 1
+                logger.debug(f"🔍 Analyzing sentence {index} (flagged by document review)")
+            else:
+                logger.debug(f"⏭️ Skipping sentence {index} (not in analysis scope)")
+            
             # Debug: Log sentence content to understand the issue
-            logger.info(f"Processing sentence {index}: '{plain_text_sentence[:100]}...'")
+            logger.debug(f"Processing sentence {index}: '{plain_text_sentence[:100]}...'")
             
             # AGGRESSIVE CLEANING: Handle malformed HTML attributes that somehow got into sentence text
             if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
@@ -834,9 +901,19 @@ def upload_file():
                 logger.warning(f"✅ Cleaned sentence {index}: '{clean_text[:100]}...'")
                 plain_text_sentence = clean_text
             
-            feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
+            # Apply rules ONLY if sentence should be analyzed
+            if should_analyze:
+                feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
+                analysis_skipped = False
+            else:
+                # Skip analysis - reviewer chose not to comment
+                # Note: Silence ≠ perfection. Silence = no comment warranted.
+                feedback = []
+                readability_scores = {}
+                quality_score = None  # Not scored
+                analysis_skipped = True
             
-            # Add sentence index to each feedback item for UI linking
+            # Store analysis_skipped flag for transparency
             enhanced_feedback = []
             for item in feedback:
                 if isinstance(item, dict):
@@ -858,6 +935,7 @@ def upload_file():
                 "feedback": enhanced_feedback,
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
+                "analysis_skipped": analysis_skipped,
                 "start": sent.start_char,
                 "end": sent.end_char
             })
@@ -882,7 +960,10 @@ def upload_file():
         
         # Stage 5: Generating Report (100%)
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 4, "Compiling insights and quality metrics...")
+            progress_tracker.update_stage(room_id, 5, "Compiling insights and quality metrics...")
+        
+        # Log analysis efficiency
+        logger.info(f"📊 Analysis complete: {analyzed_count}/{total_sentences} sentences analyzed ({document_review.analysis_scope} scope)")
         
         quality_index = calculate_quality_index(total_sentences, total_errors)
 
@@ -890,17 +971,30 @@ def upload_file():
             "totalSentences": total_sentences,
             "totalWords": len(plain_text.split()),
             "avgQualityScore": quality_index,
-            "message": "Content analysis completed."
+            "message": "Content analysis completed.",
+            "analysis_scope": document_review.analysis_scope,
+            "document_type": document_review.document_type,
+            "analyzed_sentences": analyzed_count  # NEW: transparency metric
         }
 
         # Complete progress tracking
         if progress_tracker and room_id:
-            progress_tracker.complete_session(room_id, success=True, 
-                final_message=f"Analysis complete! Found {total_errors} issues in {total_sentences} sentences.")
+            scope_msg = {
+                "minimal": "Quick review complete",
+                "targeted": f"Focused review complete - analyzed {analyzed_count} key sections",
+                "full": f"Comprehensive review complete"
+            }.get(document_review.analysis_scope, "Review complete")
+            
+            final_msg = f"{scope_msg} - Found {total_errors} issues"
+            if document_review.issues:
+                final_msg += f" ({len(document_review.issues)} document-level)"
+            
+            progress_tracker.complete_session(room_id, success=True, final_message=final_msg)
 
         # Return the result
         return jsonify({
             "content": html_content,  # For display
+            "document_review": document_review.to_ui(),  # NEW: document-level insights
             "sentences": sentence_data,
             "report": aggregated_report,
             "room_id": room_id  # Include room_id in response
@@ -1139,42 +1233,35 @@ def ai_suggestion():
         logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
                     f"(length: {len(ai_answer)})")
         
-        # As a last safety net, if suggestion is empty, derive a deterministic one
+        # As a last safety net, if suggestion is empty, use validation fallback
         if not suggestion:
-            logger.warning("Empty suggestion from RAG; using deterministic fallback.")
-            from .ai_improvement import AISuggestionEngine
-            # Use a lightweight engine instance for fallback rewrite
-            fallback_engine = AISuggestionEngine()
-            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
-            ai_answer = ai_answer or "Deterministic fallback rewrite."
-            logger.info(f"🔧 ENDPOINT: Used fallback suggestion: '{suggestion[:100]}...'")
+            logger.warning("Empty suggestion from AI; validation likely rejected output.")
+            # Check if validation returned fallback_guidance
+            if result.get('validation_failed') and result.get('fallback_guidance'):
+                fallback_guidance = result['fallback_guidance']
+                suggestion = ""  # Keep empty - no valid AI suggestion available
+                ai_answer = fallback_guidance.get('guidance', ai_answer or "Review the sentence and address the detected issue.")
+                logger.info("🔧 ENDPOINT: Using validation fallback guidance")
+            else:
+                # No AI suggestion available
+                suggestion = ""
+                ai_answer = ai_answer or f"Consider: {feedback_text}"
+                logger.info("🔧 ENDPOINT: No AI suggestion available")
         else:
-            logger.info(f"🔧 ENDPOINT: Using RAG suggestion: '{suggestion[:100]}...'")
+            logger.info(f"🔧 ENDPOINT: Using AI suggestion: '{suggestion[:100]}...'")
 
         # Guard against "No exact solution…" leaking through
-        if "no exact solution" in suggestion.lower():
-            logger.warning("Found 'no exact solution' in suggestion, using fallback")
-            from .ai_improvement import AISuggestionEngine
-            fallback_engine = AISuggestionEngine()
-            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
+        if suggestion and "no exact solution" in suggestion.lower():
+            logger.warning("Found 'no exact solution' in suggestion, clearing it")
+            suggestion = ""
             if not ai_answer:
-                ai_answer = "Applied deterministic rewrite to resolve the issue."
+                ai_answer = f"Manual review needed for: {feedback_text}"
 
         # 4) Build response
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context,
                          document_type, result.get("method", "rag_rewrite"), response_time)
 
-        # Guard against “No exact solution…” leaking through
-        if "no exact solution" in suggestion.lower():
-            from .ai_improvement import AISuggestionEngine
-            fallback_engine = AISuggestionEngine()
-            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
-            if not ai_answer:
-                ai_answer = "Applied deterministic rewrite to resolve the issue."
 
         # Type safety: Ensure all response fields are strings (not None or other types)
         suggestion = str(suggestion) if suggestion is not None else ""
@@ -1217,7 +1304,12 @@ def ai_suggestion():
             "primary_ai": "local",
             "issue_detection": "rule_based"
         }),
-        "note": f"Generated using {result.get('method', 'rag_rewrite')}"
+        "note": f"Generated using {result.get('method', 'rag_rewrite')}",
+        # ✅ CRITICAL: Pass through semantic explanation state flags for UI rendering
+        "is_semantic_explanation": result.get("is_semantic_explanation", False),
+        "is_guidance_only": result.get("is_guidance_only", False),
+        "semantic_explanation": result.get("semantic_explanation", ""),
+        "decision_type": result.get("decision_type", "")
     })
 
     except Exception as e:
