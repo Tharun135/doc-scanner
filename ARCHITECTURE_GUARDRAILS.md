@@ -266,6 +266,71 @@ To:
 
 ---
 
+## Critical Policy Guardrails (Added January 21, 2026)
+
+### 3. AI Rewrite Block Rule - HARD INVARIANT
+
+**Policy Statement:**
+> **AI must never rewrite sentences that combine normative language with conditional or alternative logic. These sentences require human judgment.**
+
+**Why this is non-negotiable:**
+- Normative language defines mandatory requirements (`must`, `shall`, `required`)
+- Conditional/alternative logic creates multiple execution paths (`if`, `or`, `in case`)
+- Even small word changes can shift requirement scope or alter which conditions apply to which alternatives
+- Understanding is not the same as authority
+
+**Enforcement:**
+```python
+# Located in: app/intelligent_ai_improvement.py
+
+def blocks_ai_rewrite(sentence: str) -> bool:
+    return (
+        contains_normative_language(sentence)
+        and contains_conditional_or_alternative(sentence)
+    )
+```
+
+**Detection criteria:**
+- Normative: ` must `, ` shall `, ` required `, ` mandatory `, ` prohibited `
+- Conditional: ` if `, ` in case `, ` unless `, ` provided that `, ` or `, ` and/or `, ` either `, ` neither `
+
+**What happens when blocked:**
+- AI rewrite is prevented entirely
+- System returns semantic explanation instead
+- Explanation clarifies why no rewrite is safe
+- User gets transparency, not false confidence
+
+**Protected in code:**
+- Policy functions: Lines ~125-175 of `intelligent_ai_improvement.py`
+- Enforcement point: After validation, before result return (~Line 2395)
+- Hard assertion: Catches any bypasses (~Line 2440)
+
+**Example of blocked sentence:**
+> "The server certificate must include the IP address of the server in the SAN field or the FQDN in case it is already registered in the DNS server."
+
+This sentence:
+- ✅ Contains `must` (normative)
+- ✅ Contains `or` + `in case` (conditional/alternative)
+- 🛑 **BLOCKED from AI rewrite**
+- ✅ Gets semantic explanation instead
+
+**Validation:**
+```python
+# Hard assertion catches violations:
+if suggestion != sentence_context:
+    assert not blocks_ai_rewrite(sentence_context), (
+        "POLICY VIOLATION: AI rewrite for normative + conditional"
+    )
+```
+
+**Impact:**
+- False positives are acceptable (over-caution is safe)
+- False negatives are not acceptable (risk is unacceptable)
+- Applies globally to ALL issue types (passive voice, long sentence, wording, etc.)
+- Cannot be bypassed by prompt engineering or model confidence
+
+---
+
 ## Remaining Work (NOT Architecture)
 
 These are refinements, not structural changes:

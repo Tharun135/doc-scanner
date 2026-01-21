@@ -2404,11 +2404,13 @@
                         <div class="text-light"><strong>${
                             aiSuggestion.is_semantic_explanation ? 
                             '🧠 Semantic Explanation (AI-Assisted)' :
+                            (aiSuggestion.is_reviewer_rationale ?
+                            '📝 Reviewer Rationale' :
                             (aiSuggestion.is_guidance_only ? 
                             '📋 Reviewer Guidance' : 
                             (aiSuggestion.decision_type === 'always_split' ? 
                             '✅ Suggested Rewrite (Reviewer-Approved)' : 
-                            '💡 AI Suggestion'))
+                            '💡 Reviewer Feedback')))
                         }</strong></div>
                         <button class="btn btn-outline-info btn-sm regenerate-btn" 
                                 onclick="regenerateAISuggestion(${sentenceIndex}, \`${feedback.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, \`${sentence.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, '${feedbackKey}')"
@@ -2431,8 +2433,8 @@
                         ${formatAISuggestion(aiSuggestion.suggestion)}
                     </div>
                     ` : `
-                    <div class="suggestion-text ${aiSuggestion.is_guidance_only ? 'bg-info bg-opacity-10 border-info' : 'bg-warning bg-opacity-10 border-warning'} text-light p-3 rounded border">
-                        <i class="fas ${aiSuggestion.is_guidance_only ? 'fa-user-edit' : 'fa-info-circle'} me-2"></i>
+                    <div class="suggestion-text ${aiSuggestion.is_reviewer_rationale ? 'bg-secondary bg-opacity-10 border-secondary' : (aiSuggestion.is_guidance_only ? 'bg-info bg-opacity-10 border-info' : 'bg-warning bg-opacity-10 border-warning')} text-light p-3 rounded border">
+                        <i class="fas ${aiSuggestion.is_reviewer_rationale ? 'fa-lightbulb' : (aiSuggestion.is_guidance_only ? 'fa-user-edit' : 'fa-info-circle')} me-2"></i>
                         ${aiSuggestion.ai_answer || 'No specific suggestion available. Please review manually.'}
                     </div>
                     `)}

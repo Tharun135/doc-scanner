@@ -1305,9 +1305,11 @@ def ai_suggestion():
             "issue_detection": "rule_based"
         }),
         "note": f"Generated using {result.get('method', 'rag_rewrite')}",
-        # ✅ CRITICAL: Pass through semantic explanation state flags for UI rendering
+        # ✅ CRITICAL: Pass through all UI rendering flags
         "is_semantic_explanation": result.get("is_semantic_explanation", False),
         "is_guidance_only": result.get("is_guidance_only", False),
+        "is_reviewer_rationale": result.get("is_reviewer_rationale", False),
+        "guidance_category": result.get("guidance_category", "readability"),
         "semantic_explanation": result.get("semantic_explanation", ""),
         "decision_type": result.get("decision_type", "")
     })

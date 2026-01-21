@@ -120,6 +120,99 @@ def structural_change_detected(original: str, suggestion: str) -> bool:
     return False
 
 
+# ============================================================================
+# POLICY GUARDRAILS - AI Rewrite Block Rules
+# ============================================================================
+
+def contains_normative_language(sentence: str) -> bool:
+    """
+    Detect normative language (mandatory requirements).
+    False positives are acceptable. False negatives are not.
+    """
+    s = sentence.lower()
+    return any(word in s for word in [
+        " must ",
+        " shall ",
+        " required ",
+        " mandatory ",
+        " prohibited "
+    ])
+
+
+def contains_conditional_or_alternative(sentence: str) -> bool:
+    """
+    Detect conditional or alternative logic.
+    False positives are acceptable. False negatives are not.
+    """
+    s = sentence.lower()
+    return any(word in s for word in [
+        " if ",
+        " in case ",
+        " unless ",
+        " provided that ",
+        " or ",
+        " and/or ",
+        " either ",
+        " neither "
+    ])
+
+
+def blocks_ai_rewrite(sentence: str) -> bool:
+    """
+    HARD BLOCK RULE: Prevent AI rewrites for normative + conditional sentences.
+    
+    This is the invariant that prevents semantic drift in compliance-critical text.
+    
+    Returns True if AI rewrite is FORBIDDEN.
+    """
+    return (
+        contains_normative_language(sentence)
+        and contains_conditional_or_alternative(sentence)
+    )
+
+
+def build_semantic_explanation_for_blocked_sentence(sentence: str, issue_type: str) -> str:
+    """
+    Build semantic explanation for sentences blocked from AI rewrite.
+    
+    This explains WHY we're not rewriting the sentence (transparency).
+    """
+    explanation_parts = []
+    
+    # Identify what made it risky
+    if contains_normative_language(sentence):
+        explanation_parts.append("This sentence contains mandatory requirement language (must/shall/required).")
+    
+    if contains_conditional_or_alternative(sentence):
+        explanation_parts.append(
+            "It includes conditional or alternative logic (if/or/in case) that creates "
+            "multiple execution paths or options."
+        )
+    
+    # Explain the risk
+    explanation_parts.append(
+        "\n\nRewriting this sentence automatically could change its compliance meaning "
+        "or alter the logical conditions. Even small word changes can shift requirement scope "
+        "or change which conditions apply to which alternatives."
+    )
+    
+    # Explain what the human should consider
+    explanation_parts.append(
+        "\n\n**What to consider if revising manually:**\n"
+        "- Does each condition apply to the correct alternative?\n"
+        "- Is the normative strength (must/should/may) appropriate?\n"
+        "- Are all technical terms defined or clear from context?\n"
+        f"- Does addressing '{issue_type}' require structural change, or is the current structure necessary for accuracy?"
+    )
+    
+    return "".join(explanation_parts)
+
+
+# ============================================================================
+# End of Policy Guardrails
+# ============================================================================
+
+
 def is_value_added(original: str, suggestion: str, issue_type: str) -> Tuple[bool, str]:
     """
     Core validation: Is the AI suggestion actually different from the original?
@@ -173,48 +266,93 @@ def is_value_added(original: str, suggestion: str, issue_type: str) -> Tuple[boo
 
 def get_deterministic_fallback(issue_type: str, original_sentence: str) -> Dict[str, str]:
     """
-    Deterministic fallback per issue type.
-    This GUARANTEES a fix even if AI fails.
-    """
-    fallbacks = {
-        "long_sentence": {
-            "guidance": "Split this sentence into two:\n• One sentence for the main concept\n• One sentence for the benefit/result",
-            "example": "Consider: 'X is a Y. It provides Z.'"
-        },
-        "passive_voice": {
-            "guidance": "Convert to active voice by identifying the actor and making it the subject",
-            "example": "Instead of 'is done by', use 'does'"
-        },
-        "adverb": {
-            "guidance": "Remove the adverb or replace with a stronger verb that conveys the same meaning",
-            "example": "Instead of 'specifically implemented', use 'implements' or describe what makes it specific"
-        },
-        "vague_terms": {
-            "guidance": "Replace vague terms with specific, measurable descriptions",
-            "example": "Instead of 'many', use exact counts or ranges"
-        },
-        "complex_words": {
-            "guidance": "Use simpler, more direct alternatives",
-            "example": "Replace technical jargon with plain language equivalents"
-        }
-    }
+    Deterministic reviewer feedback per issue type.
+    Returns guidance with appropriate tone based on issue classification.
     
-    # Normalize issue type and check for keywords
+    Returns dict with:
+        - guidance: The reviewer message
+        - category: One of [objective, readability, compliance, style]
+        - is_rationale: True if explaining restraint vs prescribing action
+    """
     issue_lower = issue_type.lower()
     
-    # Check for specific keywords first
-    if "adverb" in issue_lower or issue_lower.endswith("ly"):
-        return fallbacks["adverb"]
+    # ============================================================================
+    # CATEGORY 1: OBJECTIVE CORRECTNESS ISSUES
+    # Action-oriented (firm)
+    # ============================================================================
     
-    # Then check for key patterns
-    for key in fallbacks:
-        if key in issue_lower or key.replace("_", " ") in issue_lower:
-            return fallbacks[key]
+    if any(word in issue_lower for word in ["ambiguous", "unclear", "missing", "undefined", "incomplete"]):
+        return {
+            "guidance": "This sentence is unclear or incomplete and may confuse readers.\n\nClarify the missing or ambiguous information so the requirement can be understood without inference.",
+            "category": "objective",
+            "is_rationale": False
+        }
     
-    # Generic fallback
+    # ============================================================================
+    # CATEGORY 2: READABILITY ISSUES (mechanical, low risk)
+    # Structural advice
+    # ============================================================================
+    
+    if "long" in issue_lower or "sentence" in issue_lower:
+        return {
+            "guidance": "This sentence is difficult to read due to length and structure.\n\nConsider splitting it into shorter sentences, each expressing one idea.\n\nOptional: One sentence for the main action, one for the result or explanation.",
+            "category": "readability",
+            "is_rationale": False
+        }
+    
+    if "passive" in issue_lower:
+        return {
+            "guidance": "This sentence uses passive voice, which can make the actor unclear.\n\nConsider converting to active voice by identifying who performs the action and making them the subject.",
+            "category": "readability",
+            "is_rationale": False
+        }
+    
+    # ============================================================================
+    # CATEGORY 3: COMPLIANCE / CONDITIONAL COMPLEXITY
+    # Decision transparency
+    # ============================================================================
+    
+    if any(word in issue_lower for word in ["compliance", "normative", "conditional", "requirement", "obligation"]):
+        return {
+            "guidance": "This sentence contains conditional or compliance-related logic.\n\nAutomatic rewriting is not suggested because changing the structure could alter the meaning.",
+            "category": "compliance",
+            "is_rationale": True
+        }
+    
+    # ============================================================================
+    # CATEGORY 4: STYLE / SUBJECTIVE PREFERENCE ISSUES  
+    # Reviewer rationale (non-actionable)
+    # ============================================================================
+    
+    if "adverb" in issue_lower:
+        return {
+            "guidance": "This wording is stylistic rather than incorrect.\n\nThe current phrasing may be intentional, and replacing it requires a subjective choice. There is no single correct alternative, so no automatic rewrite is suggested.\n\nIf you want to tighten the sentence, consider whether the modifier adds meaningful information.",
+            "category": "style",
+            "is_rationale": True
+        }
+    
+    if any(word in issue_lower for word in ["tone", "voice", "style", "hedging", "weak"]):
+        return {
+            "guidance": "This wording is stylistic rather than incorrect.\n\nThe current phrasing may be intentional, and replacing it requires a subjective choice. There is no single correct alternative, so no automatic rewrite is suggested.",
+            "category": "style",
+            "is_rationale": True
+        }
+    
+    if "vague" in issue_lower:
+        return {
+            "guidance": "This term is general rather than specific.\n\nConsider whether more precise language would improve clarity for your audience.",
+            "category": "readability",
+            "is_rationale": False
+        }
+    
+    # ============================================================================
+    # GENERIC FALLBACK
+    # ============================================================================
+    
     return {
-        "guidance": "Simplify this sentence for better clarity",
-        "example": "Break complex ideas into shorter, clearer statements"
+        "guidance": "This sentence could be improved for clarity and directness.\n\nConsider simplifying complex phrasing or breaking it into shorter statements.",
+        "category": "readability",
+        "is_rationale": False
     }
 
 
@@ -2086,6 +2224,40 @@ def get_enhanced_ai_suggestion(
     """
     logger.info(f"🧠 INTELLIGENT: get_enhanced_ai_suggestion called for: {feedback_text[:50]}")
     
+    # ============================================================================
+    # POLICY GUARDRAIL - Check block rule FIRST (before any processing)
+    # ============================================================================
+    if blocks_ai_rewrite(sentence_context):
+        logger.warning(f"🛑 POLICY BLOCK: Normative + conditional sentence detected")
+        logger.info(f"   Normative: {contains_normative_language(sentence_context)}")
+        logger.info(f"   Conditional: {contains_conditional_or_alternative(sentence_context)}")
+        
+        # Build semantic explanation
+        semantic_text = build_semantic_explanation_for_blocked_sentence(
+            sentence_context, 
+            feedback_text
+        )
+        
+        return {
+            "suggestion": sentence_context,  # Keep original
+            "semantic_explanation": semantic_text,
+            "ai_answer": (
+                "No rewrite is suggested. This sentence combines mandatory requirements "
+                "with conditional logic, which requires human judgment to revise safely."
+            ),
+            "confidence": "high",
+            "method": "policy_block_normative_conditional",
+            "sources": ["Policy Guardrail: Normative + Conditional Block"],
+            "success": True,
+            "is_semantic_explanation": True,
+            "is_guidance_only": False,
+            "decision_type": "semantic_explanation",
+            "block_reason": "normative_conditional"
+        }
+    # ============================================================================
+    # End of policy guardrail
+    # ============================================================================
+    
     # ⚠️ PRE-FLIGHT CHECK: Determine if rewrite is safe/advisable
     can_rewrite, eligibility_reason = should_attempt_rewrite(feedback_text, sentence_context)
     
@@ -2094,14 +2266,18 @@ def get_enhanced_ai_suggestion(
         fallback = get_deterministic_fallback(feedback_text, sentence_context)
         return {
             "suggestion": "",
-            "ai_answer": fallback['guidance'],  # NO hint appending - clean terminal state
+            "ai_answer": fallback['guidance'],
             "confidence": "guidance",
             "method": "reviewer_guidance",
             "sources": ["Pre-flight eligibility check"],
             "success": True,
             "validation_failed": False,
             "eligibility_blocked": True,
-            "fallback_guidance": fallback
+            "fallback_guidance": fallback,
+            "is_guidance_only": True,
+            "is_reviewer_rationale": fallback.get('is_rationale', False),
+            "is_semantic_explanation": False,
+            "guidance_category": fallback.get('category', 'readability')
         }
     
     # 🧠 SEMANTIC EXPLANATION CHECK: Must be checked BEFORE attempting rewrite
@@ -2205,14 +2381,18 @@ def get_enhanced_ai_suggestion(
                 # Use deterministic fallback instead
                 fallback = get_deterministic_fallback(feedback_text, sentence_context)
                 return {
-                    "suggestion": "",  # Empty = don't show AI output
+                    "suggestion": "",
                     "ai_answer": fallback['guidance'],
                     "confidence": "guidance",
                     "method": "manual_review",
                     "sources": [],
                     "success": True,
                     "validation_failed": True,
-                    "fallback_guidance": fallback
+                    "fallback_guidance": fallback,
+                    "is_guidance_only": True,
+                    "is_reviewer_rationale": fallback.get('is_rationale', False),
+                    "is_semantic_explanation": False,
+                    "guidance_category": fallback.get('category', 'readability')
                 }
             
             # ⚠️ CRITICAL: Check if AI suggestion adds value
@@ -2226,7 +2406,7 @@ def get_enhanced_ai_suggestion(
                 # Use deterministic fallback instead of showing invalid AI output
                 fallback = get_deterministic_fallback(feedback_text, sentence_context)
                 return {
-                    "suggestion": "",  # Empty = don't show AI output  
+                    "suggestion": "",
                     "ai_answer": fallback['guidance'],
                     "confidence": "guidance",
                     "method": "reviewer_guidance",
@@ -2234,13 +2414,50 @@ def get_enhanced_ai_suggestion(
                     "success": False,
                     "validation_failed": True,
                     "validation_reason": reason,
-                    "fallback_guidance": fallback
+                    "fallback_guidance": fallback,
+                    "is_guidance_only": True,
+                    "is_reviewer_rationale": fallback.get('is_rationale', False),
+                    "is_semantic_explanation": False,
+                    "guidance_category": fallback.get('category', 'readability')
                 }
             
             logger.info(f"✅ VALIDATION PASSED: {reason}")
             
             # ============================================================================
-            # End of validation contract
+            # POLICY ENFORCEMENT - Block AI rewrites for normative + conditional
+            # ============================================================================
+            
+            # HARD BLOCK: Check if this sentence is forbidden from AI rewrite
+            if blocks_ai_rewrite(sentence_context):
+                logger.warning(f"🛑 POLICY BLOCK: Sentence contains normative + conditional logic")
+                logger.info(f"   Normative: {contains_normative_language(sentence_context)}")
+                logger.info(f"   Conditional: {contains_conditional_or_alternative(sentence_context)}")
+                
+                # Build semantic explanation instead of showing rewrite
+                semantic_text = build_semantic_explanation_for_blocked_sentence(
+                    sentence_context, 
+                    feedback_text
+                )
+                
+                return {
+                    "suggestion": sentence_context,  # Keep original
+                    "semantic_explanation": semantic_text,
+                    "ai_answer": (
+                        "No rewrite is suggested. This sentence combines mandatory requirements "
+                        "with conditional logic, which requires human judgment to revise safely."
+                    ),
+                    "confidence": "high",
+                    "method": "policy_block_normative_conditional",
+                    "sources": ["Policy Guardrail: Normative + Conditional Block"],
+                    "success": True,
+                    "is_semantic_explanation": True,
+                    "is_guidance_only": False,
+                    "decision_type": "semantic_explanation",
+                    "block_reason": "normative_conditional"
+                }
+            
+            # ============================================================================
+            # End of policy enforcement
             # ============================================================================
             
             # Update the result with validated fields
@@ -2252,6 +2469,17 @@ def get_enhanced_ai_suggestion(
                 'sources': result.get('sources', []),
                 'success': True  # Validation passed
             })
+            
+            # ============================================================================
+            # HARD ASSERTION - Catch policy violations
+            # ============================================================================
+            # This assertion prevents any AI rewrite from escaping the block rule
+            if suggestion != sentence_context:  # If we're returning a rewrite
+                assert not blocks_ai_rewrite(sentence_context), (
+                    f"POLICY VIOLATION: AI rewrite returned for normative + conditional sentence. "
+                    f"This should never happen. Sentence: {sentence_context[:100]}"
+                )
+            # ============================================================================
             
             logger.info(f"✅ Returning validated result: method={result.get('method')}")
             return result
@@ -2288,7 +2516,9 @@ def get_enhanced_ai_suggestion(
         "confidence": "medium",
         "method": "emergency_fallback_with_basic_rules",
         "sources": [],
-        "success": True  # Mark as success if we provide a meaningful change
+        "success": True,  # Mark as success if we provide a meaningful change
+        "is_guidance_only": False,
+        "is_semantic_explanation": False
     }
 
 
