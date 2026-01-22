@@ -425,6 +425,25 @@ def should_attempt_rewrite(issue_type: str, sentence: str) -> tuple[bool, str]:
     """
     issue_lower = issue_type.lower()
     
+    # Simple present tense normalization - use strict eligibility checker
+    if 'tense' in issue_lower or 'non_simple_present' in issue_lower:
+        try:
+            from app.rules.simple_present_normalization import can_convert_to_simple_present
+            allowed, reason = can_convert_to_simple_present(sentence)
+            
+            if not allowed:
+                if reason == "historical":
+                    return False, "historical_context"  # Block with reviewer_rationale
+                elif reason == "compliance_conditional":
+                    return False, "compliance_with_conditions"  # Block with semantic_explanation
+                elif reason == "already_present":
+                    return False, "already_in_present_tense"  # Skip
+            
+            return allowed, reason
+        except ImportError:
+            logger.warning("simple_present_normalization module not available")
+            return False, "module_not_available"
+    
     # Passive voice eligibility
     if 'passive' in issue_lower:
         return can_safely_rewrite_passive(sentence)
@@ -2256,6 +2275,178 @@ def get_enhanced_ai_suggestion(
         }
     # ============================================================================
     # End of policy guardrail
+    # ============================================================================
+    
+    # ============================================================================
+    # TENSE NORMALIZATION - Check eligibility and handle special cases
+    # ============================================================================
+    issue_lower = feedback_text.lower() if feedback_text else ""
+    if 'tense' in issue_lower or 'non_simple_present' in issue_lower:
+        try:
+            from app.rules.simple_present_normalization import (
+                can_convert_to_simple_present,
+                build_simple_present_prompt,
+                validate_simple_present_rewrite,
+                is_non_sentential,
+                is_metadiscourse
+            )
+            
+            # CRITICAL GATE 1: Check if this is even a sentence
+            if is_non_sentential(sentence_context):
+                return {
+                    "suggestion": sentence_context,
+                    "reviewer_rationale": (
+                        "This text appears to be a heading or title, not a complete sentence. "
+                        "Sentence-level style rules do not apply."
+                    ),
+                    "ai_answer": "This text functions as a heading or title. No tense correction needed.",
+                    "confidence": "high",
+                    "method": "non_sentential_block",
+                    "success": True,
+                    "is_reviewer_rationale": True,
+                    "decision_type": "reviewer_rationale"
+                }
+            
+            # CRITICAL GATE 2: Check if this is metadiscourse
+            if is_metadiscourse(sentence_context):
+                return {
+                    "suggestion": sentence_context,
+                    "reviewer_rationale": (
+                        "This sentence introduces an example or structural element. "
+                        "Tense normalization does not apply to metadiscourse."
+                    ),
+                    "ai_answer": "This is metadiscourse that guides the reader. It should remain as written.",
+                    "confidence": "high",
+                    "method": "metadiscourse_block",
+                    "success": True,
+                    "is_reviewer_rationale": True,
+                    "decision_type": "reviewer_rationale"
+                }
+            
+            allowed, reason = can_convert_to_simple_present(sentence_context)
+            
+            # Handle blocked cases
+            if not allowed:
+                if reason == "historical":
+                    return {
+                        "suggestion": sentence_context,
+                        "reviewer_rationale": (
+                            "This sentence describes a past event or historical context. "
+                            "Present tense is not appropriate here."
+                        ),
+                        "ai_answer": "This sentence describes historical context and should remain in past tense.",
+                        "confidence": "high",
+                        "method": "tense_historical_block",
+                        "success": True,
+                        "is_reviewer_rationale": True,
+                        "decision_type": "reviewer_rationale"
+                    }
+                
+                elif reason == "compliance_conditional":
+                    return {
+                        "suggestion": sentence_context,
+                        "semantic_explanation": (
+                            "This sentence expresses a mandatory requirement with conditional logic. "
+                            "Automatic tense conversion could alter the compliance meaning."
+                        ),
+                        "ai_answer": (
+                            "No automatic conversion suggested. This requirement contains conditions "
+                            "that must be preserved exactly as stated."
+                        ),
+                        "confidence": "high",
+                        "method": "tense_compliance_block",
+                        "success": True,
+                        "is_semantic_explanation": True,
+                        "decision_type": "semantic_explanation"
+                    }
+                
+                elif reason == "already_present":
+                    return {
+                        "suggestion": sentence_context,
+                        "ai_answer": "This sentence is already in simple present tense.",
+                        "confidence": "high",
+                        "method": "tense_already_present",
+                        "success": True
+                    }
+            
+            # Eligible for conversion - use AI
+            prompt = build_simple_present_prompt(sentence_context)
+            
+            # Try to get AI rewrite using existing Ollama infrastructure
+            try:
+                from app.ai_config import get_ollama_config
+                import requests
+                
+                config = get_ollama_config()
+                
+                if config['ollama_available']:
+                    ollama_response = requests.post(
+                        f"{config['base_url']}/api/generate",
+                        json={
+                            "model": config['model'],
+                            "prompt": prompt,
+                            "stream": False
+                        },
+                        timeout=30
+                    )
+                    
+                    if ollama_response.status_code == 200:
+                        ai_output = ollama_response.json().get('response', '').strip()
+                        
+                        # Validate the rewrite
+                        valid, validation_reason = validate_simple_present_rewrite(
+                            sentence_context, ai_output
+                        )
+                        
+                        if valid:
+                            return {
+                                "suggestion": ai_output,
+                                "ai_answer": f"Converted to simple present tense ({reason})",
+                                "confidence": "high",
+                                "method": "tense_ai_conversion",
+                                "sources": ["Company Style Guide: Grammar tenses"],
+                                "success": True,
+                                "is_ai_enhanced": True,
+                                "decision_type": "ai_enhanced"
+                            }
+                        else:
+                            # Validation failed - provide reviewer guidance
+                            return {
+                                "suggestion": sentence_context,
+                                "reviewer_guidance": (
+                                    "This sentence does not use simple present tense. "
+                                    "Rewrite it manually if doing so does not change the meaning."
+                                ),
+                                "ai_answer": f"Manual rewrite recommended (validation failed: {validation_reason})",
+                                "confidence": "medium",
+                                "method": "tense_validation_failed",
+                                "success": True,
+                                "is_reviewer_guidance": True,
+                                "decision_type": "reviewer_guidance"
+                            }
+            
+            except Exception as e:
+                logger.warning(f"AI tense conversion failed: {e}")
+            
+            # Fallback: provide reviewer guidance
+            return {
+                "suggestion": sentence_context,
+                "reviewer_guidance": (
+                    "This sentence does not use simple present tense. "
+                    "Consider rewriting it in simple present tense if doing so does not change the meaning."
+                ),
+                "ai_answer": "Manual review recommended for tense consistency.",
+                "confidence": "medium",
+                "method": "tense_guidance",
+                "success": True,
+                "is_reviewer_guidance": True,
+                "decision_type": "reviewer_guidance"
+            }
+            
+        except ImportError:
+            logger.warning("simple_present_normalization module not available")
+    # ============================================================================
+    # End of tense normalization
     # ============================================================================
     
     # ⚠️ PRE-FLIGHT CHECK: Determine if rewrite is safe/advisable

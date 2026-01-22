@@ -8,9 +8,31 @@ except ImportError:
     SOCKETIO_AVAILABLE = False
     SocketIO = None
 
+# Make flask_cors optional
+try:
+    from flask_cors import CORS
+    CORS_AVAILABLE = True
+except ImportError:
+    CORS_AVAILABLE = False
+    CORS = None
+
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this in production
+    
+    # Enable CORS if available (helps prevent "Failed to fetch" errors)
+    if CORS_AVAILABLE:
+        CORS(app)
+        print("✅ CORS enabled")
+    else:
+        # Manual CORS headers as fallback
+        @app.after_request
+        def add_cors_headers(response):
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            return response
+        print("✅ Manual CORS headers added")
     
     # Configure file upload settings
     app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size

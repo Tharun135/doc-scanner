@@ -515,19 +515,32 @@ def calculate_quality_index(total_sentences, total_errors):
 def index():
     return render_template('index.html')
 
-@main.route('/start_upload', methods=['POST'])
+@main.route('/start_upload', methods=['POST', 'OPTIONS'])
 def start_upload():
     """Initialize upload session and return room ID for progress tracking."""
-    import uuid
-    from .progress_tracker import get_progress_tracker
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response, 200
     
-    room_id = str(uuid.uuid4())
-    progress_tracker = get_progress_tracker()
-    
-    if progress_tracker:
-        progress_tracker.start_session(room_id)
-    
-    return jsonify({"room_id": room_id})
+    try:
+        import uuid
+        from .progress_tracker import get_progress_tracker
+        
+        room_id = str(uuid.uuid4())
+        progress_tracker = get_progress_tracker()
+        
+        if progress_tracker:
+            progress_tracker.start_session(room_id)
+        
+        logger.info(f"Upload session initialized: {room_id}")
+        return jsonify({"room_id": room_id})
+    except Exception as e:
+        logger.error(f"Failed to initialize upload session: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Failed to initialize upload: {str(e)}"}), 500
 
 @main.route('/analyze_intelligent', methods=['POST'])
 def analyze_intelligent():
@@ -697,41 +710,58 @@ def debug_sentences():
     
     return jsonify(debug_info)
 
-@main.route('/upload', methods=['POST'])
+@main.route('/upload', methods=['POST', 'OPTIONS'])
 def upload_file():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response, 200
+    
     global current_document_content  # Access global variable
     
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+    try:
+        if 'file' not in request.files:
+            logger.error("Upload request missing 'file' field")
+            return jsonify({"error": "No file part"}), 400
 
-    file = request.files['file']
-    if not file.filename:
-        return jsonify({"error": "No selected file"}), 400
+        file = request.files['file']
+        if not file.filename:
+            logger.error("Upload request has empty filename")
+            return jsonify({"error": "No selected file"}), 400
 
-    # Validate file extension
-    filename = file.filename.lower()
-    allowed_extensions = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
-    if not any(filename.endswith(ext) for ext in allowed_extensions):
-        return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"}), 400
+        # Validate file extension
+        filename = file.filename.lower()
+        allowed_extensions = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
+        if not any(filename.endswith(ext) for ext in allowed_extensions):
+            logger.error(f"Unsupported file type: {filename}")
+            return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"}), 400
 
-    # Get room_id for progress tracking
-    room_id = request.form.get('room_id')
-    
-    from .progress_tracker import get_progress_tracker
-    progress_tracker = get_progress_tracker()
+        # Get room_id for progress tracking
+        room_id = request.form.get('room_id')
+        
+        from .progress_tracker import get_progress_tracker
+        progress_tracker = get_progress_tracker()
 
-    logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
+        logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
+        
+        # Validate file size (Flask should handle this automatically, but let's be explicit)
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        max_size = 50 * 1024 * 1024  # 50MB
+        if file_size > max_size:
+            logger.error(f"File too large: {file_size} bytes (max: {max_size})")
+            return jsonify({"error": f"File too large. Maximum size: {max_size // (1024*1024)}MB"}), 400
+        
+        logger.info(f"File size: {file_size} bytes")
     
-    # Validate file size (Flask should handle this automatically, but let's be explicit)
-    file.seek(0, 2)  # Seek to end
-    file_size = file.tell()
-    file.seek(0)  # Reset to beginning
-    
-    max_size = 50 * 1024 * 1024  # 50MB
-    if file_size > max_size:
-        return jsonify({"error": f"File too large. Maximum size: {max_size // (1024*1024)}MB"}), 400
-    
-    logger.info(f"File size: {file_size} bytes")
+    except Exception as e:
+        logger.error(f"Error in upload validation: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Upload validation failed: {str(e)}"}), 500
 
     try:
         # Stage 1: Uploading Document (10%)

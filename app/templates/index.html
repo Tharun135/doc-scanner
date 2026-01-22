@@ -1743,7 +1743,21 @@
                 }
             } catch (error) {
                 console.error('Upload error:', error);
-                alert('An error occurred during upload: ' + error.message);
+                
+                // Provide more helpful error messages
+                let errorMsg = error.message || 'Unknown error';
+                if (errorMsg.includes('Failed to fetch')) {
+                    errorMsg = 'Cannot connect to server. Please check:\n' +
+                              '• Server is running (check terminal)\n' +
+                              '• No firewall blocking localhost:5000\n' +
+                              '• Browser console (F12) for details';
+                } else if (errorMsg.includes('NetworkError')) {
+                    errorMsg = 'Network error. Server may have crashed. Check terminal logs.';
+                } else if (errorMsg.includes('timeout')) {
+                    errorMsg = 'Upload timed out. Try a smaller file or check server logs.';
+                }
+                
+                alert('An error occurred during upload:\n\n' + errorMsg);
             } finally {
                 // Hide progress loader only if not using real-time
                 // (real-time progress will hide itself when complete)
@@ -1822,12 +1836,18 @@
             
             try {
                 // Step 1: Get room ID for progress tracking
+                console.log('🚀 Starting upload session...');
                 const roomResponse = await fetch('/start_upload', {
                     method: 'POST'
+                }).catch(err => {
+                    console.error('Network error during start_upload:', err);
+                    throw new Error('Failed to fetch - Cannot connect to server. Is it running on localhost:5000?');
                 });
                 
                 if (!roomResponse.ok) {
-                    throw new Error('Failed to initialize upload session');
+                    const errorText = await roomResponse.text();
+                    console.error('Server error response:', errorText);
+                    throw new Error(`Failed to initialize upload session: ${roomResponse.status} ${roomResponse.statusText}`);
                 }
                 
                 const roomData = await roomResponse.json();
@@ -1858,9 +1878,16 @@
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
+                }).catch(err => {
+                    console.error('Network error during upload:', err);
+                    throw new Error('Failed to fetch - Connection lost during upload. Check server logs.');
                 });
 
-                if (!response.ok) throw new Error('Upload failed');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: response.statusText }));
+                    console.error('Upload failed:', errorData);
+                    throw new Error(errorData.error || `Upload failed: ${response.status}`);
+                }
 
                 const result = await response.json();
                 console.log('📊 Upload completed successfully');

@@ -359,3 +359,196 @@ Any change that violates these guardrails must be explicitly justified and docum
 ---
 
 **Status:** 🔒 Architecture locked, pending validation
+
+## Addendum: Simple Present Tense Normalization (January 22, 2026)
+
+### Feature: Non-Simple Present Tense Detection & Conversion
+
+**Classification:** Documentation normalization (NOT grammar correction)
+
+**Three Frozen Invariants:**
+
+> **1. Non-Sentential Gate: Titles, headings, gerund phrases, and fragments NEVER reach sentence-level rules.**
+
+> **2. Metadiscourse Gate: Structural sentences that introduce examples, figures, or guide readers are NEVER rewritten.**
+
+> **3. Tense conversion is allowed only when it preserves time, obligation, and intent.**
+
+These rules prevent 90% of future bugs. Never relax them.
+
+---
+
+### Eligibility Gate (Non-Negotiable)
+
+Every sentence is classified into ONE of five semantic classes:
+
+| Class                    | Auto-Convert | Rationale                                    |
+| ------------------------ | ------------ | -------------------------------------------- |
+| Instructional            |             | Procedures should be timeless                |
+| Descriptive              |             | System behavior is present-tense            |
+| Explanatory              |             | Examples normalized to present explanations |
+| Historical               |             | Past events stay in past tense              |
+| Compliance + Conditional |             | Requirements with conditions never auto-converted |
+
+**Code Location:** `app/rules/simple_present_normalization.py`  `can_convert_to_simple_present()`
+
+---
+
+### Validation Contract (Strict)
+
+AI rewrite is REJECTED if:
+
+- Output not in simple present tense
+- Obligation terms removed (`must`  `is`)
+- New verbs introduced
+- Semantic similarity < 0.6
+- Subject changed
+
+**If validation fails:** Discard rewrite, show reviewer guidance (never "AI failed")
+
+**Code Location:** `app/rules/simple_present_normalization.py`  `validate_simple_present_rewrite()`
+
+---
+
+### Decision Flow (Locked)
+
+`python
+# 1. Classify sentence
+classification = classify_sentence_for_tense(sentence)
+
+# 2. Check eligibility
+if classification in {"historical", "compliance_conditional"}:
+    return BLOCKED  # Show semantic_explanation or reviewer_rationale
+
+# 3. Execute AI conversion (only if eligible)
+prompt = build_simple_present_prompt(sentence)
+rewrite = call_llm(prompt)
+
+# 4. Validate (strict)
+if not validate_simple_present_rewrite(original, rewrite):
+    return reviewer_guidance  # Discard AI output
+
+# 5. Return validated rewrite
+return ai_enhanced(rewrite)
+`
+
+---
+
+### Examples (Expected Behavior)
+
+####  Safe Conversion
+
+**Input:** "The system will validate the input."  
+**Output:** "The system validates the input."  
+**Decision:** `ai_enhanced`
+
+---
+
+####  Blocked: Historical Context
+
+**Input:** "In version 3.0, the module was redesigned."  
+**Output:** *No conversion attempted*  
+**Decision:** `reviewer_rationale` ("This sentence describes a past event.")
+
+---
+
+####  Blocked: Compliance + Condition
+
+**Input:** "The certificate must be generated after installation."  
+**Output:** *No conversion attempted*  
+**Decision:** `semantic_explanation` ("Changing tense could alter compliance meaning.")
+
+---
+
+####  Validation Failed
+
+**AI Output:** "The certificate is generated after installation." *(dropped "must")*  
+**System Action:** Discard rewrite  
+**User Sees:** `reviewer_guidance` ("Rewrite manually if appropriate")
+
+---
+
+### UI Copy (Trust-Preserving)
+
+Never expose validation failures as errors. Use this copy:
+
+> **Reviewer guidance**  
+> This sentence does not use simple present tense.  
+> Rewrite it manually if doing so does not change the meaning.
+
+This preserves trust even when AI cannot safely convert.
+
+---
+
+### Integration Points
+
+1. **Rule Registration:** `app/rules/simple_present_normalization.py`
+2. **Eligibility Check:** `app/intelligent_ai_improvement.py`  `should_attempt_rewrite()`
+3. **Decision Handler:** `app/intelligent_ai_improvement.py`  `get_enhanced_ai_suggestion()`
+4. **Tests:** `tests/test_simple_present_normalization.py`
+
+---
+
+### Why This Feature is Safe
+
+-  Deterministic eligibility (no AI decides "should I?")
+-  Strict validation (AI output is disposable)
+-  Clear fallbacks (guidance, not guesses)
+-  Aligned with style guide (Level 1 rule)
+-  Does NOT rewrite events, only explanations
+
+This is **reviewer-grade behavior**, not chatbot behavior.
+
+---
+
+## Critical Addition: Non-Sentential Text Gate (2026-01-22)
+
+**Problem Identified:** Titles and headings ("Configuring KEPware server with certificates") were being incorrectly flagged for tense normalization because the system assumed all text units were complete sentences.
+
+**Solution Implemented:** Added `is_non_sentential()` gate that runs BEFORE all sentence-level rules:
+
+- Detects gerund phrases (VBG-starting fragments with no finite verb)
+- Detects noun phrase titles (short text with no verb)
+- Detects title-case patterns
+- Detects fragments (<5 words with no complete verb phrase)
+
+**Integration Points:**
+- `simple_present_normalization.py:check()` - Returns empty issues list for non-sentential text
+- `intelligent_ai_improvement.py` - Returns `reviewer_rationale` explaining it's a heading/title
+
+**Test Coverage:** 4 dedicated tests in `test_simple_present_normalization.py`:
+- `test_detect_title_gerund_phrase()`
+- `test_detect_short_title()`
+- `test_detect_noun_phrase_title()`
+- `test_allow_complete_sentences()`
+
+**Architectural Impact:** This reinforces the invariant that **sentence-level rules only apply to complete sentences**. Future rules must include this gate.
+
+---
+
+## Critical Addition: Metadiscourse Gate (2026-01-22)
+
+**Problem Identified:** Metadiscourse sentences ("Here's an example of a properly configured certificate:") were being incorrectly flagged for tense normalization even though they are already in simple present and serve a structural purpose.
+
+**Solution Implemented:** Added `is_metadiscourse()` gate that runs BEFORE tense analysis:
+
+- Detects sentences that introduce examples ("Here's an example of...")
+- Detects figure/table/code references ("The following figure shows...")
+- Detects section introducers ("This section describes...")
+- Detects structural colons used for content introduction
+
+**Integration Points:**
+- `simple_present_normalization.py:check()` - Returns empty issues list for metadiscourse
+- `intelligent_ai_improvement.py` - Returns `reviewer_rationale` explaining metadiscourse is exempt
+
+**Test Coverage:** 4 dedicated tests in `test_simple_present_normalization.py`:
+- `test_detect_metadiscourse_example_introducers()`
+- `test_detect_metadiscourse_figure_references()`
+- `test_detect_metadiscourse_section_introducers()`
+- `test_allow_non_metadiscourse_sentences()`
+
+**Architectural Impact:** This reinforces the invariant that **tense rules apply only to content sentences, not structural text**. Metadiscourse is always exempt from rewriting.
+
+**User Trust Impact:** Before this fix, the system would say "Consider converting to present tense" and then echo the same sentence back, which felt broken. Now it correctly says "This sentence introduces an example. Tense normalization does not apply."
+
+---
