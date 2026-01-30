@@ -1506,6 +1506,16 @@
 
         function removeFile(index) {
             selectedFiles.splice(index, 1);
+            
+            // If no files left, clear batch UI
+            if (selectedFiles.length === 0) {
+                batchResults = [];
+                const batchProgress = document.getElementById('batchProgress');
+                const batchResultsDiv = document.getElementById('batchResults');
+                if (batchProgress) batchProgress.remove();
+                if (batchResultsDiv) batchResultsDiv.remove();
+            }
+            
             updateFileList();
         }
 
@@ -1515,6 +1525,14 @@
 
         function clearFiles() {
             selectedFiles = [];
+            batchResults = [];
+            
+            // Remove batch UI elements if they exist
+            const batchProgress = document.getElementById('batchProgress');
+            const batchResultsDiv = document.getElementById('batchResults');
+            if (batchProgress) batchProgress.remove();
+            if (batchResultsDiv) batchResultsDiv.remove();
+            
             updateFileList();
         }
 
@@ -1758,10 +1776,14 @@
                 }
                 
                 alert('An error occurred during upload:\n\n' + errorMsg);
+                
+                // Ensure progress loader is hidden on error
+                hideProgressLoader();
             } finally {
                 // Hide progress loader only if not using real-time
                 // (real-time progress will hide itself when complete)
-                if (!isRealTimeProgress) {
+                // For batch uploads, hideProgressLoader() is called within processBatchFiles()
+                if (!isRealTimeProgress && selectedFiles.length === 1) {
                     hideProgressLoader();
                 }
                 submitBtn.innerHTML = originalBtnContent;
@@ -1928,6 +1950,16 @@
 
         async function processBatchFiles(files) {
             batchResults = [];
+            
+            // Remove old batch UI elements if they exist
+            const oldBatchProgress = document.getElementById('batchProgress');
+            const oldBatchResults = document.getElementById('batchResults');
+            if (oldBatchProgress) oldBatchProgress.remove();
+            if (oldBatchResults) oldBatchResults.remove();
+            
+            // Hide the main progress loader since we'll show batch-specific progress
+            hideProgressLoader();
+            
             showBatchProgress();
 
             // Check if there's a zip file
@@ -1944,6 +1976,7 @@
             // Automatically display the first successful file's content
             const firstSuccessfulResult = batchResults.find(result => result.success);
             if (firstSuccessfulResult) {
+                console.log('📊 Auto-displaying first successful result:', firstSuccessfulResult.filename);
                 renderChart(firstSuccessfulResult.report || {}, firstSuccessfulResult.sentences || []);
                 renderContent(firstSuccessfulResult.content || '', firstSuccessfulResult.sentences || []);
                 
@@ -1960,6 +1993,14 @@
                 const existingInfo = documentContent.querySelector('.alert.alert-info');
                 if (existingInfo) existingInfo.remove();
                 documentContent.insertBefore(fileInfo, documentContent.firstChild.nextSibling);
+                
+                // Scroll to dashboard to show results
+                const dashboard = document.getElementById('dashboard');
+                if (dashboard) {
+                    setTimeout(() => {
+                        dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 300);
+                }
                 
                 // Highlight the first result as active
                 setTimeout(() => {
@@ -2143,7 +2184,11 @@
             batchResults.forEach((result, index) => {
                 const item = document.createElement('div');
                 item.className = 'result-item';
-                item.addEventListener('click', () => showBatchResult(index));
+                item.style.cursor = 'pointer';
+                item.addEventListener('click', () => {
+                    console.log(`Clicked on result item ${index}: ${result.filename}`);
+                    showBatchResult(index);
+                });
                 
                 if (result.success) {
                     const issues = result.summary?.totalIssues || 0;
@@ -2181,7 +2226,17 @@
         }
 
         function showBatchResult(index) {
+            console.log(`📂 showBatchResult called for index ${index}`);
+            console.log(`📂 Total batch results: ${batchResults.length}`);
+            
             const result = batchResults[index];
+            if (!result) {
+                console.error(`❌ No result found at index ${index}`);
+                return;
+            }
+            
+            console.log(`📂 Result:`, result);
+            
             if (!result.success) {
                 alert(`Error processing ${result.filename}: ${result.error}`);
                 return;
@@ -2192,6 +2247,7 @@
             document.querySelectorAll('.result-item')[index].classList.add('active');
 
             // Render the selected file's content
+            console.log(`📊 Rendering chart and content for ${result.filename}`);
             renderChart(result.report || {}, result.sentences || []);
             renderContent(result.content || '', result.sentences || []);
 
@@ -2207,6 +2263,12 @@
             const existingInfo = documentContent.querySelector('.alert.alert-info');
             if (existingInfo) existingInfo.remove();
             documentContent.insertBefore(fileInfo, documentContent.firstChild.nextSibling);
+            
+            // Scroll to dashboard to show the results
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard) {
+                dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         // Chart rendering
