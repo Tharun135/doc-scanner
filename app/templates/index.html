@@ -162,20 +162,23 @@
         }
 
         .sentence-highlight.highlight {
-            background-color: #ffeb3b;
-            color: #333;
-            font-weight: 500;
-            border: 1px solid #fdd835;
+            background-color: #00bcd4 !important; /* Bright Cyan */
+            color: #000 !important;
+            font-weight: 700;
+            border: 2px solid #0097a7;
+            box-shadow: 0 0 15px rgba(0, 188, 212, 0.5);
+            z-index: 10;
         }
 
         .sentence-highlight.has-feedback {
-            background-color: rgba(255, 235, 59, 0.35);
+            background-color: rgba(255, 235, 59, 0.45);
             border-bottom: 2px solid #ffd600;
+            cursor: pointer;
         }
 
         .sentence-highlight.has-feedback:hover {
-            background-color: rgba(255, 193, 7, 0.3);
-            border-bottom-color: #f57c00;
+            background-color: rgba(0, 188, 212, 0.25) !important;
+            border-bottom-color: #00bcd4;
         }
 
         .sentence-highlight.sentence-not-found {
@@ -2314,51 +2317,19 @@
             console.log(`✅ renderChart completed in ${(endTime - startTime).toFixed(2)}ms`);
         }
         
-        // NEW: Function to immediately display issues without waiting
         function displayIssuesImmediately(sentences) {
             console.log('🚀 Displaying issues immediately');
-            const feedbackContent = document.getElementById('feedbackContent');
+            const feedbackContainer = document.getElementById('feedbackContent');
+            feedbackContainer.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
             
-            // Count total issues for immediate feedback
-            let totalIssues = 0;
-            let issueHTML = '<h5 class="mb-3">Document Issues</h5>';
-            
-            sentences.forEach((sentence, index) => {
-                if (sentence.feedback && sentence.feedback.length > 0) {
-                    sentence.feedback.forEach(feedback => {
-                        totalIssues++;
-                        issueHTML += `
-                            <div class="feedback-item p-3 mb-2 border rounded" data-sentence-index="${index}">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <strong>Sentence ${index + 1}:</strong> "${sentence.sentence.substring(0, 100)}${sentence.sentence.length > 100 ? '...' : ''}"
-                                        <br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> ${feedback.message || feedback.text || feedback}</small>
-                                    </div>
-                                    <button class="btn btn-outline-primary btn-sm ai-suggestion-btn" 
-                                            data-sentence-index="${index}" 
-                                            data-sentence="${encodeURIComponent(sentence.sentence)}"
-                                            title="Get AI suggestion">
-                                        <i class="fas fa-robot"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                    });
+            sentences.forEach((sentenceData, index) => {
+                const feedback = sentenceData.feedback;
+                const sentence = sentenceData.sentence;
+                
+                if (feedback && feedback.length > 0) {
+                    renderFeedbackWithAI(feedback, sentence, index);
                 }
             });
-            
-            if (totalIssues === 0) {
-                issueHTML += `
-                    <div class="text-center text-success py-4">
-                        <i class="fas fa-check-circle fa-2x mb-2"></i>
-                        <p>Great! No issues found in your document.</p>
-                        <small>Your writing appears to be clear and well-structured.</small>
-                    </div>
-                `;
-            }
-            
-            feedbackContent.innerHTML = issueHTML;
-            console.log(`✅ Displayed ${totalIssues} issues immediately`);
         }
 
         // Enhanced AI functionality
@@ -3109,12 +3080,14 @@
                     const isVerticallyVisible = sentenceRect.top >= sectionRect.top && 
                                                sentenceRect.bottom <= sectionRect.bottom;
                     
-                    // Smooth scroll to the target position (both horizontal and vertical)
-                    documentSection.scrollTo({
-                        top: !isVerticallyVisible ? verticalScrollTarget : documentSection.scrollTop,
-                        left: !isHorizontallyVisible ? Math.max(0, horizontalScrollTarget) : documentSection.scrollLeft,
-                        behavior: 'smooth'
-                    });
+                    // Subtle scroll: only during CLICK, or if definitely obscured
+                    if (!isVerticallyVisible || !isHorizontallyVisible) {
+                        documentSection.scrollTo({
+                            top: verticalScrollTarget,
+                            left: Math.max(0, horizontalScrollTarget),
+                            behavior: 'smooth'
+                        });
+                    }
                 }
             }
             
@@ -3129,6 +3102,11 @@
             // Remove highlights from content sentences
             document.querySelectorAll('.sentence-highlight.highlight').forEach(sentence => {
                 sentence.classList.remove('highlight');
+            });
+            
+            // Remove highlights from feedback cards
+            document.querySelectorAll('.feedback-item.highlighted').forEach(item => {
+                item.classList.remove('highlighted');
             });
             
             // Remove highlights from interactive sentences
@@ -3190,185 +3168,75 @@
         }
 
         // Function to add sentence highlighting to HTML content
-        function addSentenceHighlighting(htmlContent, sentences) {
-            let processedContent = htmlContent;
+        function addSentenceHighlighting(content, sentences) {
+            let processedContent = content;
             
-            console.log('Processing sentences for highlighting:', sentences.length);
-            console.log('Original HTML content:', htmlContent);
+            // To handle repeated sentences, we track the last position searched
+            let lastFoundIndex = 0;
             
-            // Debug: Check if any sentences contain problematic content
-            sentences.forEach((sentenceData, idx) => {
-                if (sentenceData.sentence && sentenceData.sentence.includes('sentence-highlight')) {
-                    console.error(`🔥 SENTENCE ${idx} CONTAINS HIGHLIGHTING MARKUP:`, sentenceData.sentence);
-                }
-                if (sentenceData.sentence && sentenceData.sentence.includes('="')) {
-                    console.warn(`⚠️ SENTENCE ${idx} CONTAINS ATTRIBUTE SYNTAX:`, sentenceData.sentence);
-                }
-            });
-            
-            // First, try to get plain text equivalent of HTML for better matching
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlContent;
-            const plainTextContent = tempDiv.textContent || tempDiv.innerText || '';
-            console.log('Plain text content:', plainTextContent);
+            console.log(`🔍 Highlighting ${sentences.length} sentences...`);
             
             sentences.forEach((sentenceData, index) => {
-                // Clean the sentence text - remove any HTML tags that might have leaked in
-                let sentence = sentenceData.sentence.trim();
+                let sentenceToFind = sentenceData.sentence.trim();
                 
-                // AGGRESSIVE CLEANING: Check for malformed HTML attributes
-                if (sentence.includes('="') && (sentence.includes('sentence-highlight') || sentence.includes('data-sentence-index'))) {
-                    console.error(`🚨 MALFORMED HTML ATTRIBUTES in sentence ${index}:`, sentence);
-                    // Remove malformed HTML attribute patterns
-                    sentence = sentence.replace(/=["'][^"']*["'][^>]*>/g, '');
-                    sentence = sentence.replace(/\s*(?:id|class|data-[\w-]+)\s*=\s*["'][^"']*["']/g, '');
-                    sentence = sentence.replace(/<\/?[^>]*>/g, '');
-                    sentence = sentence.trim();
-                    console.warn(`🧹 Cleaned malformed attributes:`, sentence);
-                }
-                
-                // Extra safety: If sentence contains HTML tags, extract only the text content
-                if (sentence.includes('<') && sentence.includes('>')) {
-                    console.warn(`⚠️ Sentence ${index} contains HTML tags, cleaning:`, sentence);
+                // If the sentence in metadata contains HTML tags, get just the text
+                if (sentenceToFind.includes('<') && sentenceToFind.includes('>')) {
                     const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = sentence;
-                    sentence = (tempDiv.textContent || tempDiv.innerText || '').trim();
-                    console.log(`Cleaned sentence ${index}:`, sentence);
+                    tempDiv.innerHTML = sentenceToFind;
+                    sentenceToFind = (tempDiv.textContent || tempDiv.innerText || '').trim();
                 }
                 
-                if (sentence) {
-                    // console.log(`Processing sentence ${index}:`, sentence);
+                if (!sentenceToFind) return;
+
+                const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
+                const feedbackClass = hasFeedback ? ' has-feedback' : '';
+                
+                // Create a robust regex:
+                // 1. Escape special regex characters
+                // 2. Allow any amount of whitespace (normalized)
+                // 3. IMPORTANT: Allow optional HTML tags between words to handle bolding/links inside sentences
+                const words = sentenceToFind.split(/\s+/).filter(w => w.length > 0);
+                if (words.length === 0) return;
+                
+                // Build a pattern that matches the words with optional tags between them
+                const pattern = words.map(w => 
+                    w.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
+                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
+                
+                const regex = new RegExp(pattern, 'i');
+                
+                // Search in the remaining content
+                const searchPart = processedContent.substring(lastFoundIndex);
+                const match = searchPart.match(regex);
+                
+                if (match) {
+                    const matchText = match[0];
+                    const matchIndex = lastFoundIndex + match.index;
                     
-                    let found = false;
-                    const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
-                    const feedbackClass = hasFeedback ? ' has-feedback' : '';
+                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchText}</span>`;
                     
-                    // Approach 1: Direct HTML match (works for simple cases)
-                    if (processedContent.includes(sentence)) {
-                        // Safety check: ensure sentence doesn't contain problematic patterns
-                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
-                            console.error(`🚨 Skipping direct replacement for sentence ${index} - contains problematic patterns:`, sentence);
-                        } else {
-                            const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                            processedContent = processedContent.replace(sentence, replacement);
-                            found = true;
-                            console.log(`✓ Direct HTML match for sentence ${index}`);
-                        }
-                    }
+                    processedContent = processedContent.substring(0, matchIndex) + 
+                                     replacement + 
+                                     processedContent.substring(matchIndex + matchText.length);
                     
-                    // Approach 2: Try to find sentence in plain text and map back to HTML
-                    if (!found && plainTextContent.includes(sentence)) {
-                        // Special handling for sentences with angle brackets (URLs, etc.)
-                        if (sentence.includes('<') && sentence.includes('>')) {
-                            // For sentences with angle brackets, try direct text match first
-                            if (processedContent.includes(sentence)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentence}</span>`;
-                                processedContent = processedContent.replace(sentence, replacement);
-                                found = true;
-                                console.log(`✓ Direct text match for sentence with angle brackets ${index}`);
-                            }
-                        }
-                        
-                        // Standard word-based pattern matching
-                        if (!found) {
-                            // Find all words in the sentence
-                            const words = sentence.split(/\s+/).filter(word => word.length > 2);
-                            
-                            if (words.length > 0) {
-                                // Create a regex that finds the sentence allowing for HTML tags between words
-                                const wordPattern = words.map(word => 
-                                    word.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
-                                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
-                                
-                                const regex = new RegExp(wordPattern, 'i');
-                                const match = processedContent.match(regex);
-                                
-                                if (match) {
-                                    const matchedText = match[0];
-                                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchedText}</span>`;
-                                    processedContent = processedContent.replace(matchedText, replacement);
-                                    found = true;
-                                    console.log(`✓ HTML pattern match for sentence ${index}`);
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Approach 3: Fuzzy text-only match (last resort)
-                    if (!found) {
-                        // Try to find just the key parts of the sentence
-                        const significantWords = sentence.split(/\s+/).filter(word => 
-                            word.length > 3 && !['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'was', 'one', 'our', 'out', 'day', 'get', 'use', 'man', 'new', 'now', 'old', 'see', 'him', 'two', 'how', 'its', 'who', 'oil', 'sit', 'set'].includes(word.toLowerCase())
-                        );
-                        
-                        if (significantWords.length >= 2) {
-                            let bestMatch = null;
-                            let bestMatchLength = 0;
-                            
-                            // Look for the longest substring that contains significant words
-                            const tempDiv2 = document.createElement('div');
-                            tempDiv2.innerHTML = processedContent;
-                            const textContent = tempDiv2.textContent;
-                            
-                            significantWords.forEach(word => {
-                                const wordRegex = new RegExp(`[^.!?]*${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^.!?]*[.!?]`, 'gi');
-                                const matches = textContent.match(wordRegex);
-                                if (matches) {
-                                    matches.forEach(match => {
-                                        if (match.length > bestMatchLength) {
-                                            bestMatch = match.trim();
-                                            bestMatchLength = match.length;
-                                        }
-                                    });
-                                }
-                            });
-                            
-                            if (bestMatch && processedContent.includes(bestMatch)) {
-                                const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${bestMatch}</span>`;
-                                processedContent = processedContent.replace(bestMatch, replacement);
-                                found = true;
-                                console.log(`✓ Fuzzy match for sentence ${index}: "${bestMatch}"`);
-                            }
-                        }
-                    }
-                    
-                    if (!found) {
-                        console.warn(`✗ Could not find sentence ${index} in content:`, sentence);
-                        
-                        // SAFETY: Don't create markers for sentences that already contain problematic HTML
-                        if (sentence.includes('sentence-highlight') || sentence.includes('="')) {
-                            console.error(`🚨 BLOCKING marker creation for sentence ${index} - contains malformed HTML:`, sentence);
-                            // Add a safe text-only marker instead
-                            const safeText = sentence.replace(/<[^>]*>/g, '').replace(/['"=]/g, '').trim();
-                            if (safeText) {
-                                const safeMarker = `<div class="sentence-not-found-safe" data-index="${index}">⚠️ Sentence ${index + 1}: ${safeText.substring(0, 50)}...</div>`;
-                                processedContent += safeMarker;
-                                console.log(`✅ Added safe marker for sentence ${index}`);
-                            }
-                        } else {
-                            // Clean the sentence text for title attribute - remove HTML tags and attributes
-                            const cleanSentence = sentence.replace(/<[^>]*>/g, '').replace(/['"]/g, '').trim();
-                            const truncatedSentence = cleanSentence.length > 100 ? cleanSentence.substring(0, 100) + '...' : cleanSentence;
-                            
-                            // As absolute last resort, just add a marker
-                            const marker = `<span class="sentence-highlight${feedbackClass} sentence-not-found" id="content-sentence-${index}" data-sentence-index="${index}" title="Sentence: ${truncatedSentence.replace(/"/g, '&quot;')}">[Sentence ${index + 1}]</span>`;
-                            
-                            // Try to insert the marker near related content
-                            const firstWords = cleanSentence.split(' ').slice(0, 3).join(' ');
-                            if (firstWords && processedContent.includes(firstWords)) {
-                                processedContent = processedContent.replace(firstWords, marker + ' ' + firstWords);
-                                console.log(`Added fallback marker for sentence ${index}`);
-                            } else {
-                                // If we can't find the first words, just append the marker at the end
-                                processedContent += '<br>' + marker;
-                                console.log(`Added fallback marker at end for sentence ${index}`);
-                            }
-                        }
+                    // Advance search cursor to just after this replacement
+                    lastFoundIndex = matchIndex + replacement.length;
+                    // console.log(`✓ Robustly highlighted sentence ${index} at ${matchIndex}`);
+                } else {
+                    // Fallback to simple indexOf if regex fails
+                    const fallbackIndex = processedContent.indexOf(sentenceToFind, lastFoundIndex);
+                    if (fallbackIndex !== -1) {
+                         const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentenceToFind}</span>`;
+                         processedContent = processedContent.substring(0, fallbackIndex) + 
+                                          replacement + 
+                                          processedContent.substring(fallbackIndex + sentenceToFind.length);
+                         lastFoundIndex = fallbackIndex + replacement.length;
+                    } else {
+                        console.warn(`⚠️ Could not find sentence ${index} even with robust matching:`, sentenceToFind);
                     }
                 }
             });
             
-            console.log('Final processed content length:', processedContent.length);
             return processedContent;
         }
 
@@ -3409,10 +3277,12 @@
                 // Add hover functionality to highlight corresponding sentence
                 feedbackDiv.addEventListener('mouseenter', () => {
                     highlightSentence(sentenceIndex);
+                    feedbackDiv.classList.add('highlighted');
                 });
                 
                 feedbackDiv.addEventListener('mouseleave', () => {
                     unhighlightAllSentences();
+                    feedbackDiv.classList.remove('highlighted');
                 });
                 
                 // Add click functionality to scroll to sentence
@@ -3436,10 +3306,15 @@
                 contentDiv.className = 'flex-grow-1';
                 contentDiv.innerHTML = `
                     <div class="mb-2">
-                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
-                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view sentence"></i>
+                        <strong>📋 Issue:</strong> ${item.message}
                     </div>
-                    <strong>📋 Issue:</strong> ${item.message}
+                    <div class="mb-1">
+                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
+                    </div>
+                    <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
+                        "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
+                    </div>
                 `;
                 
                 // Create AI button (right side) - as a proper DOM element

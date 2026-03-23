@@ -79,9 +79,27 @@ def extract_sentences_with_html_preservation(html_content):
     # Parse HTML content
     soup = BeautifulSoup(html_content, "html.parser")
     
-    # Process each paragraph and text block separately
-    text_elements = soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th'])
+    # Process leaf elements that contain text to avoid double-counting nested blocks
+    # (e.g., a <p> inside a <div> should only be counted by the <p>)
+    all_potential = soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'span', 'blockquote'])
     
+    text_elements = []
+    for el in all_potential:
+        # Skip if it's already contained in another block we've already selected? 
+        # No, better to skip if it has block-level children that we will select anyway.
+        has_block_child = el.find(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th'])
+        
+        # If it has block children, we only want its DIRECT text (if any)
+        # But for simplicity, most documents have text in p/li/hX.
+        # If it's a div with no block children, it's a text block.
+        if not has_block_child and el.get_text().strip():
+            text_elements.append(el)
+        elif has_block_child:
+            # Check if it has any direct text children that aren't inside the block children
+            # This is rare in clean HTML but common in messy ones.
+            # For now, we favor leaf nodes.
+            pass
+            
     for element in text_elements:
         if not element.get_text().strip():
             continue
