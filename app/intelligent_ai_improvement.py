@@ -674,7 +674,7 @@ class IntelligentAISuggestionEngine:
         # PRIORITY 5: Smart rule-based as FINAL backup only
         logger.info("⚠️ FALLBACK: Using smart rule-based analysis (uploaded documents unavailable)")
         return self._generate_intelligent_fallback(
-            feedback_text, sentence_context, document_type, option_number
+            feedback_text, sentence_context, document_type, option_number, adjacent_context
         )
     
     def _generate_rag_suggestion(
@@ -931,7 +931,8 @@ class IntelligentAISuggestionEngine:
     
     def _generate_intelligent_fallback(
         self, feedback_text: str, sentence_context: str, 
-        document_type: str, option_number: int
+        document_type: str, option_number: int,
+        adjacent_context: Optional[Dict[str, str]] = None  # NEW: adjacent sentences
     ) -> Dict[str, Any]:
         """
         Generate intelligent fallback using linguistic analysis rather than hardcoded patterns.
@@ -958,7 +959,9 @@ class IntelligentAISuggestionEngine:
         if suggestion == sentence_context:
             # Try alternative improvement strategies
             if "passive voice" in feedback_text.lower():
-                suggestion = self._force_active_voice_improvement(sentence_context)
+                # Pass previous sentence for context-aware conversion
+                previous_sentence = adjacent_context.get('previous_sentence') if adjacent_context else None
+                suggestion = self._force_active_voice_improvement(sentence_context, previous_sentence)
             elif any(word in feedback_text.lower() for word in ["perfect", "tense", "has been", "have been", "had been"]):
                 suggestion = self._force_perfect_tense_improvement(sentence_context)
             elif "long sentence" in feedback_text.lower():
@@ -1004,11 +1007,35 @@ class IntelligentAISuggestionEngine:
             "success": True
         }
     
-    def _force_active_voice_improvement(self, sentence: str) -> str:
-        """Force an active voice improvement even for complex cases."""
+    def _force_active_voice_improvement(self, sentence: str, previous_sentence: Optional[str] = None) -> str:
+        """Force an active voice improvement even for complex cases, using context when available."""
         
         logger.info(f"🔍 _force_active_voice_improvement called with: {sentence}")
+        if previous_sentence:
+            logger.info(f"📖 Previous sentence available: {previous_sentence[:100]}...")
         
+        # Try anaphora resolution first if we have context
+        try:
+            from app.rules.anaphora_resolution import convert_passive_with_context
+            
+            if previous_sentence:
+                result = convert_passive_with_context(sentence, previous_sentence)
+                
+                if result:
+                    if not result.get('conversion_required', True):
+                        # Conversion not needed - passive is clearer
+                        logger.info(f"⚠️ Anaphora resolution: {result['explanation']}")
+                        return sentence
+                    else:
+                        # Conversion performed with context
+                        logger.info(f"✅ Anaphora resolution success: {result['suggestion']}")
+                        return result['suggestion']
+        except ImportError:
+            logger.warning("Anaphora resolution not available, using fallback")
+        except Exception as e:
+            logger.warning(f"Anaphora resolution failed: {e}")
+        
+        # Fallback to existing logic
         # Check if this is a sentence fragment (e.g., "Access to the IED on which...")
         # Fragments often start with prepositions or lack a main verb before "which"
         sentence_lower = sentence.lower().strip()
@@ -2243,6 +2270,59 @@ def get_enhanced_ai_suggestion(
     """
     logger.info(f"🧠 INTELLIGENT: get_enhanced_ai_suggestion called for: {feedback_text[:50]}")
     
+    # Initialize rule context tracking
+    rule_context = None
+    
+    # ============================================================================
+    # RULE AUTHORITY - Respect rule decisions when present
+    # ============================================================================
+    # If the rule already provided decision_type and reviewer_rationale, 
+    # it has done context-aware analysis. 
+    # - If decision is "no_change", "guide", "explain" → return immediately
+    # - If decision is "rewrite" → continue to AI generation but preserve rationale
+    if issue and isinstance(issue, dict):
+        logger.info(f"🔍 RULE AUTHORITY CHECK: issue type={type(issue)}, keys={list(issue.keys())}")
+        logger.info(f"🔍 Has decision_type: {'decision_type' in issue}, Has reviewer_rationale: {'reviewer_rationale' in issue}")
+        
+        if 'decision_type' in issue and 'reviewer_rationale' in issue:
+            decision_type = issue.get('decision_type')
+            reviewer_rationale = issue.get('reviewer_rationale')
+            
+            logger.info(f"✅ RULE AUTHORITY: Rule provided decision_type='{decision_type}', rationale='{reviewer_rationale[:50]}...'")
+            
+            # For non-rewrite decisions, return immediately
+            if decision_type in ['no_change', 'guide', 'explain']:
+                logger.info(f"✅ RULE AUTHORITY: Rule provided decision_type='{decision_type}' - respecting rule decision without AI generation")
+                return {
+                    "suggestion": issue.get('ai_suggestion', ''),  # Empty for no_change
+                    "ai_answer": reviewer_rationale,
+                    "confidence": "high",
+                    "method": f"rule_decision_{issue.get('rule', 'unknown')}",
+                    "sources": [f"Rule: {issue.get('rule', 'unknown')}"],
+                    "success": True,
+                    "decision_type": decision_type,
+                    "reviewer_rationale": reviewer_rationale,
+                    "rule": issue.get('rule'),
+                    "is_rule_decision": True
+                }
+            
+            # For "rewrite" decisions, continue to AI generation but remember the rule context
+            elif decision_type == 'rewrite':
+                logger.info(f"✅ RULE AUTHORITY: Rule requested rewrite - continuing to AI generation with rule context")
+                # Store rule context to include in final response
+                rule_context = {
+                    'decision_type': decision_type,
+                    'reviewer_rationale': reviewer_rationale,
+                    'rule': issue.get('rule'),
+                    'requires_rewrite': True
+                }
+                # Continue to AI generation below, not returning here
+            else:
+                logger.warning(f"⚠️ Unknown decision_type '{decision_type}' from rule - continuing to AI generation")
+    # ============================================================================
+    # End of rule authority check
+    # ============================================================================
+    
     # ============================================================================
     # POLICY GUARDRAIL - Check block rule FIRST (before any processing)
     # ============================================================================
@@ -2682,6 +2762,37 @@ def get_enhanced_ai_suggestion(
     
     # Emergency fallback with guaranteed valid structure
     logger.info("Using emergency fallback response")
+    
+    # Check if a rule requested a rewrite - provide rule-specific guidance
+    if rule_context and rule_context.get('requires_rewrite'):
+        rule_name = rule_context.get('rule', 'unknown')
+        reviewer_rationale = rule_context.get('reviewer_rationale', '')
+        
+        # Rule-specific fallback guidance (manual rewrite instructions)
+        if rule_name == 'passive_voice':
+            return {
+                "suggestion": "",
+                "ai_answer": f"{reviewer_rationale}\n\n**How to rewrite:** Identify who/what performs the action and make them the subject.\nExample: 'was configured by the user' → 'the user configured'",
+                "confidence": "medium",
+                "method": f"rule_guidance_{rule_name}",
+                "sources": [f"Rule: {rule_name}"],
+                "success": True,
+                "reviewer_rationale": reviewer_rationale,
+                "requires_manual_rewrite": True
+            }
+        elif rule_name == 'simple_present_tense':
+            return {
+                "suggestion": "",
+                "ai_answer": f"{reviewer_rationale}\n\n**How to rewrite:** Change past tense verbs to present.\nExamples: was→is, were→are, configured→configures, had→has",
+                "confidence": "medium",
+                "method": f"rule_guidance_{rule_name}",
+                "sources": [f"Rule: {rule_name}"],
+                "success": True,
+                "reviewer_rationale": reviewer_rationale,
+                "requires_manual_rewrite": True
+            }
+    
+    # Standard fallback
     fallback_suggestion = sentence_context
     fallback_explanation = f"Review the text and address: {feedback_text}"
     
@@ -2709,7 +2820,11 @@ def get_enhanced_ai_suggestion(
         "sources": [],
         "success": True,  # Mark as success if we provide a meaningful change
         "is_guidance_only": False,
-        "is_semantic_explanation": False
+        "is_semantic_explanation": False,
+        # Preserve rule context if exists
+        **({'reviewer_rationale': rule_context['reviewer_rationale'], 
+            'rule_decision': rule_context['decision_type'],
+            'rule_name': rule_context['rule']} if rule_context else {})
     }
 
 

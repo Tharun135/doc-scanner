@@ -1,0 +1,50 @@
+"""Quick test for passive_voice rule upgrade"""
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from app.app import analyze_sentence, load_rules
+
+rules = load_rules()
+
+print("="*80)
+print("PASSIVE VOICE RULE - UPGRADE VERIFICATION")
+print("="*80)
+
+tests = [
+    {
+        'name': 'Test 5.1: Passive with actor (should be rewrite)',
+        'sentence': 'The file was created by the system.',
+        'expected': 'rewrite'
+    },
+    {
+        'name': 'Test 5.2: Passive without actor (should be no_change)',
+        'sentence': 'Access is restricted for security reasons.',
+        'expected': 'no_change'
+    }
+]
+
+for test in tests:
+    print(f"\n{test['name']}")
+    print(f"Input: {test['sentence']}")
+    
+    feedback, _, _ = analyze_sentence(test['sentence'], rules)
+    
+    passive_issues = [f for f in feedback if f.get('rule') == 'passive_voice']
+    
+    if passive_issues:
+        issue = passive_issues[0]
+        decision = issue.get('decision_type', 'NOT SET')
+        rationale = issue.get('reviewer_rationale', 'NOT SET')
+        
+        print(f"  Decision: {decision}")
+        print(f"  Rationale: {rationale[:80]}...")
+        
+        if decision == test['expected']:
+            print(f"  ✓ PASS - Correct decision type")
+        else:
+            print(f"  ✗ FAIL - Expected '{test['expected']}', got '{decision}'")
+    else:
+        print(f"  ✗ FAIL - No passive voice issue detected")
+
+print(f"\n{'='*80}\n")

@@ -384,42 +384,19 @@ def determine_analysis_scope(issues: List[DocumentIssue], flagged_sections: List
     elif major_count > 2 or len(flagged_sections) > 5:
         return "full"
     elif len(flagged_sections) > 0:
-        return "targeted"
+        return "full"
     else:
-        return "minimal"
+        return "full"  # Always do full analysis so custom rules (e.g. Siemens style) run on every sentence
 
 
 def should_analyze_sentence(sentence_index: int, sentence_text: str, 
                            document_review: DocumentReviewResult) -> bool:
     """
     Gate function: Should this sentence be analyzed?
-    
-    Only analyze if:
-    1. Analysis scope is "full"
-    2. Sentence is in a flagged confusion zone
-    3. Sentence is obviously problematic (very long)
-    
-    This is the KEY noise-reduction function.
+
+    Always returns True to ensure all rules (including custom rules like Siemens
+    style guide) run on every sentence. The document-level gate still provides
+    structural insights, but sentence-level analysis is never skipped.
     """
-    # Always analyze if full review requested
-    if document_review.analysis_scope == "full":
-        return True
-    
-    # Skip analysis if document fundamentals are broken
-    if document_review.blocking:
-        return False
-    
-    # Analyze if sentence is in a flagged section
-    sentence_flag = f"paragraph_{sentence_index}"
-    if any(sentence_flag in section for section in document_review.flagged_sections):
-        return True
-    
-    # Analyze very long sentences (likely problematic)
-    if len(sentence_text.split()) > 30:
-        return True
-    
-    # For minimal scope, only analyze obvious problems
-    if document_review.analysis_scope == "minimal":
-        return False
-    
-    return False
+    return True
+

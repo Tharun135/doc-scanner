@@ -134,19 +134,7 @@ def extract_sentences_with_html_preservation(html_content):
                     
                     sentences.append(SimpleSentence(sent_text, html_fragment))
     
-    # Remove duplicate sentences based on text content
-    seen_sentences = set()
-    unique_sentences = []
-    
-    for sentence in sentences:
-        # Create a normalized version for comparison (strip whitespace and newlines)
-        normalized_text = ' '.join(sentence.text.split())
-        
-        if normalized_text and normalized_text not in seen_sentences:
-            seen_sentences.add(normalized_text)
-            unique_sentences.append(sentence)
-    
-    return unique_sentences
+    return sentences
 
 def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
     """
@@ -455,7 +443,7 @@ def review_document(content, rules):
                     })
     return {"issues": suggestions, "summary": "Review completed."}
 
-def analyze_sentence(sentence, rules):
+def analyze_sentence(sentence, rules, previous_sentence=None, next_sentence=None):
     feedback = []
     readability_scores = {
         "flesch_reading_ease": textstat.flesch_reading_ease(sentence),
@@ -467,7 +455,22 @@ def analyze_sentence(sentence, rules):
 
     # Apply each rule function to the sentence
     for rule_function in rules:
-        rule_feedback = rule_function(sentence)
+        try:
+            # Try to pass adjacent context if the rule supports it (like passive_voice)
+            import inspect
+            sig = inspect.signature(rule_function)
+            params = list(sig.parameters.keys())
+            
+            if 'previous_sentence' in params and 'next_sentence' in params:
+                # Rule supports adjacent context
+                rule_feedback = rule_function(sentence, previous_sentence=previous_sentence, next_sentence=next_sentence)
+            else:
+                # Rule doesn't support context, use standard call
+                rule_feedback = rule_function(sentence)
+        except Exception as e:
+            # Fallback to standard call if inspection fails
+            logger.debug(f"Rule inspection failed, using standard call: {e}")
+            rule_feedback = rule_function(sentence)
         if rule_feedback:
             # Convert string feedback to expected object format
             for item in rule_feedback:
@@ -815,26 +818,9 @@ def upload_file():
         from core.document_review_gate import run_document_review_gate
         document_review = run_document_review_gate(html_content, file.filename)
         
-        # If document has blocking issues, return early with document-level feedback
         if document_review.blocking:
-            logger.warning(f"🚫 Document has blocking issues - stopping detailed analysis")
-            if progress_tracker and room_id:
-                progress_tracker.complete_session(room_id, success=True,
-                    final_message="Document review complete - structural issues found")
-            
-            return jsonify({
-                "content": html_content,
-                "document_review": document_review.to_ui(),
-                "sentences": [],
-                "report": {
-                    "totalSentences": 0,
-                    "totalWords": len(html_content.split()),
-                    "avgQualityScore": 0,
-                    "message": "Document-level review complete. Please address structural issues first."
-                },
-                "review_complete": False,
-                "room_id": room_id
-            })
+            logger.warning(f"Warning: Document has blocking structural issues - but continuing with sentence-level analysis")
+
         
         # Stage 3: Breaking into Sentences (50%)
         # Only proceed if document structure is sound
@@ -933,7 +919,28 @@ def upload_file():
             
             # Apply rules ONLY if sentence should be analyzed
             if should_analyze:
-                feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
+                # Get adjacent sentences for context-aware analysis
+                previous_sentence = None
+                next_sentence = None
+                
+                if index > 0:
+                    # Get previous sentence from already processed sentences
+                    previous_sentence = sentence_data[index - 1]['sentence'] if sentence_data else None
+                
+                if index < len(sentences) - 1:
+                    # Get next sentence (if available)
+                    try:
+                        next_sent = sentences[index + 1]
+                        next_sentence = next_sent.text if hasattr(next_sent, 'text') else str(next_sent)
+                    except (IndexError, AttributeError):
+                        next_sentence = None
+                
+                feedback, readability_scores, quality_score = analyze_sentence(
+                    plain_text_sentence, 
+                    rules,
+                    previous_sentence=previous_sentence,
+                    next_sentence=next_sentence
+                )
                 analysis_skipped = False
             else:
                 # Skip analysis - reviewer chose not to comment
@@ -1199,11 +1206,20 @@ def ai_suggestion():
             else:
                 issue_type = "General"
 
-        issue_obj = {
-            "message": feedback_text,        # the rule feedback text
-            "context": sentence_context,     # the original sentence
-            "issue_type": issue_type,
-        }
+        # Check if UI passed a full rule decision (has decision_type/reviewer_rationale)
+        ui_issue = data.get('issue')
+        if ui_issue and isinstance(ui_issue, dict) and 'decision_type' in ui_issue and 'reviewer_rationale' in ui_issue:
+            # Use the full rule decision from the UI
+            issue_obj = ui_issue
+            logger.info(f"Using full rule decision from UI: decision_type={ui_issue.get('decision_type')}")
+        else:
+            # Build minimal issue object for enrichment
+            issue_obj = {
+                "message": feedback_text,        # the rule feedback text
+                "context": sentence_context,     # the original sentence
+                "issue_type": issue_type,
+            }
+            logger.info(f"Building minimal issue object for enrichment")
 
         logger.info("Getting enhanced AI suggestion with RAG context...")
         result = get_enhanced_ai_suggestion(

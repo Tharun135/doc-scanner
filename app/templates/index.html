@@ -169,8 +169,8 @@
         }
 
         .sentence-highlight.has-feedback {
-            background-color: rgba(255, 193, 7, 0.2);
-            border-bottom: 2px solid #ff9800;
+            background-color: rgba(255, 235, 59, 0.35);
+            border-bottom: 2px solid #ffd600;
         }
 
         .sentence-highlight.has-feedback:hover {
@@ -2380,6 +2380,7 @@
                 const feedback = button.getAttribute('data-feedback');
                 const sentence = button.getAttribute('data-sentence');
                 const fullSuggestion = button.getAttribute('data-full-suggestion') || '';
+                const itemData = button.getAttribute('data-item') || '';
                 
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
@@ -2403,15 +2404,17 @@
                 const decodedFeedback = decodeURIComponent(feedback);
                 const decodedSentence = decodeURIComponent(sentence);
                 const decodedFullSuggestion = fullSuggestion ? decodeURIComponent(fullSuggestion) : '';
+                const decodedItem = itemData ? JSON.parse(decodeURIComponent(itemData)) : null;
                 
                 console.log('Decoded attributes:', {
                     sentenceIndex: sentenceIndex,
                     feedback: decodedFeedback,
                     sentence: decodedSentence,
-                    fullSuggestion: decodedFullSuggestion
+                    fullSuggestion: decodedFullSuggestion,
+                    item: decodedItem
                 });
                 
-                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion);
+                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem);
             }
         });
         
@@ -2589,7 +2592,7 @@
         }
         
         // Function to handle AI feedback icon click
-        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '') {
+        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null) {
             try {
                 console.log('=== SHOW AI FEEDBACK DEBUG ===');
                 console.log('Parameters received:', {
@@ -2626,10 +2629,11 @@
                 // Get AI suggestion
                 console.log('About to call getAISuggestion with:', {
                     feedback: decodedFeedback,
-                    sentence: decodedSentence
+                    sentence: decodedSentence,
+                    item: item
                 });
                 
-                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence);
+                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item);
                 console.log('getAISuggestion returned:', aiSuggestion);
                 console.log('🔍 Response structure check:', {
                     hasSuggestion: aiSuggestion?.suggestion,
@@ -3233,7 +3237,7 @@
                 }
                 
                 if (sentence) {
-                    console.log(`Processing sentence ${index}:`, sentence);
+                    // console.log(`Processing sentence ${index}:`, sentence);
                     
                     let found = false;
                     const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
@@ -3445,6 +3449,8 @@
                 aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
                 aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
                 aiButton.setAttribute('data-full-suggestion', encodeURIComponent(item.full_suggestion || ''));
+                // Store full item for rule authority check
+                aiButton.setAttribute('data-item', encodeURIComponent(JSON.stringify(item)));
                 aiButton.setAttribute('title', 'Get AI-powered suggestions for this issue');
                 aiButton.setAttribute('aria-label', 'Get AI suggestions');
                 aiButton.innerHTML = '<i class="fas fa-robot"></i>';
@@ -3475,7 +3481,7 @@
             }
         }
 
-        async function getAISuggestion(feedback, sentence, optionNumber = 1) {
+        async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null) {
             try {
                 // Safe document type retrieval - fallback to 'technical' if element doesn't exist
                 let documentType = 'technical';
@@ -3538,6 +3544,11 @@
                     writing_goals: selectedWritingGoals || ['clarity', 'conciseness'],
                     option_number: optionNumber
                 };
+                
+                // Add full item if available (for rule authority check)
+                if (item) {
+                    requestData.issue = item;
+                }
                 
                 console.log('Request payload:', requestData);
                 

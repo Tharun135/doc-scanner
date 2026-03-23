@@ -40,7 +40,7 @@ PRESENT_TAGS = {"VBP", "VBZ"}
 
 def is_non_sentential(text: str) -> bool:
     """
-    Detect non-sentential text (titles, headings, fragments).
+    Detect non-sentential text (titles, headings, fragments, code blocks).
     
     These should NOT be analyzed by sentence-level rules.
     
@@ -49,10 +49,57 @@ def is_non_sentential(text: str) -> bool:
     - A gerund phrase used as a label
     - A fragment without a verb
     - A short noun phrase
+    - Code blocks (mermaid, json, yaml, etc.)
+    - Technical syntax/markup
     """
     text = text.strip()
     
     if not text:
+        return True
+    
+    # Bullet list items are labels, not sentences
+    # Common patterns: "- Item", "* Item", "1. Item", "• Item"
+    # Or no marker but no terminal punctuation and short
+    if not text.endswith(('.', '!', '?')):
+        # Likely a bullet/list item if it's a noun phrase without a verb
+        # or has participles used as adjectives
+        words = text.split()
+        if len(words) <= 12:  # Typical bullet items are short
+            # Check for bullet markers at the start (after parsing)
+            if any(text.startswith(marker) for marker in ['-', '*', '•', '+']):
+                return True
+            # Or numbered lists
+            if len(words) > 0 and words[0].rstrip('.').isdigit():
+                return True
+    
+    # Parenthetical descriptions are typically labels, not sentences
+    # "(integrated in...)", "Service (description)", etc.
+    if text.count('(') >= 1 and text.count(')') >= 1:
+        # If most of the text is in parentheses, or there's no verb outside them
+        paren_start = text.find('(')
+        paren_end = text.rfind(')')
+        if paren_start < paren_end:
+            before_parens = text[:paren_start].strip()
+            # Title + parenthetical description pattern
+            if len(before_parens.split()) <= 5:  # Short title before parens
+                return True
+    
+    # Code block markers
+    code_markers = [
+        'mermaid', 'flowchart', 'sequenceDiagram', 'graph',  # Mermaid
+        'json', 'yaml', 'xml', 'html', 'css', 'javascript',  # Code
+        '```', '{', '[', '<',  # Syntax
+        '-->', '|', '---', ':::', '~~~'  # Diagram syntax
+    ]
+    
+    # Check if text starts with code/diagram syntax
+    text_lower = text.lower()
+    if any(text_lower.startswith(marker) for marker in code_markers):
+        return True
+    
+    # Check for high density of technical syntax (likely code/diagram)
+    syntax_chars = sum(1 for c in text if c in '{}[]()<>|→-=:')
+    if len(text) > 10 and syntax_chars / len(text) > 0.2:
         return True
     
     # Short fragments are often titles
@@ -71,8 +118,21 @@ def is_non_sentential(text: str) -> bool:
     
     doc = nlp(text)
     
-    # Check if there's any finite verb
-    has_finite_verb = any(tok.pos_ in {"VERB", "AUX"} and tok.tag_ not in {"VBG"} for tok in doc)
+    # Check if there's any finite verb (excludes participles used as adjectives)
+    # VBG = gerund/present participle, VBN = past participle
+    # When VBN appears without auxiliary (e.g., "integrated in"), it's likely an adjective
+    has_finite_verb = False
+    for tok in doc:
+        if tok.pos_ in {"VERB", "AUX"}:
+            # Exclude non-finite forms: gerunds and past participles without auxiliaries
+            if tok.tag_ in {"VBG", "VBN"}:
+                # Check if VBN has an auxiliary (e.g., "was integrated" = finite)
+                has_aux = any(child.dep_ == "aux" for child in tok.children) or any(tok.dep_ == "aux" for tok in doc)
+                if not has_aux:
+                    continue  # VBN without aux = adjective, not finite verb
+            has_finite_verb = True
+            break
+    
     if not has_finite_verb:
         # No finite verb = likely a title or gerund phrase
         return True
@@ -229,6 +289,11 @@ def classify_sentence_for_tense(sentence: str) -> str:
         "was introduced", "was added", "was removed", "was deprecated",
         "used to", "at that time", "in the past"
     ]):
+        return "historical"
+    
+    # Conditional clauses with past tense describe prerequisites (historical context)
+    # "when X was configured", "after Y was installed", etc.
+    if any(x in s for x in [" when ", " after "]) and any(x in s for x in [" was ", " were "]):
         return "historical"
     
     # Compliance + conditions (never auto rewrite)
@@ -391,9 +456,65 @@ def check(sentence):
     
     allowed, reason = can_convert_to_simple_present(sentence_text)
     
-    # Only flag if conversion is possible
-    if allowed:
-        # Return simple string message for consistency with other rules (passive_voice, etc.)
-        issues.append("Non-simple present tense detected - consider converting to present tense for consistency with documentation standards")
+    # ============================================================
+    # DECISION LOGIC: Classify based on context
+    # ============================================================
+    
+    tense = detect_verb_tense(sentence_text)
+    
+    # Only analyze if not already in present tense
+    if tense == "present":
+        return issues  # Already correct, no issue
+    
+    # Context analysis
+    classification = classify_sentence_for_tense(sentence_text)
+    
+    if not allowed:
+        # DECISION: no_change - Preserve tense for good reasons
+        if reason == "historical":
+            issues.append({
+                'text': sentence_text,
+                'start': start_char,
+                'end': end_char,
+                'message': 'Past tense detected in historical context',
+                'decision_type': 'no_change',
+                'rule': 'simple_present_tense',
+                'reviewer_rationale': 'Historical context preserved - past tense is appropriate when describing previous versions, design decisions, or events that occurred at a specific time. Converting to present would be factually incorrect.'
+            })
+        elif reason == "compliance_conditional":
+            issues.append({
+                'text': sentence_text,
+                'start': start_char,
+                'end': end_char,
+                'message': 'Complex conditional requirement detected',
+                'decision_type': 'explain',
+                'rule': 'simple_present_tense',
+                'reviewer_rationale': 'This sentence contains compliance language with conditions. Tense conversion could alter the logical relationship between conditions and requirements. Review manually to ensure accuracy.',
+                'explanation': 'Conditional requirements with "must/shall... if/when" need careful review. The tense may be intentional to indicate specific timing or causality.'
+            })
+    else:
+        # DECISION: rewrite - Safe to convert to simple present
+        if tense == "future":
+            issues.append({
+                'text': sentence_text,
+                'start': start_char,
+                'end': end_char,
+                'message': 'Future tense detected',
+                'decision_type': 'rewrite',
+                'rule': 'simple_present_tense',
+                'reviewer_rationale': 'Technical documentation uses simple present tense for consistency and immediacy. Future tense ("will validate") should be converted to present ("validates") unless describing a planned future feature.',
+                'ai_suggestion': None  # Will be filled by enrichment service
+            })
+        elif tense == "past":
+            issues.append({
+                'text': sentence_text,
+                'start': start_char,
+                'end': end_char,
+                'message': 'Past tense detected',
+                'decision_type': 'rewrite',
+                'rule': 'simple_present_tense',
+                'reviewer_rationale': 'Convert to simple present tense for consistency with technical documentation standards. Present tense makes instructions and descriptions more immediate and clear.',
+                'ai_suggestion': None  # Will be filled by enrichment service
+            })
     
     return issues
