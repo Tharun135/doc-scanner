@@ -896,8 +896,9 @@ def upload_file():
         
         for index, sent in enumerate(sentences):
             # Update substep progress for analysis
+            # Update substep progress for analysis
             if progress_tracker and room_id and total_sentences > 0:
-                substep_progress = int(75 + (index / total_sentences) * 5)  # 75-80% range
+                substep_progress = int(60 + (index / total_sentences) * 34)  # 60-94% range
                 progress_tracker.update_progress(room_id, substep_progress, 
                     f"Analyzing sentence {index + 1} of {total_sentences}...")
             

@@ -1186,11 +1186,12 @@
             console.log('🔄 Starting fallback progress simulation');
             
             const stages = [
-                { percentage: 10, message: "Receiving and validating your document...", stage_name: "Upload" },
-                { percentage: 30, message: "Extracting text from document format...", stage_name: "Parse" },
-                { percentage: 50, message: "Identifying sentence boundaries...", stage_name: "Extract" },
-                { percentage: 80, message: "Applying grammar and style rules...", stage_name: "Analyze" },
-                { percentage: 100, message: "Generating final report...", stage_name: "Report" }
+                { percentage: 5, message: "Receiving and validating your document...", stage_name: "Upload" },
+                { percentage: 15, message: "Extracting text from document format...", stage_name: "Parse" },
+                { percentage: 30, message: "Analyzing document structure...", stage_name: "Understanding" },
+                { percentage: 45, message: "Identifying sentence boundaries...", stage_name: "Extract" },
+                { percentage: 60, message: "Applying grammar and style rules...", stage_name: "Analyze" },
+                { percentage: 95, message: "Generating final report...", stage_name: "Report" }
             ];
             
             let currentStage = 0;
@@ -1285,10 +1286,11 @@
             // Define stage thresholds and their corresponding list item indices
             const stageMapping = [
                 { threshold: 0, index: 0, name: 'Upload', icon: 'fas fa-upload' },
-                { threshold: 10, index: 1, name: 'Parse', icon: 'fas fa-file-alt' },
-                { threshold: 30, index: 2, name: 'Extract', icon: 'fas fa-cut' },
-                { threshold: 50, index: 3, name: 'Analyze', icon: 'fas fa-search' },
-                { threshold: 80, index: 4, name: 'Report', icon: 'fas fa-chart-line' }
+                { threshold: 6, index: 1, name: 'Parse', icon: 'fas fa-file-alt' },
+                { threshold: 16, index: 2, name: 'Understanding', icon: 'fas fa-brain' },
+                { threshold: 31, index: 3, name: 'Extract', icon: 'fas fa-cut' },
+                { threshold: 46, index: 4, name: 'Analyze', icon: 'fas fa-search' },
+                { threshold: 95, index: 5, name: 'Report', icon: 'fas fa-chart-line' }
             ];
             
             // Get all stage items
@@ -1577,34 +1579,40 @@
         // Progress Control Functions
         const progressStages = [
             {
-                name: "Uploading Document",
+                name: "Uploading",
                 description: "Receiving and validating your document...",
                 icon: "fas fa-upload",
-                percentage: 10
+                percentage: 5
             },
             {
-                name: "Parsing Content",
-                description: "Extracting text from PDF, DOCX, or Markdown...",
+                name: "Parsing",
+                description: "Extracting text and structure...",
                 icon: "fas fa-file-alt",
+                percentage: 15
+            },
+            {
+                name: "Understanding",
+                description: "Analyzing document structure and goals...",
+                icon: "fas fa-brain",
                 percentage: 30
             },
             {
-                name: "Breaking into Sentences",
-                description: "Identifying sentence boundaries and structure...",
+                name: "Extracting",
+                description: "Identifying sentence boundaries...",
                 icon: "fas fa-cut",
-                percentage: 50
+                percentage: 45
             },
             {
-                name: "Analyzing with Rules",
-                description: "Applying grammar, style, and readability rules...",
+                name: "Analyzing",
+                description: "Applying grammar and style rules...",
                 icon: "fas fa-search",
-                percentage: 80
+                percentage: 60
             },
             {
-                name: "Generating Report",
+                name: "Reporting",
                 description: "Compiling insights and quality metrics...",
                 icon: "fas fa-chart-line",
-                percentage: 100
+                percentage: 95
             }
         ];
 
@@ -1709,7 +1717,7 @@
 
         function startProgressSimulation() {
             let stageIndex = 0;
-            const stageDurations = [400, 800, 1500, 10000, 100]; // milliseconds for each stage
+            const stageDurations = [400, 800, 1500, 5000, 5000, 100]; // milliseconds for each stage
             
             function moveToNextStage() {
                 if (stageIndex < progressStages.length) {
@@ -4119,14 +4127,18 @@
             <div style="font-size: 0.75rem;">Parse</div>
           </li>
           <li class="stage-item pending" id="stage-2">
+            <i class="fas fa-brain"></i>
+            <div style="font-size: 0.75rem;">Understand</div>
+          </li>
+          <li class="stage-item pending" id="stage-3">
             <i class="fas fa-cut"></i>
             <div style="font-size: 0.75rem;">Extract</div>
           </li>
-          <li class="stage-item pending" id="stage-3">
+          <li class="stage-item pending" id="stage-4">
             <i class="fas fa-search"></i>
             <div style="font-size: 0.75rem;">Analyze</div>
           </li>
-          <li class="stage-item pending" id="stage-4">
+          <li class="stage-item pending" id="stage-5">
             <i class="fas fa-chart-line"></i>
             <div style="font-size: 0.75rem;">Report</div>
           </li>
