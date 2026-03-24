@@ -3626,6 +3626,7 @@
             // Clear previous content - ensure no cached malformed data
             documentContent.innerHTML = '<h4>Document Content</h4>';
             feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
+            feedbackContent.scrollTop = 0; // Reset scroll position to top
             
             // Reset AI feedback tab
             aiFeedbackContent.innerHTML = `
@@ -3635,6 +3636,7 @@
                     <p>Click the AI icon next to any issue to get intelligent suggestions</p>
                 </div>
             `;
+            aiFeedbackContent.scrollTop = 0; // Reset scroll position to top
             
             // Clear AI feedback data and any cached sentence data
             aiFeedbackData = {};
