@@ -111,10 +111,11 @@
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .feedback-item:hover {
-            background: #fff3cd !important;
+            background: #ffe066 !important;      /* Vivid yellow on hover */
             transform: translateX(5px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
@@ -122,13 +123,12 @@
         .feedback-item.highlighted {
             background: #e7f3ff !important;
             border-left-color: #007bff !important;
-            animation: pulse 1s ease-in-out;
+            animation: pulse 1.5s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
+            0%, 100% { transform: scale(1); }
             50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
         }
 
         .original-content {
@@ -151,34 +151,37 @@
         }
 
         .sentence-highlight {
-            transition: all 0.2s ease;
+            transition: all 0.25s ease;
             cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 3px;
-            margin: 1px 0;
-            position: relative;
+            padding: 0 2px;
+            border-radius: 2.5px;
             display: inline;
-            line-height: 1.6;
-        }
-
-        .sentence-highlight.highlight {
-            background-color: #00bcd4 !important; /* Bright Cyan */
-            color: #000 !important;
-            font-weight: 700;
-            border: 2px solid #0097a7;
-            box-shadow: 0 0 15px rgba(0, 188, 212, 0.5);
-            z-index: 10;
+            position: relative;
+            line-height: inherit;
+            -webkit-box-decoration-break: clone;
+            box-decoration-break: clone;
         }
 
         .sentence-highlight.has-feedback {
-            background-color: rgba(255, 235, 59, 0.45);
-            border-bottom: 2px solid #ffd600;
-            cursor: pointer;
+            background-color: rgba(255, 215, 0, 0.45) !important;
+            border-bottom: 2.5px solid #FFD700 !important;
         }
 
+        /* Hover over the sentence itself */
         .sentence-highlight.has-feedback:hover {
-            background-color: rgba(0, 188, 212, 0.25) !important;
-            border-bottom-color: #00bcd4;
+            background-color: rgba(255, 215, 0, 0.75) !important;
+            color: #000 !important;
+        }
+
+        /* Active highlight for selected issues - Highest Specificity & Recursive */
+        .document-section .sentence-highlight.highlight {
+            background-color: #00bcd4 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 0 15px rgba(0, 188, 212, 0.8) !important;
+            outline: 1.5px solid #0097a7 !important;
+            z-index: 1000 !important;
         }
 
         .sentence-highlight.sentence-not-found {
@@ -212,9 +215,7 @@
             font-weight: bold;
         }
 
-        .feedback-item:hover {
-            background: #ffe066 !important;      /* Slightly brighter on hover */
-        }
+        /* Removed duplicate feedback-item:hover to ensure consistency */
 
         .toolbar {
             display: flex;
@@ -968,17 +969,19 @@
                 </div>
                 <div class="card-body">
                     <form id="uploadForm" enctype="multipart/form-data">
-                        <div id="dropzone" class="dropzone mb-3">
+                        <div id="dropzone" class="dropzone mb-3" onclick="handleDropzoneClick(event)">
                             <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
                             <p>Drag & Drop files here or</p>
                             <div class="d-flex justify-content-center gap-3 mt-2">
-                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn">Browse Files</button>
-                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" title="Select ZIP files or any file type">Browse Zip/Files</button>
+                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn" onclick="triggerFileUpload()">Browse Files</button>
+                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" onclick="triggerBatchUpload()" title="Select ZIP files or any file type">Browse Zip/Files</button>
                             </div>
-                            <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" style="display: none;">
-                            <input type="file" id="batchFileInput" style="display: none;">
-                            <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" multiple style="display: none;">
                         </div>
+                        <!-- Inputs moved outside dropzone to prevent destruction on UI reset -->
+                        <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" style="display: none;">
+                        <input type="file" id="batchFileInput" style="display: none;">
+                        <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" multiple style="display: none;">
+                        
                         <div id="fileList" class="mb-3" style="display: none;">
                             <h6>Selected Files:</h6>
                             <div id="fileListItems"></div>
@@ -1161,8 +1164,6 @@
         const fileInput = document.getElementById('fileInput');
         const batchFileInput = document.getElementById('batchFileInput');
         const multiFileInput = document.getElementById('multiFileInput');
-        const browseBtn = document.getElementById('browseBtn');
-        const browseBatchBtn = document.getElementById('browseBatchBtn');
         const uploadForm = document.getElementById('uploadForm');
         let analysisChart;
         let selectedFiles = [];
@@ -1256,29 +1257,16 @@
             // Update stage list icons - light up current and completed stages
             updateStageListIcons(data.percentage, data.stage_name);
             
-            // Update ETA
-            if (data.eta_seconds > 0) {
-                const seconds = Math.ceil(data.eta_seconds);
-                let etaText;
-                if (seconds < 60) {
-                    etaText = `${seconds} seconds`;
-                } else {
-                    const minutes = Math.floor(seconds / 60);
-                    const remainingSeconds = seconds % 60;
-                    etaText = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-                }
-                document.getElementById('etaTime').textContent = etaText;
-            } else {
-                document.getElementById('etaTime').textContent = data.completed ? 'Complete!' : 'Almost done...';
-            }
+            // ETA update logic removed (HTML element deleted)
             
-            // If completed, hide progress after a short delay
+            // If completed, update to final state but DON'T hide immediately
+            // The hide call will happen in the fetch success handler after rendering
             if (data.completed) {
-                // Content should already be displayed immediately after upload
-                // This just handles the progress bar completion animation
-                setTimeout(() => {
-                    hideProgressLoader();
-                }, 500); // Reduced delay since content is already shown
+                console.log('🏁 Progress reached 100%, waiting for content results...');
+                document.getElementById('progressPercentage').textContent = '100%';
+                document.getElementById('progressBar').style.width = '100%';
+                document.getElementById('stageName').textContent = 'Finalizing...';
+                document.getElementById('stageDescription').textContent = 'Displaying results...';
             }
         }
 
@@ -1357,20 +1345,33 @@
             }
         }
 
-        // Handle browse button clicks using event delegation
-        document.addEventListener('click', (e) => {
-            if (e.target.id === 'browseBtn') {
-                e.preventDefault();
-                console.log('Browse button clicked, triggering file input');
-                multiFileInput.click();
-            } else if (e.target.id === 'browseBatchBtn') {
-                e.preventDefault();
-                console.log('Browse batch button clicked, triggering batch file input');
-                console.log('Batch file input element:', batchFileInput);
-                console.log('Batch file input accept attribute:', batchFileInput.accept);
-                batchFileInput.click();
+        // Improved browse handling using direct triggers
+        window.triggerFileUpload = function() {
+            console.log("🚀 triggerFileUpload called");
+            const input = document.getElementById('multiFileInput');
+            if (input) {
+                input.click();
+            } else {
+                console.error("❌ multiFileInput not found");
             }
-        });
+        };
+        
+        window.triggerBatchUpload = function() {
+            console.log("🚀 triggerBatchUpload called");
+            const input = document.getElementById('batchFileInput');
+            if (input) {
+                input.click();
+            } else {
+                console.error("❌ batchFileInput not found");
+            }
+        };
+        
+        window.handleDropzoneClick = function(e) {
+            // Only trigger if we didn't click one of the internal buttons (to avoid double clicks)
+            if (e.target.tagName !== 'BUTTON' && e.target.parentElement.tagName !== 'BUTTON') {
+                triggerFileUpload();
+            }
+        };
 
         // Handle file input changes
         fileInput.addEventListener('change', (e) => {
@@ -1525,7 +1526,7 @@
         }
 
         function selectMoreFiles() {
-            multiFileInput.click();
+            triggerFileUpload();
         }
 
         function clearFiles() {
@@ -1546,12 +1547,10 @@
                 <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
                 <p>Drag & Drop files here or</p>
                 <div class="d-flex justify-content-center gap-3 mt-2">
-                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn">Browse Files</button>
-                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn">Browse Zip</button>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn" onclick="triggerFileUpload()">Browse Files</button>
+                    <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" onclick="triggerBatchUpload()">Browse Zip</button>
                 </div>
             `;
-            
-            // No need to re-attach event listeners since we're using event delegation
         }
 
         function getFileIcon(filename) {
@@ -1685,35 +1684,10 @@
             });
             
             // Update ETA
-            updateETA();
+            // Removed ETA update
         }
 
-        function updateETA() {
-            const elapsed = Date.now() - startTime;
-            const currentPercent = progressStages[currentStage].percentage;
-            
-            if (currentPercent > 0) {
-                const estimatedTotal = (elapsed / currentPercent) * 100;
-                const remaining = Math.max(0, estimatedTotal - elapsed);
-                
-                if (remaining > 0) {
-                    const seconds = Math.ceil(remaining / 1000);
-                    let etaText;
-                    if (seconds < 60) {
-                        etaText = `${seconds} seconds`;
-                    } else {
-                        const minutes = Math.floor(seconds / 60);
-                        const remainingSeconds = seconds % 60;
-                        etaText = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-                    }
-                    document.getElementById('etaTime').textContent = etaText;
-                } else {
-                    document.getElementById('etaTime').textContent = 'Almost done...';
-                }
-            } else {
-                document.getElementById('etaTime').textContent = 'Calculating...';
-            }
-        }
+        // updateETA function removed
 
         function startProgressSimulation() {
             let stageIndex = 0;
@@ -1923,32 +1897,27 @@
                 }
 
                 const result = await response.json();
-                console.log('📊 Upload completed successfully');
+                console.log('📊 Analysis completed successfully');
                 
                 uploadCompleted = true;
                 resultData = result;
                 
-                // 🚀 IMMEDIATE DISPLAY: Show results right after upload completion
-                console.log('🚀 Immediately displaying results...');
+                // ✅ VISUAL FINISH: Fill progress bar to 100% if it wasn't already
+                updateRealTimeProgress({
+                    percentage: 100,
+                    message: "Finalizing report...",
+                    stage_name: "Complete",
+                    completed: true
+                });
+                
+                // 🚀 DISPLAY RESULTS
                 renderChart(result.report || {}, result.sentences || []);
                 renderContent(result.content || '', result.sentences || []);
                 
-                // For WebSocket mode, progress will continue but results are already shown
-                // For fallback mode, results are already shown but continue progress simulation
-                if (!socketConnected) {
-                    // In fallback mode, also set a timeout as backup
-                    setTimeout(() => {
-                        hideProgressLoader();
-                    }, 1000);
-                } else {
-                    // For WebSocket mode, let progress complete naturally
-                    // Results are already shown, so this is just for visual completion
-                }
-                
-                // Backup timeout in case progress updates fail (both WebSocket and fallback)
+                // ✅ HIDE LOADER: Give user 600ms to see the 100% state before closing
                 setTimeout(() => {
                     hideProgressLoader();
-                }, 3000); // Hide progress after 3 seconds max
+                }, 600);
                 
                 return result;
                 
@@ -3191,36 +3160,180 @@
                 if (sentenceToFind.includes('<') && sentenceToFind.includes('>')) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = sentenceToFind;
-                    sentenceToFind = (tempDiv.textContent || tempDiv.innerText || '').trim();
+                    sentenceToFind = tempDiv.textContent || tempDiv.innerText || "";
                 }
+                
+                // Normalize text by replacing &nbsp; and non-breaking spaces with regular spaces
+                sentenceToFind = sentenceToFind.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
                 
                 if (!sentenceToFind) return;
 
-                const hasFeedback = sentenceData.feedback && sentenceData.feedback.length > 0;
+                // Determine if this sentence has feedback
+                const hasFeedback = sentenceData.feedback && 
+                                  Array.isArray(sentenceData.feedback) && 
+                                  sentenceData.feedback.length > 0;
                 const feedbackClass = hasFeedback ? ' has-feedback' : '';
                 
                 // Create a robust regex:
-                // 1. Escape special regex characters
-                // 2. Allow any amount of whitespace (normalized)
-                // 3. IMPORTANT: Allow optional HTML tags between words to handle bolding/links inside sentences
-                const words = sentenceToFind.split(/\s+/).filter(w => w.length > 0);
+                // Robust word splitting: treat punctuation as separate tokens to match regardless of spacing
+                const words = sentenceToFind.split(/(\s+|(?=[.,!?;:]))/).map(w => w.trim()).filter(w => w.length > 0);
                 if (words.length === 0) return;
                 
-                // Build a pattern that matches the words with optional tags between them
-                const pattern = words.map(w => 
-                    w.replace(/[.*+?^${}()|[\]\\<>]/g, '\\$&')
-                ).join('(?:\\s*<[^>]*>\\s*)*\\s+(?:\\s*<[^>]*>\\s*)*');
+                // Step 1: Attempt to find literal HTML-sentence fragment if available
+                let matchText = '';
+                let matchIndex = -1;
                 
-                const regex = new RegExp(pattern, 'i');
+                const htmlSentence = (sentenceData.html_sentence || '').replace(/\u00A0/g, ' ').trim();
+                // Reject extremely long hints from backend
+                if (htmlSentence && htmlSentence.length > 5 && htmlSentence.length < sentenceToFind.length * 3) {
+                    // Try both direct match and normalized space match
+                    const literalIndex = processedContent.replace(/\u00A0/g, ' ').indexOf(htmlSentence, lastFoundIndex);
+                    if (literalIndex !== -1) {
+                        const originalMatchText = processedContent.substring(literalIndex, literalIndex + htmlSentence.length);
+                        
+                        // PRECISION FIX: Anchor to the first word to avoid wrapping decorators
+                        const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const firstWordRegex = new RegExp(firstWord, 'i');
+                        const wordStartInMatch = originalMatchText.search(firstWordRegex);
+                        
+                        if (wordStartInMatch !== -1) {
+                            matchIndex = literalIndex + wordStartInMatch;
+                            matchText = originalMatchText.substring(wordStartInMatch);
+                        }
+                    }
+                }
                 
-                // Search in the remaining content
-                const searchPart = processedContent.substring(lastFoundIndex);
-                const match = searchPart.match(regex);
-                
-                if (match) {
-                    const matchText = match[0];
-                    const matchIndex = lastFoundIndex + match.index;
+                // Step 2: Fall back to robust regex matching if literal fails
+                if (matchIndex === -1) {
+                    // Construct regex pattern with word boundaries and non-greedy spacers
+                    const patternParts = words.map((w, i) => {
+                        let escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        
+                        // Handle HTML entities in document source
+                        escaped = escaped.replace(/&/g, '(?:&|&amp;|&#38;)')
+                                       .replace(/"/g, '(?:\"|&quot;|&#34;)')
+                                       .replace(/'/g, '(?:\'|&apos;|&#39;)')
+                                       .replace(/</g, '(?:<|&lt;|&#60;)')
+                                       .replace(/>/g, '(?:>|&gt;|&#62;)');
+                        
+                        // Treat punctuation tokens without word boundaries
+                        const isPunctuation = /^[.,!?;:]+$/.test(w);
+                        if (!isPunctuation) {
+                            if (i === 0 && /^[a-zA-Z0-9]/.test(w)) escaped = '\\b' + escaped;
+                            if (i === words.length - 1 && /[a-zA-Z0-9]$/.test(w)) escaped = escaped + '\\b';
+                        }
+                        
+                        return escaped;
+                    });
                     
+                    // Join with non-greedy spacer allowing whitespace and tags
+                    // CRITICAL: Tighten the spacer for punctuation to avoid 'leapfrogging' over paragraphs
+                    let pattern = '';
+                    patternParts.forEach((part, i) => {
+                        if (i === 0) {
+                            pattern += part;
+                        } else {
+                            const isPunctuationMatch = words[i].match(/^[.,!?;:]+$/);
+                            const spacer = isPunctuationMatch ? 
+                                '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,20}?' : // Tight for punctuation
+                                '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?';       // Normal for words
+                            pattern += spacer + part;
+                        }
+                    });
+                    
+                    const regex = new RegExp(pattern, 'i');
+                    
+                    // Search starting from the last found position
+                    const restOfContent = processedContent.substring(lastFoundIndex);
+                    const match = restOfContent.match(regex);
+                    
+                    if (match) {
+                        // Word count check: Ensure the match doesn't have way more words than the original
+                        const matchTextOnly = match[0].replace(/<[^>]*>/g, ' ').trim();
+                        const matchWords = matchTextOnly.split(/\s+/).filter(w => w.length > 0);
+                        const originalWordCount = words.filter(w => !/^[.,!?;:]+$/.test(w)).length;
+                        
+                        // SANITY CHECK: The match shouldn't be drastically longer AND word count must be close
+                        const isLengthOk = match[0].length < sentenceToFind.length * 1.8;
+                        const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 4;
+                        
+                        if (isLengthOk && isWordCountOk) {
+                            const matchInFull = processedContent.indexOf(match[0], lastFoundIndex);
+                            
+                            // PRECISION FIX: Find the actual start of the first word to avoid wrapping leading decorators/tags
+                            const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const firstWordRegex = new RegExp(firstWord, 'i');
+                            const wordStartInMatch = match[0].search(firstWordRegex);
+                            
+                            if (wordStartInMatch !== -1) {
+                                // Adjusted match position and text
+                                const adjustedMatchText = match[0].substring(wordStartInMatch);
+                                const adjustedMatchIndex = matchInFull + wordStartInMatch;
+                                
+                                const preceding = processedContent.substring(0, adjustedMatchIndex);
+                                const lastOpen = preceding.lastIndexOf('<span class="sentence-highlight');
+                                const lastClose = preceding.lastIndexOf('</span>');
+                                
+                                if (lastOpen <= lastClose) {
+                                    matchText = adjustedMatchText;
+                                    matchIndex = adjustedMatchIndex;
+                                }
+                            }
+                        } else {
+                            console.info(`🚫 Match for sentence ${index} rejected by sanity check:`, {
+                                lengthRatio: (match[0].length / sentenceToFind.length).toFixed(2),
+                                wordDelta: Math.abs(matchWords.length - originalWordCount),
+                                expectedWords: originalWordCount,
+                                actualWords: matchWords.length
+                            });
+                        }
+                    }
+                }
+                
+                // Step 3: Global fallback if not found after last index
+                if (matchIndex === -1) {
+                    const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?');
+                    const regex = new RegExp(pattern, 'i');
+                    const match = processedContent.match(regex);
+                    
+                    if (match) {
+                        const matchTextOnly = match[0].replace(/<[^>]*>/g, ' ').trim();
+                        const matchWords = matchTextOnly.split(/\s+/).filter(w => w.length > 0);
+                        const originalWordCount = words.filter(w => !/^[.,!?;:]+$/.test(w)).length;
+                        
+                        // Strict WordCount + Length check for global fallback
+                        const isLengthOk = match[0].length < sentenceToFind.length * 1.8;
+                        const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 4;
+                        
+                        if (isLengthOk && isWordCountOk) {
+                            const matchInFull = processedContent.indexOf(match[0]);
+                            
+                            // PRECISION FIX: Anchor global fallback to the first word to avoid wrapping decorators
+                            const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const firstWordRegex = new RegExp(firstWord, 'i');
+                            const wordStartInMatch = match[0].search(firstWordRegex);
+                            
+                            if (wordStartInMatch !== -1) {
+                                // Adjusted match position and text
+                                const adjustedMatchText = match[0].substring(wordStartInMatch);
+                                const adjustedMatchIndex = matchInFull + wordStartInMatch;
+                                
+                                // Nesting check for global fallback
+                                const preceding = processedContent.substring(0, adjustedMatchIndex);
+                                const lastOpen = preceding.lastIndexOf('<span class="sentence-highlight');
+                                const lastClose = preceding.lastIndexOf('</span>');
+                                
+                                if (lastOpen <= lastClose) {
+                                    matchText = adjustedMatchText;
+                                    matchIndex = adjustedMatchIndex;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Final application:
+                if (matchIndex !== -1 && matchText) {
                     const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchText}</span>`;
                     
                     processedContent = processedContent.substring(0, matchIndex) + 
@@ -3229,19 +3342,8 @@
                     
                     // Advance search cursor to just after this replacement
                     lastFoundIndex = matchIndex + replacement.length;
-                    // console.log(`✓ Robustly highlighted sentence ${index} at ${matchIndex}`);
                 } else {
-                    // Fallback to simple indexOf if regex fails
-                    const fallbackIndex = processedContent.indexOf(sentenceToFind, lastFoundIndex);
-                    if (fallbackIndex !== -1) {
-                         const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${sentenceToFind}</span>`;
-                         processedContent = processedContent.substring(0, fallbackIndex) + 
-                                          replacement + 
-                                          processedContent.substring(fallbackIndex + sentenceToFind.length);
-                         lastFoundIndex = fallbackIndex + replacement.length;
-                    } else {
-                        console.warn(`⚠️ Could not find sentence ${index} even with robust matching:`, sentenceToFind);
-                    }
+                    console.warn(`⚠️ Could not find sentence ${index}:`, sentenceToFind);
                 }
             });
             
@@ -4152,9 +4254,7 @@
           <div class="stage-description" id="stageDescription">Receiving and validating your document...</div>
         </div>
         
-        <div class="eta-info" id="etaInfo">
-          Estimated time remaining: <span id="etaTime">Calculating...</span>
-        </div>
+        <!-- ETA Info Removed -->
       </div>
     </div>
     <div id="suggestionModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">

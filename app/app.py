@@ -111,8 +111,9 @@ def extract_sentences_with_html_preservation(html_content):
         if 'sentence-highlight' in element_html:
             logger.warning(f"🔥 INPUT HTML CONTAINS HIGHLIGHTING MARKUP: {element_html[:200]}...")
         
-        # Get the plain text version for analysis
-        element_text = element.get_text()
+        # Get the plain text version for analysis with a space separator to preserve word boundaries
+        # across tags like <br/> or between inline elements without spaces.
+        element_text = element.get_text(separator=' ')
         
         # Split the text into sentences while tracking positions
         if SPACY_AVAILABLE and nlp:
@@ -214,15 +215,34 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
                     # Look for the sentence with potential HTML tags
                     import re
                     # Create a pattern that allows HTML tags within the sentence
+                    # Use words as anchors to find the HTML segment
                     words = sentence_text.strip().split()
                     if words:
-                        # Create pattern allowing HTML tags between and within words
+                        # Create pattern allowing whitespace, tags, and common HTML entities between words
                         pattern_words = [re.escape(word) for word in words]
-                        pattern = r'(?:<[^>]*>)*\s*' + r'(?:\s*<[^>]*>\s*)*\s+(?:<[^>]*>)*\s*'.join(pattern_words) + r'\s*(?:<[^>]*>)*'
+                        # NON-GREEDY joiner to prevent swallowing next sentence
+                        boundary_pattern = r'(?:\s|<[^>]*>|&nbsp;|&#160;)+?'
+                        pattern = boundary_pattern.join(pattern_words)
+                        if len(pattern_words) > 1:
+                            # Also allow leading/trailing tags but NON-GREEDY
+                            pattern = r'(?:<[^>]*>)*?\s*' + pattern + r'\s*(?:<[^>]*>)*?'
                         
                         match = re.search(pattern, html_str, re.IGNORECASE | re.DOTALL)
                         if match:
-                            return match.group(0).strip()
+                            match_text = match.group(0)
+                            # Length-based sanity check (aggressive)
+                            if len(match_text) < len(sentence_text) * 1.5:
+                                # Word-count based check for definitive isolation
+                                try:
+                                    # Use global BeautifulSoup
+                                    match_plain = BeautifulSoup(match_text, "html.parser").get_text().split()
+                                    if abs(len(match_plain) - len(words)) <= 2:
+                                        logger.info(f"✅ Precise HTML fragment found for sentence {len(words)} words")
+                                        return match_text.strip()
+                                except Exception as e:
+                                    logger.warning(f"Word-count check failed but length ok: {e}")
+                                    # Fallback to len-only if soup fails
+                                    return match_text.strip()
                 
                 # Fallback: return the plain text
                 return sentence_text.strip()

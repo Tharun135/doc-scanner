@@ -4,9 +4,11 @@ from flask import Flask
 try:
     from flask_socketio import SocketIO
     SOCKETIO_AVAILABLE = True
-except ImportError:
+    print("✅ Flask-SocketIO is available and will be used for real-time progress tracking")
+except ImportError as e:
     SOCKETIO_AVAILABLE = False
     SocketIO = None
+    print(f"⚠️ Flask-SocketIO not found ({e}). Real-time progress tracking will be disabled.")
 
 # Make flask_cors optional
 try:
