@@ -1,0 +1,66 @@
+DocScanner AI Golden Test Document
+=====================================
+
+This document contains all edge cases that must remain stable across releases.
+Run this through the analyzer after every major change.
+If outcomes shift unexpectedly → stop.
+
+---
+
+Configure the OPC UA Server with Certificates
+
+Prerequisites:
+- Valid server certificate with SAN field
+- Network access to the target system
+- Administrator privileges
+
+Historical Context
+------------------
+
+In version 3.0, the system was redesigned to support multiple certificate formats.
+
+Procedure
+---------
+
+1. Open the configuration tool.
+2. Select the server instance from the dropdown menu.
+3. Apply the certificate to the server.
+
+The system will validate the configuration before starting.
+
+Technical Requirements
+----------------------
+
+The server certificate must include the IP address in the SAN field or the FQDN if it is registered in DNS.
+
+The file was created by the system during initialization.
+
+Access is restricted for security reasons.
+
+Here is an example of a properly configured certificate:
+
+Certificate Details:
+- Subject: CN=OPCServer
+- Issuer: CN=RootCA
+- Valid From: 2026-01-01
+- Valid To: 2027-01-01
+
+Some of the properties of alarm notifications are specifically implemented for the SIMATIC S7+ Connector.
+
+The system reads the configuration file and validates the parameters before starting.
+
+---
+
+Expected Behavior Summary:
+--------------------------
+
+Title: No feedback (classified as title)
+Prerequisites: Not analyzed as sentences
+Historical sentence: Reviewer Rationale (preserved past tense)
+Future tense: AI-Enhanced Rewrite (will → present)
+Long procedural: AI-Enhanced Rewrite (split)
+Conditional/compliance: Semantic Explanation (not split)
+Passive with actor: AI-Enhanced Rewrite (active voice)
+Passive without actor: Reviewer Rationale (preserved)
+Subjective adverb: Reviewer Rationale (intentional)
+Technical content: Preserved (no hallucination)

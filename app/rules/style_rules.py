@@ -27,6 +27,24 @@ def _get_nlp():
         nlp.max_length = 3000000  # Increase max length to 3MB
     return nlp
 
+def is_code_or_diagram(text: str) -> bool:
+    """Detect code blocks, diagrams, and technical syntax that shouldn't be analyzed."""
+    text = text.strip().lower()
+    if not text:
+        return True
+    
+    # Code/diagram markers
+    code_markers = ['mermaid', 'flowchart', 'sequencediagram', 'graph', 'json', 'yaml', 'xml', 'html', '```', '{', '[', '<', '-->', '|', '---', ':::', '~~~']
+    if any(text.startswith(marker) for marker in code_markers):
+        return True
+    
+    # High syntax density (>20% special chars = likely code)
+    syntax_chars = sum(1 for c in text if c in '{}[]()<>|→-=:')
+    if len(text) > 10 and syntax_chars / len(text) > 0.2:
+        return True
+    
+    return False
+
 def check(content):
     suggestions = []
 
@@ -61,15 +79,62 @@ def check(content):
             # Skip titles and headings for style checks
             if TITLE_UTILS_AVAILABLE and is_title_or_heading(sent.text.strip(), content):
                 continue
-                
-            # Example 2: Adverbs ending with -ly (may weaken writing)
+            
+            # Skip code blocks and diagrams
+            if is_code_or_diagram(sent.text.strip()):
+                continue
+            
+            # ============================================================
+            # ADVERB DETECTION WITH CONTEXT ANALYSIS
+            # ============================================================
+            
+            # Subjective/technical adverbs that may be intentional
+            subjective_adverbs = {
+                'properly', 'correctly', 'appropriately', 'specifically', 
+                'exactly', 'directly', 'explicitly', 'clearly', 'successfully'
+            }
+            
             for token in sent:
                 if token.text.endswith("ly") and token.pos_ == "ADV":
-                    suggestions.append(f"Consider removing or replacing the adverb '{token.text}' for stronger, more direct writing")
+                    adverb_lower = token.text.lower()
+                    
+                    if adverb_lower in subjective_adverbs:
+                        # DECISION: no_change - Technical/domain-specific term
+                        suggestions.append({
+                            'text': sent.text.strip(),
+                            'start': 0,
+                            'end': len(sent.text.strip()),
+                            'message': f"Adverb '{token.text}' detected",
+                            'decision_type': 'no_change',
+                            'rule': 'style_adverbs',
+                            'reviewer_rationale': f"'{token.text}' may be intentional and domain-specific. In technical contexts, terms like 'properly configured' or 'correctly installed' convey specific technical meaning that would be lost if removed. Consider whether this adverb clarifies a technical requirement."
+                        })
+                    else:
+                        # DECISION: guide - Suggest consideration
+                        suggestions.append({
+                            'text': sent.text.strip(),
+                            'start': 0,
+                            'end': len(sent.text.strip()),
+                            'message': f"Adverb '{token.text}' detected",
+                            'decision_type': 'guide',
+                            'rule': 'style_adverbs',
+                            'reviewer_rationale': f"Consider if '{token.text}' adds value. Adverbs ending in -ly can often be removed or replaced with more specific verbs for stronger, more direct writing. For example: 'quickly run' → 'sprint', 'carefully check' → 'verify'."
+                        })
 
-            # Example 3: Detecting overuse of 'very'
+            # ============================================================
+            # "VERY" DETECTION
+            # ============================================================
             if "very" in sent.text.lower():
-                suggestions.append("Consider replacing or removing 'very' - use more specific descriptive words instead")
+                # DECISION: guide - Generic intensifier
+                suggestions.append({
+                    'text': sent.text.strip(),
+                    'start': 0,
+                    'end': len(sent.text.strip()),
+                    'message': "'very' detected",
+                    'decision_type': 'guide',
+                    'rule': 'style_intensifier',
+                    'reviewer_rationale': "Consider replacing 'very' with more specific descriptive words. Examples: 'very big' → 'huge', 'very small' → 'tiny', 'very important' → 'critical'. This makes writing more precise and impactful."
+                })
 
     # ------------------------------
     # RAG-based contextual style checks (if available)

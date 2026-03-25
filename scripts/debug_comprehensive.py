@@ -4,8 +4,34 @@ Advanced debug to understand why the fix isn't working
 """
 
 import re
+import sys
+import os
 from bs4 import BeautifulSoup
 import html
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from app.rules.title_utils import is_title_or_heading
+    import spacy
+    nlp_loaded = spacy.load("en_core_web_sm")
+    TITLE_UTILS_AVAILABLE = True
+except Exception:
+    TITLE_UTILS_AVAILABLE = False
+    nlp_loaded = None
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    from app.rules.title_utils import is_title_or_heading
+    import spacy
+    nlp_loaded = spacy.load("en_core_web_sm")
+    TITLE_UTILS_AVAILABLE = True
+except Exception:
+    TITLE_UTILS_AVAILABLE = False
+    nlp_loaded = None
 
 def debug_tone_voice_detailed():
     """Recreate the exact logic from tone_voice.py to debug"""
@@ -96,11 +122,24 @@ def simulate_tone_voice_processing(content):
     
     original_exclamations = text_content.count('!')
     filtered_exclamations = filtered_text.count('!')
-    sentence_count = len(re.findall(r'[.!?]+', text_content))
+    
+    # Count sentences excluding headings
+    if TITLE_UTILS_AVAILABLE and nlp_loaded:
+        try:
+            doc = nlp_loaded(text_content)
+            # Count only non-heading sentences
+            sentence_count = sum(1 for sent in doc.sents 
+                               if not is_title_or_heading(sent.text.strip(), content))
+        except Exception:
+            # Fallback if spaCy processing fails
+            sentence_count = len(re.findall(r'[.!?]+', text_content))
+    else:
+        # Fallback: count all sentence-ending punctuation
+        sentence_count = len(re.findall(r'[.!?]+', text_content))
     
     print(f"   Original exclamation count: {original_exclamations}")
     print(f"   Filtered exclamation count: {filtered_exclamations}")
-    print(f"   Sentence count: {sentence_count}")
+    print(f"   Sentence count (excluding headings): {sentence_count}")
     
     if sentence_count > 0:
         ratio = filtered_exclamations / sentence_count

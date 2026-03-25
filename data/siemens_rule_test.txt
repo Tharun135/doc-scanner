@@ -1,0 +1,10 @@
+## Installing the SDC Control App
+
+There is a configuration file that should be reviewed before proceeding.
+It is important to verify all settings before you begin.
+Furthermore, you should ensure that all dependencies are available.
+The process is simply a matter of copying files.
+Please click "Save" to store the configuration.
+Therefore, the deployment can't be completed without this step.
+The last version of the software is available for download.
+For that reason, the application has to be restarted manually.
