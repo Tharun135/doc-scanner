@@ -1168,6 +1168,10 @@
         let analysisChart;
         let selectedFiles = [];
         let batchResults = [];
+        let progressQueue = [];
+        let isProcessingQueue = false;
+        let lastProgressUpdate = 0;
+        const MIN_STAGE_DELAY = 600; // Minimum time in ms to show each stage
 
         // WebSocket event handlers (only if socket is available)
         if (socket) {
@@ -1175,9 +1179,50 @@
                 console.log('📡 Progress update received:', data);
                 
                 if (isRealTimeProgress && currentRoomId) {
-                    updateRealTimeProgress(data);
+                    queueProgressUpdate(data);
                 }
             });
+        }
+
+        let lastStageSeen = null;
+
+        async function queueProgressUpdate(data) {
+            progressQueue.push(data);
+            if (!isProcessingQueue) {
+                processNextQueueItem();
+            }
+        }
+
+        async function processNextQueueItem() {
+            if (progressQueue.length === 0) {
+                isProcessingQueue = false;
+                return;
+            }
+
+            isProcessingQueue = true;
+            
+            while (progressQueue.length > 0) {
+                const data = progressQueue.shift();
+                
+                // Intelligent delay: enforce minimum time for NEW STAGES, 
+                // but allow rapid updates for substeps (like sentence increments)
+                const isNewStage = data.stage_name && data.stage_name !== lastStageSeen;
+                const requiredDelay = isNewStage ? MIN_STAGE_DELAY : 50; 
+                
+                const now = Date.now();
+                const timeSinceLast = now - lastProgressUpdate;
+                const delay = Math.max(0, requiredDelay - timeSinceLast);
+                
+                if (delay > 0) {
+                    await new Promise(r => setTimeout(r, delay));
+                }
+                
+                updateRealTimeProgress(data);
+                lastProgressUpdate = Date.now();
+                lastStageSeen = data.stage_name;
+            }
+            
+            isProcessingQueue = false;
         }
         
         // Fallback progress simulation when WebSocket is not available
@@ -1209,7 +1254,7 @@
                         completed: false
                     });
                     currentStage++;
-                    setTimeout(updateProgress, 300); // Faster updates every 300ms since content is already shown
+                    setTimeout(updateProgress, 500); // Slower updates for better visibility
                 } else {
                     // Completion
                     updateRealTimeProgress({
@@ -1241,6 +1286,7 @@
                 const stageIcons = {
                     'Upload': 'fas fa-upload',
                     'Parse': 'fas fa-file-alt', 
+                    'Understanding': 'fas fa-brain',
                     'Extract': 'fas fa-cut',
                     'Analyze': 'fas fa-search',
                     'Report': 'fas fa-chart-line',
@@ -1709,6 +1755,11 @@
 
         function resetProgress() {
             currentStage = 0;
+            progressQueue = [];
+            isProcessingQueue = false;
+            lastStageSeen = null;
+            lastProgressUpdate = 0;
+            
             document.getElementById('progressPercentage').textContent = '0%';
             document.getElementById('progressBar').style.width = '0%';
             
@@ -1902,19 +1953,30 @@
                 uploadCompleted = true;
                 resultData = result;
                 
-                // ✅ VISUAL FINISH: Fill progress bar to 100% if it wasn't already
-                updateRealTimeProgress({
+                // ✅ VISUAL JOURNEY: Ensure we wait for the progress journey to finish before showing results
+                // This prevents jumping to 100% if the backend is very fast
+                console.log('⏳ Processing finished, waiting for progress animation to catch up...');
+                
+                // Add final 100% completion event to queue
+                queueProgressUpdate({
                     percentage: 100,
                     message: "Finalizing report...",
                     stage_name: "Complete",
                     completed: true
                 });
                 
+                // Wait for queue to drain
+                while (isProcessingQueue || progressQueue.length > 0) {
+                    await new Promise(r => setTimeout(r, 100));
+                }
+                
+                console.log('🏁 Progress journey complete, rendering results');
+                
                 // 🚀 DISPLAY RESULTS
                 renderChart(result.report || {}, result.sentences || []);
                 renderContent(result.content || '', result.sentences || []);
                 
-                // ✅ HIDE LOADER: Give user 600ms to see the 100% state before closing
+                // ✅ HIDE LOADER: Short hold at 100% state before closing
                 setTimeout(() => {
                     hideProgressLoader();
                 }, 600);
@@ -3184,8 +3246,8 @@
                 let matchIndex = -1;
                 
                 const htmlSentence = (sentenceData.html_sentence || '').replace(/\u00A0/g, ' ').trim();
-                // Reject extremely long hints from backend
-                if (htmlSentence && htmlSentence.length > 5 && htmlSentence.length < sentenceToFind.length * 3) {
+                // Relaxed: Removed strict length multiplier check to allow complex technical fragments
+                if (htmlSentence && htmlSentence.length > 5) {
                     // Try both direct match and normalized space match
                     const literalIndex = processedContent.replace(/\u00A0/g, ' ').indexOf(htmlSentence, lastFoundIndex);
                     if (literalIndex !== -1) {
@@ -3219,7 +3281,7 @@
                         // Treat punctuation tokens without word boundaries
                         const isPunctuation = /^[.,!?;:]+$/.test(w);
                         if (!isPunctuation) {
-                            if (i === 0 && /^[a-zA-Z0-9]/.test(w)) escaped = '\\b' + escaped;
+                            // Relaxed: Removed leading word boundary to allow matching immediately after tags/symbols
                             if (i === words.length - 1 && /[a-zA-Z0-9]$/.test(w)) escaped = escaped + '\\b';
                         }
                         
@@ -3235,7 +3297,7 @@
                         } else {
                             const isPunctuationMatch = words[i].match(/^[.,!?;:]+$/);
                             const spacer = isPunctuationMatch ? 
-                                '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,20}?' : // Tight for punctuation
+                                '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,40}?' : // Loosened for punctuation (20->40)
                                 '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?';       // Normal for words
                             pattern += spacer + part;
                         }
@@ -3254,8 +3316,9 @@
                         const originalWordCount = words.filter(w => !/^[.,!?;:]+$/.test(w)).length;
                         
                         // SANITY CHECK: The match shouldn't be drastically longer AND word count must be close
-                        const isLengthOk = match[0].length < sentenceToFind.length * 1.8;
-                        const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 4;
+                        // Increased tolerance for technical merged sentences
+                        const isLengthOk = match[0].length < sentenceToFind.length * 2.5;
+                        const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 10;
                         
                         if (isLengthOk && isWordCountOk) {
                             const matchInFull = processedContent.indexOf(match[0], lastFoundIndex);
@@ -3302,8 +3365,9 @@
                         const originalWordCount = words.filter(w => !/^[.,!?;:]+$/.test(w)).length;
                         
                         // Strict WordCount + Length check for global fallback
-                        const isLengthOk = match[0].length < sentenceToFind.length * 1.8;
-                        const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 4;
+                        // Increased tolerance for technical merged sentences
+                        const isLengthOk = match[0].length < sentenceToFind.length * 2.5;
+                        const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 10;
                         
                         if (isLengthOk && isWordCountOk) {
                             const matchInFull = processedContent.indexOf(match[0]);

@@ -107,51 +107,46 @@ def extract_sentences_with_html_preservation(html_content):
         # Get the HTML content of this element
         element_html = str(element)
         
-        # Debug: Check if element_html contains any highlighting markup
-        if 'sentence-highlight' in element_html:
-            logger.warning(f"🔥 INPUT HTML CONTAINS HIGHLIGHTING MARKUP: {element_html[:200]}...")
-        
         # Get the plain text version for analysis with a space separator to preserve word boundaries
-        # across tags like <br/> or between inline elements without spaces.
         element_text = element.get_text(separator=' ')
         
-        # Split the text into sentences while tracking positions
+        # Split the text into sentences
+        raw_fragments = []
         if SPACY_AVAILABLE and nlp:
-            # Use spaCy for better sentence segmentation
             doc = nlp(element_text)
-            for sent in doc.sents:
-                sent_text = sent.text.strip()
-                if sent_text:
-                    # Find corresponding HTML fragment
-                    html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
-                    
-                    # Create sentence object with both HTML and text versions
-                    class EnhancedSentence:
-                        def __init__(self, text, html_fragment, start_char=0, end_char=None):
-                            self.text = text.strip()
-                            self.html_fragment = html_fragment
-                            self.start_char = start_char
-                            self.end_char = end_char if end_char else len(text)
-                    
-                    sentences.append(EnhancedSentence(sent_text, html_fragment))
+            raw_fragments = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
         else:
-            # Fallback: simple sentence splitting when spaCy is not available
-            import re
-            simple_sentences = re.split(r'[.!?]+\s+', element_text)
-            for sent_text in simple_sentences:
-                sent_text = sent_text.strip()
-                if sent_text:
-                    # Find corresponding HTML fragment
-                    html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
-                    
-                    class SimpleSentence:
-                        def __init__(self, text, html_fragment):
-                            self.text = text.strip()
-                            self.html_fragment = html_fragment
-                            self.start_char = 0
-                            self.end_char = len(text)
-                    
-                    sentences.append(SimpleSentence(sent_text, html_fragment))
+            # Fallback for splitting sentences when spacy is not available
+            raw_fragments = [s.strip() for s in re.split(r'[.!?]+\s+', element_text) if s.strip()]
+
+        # 🔗 MERGING STEP: Unify technical fragments (e.g. "Label: Content")
+        merged_fragments = []
+        i = 0
+        while i < len(raw_fragments):
+            current = raw_fragments[i]
+            # Recursively merge if current (or merged result) ends with a colon
+            # This handles: "Header: Subheader: Content"
+            while i + 1 < len(raw_fragments) and re.search(r':\s*$', current):
+                logger.info(f"🔗 MERGING TECHNICAL SPEC: '{current}' + '{raw_fragments[i+1]}'")
+                current = f"{current} {raw_fragments[i+1]}"
+                i += 1
+            merged_fragments.append(current)
+            i += 1
+
+        # Process fragments into sentence objects
+        for sent_text in merged_fragments:
+            # Find corresponding HTML fragment
+            html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
+            
+            # Use a unified sentence class
+            class SentenceObj:
+                def __init__(self, text, html_fragment):
+                    self.text = text.strip()
+                    self.html_fragment = html_fragment
+                    self.start_char = 0
+                    self.end_char = len(text)
+            
+            sentences.append(SentenceObj(sent_text, html_fragment))
     
     return sentences
 
@@ -213,7 +208,7 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
                 html_str = str(temp_element)
                 if sentence_text.strip() in html_str:
                     # Look for the sentence with potential HTML tags
-                    import re
+                # Ensure we handle multiple occurrences of the same text
                     # Create a pattern that allows HTML tags within the sentence
                     # Use words as anchors to find the HTML segment
                     words = sentence_text.strip().split()
@@ -230,18 +225,16 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
                         match = re.search(pattern, html_str, re.IGNORECASE | re.DOTALL)
                         if match:
                             match_text = match.group(0)
-                            # Length-based sanity check (aggressive)
-                            if len(match_text) < len(sentence_text) * 1.5:
-                                # Word-count based check for definitive isolation
+                            # Loosened sanity check to allow for technical merged sentences
+                            # Ratio increased to 2.5x, word delta increased to 10 for complex technical lists
+                            if len(match_text) < len(sentence_text) * 2.5:
                                 try:
-                                    # Use global BeautifulSoup
                                     match_plain = BeautifulSoup(match_text, "html.parser").get_text().split()
-                                    if abs(len(match_plain) - len(words)) <= 2:
+                                    if abs(len(match_plain) - len(words)) <= 10:
                                         logger.info(f"✅ Precise HTML fragment found for sentence {len(words)} words")
                                         return match_text.strip()
                                 except Exception as e:
-                                    logger.warning(f"Word-count check failed but length ok: {e}")
-                                    # Fallback to len-only if soup fails
+                                    logger.warning(f"Word-count check failed: {e}")
                                     return match_text.strip()
                 
                 # Fallback: return the plain text
@@ -262,7 +255,6 @@ def clean_malformed_html_attributes(text):
     Clean malformed HTML attributes that might appear in text content.
     Specifically targets patterns like: ="sentence-highlight" id="content-sentence-0"
     """
-    import re
     
     # Pattern to match malformed HTML attributes starting with ="
     # This catches patterns like: ="sentence-highlight" id="content-sentence-0" data-sentence-index="0">
@@ -820,7 +812,6 @@ def upload_file():
         if 'sentence-highlight' in html_content:
             logger.warning("🧹 Cleaning existing sentence highlighting from uploaded document...")
             # Remove all sentence highlighting spans but keep the content
-            import re
             # Remove opening span tags with sentence-highlight class
             html_content = re.sub(r'<span[^>]*sentence-highlight[^>]*>', '', html_content)
             # Remove closing span tags
