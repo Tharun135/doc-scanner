@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -75,8 +76,10 @@
             height: calc(100vh - 200px);
         }
 
-        .document-section, .feedback-section {
-            overflow: auto;  /* Enable both horizontal and vertical scrolling */
+        .document-section,
+        .feedback-section {
+            overflow: auto;
+            /* Enable both horizontal and vertical scrolling */
             padding: 1rem;
             border-radius: 5px;
             background: rgba(0, 0, 0, 0.2);
@@ -105,9 +108,12 @@
         }
 
         .feedback-item {
-            background: #fffbe6 !important;      /* Light yellow background */
-            color: #333 !important;              /* Dark text for contrast */
-            border-left: 5px solid #ffc107;      /* Emphasize with a yellow border */
+            background: #fffbe6 !important;
+            /* Light yellow background */
+            color: #333 !important;
+            /* Dark text for contrast */
+            border-left: 5px solid #ffc107;
+            /* Emphasize with a yellow border */
             font-weight: 500;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -115,9 +121,10 @@
         }
 
         .feedback-item:hover {
-            background: #ffe066 !important;      /* Vivid yellow on hover */
+            background: #ffe066 !important;
+            /* Vivid yellow on hover */
             transform: translateX(5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         .feedback-item.highlighted {
@@ -127,8 +134,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
         }
 
         .original-content {
@@ -178,7 +192,7 @@
             background-color: #00bcd4 !important;
             color: #ffffff !important;
             font-weight: 700 !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
             box-shadow: 0 0 15px rgba(0, 188, 212, 0.8) !important;
             outline: 1.5px solid #0097a7 !important;
             z-index: 1000 !important;
@@ -205,11 +219,14 @@
             background: #fff;
             color: #222;
         }
-        .document-section th, .document-section td {
+
+        .document-section th,
+        .document-section td {
             border: 1px solid #ccc;
             padding: 8px 12px;
             text-align: left;
         }
+
         .document-section th {
             background: #f7f7f7;
             font-weight: bold;
@@ -238,434 +255,496 @@
             --text-primary: #ffffff;
             background: linear-gradient(135deg, #000000, #1a1a1a);
         }
+
         #loadingOverlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(18,28,58,0.95);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(18, 28, 58, 0.95);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-.progress-container {
-    text-align: center;
-    color: #FFD700;
-    max-width: 500px;
-    width: 90%;
-    padding: 2rem;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-}
+        .progress-container {
+            text-align: center;
+            color: #FFD700;
+            max-width: 500px;
+            width: 90%;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
 
-@keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-10px); }
-}
+        @keyframes float {
 
-/* Completion celebration particles */
-.celebration-particle {
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: #FFD700;
-    border-radius: 50%;
-    pointer-events: none;
-    animation: particle-float 2s ease-out forwards;
-}
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
 
-@keyframes particle-float {
-    0% {
-        opacity: 1;
-        transform: translateY(0) translateX(0) scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: translateY(-100px) translateX(var(--random-x, 0)) scale(0);
-    }
-}
+            50% {
+                transform: translateY(-10px);
+            }
+        }
 
-.progress-header {
-    margin-bottom: 2rem;
-}
+        /* Completion celebration particles */
+        .celebration-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-float 2s ease-out forwards;
+        }
 
-.progress-title {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    background: linear-gradient(45deg, #FFD700, #FFA500);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
+        @keyframes particle-float {
+            0% {
+                opacity: 1;
+                transform: translateY(0) translateX(0) scale(1);
+            }
 
-.progress-subtitle {
-    font-size: 1rem;
-    opacity: 0.8;
-    margin-bottom: 1rem;
-}
+            100% {
+                opacity: 0;
+                transform: translateY(-100px) translateX(var(--random-x, 0)) scale(0);
+            }
+        }
 
-.progress-percentage {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 1.5rem;
-    color: #FFD700;
-    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-}
+        .progress-header {
+            margin-bottom: 2rem;
+        }
 
-.progress-bar-container {
-    width: 100%;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    margin: 1.5rem 0;
-    overflow: hidden;
-    position: relative;
-}
+        .progress-title {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
-.progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #FFD700, #FFA500, #FF6347);
-    border-radius: 4px;
-    transition: width 0.8s ease-in-out;
-    position: relative;
-    overflow: hidden;
-}
+        .progress-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-bottom: 1rem;
+        }
 
-.progress-bar::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    animation: shimmer 2s infinite;
-}
+        .progress-percentage {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            color: #FFD700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        }
 
-@keyframes shimmer {
-    0% { left: -100%; }
-    100% { left: 100%; }
-}
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+            position: relative;
+        }
 
-.stage-info {
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 215, 0, 0.2);
-}
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700, #FFA500, #FF6347);
+            border-radius: 4px;
+            transition: width 0.8s ease-in-out;
+            position: relative;
+            overflow: hidden;
+        }
 
-.stage-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-    animation: pulse 2s infinite;
-}
+        .progress-bar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
 
-.stage-name {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 0.3rem;
-    color: #FFD700;
-}
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
 
-.stage-description {
-    font-size: 0.9rem;
-    opacity: 0.7;
-    line-height: 1.4;
-}
+            100% {
+                left: 100%;
+            }
+        }
 
-.stage-list {
-    display: flex;
-    justify-content: space-between;
-    margin: 1rem 0;
-    padding: 0;
-    list-style: none;
-}
+        .stage-info {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+        }
 
-.stage-item {
-    flex: 1;
-    text-align: center;
-    padding: 0.5rem;
-    position: relative;
-}
+        .stage-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            animation: pulse 2s infinite;
+        }
 
-.stage-item.completed {
-    color: #4CAF50;
-    transform: scale(1.05);
-    transition: all 0.3s ease;
-}
+        .stage-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+            color: #FFD700;
+        }
 
-.stage-item.completed i {
-    color: #4CAF50 !important;
-    animation: completePulse 2s ease-in-out;
-}
+        .stage-description {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            line-height: 1.4;
+        }
 
-.stage-item.active {
-    color: #FFD700;
-    transform: scale(1.15);
-    background: rgba(255, 215, 0, 0.1);
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
+        .stage-list {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+            padding: 0;
+            list-style: none;
+        }
 
-.stage-item.active i {
-    color: #FFD700 !important;
-    animation: activeBounce 1.5s infinite;
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-}
+        .stage-item {
+            flex: 1;
+            text-align: center;
+            padding: 0.5rem;
+            position: relative;
+        }
 
-.stage-item.pending {
-    color: rgba(255, 255, 255, 0.3);
-    transition: all 0.3s ease;
-}
+        .stage-item.completed {
+            color: #4CAF50;
+            transform: scale(1.05);
+            transition: all 0.3s ease;
+        }
 
-.stage-item.pending i {
-    color: rgba(255, 255, 255, 0.3) !important;
-}
+        .stage-item.completed i {
+            color: #4CAF50 !important;
+            animation: completePulse 2s ease-in-out;
+        }
 
-.stage-item i {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    display: block;
-    transition: all 0.3s ease;
-}
+        .stage-item.active {
+            color: #FFD700;
+            transform: scale(1.15);
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-}
+        .stage-item.active i {
+            color: #FFD700 !important;
+            animation: activeBounce 1.5s infinite;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
 
-@keyframes activeBounce {
-    0%, 20%, 50%, 80%, 100% { 
-        transform: translateY(0) scale(1); 
-    }
-    40% { 
-        transform: translateY(-8px) scale(1.1); 
-    }
-    60% { 
-        transform: translateY(-4px) scale(1.05); 
-    }
-}
+        .stage-item.pending {
+            color: rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
 
-@keyframes completePulse {
-    0% { 
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
-    }
-    50% { 
-        transform: scale(1.1);
-        box-shadow: 0 0 0 8px rgba(76, 175, 80, 0.3);
-    }
-    100% { 
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
-    }
-}
+        .stage-item.pending i {
+            color: rgba(255, 255, 255, 0.3) !important;
+        }
 
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
-}
+        .stage-item i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+            transition: all 0.3s ease;
+        }
 
-.eta-info {
-    margin-top: 1rem;
-    font-size: 0.85rem;
-    opacity: 0.6;
-}
+        @keyframes pulse {
 
-.spinner-container {
-    text-align: center;
-    color: #FFD700;
-}
+            0%,
+            100% {
+                transform: scale(1);
+            }
 
-/* Mobile Responsiveness for Progress Loader */
-@media (max-width: 768px) {
-    .progress-container {
-        max-width: 90%;
-        padding: 1.5rem;
-    }
-    
-    .progress-title {
-        font-size: 1.5rem;
-    }
-    
-    .progress-percentage {
-        font-size: 2rem;
-    }
-    
-    .stage-list {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .stage-item {
-        flex: none;
-        min-width: calc(20% - 0.4rem);
-    }
-    
-    .stage-item i {
-        font-size: 1.2rem;
-    }
-    
-    .stage-item div {
-        font-size: 0.65rem !important;
-    }
-    
-    .stage-info {
-        padding: 0.8rem;
-    }
-    
-    .stage-icon {
-        font-size: 1.5rem;
-    }
-    
-    .stage-name {
-        font-size: 1rem;
-    }
-    
-    .stage-description {
-        font-size: 0.8rem;
-    }
-}
+            50% {
+                transform: scale(1.05);
+            }
+        }
 
-@media (max-width: 480px) {
-    .progress-container {
-        padding: 1rem;
-    }
-    
-    .progress-title {
-        font-size: 1.3rem;
-    }
-    
-    .progress-subtitle {
-        font-size: 0.9rem;
-    }
-    
-    .stage-list {
-        margin: 0.5rem 0;
-    }
-    
-    .stage-item {
-        min-width: calc(33.33% - 0.3rem);
-    }
-}
+        @keyframes activeBounce {
 
-/* AI Enhancement Indicators */
-.ai-enhancement-badge {
-    background: linear-gradient(45deg, #6c5ce7, #a29bfe);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    margin-left: 0.5rem;
-}
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0) scale(1);
+            }
 
-.rag-badge {
-    background: linear-gradient(45deg, #00b894, #00cec9);
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    margin-left: 0.5rem;
-    animation: pulse 2s infinite;
-}
+            40% {
+                transform: translateY(-8px) scale(1.1);
+            }
 
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.7); }
-    70% { box-shadow: 0 0 0 8px rgba(0, 184, 148, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 184, 148, 0); }
-}
+            60% {
+                transform: translateY(-4px) scale(1.05);
+            }
+        }
 
-/* NEW: Intelligent AI Analysis Button Styles */
-.btn-gradient-intelligent {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-}
+        @keyframes completePulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
 
-.btn-gradient-intelligent:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
-    color: white;
-}
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 0 8px rgba(76, 175, 80, 0.3);
+            }
 
-.btn-gradient-intelligent:active {
-    transform: translateY(0);
-}
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+            }
+        }
 
-.intelligent-badge {
-    background: linear-gradient(45deg, #ff9a9e, #fad0c4);
-    color: #333;
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 8px;
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba(255, 154, 158, 0.3);
-}
+        @keyframes bounce {
 
-.sources-container {
-    max-height: 200px;
-    overflow-y: auto;
-}
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
 
-.source-item {
-    border-left: 3px solid #00b894;
-    transition: all 0.3s ease;
-}
+            40% {
+                transform: translateY(-10px);
+            }
 
-.source-item:hover {
-    border-left-color: #00cec9;
-    background: rgba(0, 184, 148, 0.1) !important;
-}
+            60% {
+                transform: translateY(-5px);
+            }
+        }
 
-.source-content {
-    font-size: 0.9rem;
-    font-style: italic;
-    margin-top: 0.25rem;
-}
+        .eta-info {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            opacity: 0.6;
+        }
 
-.confidence-indicator {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-left: 0.25rem;
-}
+        .spinner-container {
+            text-align: center;
+            color: #FFD700;
+        }
 
-.confidence-high { background-color: #00b894; }
-.confidence-medium { background-color: #fdcb6e; }
-.confidence-low { background-color: #e17055; }
+        /* Mobile Responsiveness for Progress Loader */
+        @media (max-width: 768px) {
+            .progress-container {
+                max-width: 90%;
+                padding: 1.5rem;
+            }
 
-.suggestion-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    color: white;
-    margin-bottom: 1rem;
-}
-        
+            .progress-title {
+                font-size: 1.5rem;
+            }
+
+            .progress-percentage {
+                font-size: 2rem;
+            }
+
+            .stage-list {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .stage-item {
+                flex: none;
+                min-width: calc(20% - 0.4rem);
+            }
+
+            .stage-item i {
+                font-size: 1.2rem;
+            }
+
+            .stage-item div {
+                font-size: 0.65rem !important;
+            }
+
+            .stage-info {
+                padding: 0.8rem;
+            }
+
+            .stage-icon {
+                font-size: 1.5rem;
+            }
+
+            .stage-name {
+                font-size: 1rem;
+            }
+
+            .stage-description {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .progress-container {
+                padding: 1rem;
+            }
+
+            .progress-title {
+                font-size: 1.3rem;
+            }
+
+            .progress-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .stage-list {
+                margin: 0.5rem 0;
+            }
+
+            .stage-item {
+                min-width: calc(33.33% - 0.3rem);
+            }
+        }
+
+        /* AI Enhancement Indicators */
+        .ai-enhancement-badge {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+        }
+
+        .rag-badge {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-left: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 184, 148, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px rgba(0, 184, 148, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 184, 148, 0);
+            }
+        }
+
+        /* NEW: Intelligent AI Analysis Button Styles */
+        .btn-gradient-intelligent {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-gradient-intelligent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+
+        .btn-gradient-intelligent:active {
+            transform: translateY(0);
+        }
+
+        .intelligent-badge {
+            background: linear-gradient(45deg, #ff9a9e, #fad0c4);
+            color: #333;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(255, 154, 158, 0.3);
+        }
+
+        .sources-container {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .source-item {
+            border-left: 3px solid #00b894;
+            transition: all 0.3s ease;
+        }
+
+        .source-item:hover {
+            border-left-color: #00cec9;
+            background: rgba(0, 184, 148, 0.1) !important;
+        }
+
+        .source-content {
+            font-size: 0.9rem;
+            font-style: italic;
+            margin-top: 0.25rem;
+        }
+
+        .confidence-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 0.25rem;
+        }
+
+        .confidence-high {
+            background-color: #00b894;
+        }
+
+        .confidence-medium {
+            background-color: #fdcb6e;
+        }
+
+        .confidence-low {
+            background-color: #e17055;
+        }
+
+        .suggestion-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            margin-bottom: 1rem;
+        }
+
         /* Tab System Styles */
         .tab-container {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             overflow: hidden;
         }
-        
+
         .tab-header {
             display: flex;
             background: rgba(0, 0, 0, 0.2);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
+
         .tab-button {
             flex: 1;
             padding: 12px 16px;
@@ -676,29 +755,29 @@
             transition: all 0.3s ease;
             font-weight: 500;
         }
-        
+
         .tab-button.active {
             background: rgba(255, 255, 255, 0.1);
             color: var(--text-primary);
             border-bottom: 2px solid var(--secondary-color);
         }
-        
+
         .tab-button:hover {
             background: rgba(255, 255, 255, 0.05);
             color: var(--text-primary);
         }
-        
+
         .tab-content {
             display: none;
             padding: 1rem;
             max-height: 400px;
             overflow-y: auto;
         }
-        
+
         .tab-content.active {
             display: block;
         }
-        
+
         .ai-feedback-icon {
             background: linear-gradient(45deg, #6c5ce7, #a29bfe);
             color: white;
@@ -712,121 +791,133 @@
             cursor: pointer;
             transition: all 0.3s ease;
             margin-left: 8px;
-            flex-shrink: 0;  /* Prevent button from shrinking */
-            z-index: 10;     /* Ensure button is above other elements */
-            pointer-events: auto;  /* Ensure button is clickable */
-            position: relative;  /* Create stacking context */
+            flex-shrink: 0;
+            /* Prevent button from shrinking */
+            z-index: 10;
+            /* Ensure button is above other elements */
+            pointer-events: auto;
+            /* Ensure button is clickable */
+            position: relative;
+            /* Create stacking context */
         }
-        
+
         .ai-feedback-icon:hover {
             background: linear-gradient(45deg, #5a4fcf, #8b7ff7);
             transform: scale(1.15);
             box-shadow: 0 4px 8px rgba(108, 92, 231, 0.4);
         }
-        
+
         .ai-feedback-icon:active {
             transform: scale(1.05);
         }
-        
+
         .ai-feedback-content {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             color: white;
             border-radius: 8px;
             padding: 1rem;
-            margin-bottom: 1rem;        }
-        
+            margin-bottom: 1rem;
+        }
+
         .performance-indicator {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 0.5rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    z-index: 1000;
-}
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
 
         /* Enhanced AI Writing Assistant Dashboard */
         .metric-card {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 0.8rem;
-    text-align: center;
-    transition: all 0.3s ease;
-}
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.8rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
 
-.metric-card:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-2px);
-}
+        .metric-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
 
-.metric-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--highlight-color);
-}
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--highlight-color);
+        }
 
-.metric-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-top: 0.2rem;
-}
+        .metric-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
 
-.quality-score-container {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 0.8rem;
-}
+        .quality-score-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.8rem;
+        }
 
-.quality-score {
-    background: var(--secondary-color);
-    color: white;
-    padding: 0.2rem 0.5rem;
-    border-radius: 12px;
-    font-weight: bold;
-    font-size: 0.9rem;
-}
+        .quality-score {
+            background: var(--secondary-color);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
 
-.quality-progress .progress-bar {
-    background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
-    transition: width 1s ease;
-}
+        .quality-progress .progress-bar {
+            background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+            transition: width 1s ease;
+        }
 
 
-.issues-progress {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 0.8rem;
-}
+        .issues-progress {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.8rem;
+        }
 
-.smart-insights {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    padding: 0.8rem;
-}
+        .smart-insights {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 0.8rem;
+        }
 
-.insight-item {
-    background: rgba(255, 215, 0, 0.1);
-    border-left: 3px solid var(--highlight-color);
-    padding: 0.5rem;
-    margin: 0.3rem 0;
-    border-radius: 4px;
-    font-size: 0.85rem;
-}
+        .insight-item {
+            background: rgba(255, 215, 0, 0.1);
+            border-left: 3px solid var(--highlight-color);
+            padding: 0.5rem;
+            margin: 0.3rem 0;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
 
-.insight-item.active {
-    background: rgba(255, 215, 0, 0.2);
-    animation: pulse 2s ease-in-out infinite;
-}
+        .insight-item.active {
+            background: rgba(255, 215, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
 
-@keyframes pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-}
+        @keyframes pulse {
 
-.file-list-item {
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .file-list-item {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 6px;
@@ -932,6 +1023,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
@@ -945,8 +1037,9 @@
                     <i class="fas fa-brain"></i> RAG Dashboard
                 </a>
                 <!-- Hybrid Intelligence Status -->
-                <div class="btn btn-outline-light btn-sm me-2" id="hybridIntelligenceStatus" title="Hybrid Intelligence Status">
-                    <i class="fas fa-robot"></i> 
+                <div class="btn btn-outline-light btn-sm me-2" id="hybridIntelligenceStatus"
+                    title="Hybrid Intelligence Status">
+                    <i class="fas fa-robot"></i>
                     <span id="hybridStatusText">Checking...</span>
                     <span id="hybridStatusIndicator" class="badge ms-1" style="background-color: #6c757d;">●</span>
                 </div>
@@ -973,15 +1066,22 @@
                             <i class="fas fa-cloud-upload-alt fa-2x mb-2"></i>
                             <p>Drag & Drop files here or</p>
                             <div class="d-flex justify-content-center gap-3 mt-2">
-                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn" onclick="triggerFileUpload()">Browse Files</button>
-                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn" onclick="triggerBatchUpload()" title="Select ZIP files or any file type">Browse Zip/Files</button>
+                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBtn"
+                                    onclick="triggerFileUpload()">Browse Files</button>
+                                <button type="button" class="btn btn-outline-light btn-sm" id="browseBatchBtn"
+                                    onclick="triggerBatchUpload()" title="Select ZIP files or any file type">Browse
+                                    Zip/Files</button>
                             </div>
                         </div>
                         <!-- Inputs moved outside dropzone to prevent destruction on UI reset -->
-                        <input type="file" id="fileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" style="display: none;">
+                        <input type="file" id="fileInput"
+                            accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed"
+                            style="display: none;">
                         <input type="file" id="batchFileInput" style="display: none;">
-                        <input type="file" id="multiFileInput" accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed" multiple style="display: none;">
-                        
+                        <input type="file" id="multiFileInput"
+                            accept=".pdf,.md,.adoc,.docx,.txt,.zip,application/zip,application/x-zip-compressed"
+                            multiple style="display: none;">
+
                         <div id="fileList" class="mb-3" style="display: none;">
                             <h6>Selected Files:</h6>
                             <div id="fileListItems"></div>
@@ -990,10 +1090,11 @@
                             <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
                             <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
-                        
+
                         <!-- NEW: Intelligent AI Analysis Option -->
                         <div class="mt-3">
-                            <button class="btn btn-gradient-intelligent w-100" type="button" id="intelligentAnalysisBtn">
+                            <button class="btn btn-gradient-intelligent w-100" type="button"
+                                id="intelligentAnalysisBtn">
                                 <i class="fas fa-brain"></i> Intelligent AI Analysis
                                 <span class="intelligent-badge">RAG-Powered</span>
                             </button>
@@ -1026,7 +1127,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- Writing Quality Score -->
                     <div class="quality-score-container mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1034,11 +1135,12 @@
                             <span class="quality-score" id="qualityScore">-</span>
                         </div>
                         <div class="progress quality-progress">
-                            <div class="progress-bar" role="progressbar" id="qualityProgressBar" style="width: 0%"></div>
+                            <div class="progress-bar" role="progressbar" id="qualityProgressBar" style="width: 0%">
+                            </div>
                         </div>
                         <small class="text-muted" id="qualityDescription">Upload text to see quality metrics</small>
                     </div>
-                    
+
 
                     <!-- Issues Progress -->
                     <div class="issues-progress mb-3">
@@ -1047,11 +1149,12 @@
                             <span class="badge bg-warning" id="issuesStats">0</span>
                         </div>
                         <div class="progress">
-                            <div class="progress-bar bg-success" role="progressbar" id="issuesProgressBar" style="width: 100%"></div>
+                            <div class="progress-bar bg-success" role="progressbar" id="issuesProgressBar"
+                                style="width: 100%"></div>
                         </div>
                         <small class="text-muted" id="issuesDescription">No issues detected</small>
                     </div>
-                    
+
                     <!-- Smart Insights -->
                     <div class="smart-insights mb-3">
                         <div class="fw-bold mb-2"><i class="fas fa-lightbulb"></i> Smart Insights</div>
@@ -1130,7 +1233,7 @@
         let socketConnected = false;
         let currentRoomId = null;
         let isRealTimeProgress = false;
-        
+
         // Initialize WebSocket with error handling
         try {
             socket = io({
@@ -1138,22 +1241,36 @@
                 timeout: 5000,
                 forceNew: true
             });
-            
+
             socket.on('connect', () => {
                 console.log('✅ WebSocket connected');
-                socketConnected = true;
+
+                // Update the UI status badge
+                const statusText = document.getElementById('hybridStatusText');
+                const statusIndicator = document.getElementById('hybridStatusIndicator');
+
+                if (statusText) statusText.innerText = 'Online';
+                if (statusIndicator) statusIndicator.style.backgroundColor = '#28a745'; // Green
             });
-            
+            // Also add a 'disconnect' listener
+            socket.on('disconnect', () => {
+                const statusText = document.getElementById('hybridStatusText');
+                const statusIndicator = document.getElementById('hybridStatusIndicator');
+
+                if (statusText) statusText.innerText = 'Offline';
+                if (statusIndicator) statusIndicator.style.backgroundColor = '#dc3545'; // Red
+            });
+
             socket.on('disconnect', () => {
                 console.log('⚠️ WebSocket disconnected');
                 socketConnected = false;
             });
-            
+
             socket.on('connect_error', (error) => {
                 console.warn('⚠️ WebSocket connection failed, using fallback mode:', error.message);
                 socketConnected = false;
             });
-            
+
         } catch (error) {
             console.warn('⚠️ WebSocket initialization failed, using fallback mode:', error.message);
             socketConnected = false;
@@ -1177,7 +1294,7 @@
         if (socket) {
             socket.on('progress_update', (data) => {
                 console.log('📡 Progress update received:', data);
-                
+
                 if (isRealTimeProgress && currentRoomId) {
                     queueProgressUpdate(data);
                 }
@@ -1200,37 +1317,37 @@
             }
 
             isProcessingQueue = true;
-            
+
             while (progressQueue.length > 0) {
                 const data = progressQueue.shift();
-                
+
                 // Intelligent delay: enforce minimum time for NEW STAGES, 
                 // but allow rapid updates for substeps (like sentence increments)
                 const isNewStage = data.stage_name && data.stage_name !== lastStageSeen;
-                const requiredDelay = isNewStage ? MIN_STAGE_DELAY : 50; 
-                
+                const requiredDelay = isNewStage ? MIN_STAGE_DELAY : 50;
+
                 const now = Date.now();
                 const timeSinceLast = now - lastProgressUpdate;
                 const delay = Math.max(0, requiredDelay - timeSinceLast);
-                
+
                 if (delay > 0) {
                     await new Promise(r => setTimeout(r, delay));
                 }
-                
+
                 updateRealTimeProgress(data);
                 lastProgressUpdate = Date.now();
                 lastStageSeen = data.stage_name;
             }
-            
+
             isProcessingQueue = false;
         }
-        
+
         // Fallback progress simulation when WebSocket is not available
         function simulateFallbackProgress(roomId, onComplete) {
             if (socketConnected) return; // Only use fallback when socket is not connected
-            
+
             console.log('🔄 Starting fallback progress simulation');
-            
+
             const stages = [
                 { percentage: 5, message: "Receiving and validating your document...", stage_name: "Upload" },
                 { percentage: 15, message: "Extracting text from document format...", stage_name: "Parse" },
@@ -1239,9 +1356,9 @@
                 { percentage: 60, message: "Applying grammar and style rules...", stage_name: "Analyze" },
                 { percentage: 95, message: "Generating final report...", stage_name: "Report" }
             ];
-            
+
             let currentStage = 0;
-            
+
             const updateProgress = () => {
                 if (currentStage < stages.length) {
                     const stage = stages[currentStage];
@@ -1267,44 +1384,44 @@
                     if (onComplete) onComplete();
                 }
             };
-            
+
             setTimeout(updateProgress, 200); // Start after 200ms
         }
 
         function updateRealTimeProgress(data) {
             // Update percentage
             document.getElementById('progressPercentage').textContent = data.percentage + '%';
-            
+
             // Update progress bar
             document.getElementById('progressBar').style.width = data.percentage + '%';
-            
+
             // Update stage info
             if (data.stage_name) {
                 document.getElementById('stageName').textContent = data.stage_name;
-                
+
                 // Update stage icon based on current stage
                 const stageIcons = {
                     'Upload': 'fas fa-upload',
-                    'Parse': 'fas fa-file-alt', 
+                    'Parse': 'fas fa-file-alt',
                     'Understanding': 'fas fa-brain',
                     'Extract': 'fas fa-cut',
                     'Analyze': 'fas fa-search',
                     'Report': 'fas fa-chart-line',
                     'Complete': 'fas fa-check-circle'
                 };
-                
+
                 const iconElement = document.getElementById('stageIcon');
                 if (iconElement && stageIcons[data.stage_name]) {
                     iconElement.innerHTML = `<i class="${stageIcons[data.stage_name]}"></i>`;
                 }
             }
             document.getElementById('stageDescription').textContent = data.message;
-            
+
             // Update stage list icons - light up current and completed stages
             updateStageListIcons(data.percentage, data.stage_name);
-            
+
             // ETA update logic removed (HTML element deleted)
-            
+
             // If completed, update to final state but DON'T hide immediately
             // The hide call will happen in the fetch success handler after rendering
             if (data.completed) {
@@ -1326,16 +1443,16 @@
                 { threshold: 46, index: 4, name: 'Analyze', icon: 'fas fa-search' },
                 { threshold: 95, index: 5, name: 'Report', icon: 'fas fa-chart-line' }
             ];
-            
+
             // Get all stage items
             const stageItems = document.querySelectorAll('.stage-item');
-            
+
             // Reset all stages to pending first
             stageItems.forEach(item => {
                 item.classList.remove('completed', 'active', 'pending');
                 item.classList.add('pending');
             });
-            
+
             // Determine current stage based on percentage
             let currentStageIndex = -1;
             for (let i = 0; i < stageMapping.length; i++) {
@@ -1345,11 +1462,11 @@
                     break;
                 }
             }
-            
+
             // Update stage items
             stageItems.forEach((item, index) => {
                 const stageIcon = item.querySelector('i');
-                
+
                 if (index < currentStageIndex) {
                     // Completed stages - green with check mark
                     item.classList.remove('pending', 'active');
@@ -1376,7 +1493,7 @@
                     }
                 }
             });
-            
+
             // Special case for 100% completion
             if (percentage >= 100) {
                 stageItems.forEach((item, index) => {
@@ -1392,7 +1509,7 @@
         }
 
         // Improved browse handling using direct triggers
-        window.triggerFileUpload = function() {
+        window.triggerFileUpload = function () {
             console.log("🚀 triggerFileUpload called");
             const input = document.getElementById('multiFileInput');
             if (input) {
@@ -1401,8 +1518,8 @@
                 console.error("❌ multiFileInput not found");
             }
         };
-        
-        window.triggerBatchUpload = function() {
+
+        window.triggerBatchUpload = function () {
             console.log("🚀 triggerBatchUpload called");
             const input = document.getElementById('batchFileInput');
             if (input) {
@@ -1411,8 +1528,8 @@
                 console.error("❌ batchFileInput not found");
             }
         };
-        
-        window.handleDropzoneClick = function(e) {
+
+        window.handleDropzoneClick = function (e) {
             // Only trigger if we didn't click one of the internal buttons (to avoid double clicks)
             if (e.target.tagName !== 'BUTTON' && e.target.parentElement.tagName !== 'BUTTON') {
                 triggerFileUpload();
@@ -1435,19 +1552,19 @@
             if (files.length > 0) {
                 // Add new files to existing selection instead of replacing
                 const newFiles = Array.from(files);
-                
+
                 // Filter out duplicates based on file name and size
                 const filteredNewFiles = newFiles.filter(newFile => {
-                    return !selectedFiles.some(existingFile => 
+                    return !selectedFiles.some(existingFile =>
                         existingFile.name === newFile.name && existingFile.size === newFile.size
                     );
                 });
-                
+
                 if (filteredNewFiles.length > 0) {
                     selectedFiles = [...selectedFiles, ...filteredNewFiles];
                     updateFileList();
                 }
-                
+
                 // Clear the input to allow selecting the same files again if needed
                 e.target.value = '';
             }
@@ -1485,14 +1602,14 @@
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 const newFiles = Array.from(files);
-                
+
                 // Filter out duplicates based on file name and size
                 const filteredNewFiles = newFiles.filter(newFile => {
-                    return !selectedFiles.some(existingFile => 
+                    return !selectedFiles.some(existingFile =>
                         existingFile.name === newFile.name && existingFile.size === newFile.size
                     );
                 });
-                
+
                 if (filteredNewFiles.length > 0) {
                     selectedFiles = [...selectedFiles, ...filteredNewFiles];
                     updateFileList();
@@ -1505,7 +1622,7 @@
             const fileList = document.getElementById('fileList');
             const fileListItems = document.getElementById('fileListItems');
             const uploadBtnText = document.getElementById('uploadBtnText');
-            
+
             if (selectedFiles.length === 0) {
                 fileList.style.display = 'none';
                 uploadBtnText.textContent = 'Upload & Analyze';
@@ -1515,14 +1632,14 @@
 
             fileList.style.display = 'block';
             fileListItems.innerHTML = '';
-            
+
             selectedFiles.forEach((file, index) => {
                 const fileItem = document.createElement('div');
                 fileItem.className = 'file-list-item';
-                
+
                 const fileSize = formatFileSize(file.size);
                 const fileIcon = getFileIcon(file.name);
-                
+
                 fileItem.innerHTML = `
                     <div class="file-info">
                         <i class="${fileIcon}"></i>
@@ -1533,7 +1650,7 @@
                         <i class="fas fa-times"></i>
                     </button>
                 `;
-                
+
                 fileListItems.appendChild(fileItem);
             });
 
@@ -1558,7 +1675,7 @@
 
         function removeFile(index) {
             selectedFiles.splice(index, 1);
-            
+
             // If no files left, clear batch UI
             if (selectedFiles.length === 0) {
                 batchResults = [];
@@ -1567,7 +1684,7 @@
                 if (batchProgress) batchProgress.remove();
                 if (batchResultsDiv) batchResultsDiv.remove();
             }
-            
+
             updateFileList();
         }
 
@@ -1578,13 +1695,13 @@
         function clearFiles() {
             selectedFiles = [];
             batchResults = [];
-            
+
             // Remove batch UI elements if they exist
             const batchProgress = document.getElementById('batchProgress');
             const batchResultsDiv = document.getElementById('batchResults');
             if (batchProgress) batchProgress.remove();
             if (batchResultsDiv) batchResultsDiv.remove();
-            
+
             updateFileList();
         }
 
@@ -1670,7 +1787,7 @@
             currentStage = 0;
             startTime = Date.now();
             isRealTimeProgress = useRealTime;
-            
+
             if (!useRealTime) {
                 // Use old simulation method as fallback
                 updateProgress(0);
@@ -1701,21 +1818,21 @@
 
         function updateProgress(stageIndex) {
             if (stageIndex >= progressStages.length) return;
-            
+
             const stage = progressStages[stageIndex];
             currentStage = stageIndex;
-            
+
             // Update percentage
             document.getElementById('progressPercentage').textContent = stage.percentage + '%';
-            
+
             // Update progress bar
             document.getElementById('progressBar').style.width = stage.percentage + '%';
-            
+
             // Update stage info
             document.getElementById('stageIcon').innerHTML = `<i class="${stage.icon}"></i>`;
             document.getElementById('stageName').textContent = stage.name;
             document.getElementById('stageDescription').textContent = stage.description;
-            
+
             // Update stage list
             const stageItems = document.querySelectorAll('.stage-item');
             stageItems.forEach((item, index) => {
@@ -1728,7 +1845,7 @@
                     item.classList.add('pending');
                 }
             });
-            
+
             // Update ETA
             // Removed ETA update
         }
@@ -1738,18 +1855,18 @@
         function startProgressSimulation() {
             let stageIndex = 0;
             const stageDurations = [400, 800, 1500, 5000, 5000, 100]; // milliseconds for each stage
-            
+
             function moveToNextStage() {
                 if (stageIndex < progressStages.length) {
                     updateProgress(stageIndex);
                     stageIndex++;
-                    
+
                     if (stageIndex < progressStages.length) {
                         setTimeout(moveToNextStage, stageDurations[stageIndex - 1]);
                     }
                 }
             }
-            
+
             moveToNextStage();
         }
 
@@ -1759,10 +1876,10 @@
             isProcessingQueue = false;
             lastStageSeen = null;
             lastProgressUpdate = 0;
-            
+
             document.getElementById('progressPercentage').textContent = '0%';
             document.getElementById('progressBar').style.width = '0%';
-            
+
             const stageItems = document.querySelectorAll('.stage-item');
             stageItems.forEach(item => {
                 item.classList.remove('completed', 'active');
@@ -1797,22 +1914,22 @@
                 }
             } catch (error) {
                 console.error('Upload error:', error);
-                
+
                 // Provide more helpful error messages
                 let errorMsg = error.message || 'Unknown error';
                 if (errorMsg.includes('Failed to fetch')) {
                     errorMsg = 'Cannot connect to server. Please check:\n' +
-                              '• Server is running (check terminal)\n' +
-                              '• No firewall blocking localhost:5000\n' +
-                              '• Browser console (F12) for details';
+                        '• Server is running (check terminal)\n' +
+                        '• No firewall blocking localhost:5000\n' +
+                        '• Browser console (F12) for details';
                 } else if (errorMsg.includes('NetworkError')) {
                     errorMsg = 'Network error. Server may have crashed. Check terminal logs.';
                 } else if (errorMsg.includes('timeout')) {
                     errorMsg = 'Upload timed out. Try a smaller file or check server logs.';
                 }
-                
+
                 alert('An error occurred during upload:\n\n' + errorMsg);
-                
+
                 // Ensure progress loader is hidden on error
                 hideProgressLoader();
             } finally {
@@ -1862,11 +1979,11 @@
                 if (response.ok) {
                     // Get JSON response and redirect to intelligent results page
                     const analysisResult = await response.json();
-                    
+
                     if (analysisResult.success) {
                         // Encode the analysis data for URL parameter
                         const analysisDataEncoded = encodeURIComponent(JSON.stringify(analysisResult));
-                        
+
                         // Redirect to the intelligent results page with nice UI
                         window.location.href = `/intelligent_results?data=${analysisDataEncoded}`;
                     } else {
@@ -1891,7 +2008,7 @@
             let uploadCompleted = false;
             let resultData = null;
             let fileRoomId = null;  // Local room ID for this specific file upload
-            
+
             try {
                 // Step 1: Get room ID for progress tracking
                 console.log('🚀 Starting upload session...');
@@ -1901,18 +2018,18 @@
                     console.error('Network error during start_upload:', err);
                     throw new Error('Failed to fetch - Cannot connect to server. Is it running on localhost:5000?');
                 });
-                
+
                 if (!roomResponse.ok) {
                     const errorText = await roomResponse.text();
                     console.error('Server error response:', errorText);
                     throw new Error(`Failed to initialize upload session: ${roomResponse.status} ${roomResponse.statusText}`);
                 }
-                
+
                 const roomData = await roomResponse.json();
                 fileRoomId = roomData.room_id;  // Use local variable instead of global
                 currentRoomId = fileRoomId;  // Update global for UI display
                 console.log('📋 Upload session started:', fileRoomId);
-                
+
                 // Join the progress room for WebSocket updates (if available)
                 if (socket && socketConnected) {
                     console.log('🔌 Using WebSocket for progress tracking');
@@ -1926,7 +2043,7 @@
                         }
                     });
                 }
-                
+
                 // Step 2: Upload file with room ID
                 const formData = new FormData();
                 formData.append('file', file);
@@ -1949,14 +2066,14 @@
 
                 const result = await response.json();
                 console.log('📊 Analysis completed successfully');
-                
+
                 uploadCompleted = true;
                 resultData = result;
-                
+
                 // ✅ VISUAL JOURNEY: Ensure we wait for the progress journey to finish before showing results
                 // This prevents jumping to 100% if the backend is very fast
                 console.log('⏳ Processing finished, waiting for progress animation to catch up...');
-                
+
                 // Add final 100% completion event to queue
                 queueProgressUpdate({
                     percentage: 100,
@@ -1964,25 +2081,25 @@
                     stage_name: "Complete",
                     completed: true
                 });
-                
+
                 // Wait for queue to drain
                 while (isProcessingQueue || progressQueue.length > 0) {
                     await new Promise(r => setTimeout(r, 100));
                 }
-                
+
                 console.log('🏁 Progress journey complete, rendering results');
-                
+
                 // 🚀 DISPLAY RESULTS
                 renderChart(result.report || {}, result.sentences || []);
                 renderContent(result.content || '', result.sentences || []);
-                
+
                 // ✅ HIDE LOADER: Short hold at 100% state before closing
                 setTimeout(() => {
                     hideProgressLoader();
                 }, 600);
-                
+
                 return result;
-                
+
             } catch (error) {
                 console.error('❌ Upload error:', error);
                 hideProgressLoader();
@@ -1992,21 +2109,21 @@
 
         async function processBatchFiles(files) {
             batchResults = [];
-            
+
             // Remove old batch UI elements if they exist
             const oldBatchProgress = document.getElementById('batchProgress');
             const oldBatchResults = document.getElementById('batchResults');
             if (oldBatchProgress) oldBatchProgress.remove();
             if (oldBatchResults) oldBatchResults.remove();
-            
+
             // Hide the main progress loader since we'll show batch-specific progress
             hideProgressLoader();
-            
+
             showBatchProgress();
 
             // Check if there's a zip file
             const zipFile = files.find(file => file.name.toLowerCase().endsWith('.zip'));
-            
+
             if (zipFile) {
                 await processBatchZip(zipFile);
             } else {
@@ -2014,14 +2131,14 @@
             }
 
             showBatchResults();
-            
+
             // Automatically display the first successful file's content
             const firstSuccessfulResult = batchResults.find(result => result.success);
             if (firstSuccessfulResult) {
                 console.log('📊 Auto-displaying first successful result:', firstSuccessfulResult.filename);
                 renderChart(firstSuccessfulResult.report || {}, firstSuccessfulResult.sentences || []);
                 renderContent(firstSuccessfulResult.content || '', firstSuccessfulResult.sentences || []);
-                
+
                 // Add indicator showing which file is currently displayed
                 const fileInfo = document.createElement('div');
                 fileInfo.className = 'alert alert-info';
@@ -2030,12 +2147,12 @@
                     Currently viewing: <strong>${firstSuccessfulResult.filename}</strong> 
                     <small class="text-muted">(Click on other files in the batch results to view them)</small>
                 `;
-                
+
                 const documentContent = document.getElementById('documentContent');
                 const existingInfo = documentContent.querySelector('.alert.alert-info');
                 if (existingInfo) existingInfo.remove();
                 documentContent.insertBefore(fileInfo, documentContent.firstChild.nextSibling);
-                
+
                 // Scroll to dashboard to show results
                 const dashboard = document.getElementById('dashboard');
                 if (dashboard) {
@@ -2043,7 +2160,7 @@
                         dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }, 300);
                 }
-                
+
                 // Highlight the first result as active
                 setTimeout(() => {
                     const firstResultIndex = batchResults.findIndex(result => result.success);
@@ -2073,7 +2190,7 @@
                 if (!response.ok) throw new Error('Batch upload failed');
 
                 const result = await response.json();
-                
+
                 if (result.success && result.results) {
                     batchResults = result.results;
                     updateProgressItem(zipFile.name, 'completed', `Processed ${result.results.length} files`);
@@ -2103,7 +2220,7 @@
                     if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
 
                     const result = await response.json();
-                    
+
                     batchResults.push({
                         filename: file.name,
                         success: true,
@@ -2143,7 +2260,7 @@
                 <h6><i class="fas fa-tasks"></i> Processing Files</h6>
                 <div id="progressItems"></div>
             `;
-            
+
             // Insert after file list
             const fileList = document.getElementById('fileList');
             fileList.parentNode.insertBefore(progressDiv, fileList.nextSibling);
@@ -2171,8 +2288,8 @@
             const item = document.getElementById(safeId);
             if (item) {
                 item.className = `progress-item ${status}`;
-                const icon = status === 'processing' ? 'fa-spinner fa-spin' : 
-                           status === 'completed' ? 'fa-check' : 'fa-times';
+                const icon = status === 'processing' ? 'fa-spinner fa-spin' :
+                    status === 'completed' ? 'fa-check' : 'fa-times';
                 item.querySelector('i').className = `fas ${icon} me-2`;
                 item.querySelector('.status').textContent = message;
             }
@@ -2182,11 +2299,11 @@
             const resultsDiv = document.createElement('div');
             resultsDiv.id = 'batchResults';
             resultsDiv.className = 'batch-results';
-            
+
             const successCount = batchResults.filter(r => r.success).length;
-            const totalIssues = batchResults.reduce((sum, r) => 
+            const totalIssues = batchResults.reduce((sum, r) =>
                 r.success ? sum + (r.summary?.totalIssues || 0) : sum, 0);
-            const avgQuality = batchResults.filter(r => r.success).reduce((sum, r) => 
+            const avgQuality = batchResults.filter(r => r.success).reduce((sum, r) =>
                 sum + (r.summary?.qualityScore || 0), 0) / successCount;
 
             resultsDiv.innerHTML = `
@@ -2231,7 +2348,7 @@
                     console.log(`Clicked on result item ${index}: ${result.filename}`);
                     showBatchResult(index);
                 });
-                
+
                 if (result.success) {
                     const issues = result.summary?.totalIssues || 0;
                     const quality = result.summary?.qualityScore || 0;
@@ -2262,7 +2379,7 @@
                         </div>
                     `;
                 }
-                
+
                 resultItems.appendChild(item);
             });
         }
@@ -2270,15 +2387,15 @@
         function showBatchResult(index) {
             console.log(`📂 showBatchResult called for index ${index}`);
             console.log(`📂 Total batch results: ${batchResults.length}`);
-            
+
             const result = batchResults[index];
             if (!result) {
                 console.error(`❌ No result found at index ${index}`);
                 return;
             }
-            
+
             console.log(`📂 Result:`, result);
-            
+
             if (!result.success) {
                 alert(`Error processing ${result.filename}: ${result.error}`);
                 return;
@@ -2300,12 +2417,12 @@
                 <i class="fas fa-info-circle me-2"></i>
                 Currently viewing: <strong>${result.filename}</strong>
             `;
-            
+
             const documentContent = document.getElementById('documentContent');
             const existingInfo = documentContent.querySelector('.alert.alert-info');
             if (existingInfo) existingInfo.remove();
             documentContent.insertBefore(fileInfo, documentContent.firstChild.nextSibling);
-            
+
             // Scroll to dashboard to show the results
             const dashboard = document.getElementById('dashboard');
             if (dashboard) {
@@ -2317,7 +2434,7 @@
         function renderChart(report, sentences) {
             console.log('🚀 Starting renderChart - immediate execution');
             const startTime = performance.now();
-            
+
             const ctx = document.getElementById('analysisChart').getContext('2d');
 
             if (analysisChart) {
@@ -2348,23 +2465,23 @@
                     }
                 }
             });
-            
+
             // IMMEDIATE FEEDBACK DISPLAY - show issues right away
             displayIssuesImmediately(sentences);
-            
+
             const endTime = performance.now();
             console.log(`✅ renderChart completed in ${(endTime - startTime).toFixed(2)}ms`);
         }
-        
+
         function displayIssuesImmediately(sentences) {
             console.log('🚀 Displaying issues immediately');
             const feedbackContainer = document.getElementById('feedbackContent');
             feedbackContainer.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
-            
+
             sentences.forEach((sentenceData, index) => {
                 const feedback = sentenceData.feedback;
                 const sentence = sentenceData.sentence;
-                
+
                 if (feedback && feedback.length > 0) {
                     renderFeedbackWithAI(feedback, sentence, index);
                 }
@@ -2375,23 +2492,23 @@
         let currentSuggestionId = null;
         let selectedWritingGoals = ['clarity', 'conciseness']; // Default goals (UI removed but backend may still use)
         let aiFeedbackData = {}; // Store AI feedback data by sentence index and feedback type
-        
+
         // Add event delegation for AI feedback icons
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             console.log('🔍 Click detected on:', e.target);
             console.log('🔍 Closest ai-feedback-icon:', e.target.closest('.ai-feedback-icon'));
-            
+
             const button = e.target.closest('.ai-feedback-icon');
             if (button) {
                 e.preventDefault();  // Prevent any default behavior
                 e.stopPropagation();  // Stop event from bubbling
-                
+
                 const sentenceIndex = parseInt(button.getAttribute('data-sentence-index'));
                 const feedback = button.getAttribute('data-feedback');
                 const sentence = button.getAttribute('data-sentence');
                 const fullSuggestion = button.getAttribute('data-full-suggestion') || '';
                 const itemData = button.getAttribute('data-item') || '';
-                
+
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
                 console.log('Raw attributes:', {
@@ -2399,7 +2516,7 @@
                     feedback: feedback,
                     sentence: sentence
                 });
-                
+
                 // Validate we have required data
                 if (isNaN(sentenceIndex) || !feedback || !sentence) {
                     console.error('❌ Missing required data attributes on AI button:', {
@@ -2409,13 +2526,13 @@
                     });
                     return;
                 }
-                
+
                 // Decode attributes
                 const decodedFeedback = decodeURIComponent(feedback);
                 const decodedSentence = decodeURIComponent(sentence);
                 const decodedFullSuggestion = fullSuggestion ? decodeURIComponent(fullSuggestion) : '';
                 const decodedItem = itemData ? JSON.parse(decodeURIComponent(itemData)) : null;
-                
+
                 console.log('Decoded attributes:', {
                     sentenceIndex: sentenceIndex,
                     feedback: decodedFeedback,
@@ -2423,11 +2540,11 @@
                     fullSuggestion: decodedFullSuggestion,
                     item: decodedItem
                 });
-                
+
                 showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem);
             }
         });
-        
+
         // Tab switching functionality
         function switchTab(tabName) {
             // Update tab buttons
@@ -2435,19 +2552,19 @@
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
+
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            
+
             if (tabName === 'feedback') {
                 document.getElementById('feedbackContent').classList.add('active');
             } else if (tabName === 'ai-feedback') {
                 document.getElementById('aiFeedbackContent').classList.add('active');
             }
         }
-        
+
         // Helper function to get user-friendly method label
         function getMethodLabel(method) {
             const methodLabels = {
@@ -2463,24 +2580,24 @@
             };
             return methodLabels[method] || method;
         }
-        
+
         // Function to add AI feedback to the AI tab
         function addToAITab(sentenceIndex, feedback, sentence, aiSuggestion, feedbackKey) {
             const aiFeedbackContainer = document.getElementById('aiFeedbackContent');
-            
+
             // Remove the placeholder if it exists
             const placeholder = aiFeedbackContainer.querySelector('.text-muted.text-center');
             if (placeholder) {
                 placeholder.remove();
             }
-            
+
             // Create AI feedback item with unique identifier
             const aiDiv = document.createElement('div');
             aiDiv.className = 'ai-feedback-content';
             aiDiv.setAttribute('data-sentence-index', sentenceIndex);
             aiDiv.setAttribute('data-feedback-key', feedbackKey);
             aiDiv.setAttribute('data-feedback-type', feedback);
-            
+
             const methodLabel = getMethodLabel(aiSuggestion.method);
             aiDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-3">
@@ -2503,17 +2620,16 @@
                 
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="text-light"><strong>${
-                            aiSuggestion.is_semantic_explanation ? 
-                            '🧠 Semantic Explanation (AI-Assisted)' :
-                            (aiSuggestion.is_reviewer_rationale ?
-                            '📝 Reviewer Rationale' :
-                            (aiSuggestion.is_guidance_only ? 
-                            '📋 Reviewer Guidance' : 
-                            (aiSuggestion.decision_type === 'always_split' ? 
-                            '✅ Suggested Rewrite (Reviewer-Approved)' : 
-                            '💡 Reviewer Feedback')))
-                        }</strong></div>
+                        <div class="text-light"><strong>${aiSuggestion.is_semantic_explanation ?
+                    '🧠 Semantic Explanation (AI-Assisted)' :
+                    (aiSuggestion.is_reviewer_rationale ?
+                        '📝 Reviewer Rationale' :
+                        (aiSuggestion.is_guidance_only ?
+                            '📋 Reviewer Guidance' :
+                            (aiSuggestion.decision_type === 'always_split' ?
+                                '✅ Suggested Rewrite (Reviewer-Approved)' :
+                                '💡 Reviewer Feedback')))
+                }</strong></div>
                         <button class="btn btn-outline-info btn-sm regenerate-btn" 
                                 onclick="regenerateAISuggestion(${sentenceIndex}, \`${feedback.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, \`${sentence.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, '${feedbackKey}')"
                                 title="Get a different suggestion">
@@ -2556,14 +2672,14 @@
                 </div>
                 ` : ''}
             `;
-            
+
             // Insert in order by sentence index, then by feedback type
             const existingItems = Array.from(aiFeedbackContainer.querySelectorAll('.ai-feedback-content[data-sentence-index]'));
             let inserted = false;
-            
+
             for (let existingItem of existingItems) {
                 const existingIndex = parseInt(existingItem.getAttribute('data-sentence-index'));
-                
+
                 if (sentenceIndex < existingIndex) {
                     aiFeedbackContainer.insertBefore(aiDiv, existingItem);
                     inserted = true;
@@ -2587,11 +2703,11 @@
                     break;
                 }
             }
-            
+
             if (!inserted) {
                 aiFeedbackContainer.appendChild(aiDiv);
             }
-            
+
             // Store the AI feedback data with unique key
             aiFeedbackData[feedbackKey] = {
                 feedback: feedback,
@@ -2600,7 +2716,7 @@
                 sentenceIndex: sentenceIndex
             };
         }
-        
+
         // Function to handle AI feedback icon click
         async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null) {
             try {
@@ -2611,17 +2727,17 @@
                     sentence: sentence,
                     fullSuggestion: fullSuggestion
                 });
-                
+
                 // Parameters are already decoded by the click handler
                 const decodedFeedback = feedback;
                 const decodedSentence = sentence;
                 const decodedFullSuggestion = fullSuggestion;
-                
+
                 // Create a unique key for this specific feedback type and sentence combination
                 // Use encodeURIComponent instead of btoa to handle Unicode characters safely
                 const feedbackKey = `${sentenceIndex}_${encodeURIComponent(decodedFeedback).replace(/[^a-zA-Z0-9]/g, '')}`;
                 console.log('Generated feedback key:', feedbackKey);
-                
+
                 // Check if we already have AI feedback for this specific sentence and feedback type
                 if (aiFeedbackData[feedbackKey]) {
                     console.log('Found existing AI feedback, switching to tab');
@@ -2630,19 +2746,19 @@
                     highlightAIFeedback(sentenceIndex, decodedFeedback);
                     return;
                 }
-                
+
                 // Always get a fresh AI suggestion when the AI icon is clicked
                 // Show loading state
                 console.log('Getting fresh AI suggestion...');
                 const loadingToast = showLoadingToast('Getting AI suggestions...');
-                
+
                 // Get AI suggestion
                 console.log('About to call getAISuggestion with:', {
                     feedback: decodedFeedback,
                     sentence: decodedSentence,
                     item: item
                 });
-                
+
                 const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item);
                 console.log('getAISuggestion returned:', aiSuggestion);
                 console.log('🔍 Response structure check:', {
@@ -2653,37 +2769,37 @@
                     hasFallbackGuidance: aiSuggestion?.fallback_guidance,
                     method: aiSuggestion?.method
                 });
-                
+
                 // Hide loading
                 hideLoadingToast(loadingToast);
-                
+
                 // Check if we have a valid response (either AI suggestion or validation fallback guidance)
-                const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' && 
-                                       aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
-                const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' && 
-                                             (aiSuggestion.validation_failed || 
-                                              (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
-                
+                const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' &&
+                    aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
+                const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' &&
+                    (aiSuggestion.validation_failed ||
+                        (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
+
                 if (hasAISuggestion || hasValidationFallback) {
                     console.log('✅ AI response received, adding to tab');
                     console.log('AI suggestion object:', aiSuggestion);
-                    
+
                     // If validation failed, enhance the display
                     if (hasValidationFallback && !hasAISuggestion) {
                         console.log('ℹ️ Validation fallback - showing guidance instead of AI suggestion');
                         // Ensure we have guidance text in ai_answer field
                         if (!aiSuggestion.ai_answer && aiSuggestion.fallback_guidance) {
-                            aiSuggestion.ai_answer = aiSuggestion.fallback_guidance.guidance || 
-                                                     'Consider addressing this issue manually.';
+                            aiSuggestion.ai_answer = aiSuggestion.fallback_guidance.guidance ||
+                                'Consider addressing this issue manually.';
                         }
                     }
-                    
+
                     // Add to AI tab
                     addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion, feedbackKey);
-                    
+
                     // Switch to AI tab
                     switchTabProgrammatically('ai-feedback');
-                    
+
                     // Highlight the new feedback
                     highlightAIFeedback(sentenceIndex, decodedFeedback);
                 } else {
@@ -2703,48 +2819,48 @@
                     });
                     showErrorToast('AI suggestion not available. Check console for details - invalid response structure.');
                 }
-                
+
             } catch (error) {
                 console.error('❌ Error in showAIFeedback:', error);
                 console.error('Error stack:', error.stack);
                 showErrorToast('Error getting AI suggestion: ' + error.message);
             }
         }
-        
+
         // Function to regenerate AI suggestions
         let currentOptionNumber = 1; // Track current option number
-        
+
         async function regenerateAISuggestion(sentenceIndex, feedback, sentence, feedbackKey) {
             try {
                 console.log('=== REGENERATE AI SUGGESTION ===');
                 console.log('Parameters:', { sentenceIndex, feedback, sentence, feedbackKey });
-                
+
                 // Increment option number for next suggestion
                 currentOptionNumber = currentOptionNumber + 1;
                 if (currentOptionNumber > 3) currentOptionNumber = 1; // Cycle back to option 1
-                
+
                 const decodedFeedback = decodeURIComponent(feedback);
                 const decodedSentence = decodeURIComponent(sentence);
-                
+
                 console.log('Getting option number:', currentOptionNumber);
                 const loadingToast = showLoadingToast(`Generating alternative suggestion (Option ${currentOptionNumber})...`);
-                
+
                 // Get AI suggestion with option number
                 const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, currentOptionNumber);
-                
+
                 // Hide loading
                 hideLoadingToast(loadingToast);
-                
+
                 // Check if we have a valid response (either AI suggestion or validation fallback guidance)
-                const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' && 
-                                       aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
-                const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' && 
-                                             (aiSuggestion.validation_failed || 
-                                              (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
-                
+                const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' &&
+                    aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
+                const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' &&
+                    (aiSuggestion.validation_failed ||
+                        (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
+
                 if (hasAISuggestion || hasValidationFallback) {
                     console.log('✅ Regenerated AI response received');
-                    
+
                     // Find and update the existing AI feedback item
                     const existingItem = document.querySelector(`[data-feedback-key="${feedbackKey}"]`);
                     if (existingItem) {
@@ -2761,38 +2877,38 @@
                                 suggestionDiv.innerHTML = `<i class="fas fa-info-circle me-2"></i>${aiSuggestion.ai_answer || 'No specific suggestion available. Please review manually.'}`;
                             }
                         }
-                        
+
                         // Update stored data
                         if (aiFeedbackData[feedbackKey]) {
                             aiFeedbackData[feedbackKey].aiSuggestion = aiSuggestion;
                         }
-                        
+
                         // Highlight the updated feedback
                         highlightAIFeedback(sentenceIndex, decodedFeedback);
-                        
+
                         showSuccessToast(`Generated alternative suggestion (Option ${currentOptionNumber})`);
                     }
                 } else {
                     console.error('❌ Regenerate AI suggestion failed - invalid response');
                     showErrorToast('Could not generate alternative suggestion at this time. Please try again or review manually.');
                 }
-                
+
             } catch (error) {
                 console.error('❌ Error in regenerateAISuggestion:', error);
                 showErrorToast('Error regenerating AI suggestion: ' + error.message);
             }
         }
-        
+
         // Function to switch tab programmatically
         function switchTabProgrammatically(tabName) {
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
-            
+
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
-            
+
             if (tabName === 'feedback') {
                 document.querySelector('.tab-button:first-child').classList.add('active');
                 document.getElementById('feedbackContent').classList.add('active');
@@ -2801,7 +2917,7 @@
                 document.getElementById('aiFeedbackContent').classList.add('active');
             }
         }
-        
+
         // Function to highlight AI feedback item
         function highlightAIFeedback(sentenceIndex, feedbackType = null) {
             // Remove existing highlights
@@ -2809,7 +2925,7 @@
                 item.style.transform = '';
                 item.style.boxShadow = '';
             });
-            
+
             // Find the target item - if feedbackType is provided, find the specific feedback
             let targetItem;
             if (feedbackType) {
@@ -2824,12 +2940,12 @@
                 // If no specific feedback type, just get the first item for this sentence
                 targetItem = document.querySelector(`#aiFeedbackContent [data-sentence-index="${sentenceIndex}"]`);
             }
-            
+
             if (targetItem) {
                 targetItem.style.transform = 'scale(1.02)';
                 targetItem.style.boxShadow = '0 8px 25px rgba(102, 126, 234, 0.4)';
                 targetItem.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                
+
                 // Remove highlight after a few seconds
                 setTimeout(() => {
                     targetItem.style.transform = '';
@@ -2837,7 +2953,7 @@
                 }, 3000);
             }
         }
-        
+
         // Toast notification functions
         function showLoadingToast(message) {
             const toast = document.createElement('div');
@@ -2847,7 +2963,7 @@
                 ${message}
             `;
             document.body.appendChild(toast);
-            
+
             // Add styles if not already present
             if (!document.querySelector('#toast-styles')) {
                 const style = document.createElement('style');
@@ -2877,10 +2993,10 @@
                 `;
                 document.head.appendChild(style);
             }
-            
+
             return toast;
         }
-        
+
         function hideLoadingToast(toast) {
             if (toast && toast.parentNode) {
                 toast.style.animation = 'slideIn 0.3s ease reverse';
@@ -2891,7 +3007,7 @@
                 }, 300);
             }
         }
-        
+
         function showErrorToast(message) {
             const toast = document.createElement('div');
             toast.className = 'toast-notification error';
@@ -2900,16 +3016,16 @@
                 ${message}
             `;
             document.body.appendChild(toast);
-            
+
             setTimeout(() => {
                 hideLoadingToast(toast);
             }, 3000);
         }
-        
+
         // Writing Goals Analytics (simplified - goals now hardcoded)
         function updateWritingGoalsAnalytics() {
             console.log('Selected writing goals:', selectedWritingGoals);
-            
+
             // Update dashboard insights based on selected goals
             updateSmartInsights();
         }
@@ -2918,37 +3034,37 @@
             // Update word and sentence counts
             const wordCount = content.split(/\s+/).filter(word => word.length > 0).length;
             const sentenceCount = sentences.length;
-            
+
             document.getElementById('wordCount').textContent = wordCount;
             document.getElementById('sentenceCount').textContent = sentenceCount;
-            
+
             // Calculate and update quality score
             const issues = sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0);
             const qualityScore = sentenceCount > 0 ? Math.max(0, Math.round((1 - issues / sentenceCount) * 100)) : 0;
-            
+
             document.getElementById('qualityScore').textContent = `${qualityScore}%`;
             document.getElementById('qualityProgressBar').style.width = `${qualityScore}%`;
-            
+
             // Update quality description
             let description = '';
             if (qualityScore >= 90) description = 'Excellent writing quality';
             else if (qualityScore >= 75) description = 'Good writing quality';
             else if (qualityScore >= 60) description = 'Fair writing quality - room for improvement';
             else description = 'Needs improvement';
-            
+
             document.getElementById('qualityDescription').textContent = description;
-            
+
             // Update issues progress
             document.getElementById('issuesStats').textContent = issues;
             document.getElementById('issuesProgressBar').style.width = issues === 0 ? '100%' : `${Math.max(10, 100 - (issues * 10))}%`;
-            document.getElementById('issuesDescription').textContent = 
+            document.getElementById('issuesDescription').textContent =
                 issues === 0 ? 'No issues detected' : `${issues} issue${issues > 1 ? 's' : ''} found`;
         }
 
         function updateSmartInsights() {
             const insights = [];
             const container = document.getElementById('smartInsightsList');
-            
+
             // Generate insights based on selected goals and document state
             if (selectedWritingGoals.includes('clarity')) {
                 insights.push({
@@ -2957,7 +3073,7 @@
                     priority: 'high'
                 });
             }
-            
+
             if (selectedWritingGoals.includes('conciseness')) {
                 insights.push({
                     icon: 'fas fa-compress-alt',
@@ -2965,7 +3081,7 @@
                     priority: 'medium'
                 });
             }
-            
+
             if (selectedWritingGoals.includes('engagement')) {
                 insights.push({
                     icon: 'fas fa-heart',
@@ -2973,7 +3089,7 @@
                     priority: 'medium'
                 });
             }
-            
+
             // Clear and populate insights
             container.innerHTML = '';
             insights.forEach(insight => {
@@ -2982,7 +3098,7 @@
                 div.innerHTML = `<i class="${insight.icon}"></i> ${insight.text}`;
                 container.appendChild(div);
             });
-            
+
             if (insights.length === 0) {
                 container.innerHTML = '<div class="insight-item text-muted"><i class="fas fa-info-circle"></i> Select writing goals to see personalized insights</div>';
             }
@@ -2992,17 +3108,17 @@
         function updateSmartInsightsFromDocument(sentences) {
             const insights = [];
             const container = document.getElementById('smartInsightsList');
-            
+
             // Analyze document patterns
             const totalIssues = sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0);
             const longSentences = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && f.message.includes('Long sentence'))).length;
             const grammarIssues = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && (f.message.includes('grammar') || f.message.includes('verb')))).length;
             const repeatedWords = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && f.message.includes('repeated'))).length;
-            
+
             // Calculate quality score to determine overall message
             const sentenceCount = sentences.length;
             const qualityScore = sentenceCount > 0 ? Math.max(0, Math.round((1 - totalIssues / sentenceCount) * 100)) : 0;
-            
+
             // Generate targeted insights
             if (longSentences > 0 && selectedWritingGoals.includes('conciseness')) {
                 insights.push({
@@ -3011,7 +3127,7 @@
                     priority: 'high'
                 });
             }
-            
+
             if (grammarIssues > 0 && selectedWritingGoals.includes('professionalism')) {
                 insights.push({
                     icon: 'fas fa-check-circle',
@@ -3019,7 +3135,7 @@
                     priority: 'high'
                 });
             }
-            
+
             if (repeatedWords > 0 && selectedWritingGoals.includes('clarity')) {
                 insights.push({
                     icon: 'fas fa-sync-alt',
@@ -3027,7 +3143,7 @@
                     priority: 'medium'
                 });
             }
-            
+
             if (selectedWritingGoals.includes('engagement') && totalIssues < 3) {
                 insights.push({
                     icon: 'fas fa-heart',
@@ -3035,7 +3151,7 @@
                     priority: 'low'
                 });
             }
-            
+
             if (selectedWritingGoals.includes('accessibility') && longSentences > 2) {
                 insights.push({
                     icon: 'fas fa-universal-access',
@@ -3043,21 +3159,21 @@
                     priority: 'medium'
                 });
             }
-            
+
             // Clear and populate insights
             container.innerHTML = '';
             insights.sort((a, b) => {
                 const priorityOrder = { high: 3, medium: 2, low: 1 };
                 return priorityOrder[b.priority] - priorityOrder[a.priority];
             });
-            
+
             insights.forEach(insight => {
                 const div = document.createElement('div');
                 div.className = `insight-item ${insight.priority === 'high' ? 'active' : ''}`;
                 div.innerHTML = `<i class="${insight.icon}"></i> ${insight.text}`;
                 container.appendChild(div);
             });
-            
+
             // Show overall quality message when no specific insights are generated
             if (insights.length === 0) {
                 if (qualityScore < 90) {
@@ -3073,7 +3189,7 @@
             toast.className = 'toast-notification success';
             toast.innerHTML = `<i class="fas fa-check me-2"></i>${message}`;
             document.body.appendChild(toast);
-            
+
             // Add success style if not present
             if (!document.querySelector('#success-toast-style')) {
                 const style = document.createElement('style');
@@ -3081,7 +3197,7 @@
                 style.textContent = `.toast-notification.success { background: #27ae60; }`;
                 document.head.appendChild(style);
             }
-            
+
             setTimeout(() => hideLoadingToast(toast), 3000);
         }
 
@@ -3089,36 +3205,36 @@
         function highlightSentence(sentenceIndex) {
             // Remove any existing highlights
             unhighlightAllSentences();
-            
+
             // Highlight the target sentence in the content
             const contentSentence = document.getElementById(`content-sentence-${sentenceIndex}`);
             if (contentSentence) {
                 contentSentence.classList.add('highlight');
-                
+
                 // Auto-scroll to center the sentence in the Document Content section
                 const documentSection = document.querySelector('.document-section');
                 if (documentSection) {
                     const sentenceRect = contentSentence.getBoundingClientRect();
                     const sectionRect = documentSection.getBoundingClientRect();
-                    
+
                     // Calculate vertical scroll position to center the sentence
                     const sectionCenterY = sectionRect.height / 2;
                     const sentenceRelativeTop = sentenceRect.top - sectionRect.top;
                     const verticalScrollTarget = documentSection.scrollTop + sentenceRelativeTop - sectionCenterY;
-                    
+
                     // Calculate horizontal scroll position to center the sentence
                     const sectionCenterX = sectionRect.width / 2;
                     const sentenceRelativeLeft = sentenceRect.left - sectionRect.left;
                     const horizontalScrollTarget = documentSection.scrollLeft + sentenceRelativeLeft + (sentenceRect.width / 2) - sectionCenterX;
-                    
+
                     // Check if sentence is outside visible area horizontally
-                    const isHorizontallyVisible = sentenceRect.left >= sectionRect.left && 
-                                                 sentenceRect.right <= sectionRect.right;
-                    
+                    const isHorizontallyVisible = sentenceRect.left >= sectionRect.left &&
+                        sentenceRect.right <= sectionRect.right;
+
                     // Check if sentence is outside visible area vertically
-                    const isVerticallyVisible = sentenceRect.top >= sectionRect.top && 
-                                               sentenceRect.bottom <= sectionRect.bottom;
-                    
+                    const isVerticallyVisible = sentenceRect.top >= sectionRect.top &&
+                        sentenceRect.bottom <= sectionRect.bottom;
+
                     // Subtle scroll: only during CLICK, or if definitely obscured
                     if (!isVerticallyVisible || !isHorizontallyVisible) {
                         documentSection.scrollTo({
@@ -3129,58 +3245,58 @@
                     }
                 }
             }
-            
+
             // Also highlight in interactive section if it exists
             const interactiveSentence = document.getElementById(`sentence-${sentenceIndex}`);
             if (interactiveSentence) {
                 interactiveSentence.classList.add('highlight');
             }
         }
-        
+
         function unhighlightAllSentences() {
             // Remove highlights from content sentences
             document.querySelectorAll('.sentence-highlight.highlight').forEach(sentence => {
                 sentence.classList.remove('highlight');
             });
-            
+
             // Remove highlights from feedback cards
             document.querySelectorAll('.feedback-item.highlighted').forEach(item => {
                 item.classList.remove('highlighted');
             });
-            
+
             // Remove highlights from interactive sentences
             document.querySelectorAll('.sentence.highlight').forEach(sentence => {
                 sentence.classList.remove('highlight');
             });
         }
-        
+
         function highlightFeedbackForSentence(sentenceIndex) {
             // Remove any existing feedback highlights
             document.querySelectorAll('.feedback-item.highlighted').forEach(item => {
                 item.classList.remove('highlighted');
             });
-            
+
             // Highlight corresponding feedback items
             document.querySelectorAll(`.feedback-item[data-sentence-index="${sentenceIndex}"]`).forEach(item => {
                 item.classList.add('highlighted');
             });
         }
-        
+
         function scrollToSentence(sentenceIndex) {
             // Try content sentence first, then interactive sentence
             let sentenceElement = document.getElementById(`content-sentence-${sentenceIndex}`);
             if (!sentenceElement) {
                 sentenceElement = document.getElementById(`sentence-${sentenceIndex}`);
             }
-            
+
             if (sentenceElement) {
                 // Use scrollIntoView with both vertical and horizontal centering
-                sentenceElement.scrollIntoView({ 
-                    behavior: 'smooth', 
+                sentenceElement.scrollIntoView({
+                    behavior: 'smooth',
                     block: 'center',
                     inline: 'center'  // This handles horizontal scrolling
                 });
-                
+
                 // Temporarily highlight the sentence
                 highlightSentence(sentenceIndex);
                 setTimeout(() => {
@@ -3209,42 +3325,42 @@
         // Function to add sentence highlighting to HTML content
         function addSentenceHighlighting(content, sentences) {
             let processedContent = content;
-            
+
             // To handle repeated sentences, we track the last position searched
             let lastFoundIndex = 0;
-            
+
             console.log(`🔍 Highlighting ${sentences.length} sentences...`);
-            
+
             sentences.forEach((sentenceData, index) => {
                 let sentenceToFind = sentenceData.sentence.trim();
-                
+
                 // If the sentence in metadata contains HTML tags, get just the text
                 if (sentenceToFind.includes('<') && sentenceToFind.includes('>')) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = sentenceToFind;
                     sentenceToFind = tempDiv.textContent || tempDiv.innerText || "";
                 }
-                
+
                 // Normalize text by replacing &nbsp; and non-breaking spaces with regular spaces
                 sentenceToFind = sentenceToFind.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
-                
+
                 if (!sentenceToFind) return;
 
                 // Determine if this sentence has feedback
-                const hasFeedback = sentenceData.feedback && 
-                                  Array.isArray(sentenceData.feedback) && 
-                                  sentenceData.feedback.length > 0;
+                const hasFeedback = sentenceData.feedback &&
+                    Array.isArray(sentenceData.feedback) &&
+                    sentenceData.feedback.length > 0;
                 const feedbackClass = hasFeedback ? ' has-feedback' : '';
-                
+
                 // Create a robust regex:
                 // Robust word splitting: treat punctuation as separate tokens to match regardless of spacing
                 const words = sentenceToFind.split(/(\s+|(?=[.,!?;:]))/).map(w => w.trim()).filter(w => w.length > 0);
                 if (words.length === 0) return;
-                
+
                 // Step 1: Attempt to find literal HTML-sentence fragment if available
                 let matchText = '';
                 let matchIndex = -1;
-                
+
                 const htmlSentence = (sentenceData.html_sentence || '').replace(/\u00A0/g, ' ').trim();
                 // Relaxed: Removed strict length multiplier check to allow complex technical fragments
                 if (htmlSentence && htmlSentence.length > 5) {
@@ -3252,42 +3368,42 @@
                     const literalIndex = processedContent.replace(/\u00A0/g, ' ').indexOf(htmlSentence, lastFoundIndex);
                     if (literalIndex !== -1) {
                         const originalMatchText = processedContent.substring(literalIndex, literalIndex + htmlSentence.length);
-                        
+
                         // PRECISION FIX: Anchor to the first word to avoid wrapping decorators
                         const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                         const firstWordRegex = new RegExp(firstWord, 'i');
                         const wordStartInMatch = originalMatchText.search(firstWordRegex);
-                        
+
                         if (wordStartInMatch !== -1) {
                             matchIndex = literalIndex + wordStartInMatch;
                             matchText = originalMatchText.substring(wordStartInMatch);
                         }
                     }
                 }
-                
+
                 // Step 2: Fall back to robust regex matching if literal fails
                 if (matchIndex === -1) {
                     // Construct regex pattern with word boundaries and non-greedy spacers
                     const patternParts = words.map((w, i) => {
                         let escaped = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        
+
                         // Handle HTML entities in document source
                         escaped = escaped.replace(/&/g, '(?:&|&amp;|&#38;)')
-                                       .replace(/"/g, '(?:\"|&quot;|&#34;)')
-                                       .replace(/'/g, '(?:\'|&apos;|&#39;)')
-                                       .replace(/</g, '(?:<|&lt;|&#60;)')
-                                       .replace(/>/g, '(?:>|&gt;|&#62;)');
-                        
+                            .replace(/"/g, '(?:\"|&quot;|&#34;)')
+                            .replace(/'/g, '(?:\'|&apos;|&#39;)')
+                            .replace(/</g, '(?:<|&lt;|&#60;)')
+                            .replace(/>/g, '(?:>|&gt;|&#62;)');
+
                         // Treat punctuation tokens without word boundaries
                         const isPunctuation = /^[.,!?;:]+$/.test(w);
                         if (!isPunctuation) {
                             // Relaxed: Removed leading word boundary to allow matching immediately after tags/symbols
                             if (i === words.length - 1 && /[a-zA-Z0-9]$/.test(w)) escaped = escaped + '\\b';
                         }
-                        
+
                         return escaped;
                     });
-                    
+
                     // Join with non-greedy spacer allowing whitespace and tags
                     // CRITICAL: Tighten the spacer for punctuation to avoid 'leapfrogging' over paragraphs
                     let pattern = '';
@@ -3296,47 +3412,47 @@
                             pattern += part;
                         } else {
                             const isPunctuationMatch = words[i].match(/^[.,!?;:]+$/);
-                            const spacer = isPunctuationMatch ? 
+                            const spacer = isPunctuationMatch ?
                                 '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,40}?' : // Loosened for punctuation (20->40)
                                 '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?';       // Normal for words
                             pattern += spacer + part;
                         }
                     });
-                    
+
                     const regex = new RegExp(pattern, 'i');
-                    
+
                     // Search starting from the last found position
                     const restOfContent = processedContent.substring(lastFoundIndex);
                     const match = restOfContent.match(regex);
-                    
+
                     if (match) {
                         // Word count check: Ensure the match doesn't have way more words than the original
                         const matchTextOnly = match[0].replace(/<[^>]*>/g, ' ').trim();
                         const matchWords = matchTextOnly.split(/\s+/).filter(w => w.length > 0);
                         const originalWordCount = words.filter(w => !/^[.,!?;:]+$/.test(w)).length;
-                        
+
                         // SANITY CHECK: The match shouldn't be drastically longer AND word count must be close
                         // Increased tolerance for technical merged sentences
                         const isLengthOk = match[0].length < sentenceToFind.length * 2.5;
                         const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 10;
-                        
+
                         if (isLengthOk && isWordCountOk) {
                             const matchInFull = processedContent.indexOf(match[0], lastFoundIndex);
-                            
+
                             // PRECISION FIX: Find the actual start of the first word to avoid wrapping leading decorators/tags
                             const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                             const firstWordRegex = new RegExp(firstWord, 'i');
                             const wordStartInMatch = match[0].search(firstWordRegex);
-                            
+
                             if (wordStartInMatch !== -1) {
                                 // Adjusted match position and text
                                 const adjustedMatchText = match[0].substring(wordStartInMatch);
                                 const adjustedMatchIndex = matchInFull + wordStartInMatch;
-                                
+
                                 const preceding = processedContent.substring(0, adjustedMatchIndex);
                                 const lastOpen = preceding.lastIndexOf('<span class="sentence-highlight');
                                 const lastClose = preceding.lastIndexOf('</span>');
-                                
+
                                 if (lastOpen <= lastClose) {
                                     matchText = adjustedMatchText;
                                     matchIndex = adjustedMatchIndex;
@@ -3352,41 +3468,41 @@
                         }
                     }
                 }
-                
+
                 // Step 3: Global fallback if not found after last index
                 if (matchIndex === -1) {
                     const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?');
                     const regex = new RegExp(pattern, 'i');
                     const match = processedContent.match(regex);
-                    
+
                     if (match) {
                         const matchTextOnly = match[0].replace(/<[^>]*>/g, ' ').trim();
                         const matchWords = matchTextOnly.split(/\s+/).filter(w => w.length > 0);
                         const originalWordCount = words.filter(w => !/^[.,!?;:]+$/.test(w)).length;
-                        
+
                         // Strict WordCount + Length check for global fallback
                         // Increased tolerance for technical merged sentences
                         const isLengthOk = match[0].length < sentenceToFind.length * 2.5;
                         const isWordCountOk = Math.abs(matchWords.length - originalWordCount) <= 10;
-                        
+
                         if (isLengthOk && isWordCountOk) {
                             const matchInFull = processedContent.indexOf(match[0]);
-                            
+
                             // PRECISION FIX: Anchor global fallback to the first word to avoid wrapping decorators
                             const firstWord = words[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                             const firstWordRegex = new RegExp(firstWord, 'i');
                             const wordStartInMatch = match[0].search(firstWordRegex);
-                            
+
                             if (wordStartInMatch !== -1) {
                                 // Adjusted match position and text
                                 const adjustedMatchText = match[0].substring(wordStartInMatch);
                                 const adjustedMatchIndex = matchInFull + wordStartInMatch;
-                                
+
                                 // Nesting check for global fallback
                                 const preceding = processedContent.substring(0, adjustedMatchIndex);
                                 const lastOpen = preceding.lastIndexOf('<span class="sentence-highlight');
                                 const lastClose = preceding.lastIndexOf('</span>');
-                                
+
                                 if (lastOpen <= lastClose) {
                                     matchText = adjustedMatchText;
                                     matchIndex = adjustedMatchIndex;
@@ -3399,18 +3515,18 @@
                 // Final application:
                 if (matchIndex !== -1 && matchText) {
                     const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchText}</span>`;
-                    
-                    processedContent = processedContent.substring(0, matchIndex) + 
-                                     replacement + 
-                                     processedContent.substring(matchIndex + matchText.length);
-                    
+
+                    processedContent = processedContent.substring(0, matchIndex) +
+                        replacement +
+                        processedContent.substring(matchIndex + matchText.length);
+
                     // Advance search cursor to just after this replacement
                     lastFoundIndex = matchIndex + replacement.length;
                 } else {
                     console.warn(`⚠️ Could not find sentence ${index}:`, sentenceToFind);
                 }
             });
-            
+
             return processedContent;
         }
 
@@ -3439,26 +3555,26 @@
         // Enhanced feedback rendering with AI suggestions and hover highlighting
         async function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
             const feedbackContainer = document.getElementById('feedbackContent');
-            
+
             console.log('renderFeedbackWithAI called with:', feedback, sentence, sentenceIndex);
-            
+
             for (const item of feedback) {
                 const feedbackDiv = document.createElement('div');
                 feedbackDiv.className = 'feedback-item p-3 mb-2 border-start';
                 feedbackDiv.setAttribute('data-sentence-index', sentenceIndex);
                 feedbackDiv.setAttribute('data-order', sentenceIndex); // For sorting
-                
+
                 // Add hover functionality to highlight corresponding sentence
                 feedbackDiv.addEventListener('mouseenter', () => {
                     highlightSentence(sentenceIndex);
                     feedbackDiv.classList.add('highlighted');
                 });
-                
+
                 feedbackDiv.addEventListener('mouseleave', () => {
                     unhighlightAllSentences();
                     feedbackDiv.classList.remove('highlighted');
                 });
-                
+
                 // Add click functionality to scroll to sentence
                 feedbackDiv.addEventListener('click', (e) => {
                     // Don't trigger if clicking on AI icon or its children
@@ -3466,15 +3582,15 @@
                         scrollToSentence(sentenceIndex);
                     }
                 });
-                
+
                 console.log('Processing feedback item:', item);
                 console.log('Creating AI button for sentence:', sentenceIndex);
-                
+
                 // Create wrapper div
                 const wrapperDiv = document.createElement('div');
                 wrapperDiv.className = 'd-flex justify-content-between align-items-start';
                 wrapperDiv.style.gap = '12px';
-                
+
                 // Create content div (left side)
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'flex-grow-1';
@@ -3490,7 +3606,7 @@
                         "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
                     </div>
                 `;
-                
+
                 // Create AI button (right side) - as a proper DOM element
                 const aiButton = document.createElement('button');
                 aiButton.className = 'ai-feedback-icon';
@@ -3503,18 +3619,18 @@
                 aiButton.setAttribute('title', 'Get AI-powered suggestions for this issue');
                 aiButton.setAttribute('aria-label', 'Get AI suggestions');
                 aiButton.innerHTML = '<i class="fas fa-robot"></i>';
-                
+
                 // Assemble the structure
                 wrapperDiv.appendChild(contentDiv);
                 wrapperDiv.appendChild(aiButton);
                 feedbackDiv.appendChild(wrapperDiv);
-                
+
                 console.log('✅ AI button created as DOM element for sentence:', sentenceIndex);
-                
+
                 // Insert in the correct order
                 const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));
                 let inserted = false;
-                
+
                 for (let existingItem of existingItems) {
                     const existingOrder = parseInt(existingItem.getAttribute('data-order'));
                     if (sentenceIndex < existingOrder) {
@@ -3523,7 +3639,7 @@
                         break;
                     }
                 }
-                
+
                 if (!inserted) {
                     feedbackContainer.appendChild(feedbackDiv);
                 }
@@ -3538,7 +3654,7 @@
                 if (documentTypeElement && documentTypeElement.value) {
                     documentType = documentTypeElement.value;
                 }
-                
+
                 console.log('=== AI SUGGESTION DEBUG ===');
                 console.log('Document type used:', documentType);
                 console.log('Raw inputs:', {
@@ -3549,33 +3665,33 @@
                     feedbackLength: feedback?.length,
                     sentenceLength: sentence?.length
                 });
-                
+
                 // Clean and validate required parameters
                 const cleanFeedback = feedback ? feedback.trim() : '';
                 const cleanSentence = sentence ? sentence.trim() : '';
-                
+
                 console.log('Cleaned inputs:', {
                     cleanFeedback: cleanFeedback,
                     cleanSentence: cleanSentence,
                     cleanFeedbackLength: cleanFeedback.length,
                     cleanSentenceLength: cleanSentence.length
                 });
-                
+
                 if (!cleanFeedback) {
-                    console.error('❌ VALIDATION FAILED - Missing required feedback parameter:', { 
-                        feedback: cleanFeedback, 
+                    console.error('❌ VALIDATION FAILED - Missing required feedback parameter:', {
+                        feedback: cleanFeedback,
                         sentence: cleanSentence,
                         feedbackEmpty: !cleanFeedback,
                         sentenceEmpty: !cleanSentence
                     });
                     return null;
                 }
-                
+
                 // Sentence is optional - AI can provide suggestions even without specific sentence context
                 if (!cleanSentence) {
                     console.log('ℹ️ No sentence context provided - AI will use general examples');
                 }
-                
+
                 // Extract just the core issue description from feedback if it contains structured data
                 let coreIssue = cleanFeedback;
                 if (cleanFeedback.includes('Issue:')) {
@@ -3585,7 +3701,7 @@
                         console.log('Extracted core issue:', coreIssue);
                     }
                 }
-                
+
                 const requestData = {
                     feedback: coreIssue,
                     sentence: cleanSentence,
@@ -3593,14 +3709,14 @@
                     writing_goals: selectedWritingGoals || ['clarity', 'conciseness'],
                     option_number: optionNumber
                 };
-                
+
                 // Add full item if available (for rule authority check)
                 if (item) {
                     requestData.issue = item;
                 }
-                
+
                 console.log('Request payload:', requestData);
-                
+
                 const response = await fetch('/ai_suggestion', {
                     method: 'POST',
                     headers: {
@@ -3611,7 +3727,7 @@
 
                 console.log('Response status:', response.status);
                 console.log('Response ok:', response.ok);
-                
+
                 if (response.ok) {
                     const result = await response.json();
                     console.log('✅ AI suggestion HTTP success - analyzing response...');
@@ -3625,9 +3741,9 @@
                     console.log('Suggestion is truthy:', !!result.suggestion);
                     console.log('Has ai_answer:', !!result.ai_answer);
                     console.log('Validation failed flag:', result.validation_failed);
-                    
+
                     // Accept response if it has suggestion OR ai_answer (for validation fallback cases)
-                    if (result && typeof result === 'object' && 
+                    if (result && typeof result === 'object' &&
                         ('suggestion' in result || 'ai_answer' in result)) {
                         console.log('✅ Valid AI response object confirmed - validation passed');
                         return result;
@@ -3660,16 +3776,16 @@
                 'medium': '★★☆',
                 'low': '★☆☆'
             };
-            
+
             document.getElementById('qualityScore').textContent = confidenceMap[suggestion.confidence] || '-';
             document.getElementById('aiMethod').textContent = suggestion.method || '-';
-            
+
             // Show performance indicator
             const indicator = document.createElement('div');
             indicator.className = 'performance-indicator';
             indicator.textContent = `AI Response: ${suggestion.confidence} confidence`;
             document.body.appendChild(indicator);
-            
+
             setTimeout(() => {
                 indicator.remove();
             }, 3000);
@@ -3679,19 +3795,19 @@
         function renderContent(content, sentences) {
             console.log('🚀 Starting renderContent - immediate execution');
             const startTime = performance.now();
-            
+
             const documentContent = document.getElementById('documentContent');
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
-            
+
             // Update dashboard metrics FIRST for immediate visual feedback
             updateDocumentMetrics(content, sentences);
-            
+
             // Clear previous content - ensure no cached malformed data
             documentContent.innerHTML = '<h4>Document Content</h4>';
             feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
             feedbackContent.scrollTop = 0; // Reset scroll position to top
-            
+
             // Reset AI feedback tab
             aiFeedbackContent.innerHTML = `
                 <h5 class="mb-3">AI-Powered Suggestions</h5>
@@ -3701,38 +3817,38 @@
                 </div>
             `;
             aiFeedbackContent.scrollTop = 0; // Reset scroll position to top
-            
+
             // Clear AI feedback data and any cached sentence data
             aiFeedbackData = {};
             window.currentSentences = [];
-            
+
             console.log('Processing sentences:', sentences.length);
             console.log('Sentences data:', sentences);
-            
+
             // Create enhanced HTML content with highlighted sentences
             const originalContentDiv = document.createElement('div');
             originalContentDiv.className = 'original-content mt-3';
-            
+
             // Process the HTML content to add sentence highlighting - OPTIMIZED
             const enhancedContent = addSentenceHighlighting(content, sentences);
             originalContentDiv.innerHTML = enhancedContent;
-            
+
             // Store sentences for reference
             window.currentSentences = sentences;
-            
+
             // Add the enhanced content to document - IMMEDIATE
             documentContent.appendChild(originalContentDiv);
-            
+
             // Add click handlers to the newly created sentence spans - IMMEDIATE
             addContentSentenceHandlers();
-            
+
             const endTime = performance.now();
             console.log(`✅ renderContent completed in ${(endTime - startTime).toFixed(2)}ms`);
-            
+
             // Process sentences with AI enhancement - in document order
             let feedbackCount = 0;
             const feedbackPromises = [];
-            
+
             // Collect all feedback rendering promises to maintain order
             sentences.forEach((sentenceData, index) => {
                 console.log(`Sentence ${index}:`, sentenceData);
@@ -3746,18 +3862,18 @@
                     });
                 }
             });
-            
+
             // Wait for all feedback to be rendered in order
             if (feedbackPromises.length > 0) {
                 // Process feedback in sequential order
                 feedbackPromises.sort((a, b) => a.index - b.index);
-                
+
                 // Execute promises sequentially to maintain order
                 feedbackPromises.reduce((prevPromise, current) => {
                     return prevPromise.then(() => current.promise);
                 }, Promise.resolve());
             }
-            
+
             // If no feedback found, show a message
             if (feedbackCount === 0) {
                 const noIssuesDiv = document.createElement('div');
@@ -3772,7 +3888,7 @@
                     </div>
                 `;
                 feedbackContent.appendChild(noIssuesDiv);
-                
+
                 // Show document quality summary
                 const qualitySummary = document.createElement('div');
                 qualitySummary.className = 'card mt-3';
@@ -3796,7 +3912,7 @@
                 `;
                 feedbackContent.appendChild(qualitySummary);
             }
-            
+
             // Update smart insights based on document analysis
             updateSmartInsightsFromDocument(sentences);
         }
@@ -3806,7 +3922,7 @@
             tempDiv.innerHTML = feedback;
             let cleanText = tempDiv.textContent || tempDiv.innerText || '';
 
-           
+
             const fileExtensions = ['csv', 'pdf', 'docx', 'txt', 'md', 'adoc', 'zip', 'png', 'jpg', 'jpeg', 'gif'];
             const regex = new RegExp(`[^.!?]*(?<!\\b(?:${fileExtensions.join('|')})\\b)[.!?]`, 'g');
             const match = cleanText.match(regex);
@@ -3823,7 +3939,7 @@
         });
 
         // AI Suggestion Modal logic
-        document.body.addEventListener('click', async function(e) {
+        document.body.addEventListener('click', async function (e) {
             // Removed deprecated ai-suggest-btn handler - now using ai-feedback-icon
             if (e.target.id === 'closeSuggestionModal') {
                 document.getElementById('suggestionModal').style.display = 'none';
@@ -3832,31 +3948,31 @@
 
         // Export functionality
         document.getElementById('exportBtn').addEventListener('click', () => {
-    // Gather feedback data
-    let csvContent = "Sentence,Feedback\n";
-    document.querySelectorAll('.sentence').forEach((sentenceSpan) => {
-        const idx = sentenceSpan.dataset.index;
-        // Find all feedback for this sentence
-        const feedbacks = [];
-        document.querySelectorAll(`.feedback-item[data-index="${idx}"]`).forEach(fb => {
-            feedbacks.push(fb.innerText.replace(/"/g, '""'));
-        });
-        if (feedbacks.length) {
-            csvContent += `"${sentenceSpan.innerText.replace(/"/g, '""')}","${feedbacks.join('; ')}"\n`;
-        }
-    });
+            // Gather feedback data
+            let csvContent = "Sentence,Feedback\n";
+            document.querySelectorAll('.sentence').forEach((sentenceSpan) => {
+                const idx = sentenceSpan.dataset.index;
+                // Find all feedback for this sentence
+                const feedbacks = [];
+                document.querySelectorAll(`.feedback-item[data-index="${idx}"]`).forEach(fb => {
+                    feedbacks.push(fb.innerText.replace(/"/g, '""'));
+                });
+                if (feedbacks.length) {
+                    csvContent += `"${sentenceSpan.innerText.replace(/"/g, '""')}","${feedbacks.join('; ')}"\n`;
+                }
+            });
 
-    // Download as CSV
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'feedback_export.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-});
+            // Download as CSV
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'feedback_export.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
 
         // History functionality
         document.getElementById('historyBtn').addEventListener('click', () => {
@@ -3869,7 +3985,7 @@
         });
 
         // Initialize modal event handlers when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initializeModalHandlers();
             checkHybridIntelligenceStatus(); // Check hybrid intelligence on load
         });
@@ -3886,13 +4002,13 @@
         function checkHybridIntelligenceStatus() {
             const statusText = document.getElementById('hybridStatusText');
             const statusIndicator = document.getElementById('hybridStatusIndicator');
-            
+
             if (!statusText || !statusIndicator) return;
-            
+
             // Set checking state
             statusText.textContent = 'Checking...';
             statusIndicator.style.backgroundColor = '#6c757d'; // Gray
-            
+
             fetch('/hybrid_intelligence/status')
                 .then(response => response.json())
                 .then(data => {
@@ -3927,48 +4043,48 @@
 
         function initializeModalHandlers() {
             // Modal close handlers using event delegation
-            document.addEventListener('click', function(e) {
+            document.addEventListener('click', function (e) {
                 // Close history modal
                 if (e.target.id === 'closeHistoryBottomBtn' || e.target.closest('#closeHistoryBottomBtn')) {
                     console.log('Closing history modal');
                     document.getElementById('historyModal').style.display = 'none';
                 }
-                
+
                 // Close settings modal
                 if (e.target.id === 'closeSettingsBottomBtn' || e.target.closest('#closeSettingsBottomBtn')) {
                     console.log('Closing settings modal');
                     document.getElementById('settingsModal').style.display = 'none';
                 }
-                
+
                 // Close modals when clicking outside
                 if (e.target.id === 'historyModal') {
                     document.getElementById('historyModal').style.display = 'none';
                 }
-                
+
                 if (e.target.id === 'settingsModal') {
                     document.getElementById('settingsModal').style.display = 'none';
                 }
-                
+
                 // Settings save handlers
                 if (e.target.id === 'saveSettingsBtn' || e.target.closest('#saveSettingsBtn')) {
                     saveSettings();
                 }
-                
+
                 if (e.target.id === 'resetSettingsBtn' || e.target.closest('#resetSettingsBtn')) {
                     resetSettings();
                 }
             });
-            
+
             // Also add ESC key support
-            document.addEventListener('keydown', function(e) {
+            document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') {
                     const historyModal = document.getElementById('historyModal');
                     const settingsModal = document.getElementById('settingsModal');
-                    
+
                     if (historyModal && historyModal.style.display === 'flex') {
                         historyModal.style.display = 'none';
                     }
-                    
+
                     if (settingsModal && settingsModal.style.display === 'flex') {
                         settingsModal.style.display = 'none';
                     }
@@ -3981,11 +4097,11 @@
             const modal = document.getElementById('historyModal');
             const loading = document.getElementById('historyLoading');
             const content = document.getElementById('historyContent');
-            
+
             modal.style.display = 'flex';
             loading.style.display = 'block';
             content.innerHTML = '';
-            
+
             // Fetch history data
             fetch('/performance_dashboard')
                 .then(response => response.json())
@@ -4002,7 +4118,7 @@
 
         function renderHistoryContent(data) {
             const content = document.getElementById('historyContent');
-            
+
             if (!data || !data.recent_suggestions || data.recent_suggestions.length === 0) {
                 content.innerHTML = `
                     <div style="text-align:center; padding:3rem; color:#666;">
@@ -4042,7 +4158,7 @@
                 const date = new Date(suggestion.timestamp).toLocaleDateString();
                 const time = new Date(suggestion.timestamp).toLocaleTimeString();
                 const rating = suggestion.user_rating ? '★'.repeat(suggestion.user_rating) + '☆'.repeat(5 - suggestion.user_rating) : 'Not rated';
-                
+
                 historyHtml += `
                     <div style="border:1px solid #ddd; border-radius:8px; padding:1rem; margin-bottom:1rem; background:white;">
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
@@ -4076,11 +4192,11 @@
             const modal = document.getElementById('settingsModal');
             const loading = document.getElementById('settingsLoading');
             const content = document.getElementById('settingsContent');
-            
+
             modal.style.display = 'flex';
             loading.style.display = 'block';
             content.innerHTML = '';
-            
+
             // Fetch settings data
             fetch('/ai_config')
                 .then(response => response.json())
@@ -4099,7 +4215,7 @@
             const content = document.getElementById('settingsContent');
             const config = data.suggestion_config || {};
             const flags = data.feature_flags || {};
-            
+
             content.innerHTML = `
                 <div style="margin-bottom:2rem;">
                     <h5 style="color:#2c3e50; margin-bottom:1rem;">
@@ -4191,10 +4307,10 @@
         function saveSettings() {
             const saveBtn = document.getElementById('saveSettingsBtn');
             const originalText = saveBtn.innerHTML;
-            
+
             saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
             saveBtn.disabled = true;
-            
+
             const settings = {
                 suggestion_config: {
                     min_confidence_threshold: parseFloat(document.getElementById('confidenceThreshold').value),
@@ -4209,7 +4325,7 @@
                     learning_from_feedback: document.getElementById('learningFromFeedback').checked
                 }
             };
-            
+
             fetch('/ai_config', {
                 method: 'POST',
                 headers: {
@@ -4217,26 +4333,26 @@
                 },
                 body: JSON.stringify(settings)
             })
-            .then(response => response.json())
-            .then(data => {
-                saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
-                saveBtn.style.background = '#27ae60';
-                setTimeout(() => {
-                    saveBtn.innerHTML = originalText;
-                    saveBtn.style.background = '';
-                    saveBtn.disabled = false;
-                }, 2000);
-            })
-            .catch(error => {
-                saveBtn.innerHTML = '<i class="fas fa-times"></i> Error';
-                saveBtn.style.background = '#e74c3c';
-                setTimeout(() => {
-                    saveBtn.innerHTML = originalText;
-                    saveBtn.style.background = '';
-                    saveBtn.disabled = false;
-                }, 2000);
-                console.error('Error saving settings:', error);
-            });
+                .then(response => response.json())
+                .then(data => {
+                    saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+                    saveBtn.style.background = '#27ae60';
+                    setTimeout(() => {
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.style.background = '';
+                        saveBtn.disabled = false;
+                    }, 2000);
+                })
+                .catch(error => {
+                    saveBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                    saveBtn.style.background = '#e74c3c';
+                    setTimeout(() => {
+                        saveBtn.innerHTML = originalText;
+                        saveBtn.style.background = '';
+                        saveBtn.disabled = false;
+                    }, 2000);
+                    console.error('Error saving settings:', error);
+                });
         }
 
         function resetSettings() {
@@ -4255,7 +4371,7 @@
                         learning_from_feedback: true
                     }
                 };
-                
+
                 fetch('/ai_config', {
                     method: 'POST',
                     headers: {
@@ -4263,79 +4379,84 @@
                     },
                     body: JSON.stringify(settings)
                 })
-                .then(() => {
-                    showSettingsModal(); // Reload the modal with new values
-                })
-                .catch(error => {
-                    console.error('Error resetting settings:', error);
-                });
+                    .then(() => {
+                        showSettingsModal(); // Reload the modal with new values
+                    })
+                    .catch(error => {
+                        console.error('Error resetting settings:', error);
+                    });
             }
         }
     </script>
     <div id="loadingOverlay" style="display:none;">
-      <div class="progress-container">
-        <div class="progress-header">
-          <div class="progress-title">Document Analysis</div>
-          <div class="progress-subtitle">Processing your document with AI-powered insights</div>
+        <div class="progress-container">
+            <div class="progress-header">
+                <div class="progress-title">Document Analysis</div>
+                <div class="progress-subtitle">Processing your document with AI-powered insights</div>
+            </div>
+
+            <div class="progress-percentage" id="progressPercentage">0%</div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+            </div>
+
+            <ul class="stage-list" id="stageList">
+                <li class="stage-item pending" id="stage-0">
+                    <i class="fas fa-upload"></i>
+                    <div style="font-size: 0.75rem;">Upload</div>
+                </li>
+                <li class="stage-item pending" id="stage-1">
+                    <i class="fas fa-file-alt"></i>
+                    <div style="font-size: 0.75rem;">Parse</div>
+                </li>
+                <li class="stage-item pending" id="stage-2">
+                    <i class="fas fa-brain"></i>
+                    <div style="font-size: 0.75rem;">Understand</div>
+                </li>
+                <li class="stage-item pending" id="stage-3">
+                    <i class="fas fa-cut"></i>
+                    <div style="font-size: 0.75rem;">Extract</div>
+                </li>
+                <li class="stage-item pending" id="stage-4">
+                    <i class="fas fa-search"></i>
+                    <div style="font-size: 0.75rem;">Analyze</div>
+                </li>
+                <li class="stage-item pending" id="stage-5">
+                    <i class="fas fa-chart-line"></i>
+                    <div style="font-size: 0.75rem;">Report</div>
+                </li>
+            </ul>
+
+            <div class="stage-info">
+                <div class="stage-icon" id="stageIcon">
+                    <i class="fas fa-upload"></i>
+                </div>
+                <div class="stage-name" id="stageName">Uploading Document</div>
+                <div class="stage-description" id="stageDescription">Receiving and validating your document...</div>
+            </div>
+
+            <!-- ETA Info Removed -->
         </div>
-        
-        <div class="progress-percentage" id="progressPercentage">0%</div>
-        
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="progressBar" style="width: 0%"></div>
-        </div>
-        
-        <ul class="stage-list" id="stageList">
-          <li class="stage-item pending" id="stage-0">
-            <i class="fas fa-upload"></i>
-            <div style="font-size: 0.75rem;">Upload</div>
-          </li>
-          <li class="stage-item pending" id="stage-1">
-            <i class="fas fa-file-alt"></i>
-            <div style="font-size: 0.75rem;">Parse</div>
-          </li>
-          <li class="stage-item pending" id="stage-2">
-            <i class="fas fa-brain"></i>
-            <div style="font-size: 0.75rem;">Understand</div>
-          </li>
-          <li class="stage-item pending" id="stage-3">
-            <i class="fas fa-cut"></i>
-            <div style="font-size: 0.75rem;">Extract</div>
-          </li>
-          <li class="stage-item pending" id="stage-4">
-            <i class="fas fa-search"></i>
-            <div style="font-size: 0.75rem;">Analyze</div>
-          </li>
-          <li class="stage-item pending" id="stage-5">
-            <i class="fas fa-chart-line"></i>
-            <div style="font-size: 0.75rem;">Report</div>
-          </li>
-        </ul>
-        
-        <div class="stage-info">
-          <div class="stage-icon" id="stageIcon">
-            <i class="fas fa-upload"></i>
-          </div>
-          <div class="stage-name" id="stageName">Uploading Document</div>
-          <div class="stage-description" id="stageDescription">Receiving and validating your document...</div>
-        </div>
-        
-        <!-- ETA Info Removed -->
-      </div>
     </div>
-    <div id="suggestionModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:#fff; color:#222; padding:2rem; border-radius:8px; min-width:300px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
-        <button id="closeSuggestionModal" style="position:absolute; top:10px; right:10px;" class="btn btn-sm btn-secondary">&times;</button>
-        <div id="suggestionLoading" style="display:none;">
-        <span class="spinner-border spinner-border-sm"></span> Generating suggestion...
+    <div id="suggestionModal"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#fff; color:#222; padding:2rem; border-radius:8px; min-width:300px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
+            <button id="closeSuggestionModal" style="position:absolute; top:10px; right:10px;"
+                class="btn btn-sm btn-secondary">&times;</button>
+            <div id="suggestionLoading" style="display:none;">
+                <span class="spinner-border spinner-border-sm"></span> Generating suggestion...
+            </div>
+            <div id="suggestionText"></div>
         </div>
-        <div id="suggestionText"></div>
-    </div>
     </div>
 
     <!-- History Modal -->
-    <div id="historyModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
-        <div style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:800px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
+    <div id="historyModal"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:800px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
             <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center;">
                 <i class="fas fa-history" style="margin-right:10px; color:#3498db;"></i>
                 Suggestion History
@@ -4353,8 +4474,10 @@
     </div>
 
     <!-- Settings Modal -->
-    <div id="settingsModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
-        <div style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:700px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
+    <div id="settingsModal"
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+        <div
+            style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:700px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
             <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center;">
                 <i class="fas fa-cog" style="margin-right:10px; color:#e74c3c;"></i>
                 AI Assistant Settings
@@ -4377,4 +4500,5 @@
         </div>
     </div>
 </body>
+
 </html>
