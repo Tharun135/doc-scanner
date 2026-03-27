@@ -1244,7 +1244,21 @@
 
             socket.on('connect', () => {
                 console.log('✅ WebSocket connected');
-                socketConnected = true;
+
+                // Update the UI status badge
+                const statusText = document.getElementById('hybridStatusText');
+                const statusIndicator = document.getElementById('hybridStatusIndicator');
+
+                if (statusText) statusText.innerText = 'Online';
+                if (statusIndicator) statusIndicator.style.backgroundColor = '#28a745'; // Green
+            });
+            // Also add a 'disconnect' listener
+            socket.on('disconnect', () => {
+                const statusText = document.getElementById('hybridStatusText');
+                const statusIndicator = document.getElementById('hybridStatusIndicator');
+
+                if (statusText) statusText.innerText = 'Offline';
+                if (statusIndicator) statusIndicator.style.backgroundColor = '#dc3545'; // Red
             });
 
             socket.on('disconnect', () => {
@@ -3606,20 +3620,12 @@
                 aiButton.setAttribute('aria-label', 'Get AI suggestions');
                 aiButton.innerHTML = '<i class="fas fa-robot"></i>';
 
-                // Add direct click handler to ensure it works
-                aiButton.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🤖 AI button clicked directly!', { sentenceIndex, feedback: item.message });
-                    showAIFeedback(sentenceIndex, item.message, sentence, item.full_suggestion || '');
-                });
-
                 // Assemble the structure
                 wrapperDiv.appendChild(contentDiv);
                 wrapperDiv.appendChild(aiButton);
                 feedbackDiv.appendChild(wrapperDiv);
 
-                console.log('✅ AI button created with click handler for sentence:', sentenceIndex);
+                console.log('✅ AI button created as DOM element for sentence:', sentenceIndex);
 
                 // Insert in the correct order
                 const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));
@@ -3794,22 +3800,10 @@
             const feedbackContent = document.getElementById('feedbackContent');
             const aiFeedbackContent = document.getElementById('aiFeedbackContent');
 
-            // 🚀 IMMEDIATE: Show loading indicator in document content while processing
-            documentContent.innerHTML = `
-                <h4>Document Content</h4>
-                <div class="text-center py-3">
-                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                    <span class="text-muted">Rendering content...</span>
-                </div>
-            `;
-
-            // Force immediate DOM update
-            documentContent.offsetHeight; // Force reflow
-
             // Update dashboard metrics FIRST for immediate visual feedback
             updateDocumentMetrics(content, sentences);
 
-            // Clear previous content - ensure no cached malformed data (immediate, no setTimeout)
+            // Clear previous content - ensure no cached malformed data
             documentContent.innerHTML = '<h4>Document Content</h4>';
             feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
             feedbackContent.scrollTop = 0; // Reset scroll position to top
@@ -3851,14 +3845,7 @@
             const endTime = performance.now();
             console.log(`✅ renderContent completed in ${(endTime - startTime).toFixed(2)}ms`);
 
-            // 🚀 CRITICAL: Hide progress loader immediately after content is visible
-            // Don't wait for feedback to load - content is already on screen!
-            if (typeof hideProgressLoader === 'function') {
-                hideProgressLoader();
-                console.log('⚡ Progress loader hidden - content is now visible');
-            }
-
-            // Process sentences with AI enhancement - in document order (ASYNC, non-blocking)
+            // Process sentences with AI enhancement - in document order
             let feedbackCount = 0;
             const feedbackPromises = [];
 
@@ -3876,7 +3863,7 @@
                 }
             });
 
-            // Process feedback in background (non-blocking)
+            // Wait for all feedback to be rendered in order
             if (feedbackPromises.length > 0) {
                 // Show loading indicator in feedback section
                 const feedbackContent = document.getElementById('feedbackContent');
@@ -3891,16 +3878,14 @@
                 // Process feedback in sequential order (async, in background)
                 feedbackPromises.sort((a, b) => a.index - b.index);
 
-                // Execute promises sequentially but don't block rendering
+                // Execute promises sequentially to maintain order
                 feedbackPromises.reduce((prevPromise, current) => {
                     return prevPromise.then(() => current.promise);
-                }, Promise.resolve()).then(() => {
-                    // Remove loading indicator when done
-                    const loader = feedbackContent.querySelector('.feedback-loading');
-                    if (loader) loader.remove();
-                    console.log('✅ All feedback items rendered');
-                });
-            } else {
+                }, Promise.resolve());
+            }
+
+            // If no feedback found, show a message
+            if (feedbackCount === 0) {
                 const noIssuesDiv = document.createElement('div');
                 noIssuesDiv.className = 'alert alert-success mt-3';
                 noIssuesDiv.innerHTML = `
@@ -3973,107 +3958,30 @@
 
         // Export functionality - Enhanced with more details
         document.getElementById('exportBtn').addEventListener('click', () => {
-            console.log('📥 Export button clicked');
-            console.log('Current sentences data:', window.currentSentences);
-
-            // Gather feedback data with enhanced details
-            let csvContent = "Sentence Number,Sentence Text,Issue Type,Issue Description,AI Suggestion,Word Count\n";
-            let rowCount = 0;
-
-            // Get all sentences with feedback
-            if (window.currentSentences && window.currentSentences.length > 0) {
-                console.log(`Found ${window.currentSentences.length} sentences in window.currentSentences`);
-
-                // Use the stored sentences data for accurate information
-                window.currentSentences.forEach((sentenceData, index) => {
-                    console.log(`Sentence ${index}:`, sentenceData);
-
-                    if (sentenceData.feedback && sentenceData.feedback.length > 0) {
-                        const sentenceText = sentenceData.sentence || '';
-                        const wordCount = sentenceText.split(/\s+/).filter(w => w.length > 0).length;
-
-                        sentenceData.feedback.forEach(feedbackItem => {
-                            const issueType = feedbackItem.rule || feedbackItem.type || 'General';
-                            const issueDescription = feedbackItem.message || feedbackItem.text || '';
-                            const aiSuggestion = feedbackItem.full_suggestion || feedbackItem.suggestion || 'Click AI icon for suggestion';
-
-                            // Escape quotes for CSV format
-                            const escapedSentence = sentenceText.replace(/"/g, '""');
-                            const escapedIssueType = issueType.replace(/"/g, '""');
-                            const escapedDescription = issueDescription.replace(/"/g, '""');
-                            const escapedSuggestion = aiSuggestion.replace(/"/g, '""');
-
-                            csvContent += `${index + 1},"${escapedSentence}","${escapedIssueType}","${escapedDescription}","${escapedSuggestion}",${wordCount}\n`;
-                            rowCount++;
-                        });
-                    }
+            // Gather feedback data
+            let csvContent = "Sentence,Feedback\n";
+            document.querySelectorAll('.sentence').forEach((sentenceSpan) => {
+                const idx = sentenceSpan.dataset.index;
+                // Find all feedback for this sentence
+                const feedbacks = [];
+                document.querySelectorAll(`.feedback-item[data-index="${idx}"]`).forEach(fb => {
+                    feedbacks.push(fb.innerText.replace(/"/g, '""'));
                 });
-
-                console.log(`✅ Exported ${rowCount} feedback items from window.currentSentences`);
-            } else {
-                console.log('⚠️ No window.currentSentences found, trying DOM extraction');
-
-                // Fallback to DOM-based extraction if no sentence data available
-                const feedbackItems = document.querySelectorAll('.feedback-item');
-                console.log(`Found ${feedbackItems.length} feedback items in DOM`);
-
-                feedbackItems.forEach((feedbackItem) => {
-                    const sentenceIndex = feedbackItem.getAttribute('data-sentence-index');
-                    console.log(`Processing feedback item for sentence ${sentenceIndex}:`, feedbackItem);
-
-                    // Find the corresponding sentence
-                    const sentenceSpan = document.querySelector(`.sentence[data-index="${sentenceIndex}"]`);
-                    const sentenceText = sentenceSpan ? sentenceSpan.innerText : 'Sentence not found';
-                    const wordCount = sentenceText.split(/\s+/).filter(w => w.length > 0).length;
-
-                    // Extract feedback text (remove icons and extra elements)
-                    const feedbackTextElements = feedbackItem.querySelectorAll('strong');
-                    let issueDescription = '';
-                    feedbackTextElements.forEach(el => {
-                        if (el.textContent.includes('Issue:')) {
-                            issueDescription = el.parentElement.textContent.replace('📋 Issue:', '').trim();
-                        }
-                    });
-
-                    if (!issueDescription) {
-                        issueDescription = feedbackItem.innerText.split('\n')[1] || feedbackItem.innerText;
-                    }
-
-                    // Escape quotes for CSV format
-                    const escapedSentence = sentenceText.replace(/"/g, '""');
-                    const escapedDescription = issueDescription.replace(/"/g, '""');
-
-                    csvContent += `${parseInt(sentenceIndex) + 1},"${escapedSentence}","General","${escapedDescription}","Click AI icon for suggestion",${wordCount}\n`;
-                    rowCount++;
-                });
-
-                console.log(`✅ Exported ${rowCount} feedback items from DOM`);
-            }
-
-            if (rowCount === 0) {
-                alert('No feedback data to export. Please analyze a document first.');
-                console.log('❌ No data exported - no feedback found');
-                return;
-            }
-
-            // Generate filename with timestamp
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            const filename = `document_feedback_${timestamp}.csv`;
+                if (feedbacks.length) {
+                    csvContent += `"${sentenceSpan.innerText.replace(/"/g, '""')}","${feedbacks.join('; ')}"\n`;
+                }
+            });
 
             // Download as CSV
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([csvContent], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = filename;
+            a.download = 'feedback_export.csv';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
-            // Show success message
-            console.log(`✅ Exported ${rowCount} items to ${filename}`);
-            alert(`Successfully exported ${rowCount} feedback items to ${filename}`);
         });
 
         // History functionality
