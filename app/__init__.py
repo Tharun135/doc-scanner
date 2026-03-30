@@ -1,4 +1,8 @@
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager
+from flask_bcrypt import Bcrypt
+import os
 
 # Make flask_socketio optional
 try:
@@ -18,16 +22,47 @@ except ImportError:
     CORS_AVAILABLE = False
     CORS = None
 
+# Module-level instances so models and auth can import them directly
+db = SQLAlchemy()
+bcrypt = Bcrypt()
+login_manager = LoginManager()
+
+
 def create_app():
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this in production
-    
-    # Enable CORS if available (helps prevent "Failed to fetch" errors)
+
+    # ── Security & DB configuration ──────────────────────────────────────────
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-in-production-random-string')
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'app.db'
+    )
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # ── Initialize extensions ────────────────────────────────────────────────
+    db.init_app(app)
+    bcrypt.init_app(app)
+
+    login_manager.login_view = 'auth.login'
+    login_manager.login_message = 'Please sign in to access Doc Scanner.'
+    login_manager.login_message_category = 'warning'
+    login_manager.init_app(app)
+
+    from .models import User
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
+    # Create all DB tables if they don't exist yet
+    with app.app_context():
+        db.create_all()
+        print("✅ User database initialized (app.db)")
+
+    # ── CORS ─────────────────────────────────────────────────────────────────
     if CORS_AVAILABLE:
         CORS(app)
         print("✅ CORS enabled")
     else:
-        # Manual CORS headers as fallback
         @app.after_request
         def add_cors_headers(response):
             response.headers['Access-Control-Allow-Origin'] = '*'
@@ -35,37 +70,37 @@ def create_app():
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
             return response
         print("✅ Manual CORS headers added")
-    
-    # Configure file upload settings
-    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+
+    # ── File upload settings ─────────────────────────────────────────────────
+    app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
     app.config['UPLOAD_EXTENSIONS'] = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
-    
-    # Initialize SocketIO only if available
+
+    # ── SocketIO ─────────────────────────────────────────────────────────────
     if SOCKETIO_AVAILABLE:
         socketio = SocketIO(app, cors_allowed_origins="*", logger=False, engineio_logger=False)
     else:
         socketio = None
-    
-    # Initialize progress tracker
+
     from .progress_tracker import initialize_progress_tracker
     progress_tracker = initialize_progress_tracker(socketio)
 
+    # ── Blueprints ────────────────────────────────────────────────────────────
+    # Auth blueprint (login / register / logout)
+    from .auth import auth as auth_blueprint
+    app.register_blueprint(auth_blueprint)
+    print("✅ Auth blueprint registered (login/register/logout)")
+
+    # Main scanner blueprint
     from .app import main as main_blueprint
     app.register_blueprint(main_blueprint)
-    
-    # Register RAG blueprint for knowledge base management
+
+    # RAG blueprint
     try:
         from .rag_routes import rag, init_rag_system
         app.register_blueprint(rag)
-        
-        # Don't initialize RAG system at startup to avoid hanging
-        # It will be initialized on first access to RAG routes
         print("✅ RAG system registered - will initialize on first use!")
-        
-        # Start performance optimization in background (optional)
         try:
             import sys
-            import os
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
             from rag_performance_optimizer import preload_rag_dashboard_data
@@ -86,17 +121,17 @@ def create_app():
         except Exception as e2:
             print(f"Error: Could not load minimal RAG system: {e2}")
             print("⚠️ Running without RAG capabilities")
-    
-    # Add SocketIO event handlers only if available
+
+    # ── SocketIO event handlers ───────────────────────────────────────────────
     if SOCKETIO_AVAILABLE and socketio:
         @socketio.on('connect')
         def handle_connect():
             print('Client connected')
-        
+
         @socketio.on('disconnect')
         def handle_disconnect():
             print('Client disconnected')
-        
+
         @socketio.on('join_progress_room')
         def handle_join_room(data):
             from flask_socketio import join_room
@@ -104,32 +139,29 @@ def create_app():
             if room_id:
                 join_room(room_id)
                 print(f'Client joined progress room: {room_id}')
-    
-    # Register agent blueprint
+
+    # ── Agent blueprint ───────────────────────────────────────────────────────
     try:
         import sys
-        import os
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from agent.flask_routes_fixed import agent_bp
         app.register_blueprint(agent_bp)
         print("✅ Agent blueprint loaded successfully!")
     except ImportError as e:
         print(f"Warning: Could not import agent blueprint: {e}")
-        # Create a minimal agent endpoint for testing
         from flask import Blueprint, jsonify, request
         minimal_agent_bp = Blueprint('agent', __name__, url_prefix='/api/agent')
-        
+
         @minimal_agent_bp.route('/status', methods=['GET'])
         def agent_status():
             return jsonify({"status": "running", "message": "Agent is operational"})
-        
+
         @minimal_agent_bp.route('/analyze', methods=['POST'])
         def analyze_document():
             return jsonify({"message": "Analysis complete", "issues": []})
-            
+
         app.register_blueprint(minimal_agent_bp)
         print("✅ Minimal agent endpoints created!")
 
-    # Store socketio instance in app for access in routes
     app.socketio = socketio
     return app

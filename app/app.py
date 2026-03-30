@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template
+from flask_login import login_required, current_user
 import os
 import re
 import subprocess
@@ -545,8 +546,9 @@ def calculate_quality_index(total_sentences, total_errors):
 ############################
 
 @main.route('/')
+@login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', user=current_user)
 
 @main.route('/start_upload', methods=['POST', 'OPTIONS'])
 def start_upload():

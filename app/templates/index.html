@@ -1043,10 +1043,19 @@
                     <span id="hybridStatusText">Checking...</span>
                     <span id="hybridStatusIndicator" class="badge ms-1" style="background-color: #6c757d;">●</span>
                 </div>
-                <div class="form-check form-switch">
+                <div class="form-check form-switch me-3">
                     <input class="form-check-input" type="checkbox" id="darkModeToggle">
                     <label class="form-check-label" for="darkModeToggle">Dark Mode</label>
                 </div>
+                <!-- Logged-in User & Logout -->
+                {% if user and user.is_authenticated %}
+                <span class="text-white-50 me-2" style="font-size:0.875rem;">
+                    <i class="fas fa-user-circle me-1"></i>{{ user.name }}
+                </span>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+                {% endif %}
             </div>
         </div>
     </nav>
