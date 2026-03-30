@@ -1060,6 +1060,17 @@ def upload_file():
             
             progress_tracker.complete_session(room_id, success=True, final_message=final_msg)
 
+        # Save this scan to the current user's private history
+        try:
+            save_scan_history(
+                filename=file.filename,
+                issue_count=total_errors,
+                word_count=len(plain_text.split()),
+                quality_score=int(quality_index) if quality_index else 0
+            )
+        except Exception as hist_err:
+            logger.warning(f"Could not save scan history: {hist_err}")
+
         # Return the result
         return jsonify({
             "content": html_content,  # For display
@@ -1498,8 +1509,53 @@ def performance_dashboard():
         return jsonify(dashboard_data)
         
     except Exception as e:
-        logger.error(f"Error getting dashboard data: {str(e)}")
+        logger.error(f"Error getting dashboard data: {str(e)}") 
         return jsonify({"error": "Failed to get dashboard data"}), 500
+
+
+# ── Per-User Scan History ─────────────────────────────────────────────────────
+
+@main.route('/api/history', methods=['GET'])
+@login_required
+def get_user_history():
+    """Return the scan history for the currently logged-in user only."""
+    try:
+        from .models import ScanHistory
+        scans = (ScanHistory.query
+                 .filter_by(user_id=current_user.id)
+                 .order_by(ScanHistory.scanned_at.desc())
+                 .limit(50)
+                 .all())
+        return jsonify({
+            'scans': [s.to_dict() for s in scans],
+            'total': len(scans)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching user history: {e}")
+        return jsonify({'scans': [], 'total': 0})
+
+
+def save_scan_history(filename, issue_count=0, word_count=0, quality_score=0):
+    """Save a scan record linked to the current user. Safe to call anywhere."""
+    try:
+        from flask_login import current_user as cu
+        if not cu or not cu.is_authenticated:
+            return
+        from .models import ScanHistory
+        from . import db
+        record = ScanHistory(
+            user_id=cu.id,
+            filename=filename or 'Untitled Document',
+            issue_count=int(issue_count),
+            word_count=int(word_count),
+            quality_score=int(quality_score)
+        )
+        db.session.add(record)
+        # Increment analysis_count on User
+        cu.analysis_count = (cu.analysis_count or 0) + 1
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"Error saving scan history: {e}")
 
 @main.route('/rag/stats', methods=['GET'])
 def rag_stats():

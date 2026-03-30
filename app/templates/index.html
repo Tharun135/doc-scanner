@@ -4121,8 +4121,8 @@
             loading.style.display = 'block';
             content.innerHTML = '';
 
-            // Fetch history data
-            fetch('/performance_dashboard')
+            // Fetch THIS user's private history
+            fetch('/api/history')
                 .then(response => response.json())
                 .then(data => {
                     loading.style.display = 'none';
@@ -4130,80 +4130,66 @@
                 })
                 .catch(error => {
                     loading.style.display = 'none';
-                    content.innerHTML = '<div style="color:#e74c3c; text-align:center; padding:2rem;"><i class="fas fa-exclamation-triangle"></i> Failed to load history data.</div>';
+                    content.innerHTML = '<div style="color:#e74c3c; text-align:center; padding:2rem;"><i class="fas fa-exclamation-triangle"></i> Failed to load history.</div>';
                     console.error('Error loading history:', error);
                 });
         }
 
         function renderHistoryContent(data) {
             const content = document.getElementById('historyContent');
+            const scans = data.scans || [];
 
-            if (!data || !data.recent_suggestions || data.recent_suggestions.length === 0) {
+            if (scans.length === 0) {
                 content.innerHTML = `
                     <div style="text-align:center; padding:3rem; color:#666;">
                         <i class="fas fa-history" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i>
-                        <h4>No History Yet</h4>
-                        <p>Start analyzing documents to see your suggestion history here.</p>
+                        <h4>No Scans Yet</h4>
+                        <p>Upload and analyze your first document to see your private history here.</p>
                     </div>
                 `;
                 return;
             }
 
-            // Overview stats
-            const stats = data.overall_stats || {};
-            let overviewHtml = `
-                <div style="margin-bottom:2rem; padding:1rem; background:#f8f9fa; border-radius:8px;">
-                    <h5 style="margin-bottom:1rem; color:#2c3e50;">Overview (Last 30 Days)</h5>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:1rem;">
-                        <div style="text-align:center;">
-                            <div style="font-size:1.5rem; font-weight:bold; color:#3498db;">${stats.total_suggestions || 0}</div>
-                            <div style="font-size:0.9rem; color:#666;">Total Suggestions</div>
-                        </div>
-                        <div style="text-align:center;">
-                            <div style="font-size:1.5rem; font-weight:bold; color:#27ae60;">${stats.avg_rating ? stats.avg_rating.toFixed(1) : 'N/A'}/5</div>
-                            <div style="font-size:0.9rem; color:#666;">Avg Rating</div>
-                        </div>
+            // Summary bar
+            const totalIssues = scans.reduce((s, x) => s + (x.issue_count || 0), 0);
+            const avgQuality = Math.round(scans.reduce((s, x) => s + (x.quality_score || 0), 0) / scans.length);
+            let html = `
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem;">
+                    <div style="text-align:center; background:rgba(52,152,219,0.1); border-radius:8px; padding:0.8rem;">
+                        <div style="font-size:1.4rem; font-weight:700; color:#3498db;">${scans.length}</div>
+                        <div style="font-size:0.85rem; color:#666;">Total Scans</div>
+                    </div>
+                    <div style="text-align:center; background:rgba(231,76,60,0.1); border-radius:8px; padding:0.8rem;">
+                        <div style="font-size:1.4rem; font-weight:700; color:#e74c3c;">${totalIssues}</div>
+                        <div style="font-size:0.85rem; color:#666;">Issues Found</div>
+                    </div>
+                    <div style="text-align:center; background:rgba(39,174,96,0.1); border-radius:8px; padding:0.8rem;">
+                        <div style="font-size:1.4rem; font-weight:700; color:#27ae60;">${avgQuality}%</div>
+                        <div style="font-size:0.85rem; color:#666;">Avg Quality</div>
                     </div>
                 </div>
+                <div style="max-height:420px; overflow-y:auto;">
             `;
 
-            // Recent suggestions
-            let historyHtml = `
-                <h5 style="margin-bottom:1rem; color:#2c3e50;">Recent Suggestions</h5>
-                <div style="max-height:400px; overflow-y:auto;">
-            `;
-
-            data.recent_suggestions.slice(0, 20).forEach((suggestion, index) => {
-                const date = new Date(suggestion.timestamp).toLocaleDateString();
-                const time = new Date(suggestion.timestamp).toLocaleTimeString();
-                const rating = suggestion.user_rating ? '★'.repeat(suggestion.user_rating) + '☆'.repeat(5 - suggestion.user_rating) : 'Not rated';
-
-                historyHtml += `
-                    <div style="border:1px solid #ddd; border-radius:8px; padding:1rem; margin-bottom:1rem; background:white;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
-                            <div style="font-weight:bold; color:#2c3e50;">${suggestion.suggestion_method || 'AI'} Suggestion</div>
-                            <div style="font-size:0.9rem; color:#666;">${date} ${time}</div>
+            scans.forEach(scan => {
+                const qualityColor = scan.quality_score >= 80 ? '#27ae60' : scan.quality_score >= 60 ? '#f39c12' : '#e74c3c';
+                html += `
+                    <div style="border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:1rem; margin-bottom:0.75rem; background:rgba(255,255,255,0.05);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <div style="font-weight:600;"><i class="fas fa-file-alt me-2" style="color:#3498db;"></i>${scan.filename}</div>
+                            <div style="font-size:0.8rem; color:#888;">${scan.scanned_at}</div>
                         </div>
-                        <div style="margin-bottom:0.5rem; color:#666; font-size:0.9rem;">
-                            <strong>Context:</strong> "${(suggestion.sentence_context || '').substring(0, 100)}${suggestion.sentence_context && suggestion.sentence_context.length > 100 ? '...' : ''}"
+                        <div style="display:flex; gap:1rem; font-size:0.85rem; color:#aaa;">
+                            <span><i class="fas fa-font me-1"></i>${scan.word_count.toLocaleString()} words</span>
+                            <span><i class="fas fa-exclamation-circle me-1" style="color:#e74c3c;"></i>${scan.issue_count} issues</span>
+                            <span><i class="fas fa-star me-1" style="color:${qualityColor};"></i><strong style="color:${qualityColor};">${scan.quality_score}%</strong> quality</span>
                         </div>
-                        <div style="margin-bottom:0.5rem; padding:0.5rem; background:#f8f9fa; border-radius:4px; font-size:0.9rem;">
-                            ${suggestion.feedback_text || 'No suggestion text available'}
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.9rem;">
-                            <div style="color:#666;">
-                                <span style="margin-right:1rem;">📄 ${suggestion.document_type || 'Unknown'}</span>
-                                <span>⏱️ ${suggestion.response_time ? (suggestion.response_time * 1000).toFixed(0) + 'ms' : 'N/A'}</span>
-                            </div>
-                            <div style="color:#f39c12;">${rating}</div>
-                        </div>
-                        ${suggestion.user_feedback ? `<div style="margin-top:0.5rem; padding:0.5rem; background:#e8f5e8; border-radius:4px; font-size:0.9rem;"><strong>Your feedback:</strong> ${suggestion.user_feedback}</div>` : ''}
                     </div>
                 `;
             });
 
-            historyHtml += '</div>';
-            content.innerHTML = overviewHtml + historyHtml;
+            html += '</div>';
+            content.innerHTML = html;
         }
 
         // Settings Modal Functions
