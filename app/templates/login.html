@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login – Doc Scanner</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2A3B5A;
+            --secondary: #2A9BAA;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), #3A4D7C, var(--secondary));
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .auth-card {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .brand {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #fff;
+        }
+        .brand i { font-size: 2.5rem; color: #FFD700; }
+        .brand h1 { font-size: 1.6rem; font-weight: 700; margin-top: 0.5rem; }
+        .brand p { font-size: 0.9rem; opacity: 0.7; }
+        .form-label { color: rgba(255,255,255,0.85); font-size: 0.9rem; }
+        .form-control {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+        }
+        .form-control:focus {
+            background: rgba(255,255,255,0.15);
+            border-color: var(--secondary);
+            color: #fff;
+            box-shadow: 0 0 0 3px rgba(42,155,170,0.25);
+        }
+        .form-control::placeholder { color: rgba(255,255,255,0.4); }
+        .btn-login {
+            background: linear-gradient(135deg, var(--secondary), #177E89);
+            border: none;
+            color: #fff;
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            margin-top: 0.5rem;
+        }
+        .btn-login:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(42,155,170,0.5);
+            color: #fff;
+        }
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.9rem;
+        }
+        .auth-footer a { color: #FFD700; text-decoration: none; }
+        .auth-footer a:hover { text-decoration: underline; }
+        .alert { border-radius: 8px; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="brand">
+            <i class="fas fa-check-circle"></i>
+            <h1>Doc Scanner</h1>
+            <p>Sign in to your account</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="mb-3">
+                <label class="form-label" for="email"><i class="fas fa-envelope me-1"></i> Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="password"><i class="fas fa-lock me-1"></i> Password</label>
+                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                <label class="form-check-label text-white-50" for="remember">Keep me signed in</label>
+            </div>
+            <button type="submit" class="btn btn-login">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Don't have an account? <a href="{{ url_for('auth.register') }}">Create one free</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

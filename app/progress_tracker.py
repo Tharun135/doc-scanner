@@ -26,7 +26,7 @@ class ProgressTracker:
         self.socketio = socketio
         self.active_sessions = {}  # session_id -> progress_info
         
-    def start_session(self, room_id: str, total_stages: int = 5) -> str:
+    def start_session(self, room_id: str, total_stages: int = 6) -> str:
         """Start a new progress tracking session."""
         session_info = {
             'room_id': room_id,
@@ -34,11 +34,12 @@ class ProgressTracker:
             'current_stage': 0,
             'start_time': time.time(),
             'stages': [
-                {'name': 'Uploading Document', 'description': 'Receiving and validating your document...', 'percentage': 10},
-                {'name': 'Parsing Content', 'description': 'Extracting text from PDF, DOCX, or Markdown...', 'percentage': 30},
-                {'name': 'Breaking into Sentences', 'description': 'Identifying sentence boundaries and structure...', 'percentage': 50},
-                {'name': 'Analyzing with Rules', 'description': 'Applying grammar, style, and readability rules...', 'percentage': 80},
-                {'name': 'Generating Report', 'description': 'Compiling insights and quality metrics...', 'percentage': 100}
+                {'name': 'Uploading', 'description': 'Receiving and validating your document...', 'percentage': 5},
+                {'name': 'Parsing', 'description': 'Extracting text and structure...', 'percentage': 15},
+                {'name': 'Understanding', 'description': 'Analyzing document structure and goals...', 'percentage': 30},
+                {'name': 'Extracting', 'description': 'Identifying sentence boundaries...', 'percentage': 45},
+                {'name': 'Analyzing', 'description': 'Applying grammar and style rules...', 'percentage': 60},
+                {'name': 'Reporting', 'description': 'Compiling insights and quality metrics...', 'percentage': 95}
             ]
         }
         

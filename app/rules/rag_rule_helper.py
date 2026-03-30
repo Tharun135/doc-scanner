@@ -4,11 +4,21 @@ This module provides a unified interface for rules to use RAG with smart fallbac
 """
 
 import logging
-from services.enrichment import enrich_issues_with_rag
 from typing import Dict, List, Optional, Any, Union
 from bs4 import BeautifulSoup
 import html
 import re
+
+# Import enrichment service with proper relative import
+try:
+    from app.services.enrichment import enrich_issues_with_rag
+except ImportError:
+    try:
+        from ..services.enrichment import enrich_issues_with_rag
+    except ImportError:
+        # Fallback if service not available
+        enrich_issues_with_rag = None
+        logging.warning("RAG enrichment service not available")
 
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
 RAG_ENABLED = True  # Enabled for RAG functionality

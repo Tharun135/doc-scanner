@@ -389,9 +389,9 @@ class SmartRuleEngine:
             },
             {
                 "id": "click_on_fix",
-                "pattern": r"\bclick on\b",
+                "pattern": r"\bclick\s+on\b",
                 "replacement": "click",
-                "explanation": "Simplified UI instruction",
+                "explanation": "Simplified UI instruction (removed 'on')",
                 "category": "ui_clarity"
             },
             {
@@ -419,21 +419,35 @@ class SmartRuleEngine:
     
     def apply_smart_rules(self, sentence: str) -> Optional[Dict[str, Any]]:
         """Apply smart rules and return first match with details."""
+        logger.info(f"🔍 Checking {len(self.rules)} smart rules against: '{sentence}'")
+        
         for rule in self.rules:
             pattern = rule["pattern"]
             if re.search(pattern, sentence, re.IGNORECASE):
+                # Perform case-sensitive replacement to preserve original capitalization
                 suggestion = re.sub(pattern, rule["replacement"], sentence, flags=re.IGNORECASE)
+                
+                logger.info(f"✅ Rule '{rule['id']}' matched!")
+                logger.info(f"   Pattern: {pattern}")
+                logger.info(f"   Original: {sentence}")
+                logger.info(f"   Suggestion: {suggestion}")
+                
+                # If suggestion is identical to original, skip this rule
+                if suggestion == sentence:
+                    logger.warning(f"⚠️ Rule '{rule['id']}' produced no change, skipping")
+                    continue
                 
                 return {
                     "suggestion": suggestion,
                     "ai_answer": f"{rule['explanation']}. This improves {rule['category']} in technical documentation.",
                     "confidence": "high",
                     "method": "smart_rule_based",
-                    "sources": [f"Rule: {rule['id']}"],
+                    "sources": [f"Rule: {rule['id']}", "Siemens Technical Writing Guidelines"],
                     "original_sentence": sentence,
                     "success": True
                 }
         
+        logger.info("❌ No smart rule matched")
         return None
 
 
@@ -463,13 +477,22 @@ class EnhancedAISuggestionSystem:
         
         Flow: Smart Rules → RAG Context → LLM → Quality Filter
         """
-        logger.info(f"Processing: '{sentence[:50]}...'")
+        logger.info(f"🔍 Enhanced AI Processing: '{sentence[:50]}...'")
+        logger.info(f"📋 Feedback: '{feedback_text}'")
         
         # Layer 1: Smart Rule Engine
         rule_suggestion = self.rule_engine.apply_smart_rules(sentence)
         if rule_suggestion:
+            logger.info(f"✅ Smart rule match: {rule_suggestion.get('suggestion', '')[:50]}")
             validated = self._validate_if_enabled(sentence, rule_suggestion["suggestion"])
             if validated:
+                rule_suggestion["suggestion"] = validated
+                logger.info("✅ Using smart rule suggestion (validated)")
+                return rule_suggestion
+            else:
+                logger.warning("⚠️ Smart rule suggestion failed validation")
+        else:
+            logger.info("⚠️ No smart rule match found")
                 rule_suggestion["suggestion"] = validated
                 logger.info("✅ Using smart rule suggestion")
                 return rule_suggestion

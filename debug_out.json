@@ -1,0 +1,337 @@
+{
+  "content": "<p>## Installing the SDC Control App</p><p>There is a configuration file that should be reviewed before proceeding.\nIt is important to verify all settings before you begin.\nFurthermore, you should ensure that all dependencies are available.\nThe process is simply a matter of copying files.\nPlease click \"Save\" to store the configuration.\nTherefore, the deployment can't be completed without this step.\nThe last version of the software is available for download.\nFor that reason, the application has to be restarted manually.\n</p>",
+  "document_review": {
+    "analysis_scope": "minimal",
+    "blocking": true,
+    "document_type": "procedure",
+    "guidance": "As a reviewer, I need to understand the document's purpose before I can provide detailed feedback.",
+    "issues": [
+      {
+        "id": "DOC_GOAL_UNCLEAR",
+        "message": "As a user, I'm not sure what this document helps me achieve.",
+        "reviewer_question": "What am I supposed to learn or do after reading this?",
+        "section": null,
+        "severity": "blocking"
+      },
+      {
+        "id": "MISSING_OUTCOME",
+        "message": "As a user, I don't know how to tell if I succeeded.",
+        "reviewer_question": "How do I know this worked?",
+        "section": null,
+        "severity": "minor"
+      },
+      {
+        "id": "NO_NUMBERED_STEPS",
+        "message": "As a user, I can't follow a clear sequence of actions.",
+        "reviewer_question": "What order should I do things in?",
+        "section": null,
+        "severity": "major"
+      }
+    ]
+  },
+  "report": {
+    "analysis_scope": "minimal",
+    "analyzed_sentences": 9,
+    "avgQualityScore": 0,
+    "document_type": "procedure",
+    "message": "Content analysis completed.",
+    "totalSentences": 9,
+    "totalWords": 81
+  },
+  "room_id": null,
+  "sentences": [
+    {
+      "analysis_skipped": false,
+      "end": 33,
+      "feedback": [],
+      "html_sentence": "## Installing the SDC Control App",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 7.4,
+        "flesch_reading_ease": 83.32,
+        "gunning_fog": 2.0,
+        "smog_index": 0.0
+      },
+      "sentence": "## Installing the SDC Control App",
+      "sentence_index": 0,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 72,
+      "feedback": [
+        {
+          "decision_type": "no_change",
+          "end": 72,
+          "message": "Passive voice detected",
+          "reviewer_rationale": "Modal passive without clear actor - passive voice is acceptable",
+          "rule": "passive_voice",
+          "sentence_index": 1,
+          "start": 0,
+          "text": "There is a configuration file that should be reviewed before proceeding."
+        },
+        {
+          "decision_type": "guide",
+          "end": 72,
+          "message": "Siemens Style: Avoid 'should' \u2014 it is ambiguous",
+          "reviewer_rationale": "Replace 'should' with a direct imperative or a definitive statement. 'Should' provides room for interpretation. Example: 'You should click Save' \u2192 'Click Save'.",
+          "rule": "siemens_style",
+          "sentence_index": 1,
+          "start": 0,
+          "text": "There is a configuration file that should be reviewed before proceeding."
+        }
+      ],
+      "html_sentence": "<p>There is a configuration file that should be reviewed before proceeding.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 10.6,
+        "flesch_reading_ease": 51.85,
+        "gunning_fog": 11.67,
+        "smog_index": 0.0
+      },
+      "sentence": "There is a configuration file that should be reviewed before proceeding.",
+      "sentence_index": 1,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 56,
+      "feedback": [
+        {
+          "decision_type": "guide",
+          "end": 56,
+          "message": "Siemens Style: Avoid weak expression 'it is'",
+          "reviewer_rationale": "Rewrite to remove 'it is'. Weak expletive constructions dilute clarity. Example: 'It is important to save the file' \u2192 'Save the file'.",
+          "rule": "siemens_style",
+          "sentence_index": 2,
+          "start": 0,
+          "text": "It is important to verify all settings before you begin."
+        }
+      ],
+      "html_sentence": "It is important to verify all settings before you begin.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 5.7,
+        "flesch_reading_ease": 52.87,
+        "gunning_fog": 8.0,
+        "smog_index": 0.0
+      },
+      "sentence": "It is important to verify all settings before you begin.",
+      "sentence_index": 2,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 67,
+      "feedback": [
+        {
+          "decision_type": "guide",
+          "end": 67,
+          "message": "Siemens Style: Avoid filler word 'furthermore'",
+          "reviewer_rationale": "Remove 'furthermore'. It is a filler word. Break the sentence into two independent sentences or restructure the list of points.",
+          "rule": "siemens_style",
+          "sentence_index": 3,
+          "start": 0,
+          "text": "Furthermore, you should ensure that all dependencies are available."
+        }
+      ],
+      "html_sentence": "Furthermore, you should ensure that all dependencies are available.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 14.0,
+        "flesch_reading_ease": 45.42,
+        "gunning_fog": 12.49,
+        "smog_index": 0.0
+      },
+      "sentence": "Furthermore, you should ensure that all dependencies are available.",
+      "sentence_index": 3,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 48,
+      "feedback": [
+        {
+          "decision_type": "guide",
+          "end": 48,
+          "message": "Siemens Style: Avoid 'simply' or 'it's very easy'",
+          "reviewer_rationale": "Avoid using 'simply' or 'it's very easy' outside of the 'Getting Started' section. They are too colloquial and may frustrate users who are struggling. Remove the word or rewrite the sentence without minimizing the task.",
+          "rule": "siemens_style",
+          "sentence_index": 4,
+          "start": 0,
+          "text": "The process is simply a matter of copying files."
+        },
+        {
+          "decision_type": "guide",
+          "end": 48,
+          "message": "Adverb 'simply' detected",
+          "reviewer_rationale": "Consider if 'simply' adds value. Adverbs ending in -ly can often be removed or replaced with more specific verbs for stronger, more direct writing. For example: 'quickly run' \u2192 'sprint', 'carefully check' \u2192 'verify'.",
+          "rule": "style_adverbs",
+          "sentence_index": 4,
+          "start": 0,
+          "text": "The process is simply a matter of copying files."
+        }
+      ],
+      "html_sentence": "The process is simply a matter of copying files.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 4.0,
+        "flesch_reading_ease": 87.72,
+        "gunning_fog": 3.6,
+        "smog_index": 0.0
+      },
+      "sentence": "The process is simply a matter of copying files.",
+      "sentence_index": 4,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 47,
+      "feedback": [
+        {
+          "decision_type": "guide",
+          "end": 47,
+          "message": "Siemens Style: Avoid unnecessary 'please'",
+          "reviewer_rationale": "Remove 'please' unless the request is genuinely inconvenient or unplanned. In standard instructions, 'please' adds no value. Example: 'Please click OK' \u2192 'Click OK'.",
+          "rule": "siemens_style",
+          "sentence_index": 5,
+          "start": 0,
+          "text": "Please click \"Save\" to store the configuration."
+        }
+      ],
+      "html_sentence": "Please click \"Save\" to store the configuration.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 9.7,
+        "flesch_reading_ease": 64.37,
+        "gunning_fog": 8.51,
+        "smog_index": 0.0
+      },
+      "sentence": "Please click \"Save\" to store the configuration.",
+      "sentence_index": 5,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 63,
+      "feedback": [
+        {
+          "decision_type": "no_change",
+          "end": 63,
+          "message": "Passive voice detected",
+          "reviewer_rationale": "Actor unclear and cannot be inferred from context - passive voice may be appropriate",
+          "rule": "passive_voice",
+          "sentence_index": 6,
+          "start": 0,
+          "text": "Therefore, the deployment can't be completed without this step."
+        },
+        {
+          "decision_type": "guide",
+          "end": 63,
+          "message": "Siemens Style: Avoid filler word 'therefore'",
+          "reviewer_rationale": "Remove 'therefore'. It is a filler word. Rewrite the sentence so the consequence is stated directly without a linking adverb.",
+          "rule": "siemens_style",
+          "sentence_index": 6,
+          "start": 0,
+          "text": "Therefore, the deployment can't be completed without this step."
+        },
+        {
+          "ai_suggestion": null,
+          "decision_type": "rewrite",
+          "end": 63,
+          "message": "Past tense detected",
+          "reviewer_rationale": "Convert to simple present tense for consistency with technical documentation standards. Present tense makes instructions and descriptions more immediate and clear.",
+          "rule": "simple_present_tense",
+          "sentence_index": 6,
+          "start": 0,
+          "text": "Therefore, the deployment can't be completed without this step."
+        }
+      ],
+      "html_sentence": "Therefore, the deployment can't be completed without this step.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 11.8,
+        "flesch_reading_ease": 53.88,
+        "gunning_fog": 12.49,
+        "smog_index": 0.0
+      },
+      "sentence": "Therefore, the deployment can't be completed without this step.",
+      "sentence_index": 6,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 59,
+      "feedback": [
+        {
+          "decision_type": "guide",
+          "end": 59,
+          "message": "Siemens Style: 'Last' implies finality \u2014 use 'Latest' or 'Previous'",
+          "reviewer_rationale": "Replace 'last update/version' with the correct term: 'latest update' (most recent, more may follow) or 'previous version' (the one before current). 'Last' implies nothing else will follow.",
+          "rule": "siemens_style",
+          "sentence_index": 7,
+          "start": 0,
+          "text": "The last version of the software is available for download."
+        }
+      ],
+      "html_sentence": "The last version of the software is available for download.",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 7.1,
+        "flesch_reading_ease": 78.25,
+        "gunning_fog": 4.0,
+        "smog_index": 0.0
+      },
+      "sentence": "The last version of the software is available for download.",
+      "sentence_index": 7,
+      "start": 0
+    },
+    {
+      "analysis_skipped": false,
+      "end": 62,
+      "feedback": [
+        {
+          "decision_type": "no_change",
+          "end": 62,
+          "message": "Passive voice detected",
+          "reviewer_rationale": "Actor unclear and cannot be inferred from context - passive voice may be appropriate",
+          "rule": "passive_voice",
+          "sentence_index": 8,
+          "start": 0,
+          "text": "For that reason, the application has to be restarted manually."
+        },
+        {
+          "decision_type": "guide",
+          "end": 62,
+          "message": "Siemens Style: Avoid filler expression 'for that reason'",
+          "reviewer_rationale": "Remove 'for that reason'. It is a filler expression. Replace it with a concise cause-and-effect sentence or combine the two ideas into one.",
+          "rule": "siemens_style",
+          "sentence_index": 8,
+          "start": 0,
+          "text": "For that reason, the application has to be restarted manually."
+        },
+        {
+          "decision_type": "guide",
+          "end": 62,
+          "message": "Adverb 'manually' detected",
+          "reviewer_rationale": "Consider if 'manually' adds value. Adverbs ending in -ly can often be removed or replaced with more specific verbs for stronger, more direct writing. For example: 'quickly run' \u2192 'sprint', 'carefully check' \u2192 'verify'.",
+          "rule": "style_adverbs",
+          "sentence_index": 8,
+          "start": 0,
+          "text": "For that reason, the application has to be restarted manually."
+        }
+      ],
+      "html_sentence": "For that reason, the application has to be restarted manually.\n</p>",
+      "quality_score": 55.0,
+      "readability_scores": {
+        "automated_readability_index": 8.5,
+        "flesch_reading_ease": 44.41,
+        "gunning_fog": 12.0,
+        "smog_index": 0.0
+      },
+      "sentence": "For that reason, the application has to be restarted manually.",
+      "sentence_index": 8,
+      "start": 0
+    }
+  ]
+}

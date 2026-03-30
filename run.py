@@ -12,15 +12,15 @@ if __name__ == '__main__':
     
     print(f"🚀 Starting DocScanner AI (Debug: {debug_mode}, Stable: {stable_mode}, Port: {port})")
     
-    # Use socketio.run if available, otherwise use app.run
+    # Disable reloader to prevent disruptive restarts during heavy processing
     if socketio:
         socketio.run(
             app, 
             debug=debug_mode, 
             host='0.0.0.0', 
             port=port,
-            use_reloader=not stable_mode  # Disable reloader in stable mode
+            use_reloader=False  # Re-disabling for stability on Windows with Eventlet
         )
     else:
         print("⚠️ Running without SocketIO support")
-        app.run(debug=debug_mode, host='0.0.0.0', port=port, use_reloader=not stable_mode)
+        app.run(debug=debug_mode, host='0.0.0.0', port=port, use_reloader=False)

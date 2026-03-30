@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template
+from flask_login import login_required, current_user
 import os
 import re
 import subprocess
@@ -79,9 +80,27 @@ def extract_sentences_with_html_preservation(html_content):
     # Parse HTML content
     soup = BeautifulSoup(html_content, "html.parser")
     
-    # Process each paragraph and text block separately
-    text_elements = soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th'])
+    # Process leaf elements that contain text to avoid double-counting nested blocks
+    # (e.g., a <p> inside a <div> should only be counted by the <p>)
+    all_potential = soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'span', 'blockquote'])
     
+    text_elements = []
+    for el in all_potential:
+        # Skip if it's already contained in another block we've already selected? 
+        # No, better to skip if it has block-level children that we will select anyway.
+        has_block_child = el.find(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th'])
+        
+        # If it has block children, we only want its DIRECT text (if any)
+        # But for simplicity, most documents have text in p/li/hX.
+        # If it's a div with no block children, it's a text block.
+        if not has_block_child and el.get_text().strip():
+            text_elements.append(el)
+        elif has_block_child:
+            # Check if it has any direct text children that aren't inside the block children
+            # This is rare in clean HTML but common in messy ones.
+            # For now, we favor leaf nodes.
+            pass
+            
     for element in text_elements:
         if not element.get_text().strip():
             continue
@@ -89,64 +108,48 @@ def extract_sentences_with_html_preservation(html_content):
         # Get the HTML content of this element
         element_html = str(element)
         
-        # Debug: Check if element_html contains any highlighting markup
-        if 'sentence-highlight' in element_html:
-            logger.warning(f"🔥 INPUT HTML CONTAINS HIGHLIGHTING MARKUP: {element_html[:200]}...")
+        # Get the plain text version for analysis with a space separator to preserve word boundaries
+        element_text = element.get_text(separator=' ')
         
-        # Get the plain text version for analysis
-        element_text = element.get_text()
-        
-        # Split the text into sentences while tracking positions
+        # Split the text into sentences
+        raw_fragments = []
         if SPACY_AVAILABLE and nlp:
-            # Use spaCy for better sentence segmentation
             doc = nlp(element_text)
-            for sent in doc.sents:
-                sent_text = sent.text.strip()
-                if sent_text:
-                    # Find corresponding HTML fragment
-                    html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
-                    
-                    # Create sentence object with both HTML and text versions
-                    class EnhancedSentence:
-                        def __init__(self, text, html_fragment, start_char=0, end_char=None):
-                            self.text = text.strip()
-                            self.html_fragment = html_fragment
-                            self.start_char = start_char
-                            self.end_char = end_char if end_char else len(text)
-                    
-                    sentences.append(EnhancedSentence(sent_text, html_fragment))
+            raw_fragments = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
         else:
-            # Fallback: simple sentence splitting when spaCy is not available
-            import re
-            simple_sentences = re.split(r'[.!?]+\s+', element_text)
-            for sent_text in simple_sentences:
-                sent_text = sent_text.strip()
-                if sent_text:
-                    # Find corresponding HTML fragment
-                    html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
-                    
-                    class SimpleSentence:
-                        def __init__(self, text, html_fragment):
-                            self.text = text.strip()
-                            self.html_fragment = html_fragment
-                            self.start_char = 0
-                            self.end_char = len(text)
-                    
-                    sentences.append(SimpleSentence(sent_text, html_fragment))
+            # Fallback for splitting sentences when spacy is not available
+            raw_fragments = [s.strip() for s in re.split(r'[.!?]+\s+', element_text) if s.strip()]
+
+        # 🔗 MERGING STEP: Unify technical fragments (e.g. "Label: Content")
+        merged_fragments = []
+        i = 0
+        while i < len(raw_fragments):
+            current = raw_fragments[i]
+            # Recursively merge if current (or merged result) ends with a colon
+            # This handles: "Header: Subheader: Content"
+            while i + 1 < len(raw_fragments) and re.search(r':\s*$', current):
+                logger.info(f"🔗 MERGING TECHNICAL SPEC: '{current}' + '{raw_fragments[i+1]}'")
+                current = f"{current} {raw_fragments[i+1]}"
+                i += 1
+            merged_fragments.append(current)
+            i += 1
+
+        # Process fragments into sentence objects
+        for sent_text in merged_fragments:
+            # Find corresponding HTML fragment
+            html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
+            
+            # Use a unified sentence class
+            class SentenceObj:
+                def __init__(self, text, html_fragment):
+                    self.text = text.strip()
+                    self.html_fragment = html_fragment
+                    self.start_char = 0
+                    self.end_char = len(text)
+            
+            sentences.append(SentenceObj(sent_text, html_fragment))
     
-    # Remove duplicate sentences based on text content
-    seen_sentences = set()
-    unique_sentences = []
-    
-    for sentence in sentences:
-        # Create a normalized version for comparison (strip whitespace and newlines)
-        normalized_text = ' '.join(sentence.text.split())
-        
-        if normalized_text and normalized_text not in seen_sentences:
-            seen_sentences.add(normalized_text)
-            unique_sentences.append(sentence)
-    
-    return unique_sentences
+    return sentences
 
 def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
     """
@@ -206,17 +209,34 @@ def find_html_fragment_for_sentence(element_html, sentence_text, full_text):
                 html_str = str(temp_element)
                 if sentence_text.strip() in html_str:
                     # Look for the sentence with potential HTML tags
-                    import re
+                # Ensure we handle multiple occurrences of the same text
                     # Create a pattern that allows HTML tags within the sentence
+                    # Use words as anchors to find the HTML segment
                     words = sentence_text.strip().split()
                     if words:
-                        # Create pattern allowing HTML tags between and within words
+                        # Create pattern allowing whitespace, tags, and common HTML entities between words
                         pattern_words = [re.escape(word) for word in words]
-                        pattern = r'(?:<[^>]*>)*\s*' + r'(?:\s*<[^>]*>\s*)*\s+(?:<[^>]*>)*\s*'.join(pattern_words) + r'\s*(?:<[^>]*>)*'
+                        # NON-GREEDY joiner to prevent swallowing next sentence
+                        boundary_pattern = r'(?:\s|<[^>]*>|&nbsp;|&#160;)+?'
+                        pattern = boundary_pattern.join(pattern_words)
+                        if len(pattern_words) > 1:
+                            # Also allow leading/trailing tags but NON-GREEDY
+                            pattern = r'(?:<[^>]*>)*?\s*' + pattern + r'\s*(?:<[^>]*>)*?'
                         
                         match = re.search(pattern, html_str, re.IGNORECASE | re.DOTALL)
                         if match:
-                            return match.group(0).strip()
+                            match_text = match.group(0)
+                            # Loosened sanity check to allow for technical merged sentences
+                            # Ratio increased to 2.5x, word delta increased to 10 for complex technical lists
+                            if len(match_text) < len(sentence_text) * 2.5:
+                                try:
+                                    match_plain = BeautifulSoup(match_text, "html.parser").get_text().split()
+                                    if abs(len(match_plain) - len(words)) <= 10:
+                                        logger.info(f"✅ Precise HTML fragment found for sentence {len(words)} words")
+                                        return match_text.strip()
+                                except Exception as e:
+                                    logger.warning(f"Word-count check failed: {e}")
+                                    return match_text.strip()
                 
                 # Fallback: return the plain text
                 return sentence_text.strip()
@@ -236,7 +256,6 @@ def clean_malformed_html_attributes(text):
     Clean malformed HTML attributes that might appear in text content.
     Specifically targets patterns like: ="sentence-highlight" id="content-sentence-0"
     """
-    import re
     
     # Pattern to match malformed HTML attributes starting with ="
     # This catches patterns like: ="sentence-highlight" id="content-sentence-0" data-sentence-index="0">
@@ -282,7 +301,18 @@ def parse_file(file):
         return f"Error parsing {filename}: {str(e)}"
 
 def parse_zip(file_stream):
-    """Parse ZIP file and extract text content from supported documents inside"""
+    """Parse ZIP file and extract text content from supported documents inside
+    
+    ⚠️ REVIEWER DECISION NEEDED:
+    Current behavior: Merges all files into one document for review.
+    Alternative: Review each file separately.
+    
+    Question: Are these separate documents or one review unit?
+    - If separate: Need to review each with its own document gate
+    - If collection: Need summary of collection-level issues
+    
+    DO NOT: Blend feedback silently across files without clarifying this to users.
+    """
     import zipfile
     import io
     
@@ -444,7 +474,7 @@ def review_document(content, rules):
                     })
     return {"issues": suggestions, "summary": "Review completed."}
 
-def analyze_sentence(sentence, rules):
+def analyze_sentence(sentence, rules, previous_sentence=None, next_sentence=None):
     feedback = []
     readability_scores = {
         "flesch_reading_ease": textstat.flesch_reading_ease(sentence),
@@ -456,7 +486,22 @@ def analyze_sentence(sentence, rules):
 
     # Apply each rule function to the sentence
     for rule_function in rules:
-        rule_feedback = rule_function(sentence)
+        try:
+            # Try to pass adjacent context if the rule supports it (like passive_voice)
+            import inspect
+            sig = inspect.signature(rule_function)
+            params = list(sig.parameters.keys())
+            
+            if 'previous_sentence' in params and 'next_sentence' in params:
+                # Rule supports adjacent context
+                rule_feedback = rule_function(sentence, previous_sentence=previous_sentence, next_sentence=next_sentence)
+            else:
+                # Rule doesn't support context, use standard call
+                rule_feedback = rule_function(sentence)
+        except Exception as e:
+            # Fallback to standard call if inspection fails
+            logger.debug(f"Rule inspection failed, using standard call: {e}")
+            rule_feedback = rule_function(sentence)
         if rule_feedback:
             # Convert string feedback to expected object format
             for item in rule_feedback:
@@ -535,22 +580,36 @@ def calculate_quality_index(total_sentences, total_errors):
 ############################
 
 @main.route('/')
+@login_required
 def index():
-    return render_template('index.html')
+    return render_template('index.html', user=current_user)
 
-@main.route('/start_upload', methods=['POST'])
+@main.route('/start_upload', methods=['POST', 'OPTIONS'])
 def start_upload():
     """Initialize upload session and return room ID for progress tracking."""
-    import uuid
-    from .progress_tracker import get_progress_tracker
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response, 200
     
-    room_id = str(uuid.uuid4())
-    progress_tracker = get_progress_tracker()
-    
-    if progress_tracker:
-        progress_tracker.start_session(room_id)
-    
-    return jsonify({"room_id": room_id})
+    try:
+        import uuid
+        from .progress_tracker import get_progress_tracker
+        
+        room_id = str(uuid.uuid4())
+        progress_tracker = get_progress_tracker()
+        
+        if progress_tracker:
+            progress_tracker.start_session(room_id)
+        
+        logger.info(f"Upload session initialized: {room_id}")
+        return jsonify({"room_id": room_id})
+    except Exception as e:
+        logger.error(f"Failed to initialize upload session: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Failed to initialize upload: {str(e)}"}), 500
 
 @main.route('/analyze_intelligent', methods=['POST'])
 def analyze_intelligent():
@@ -720,41 +779,58 @@ def debug_sentences():
     
     return jsonify(debug_info)
 
-@main.route('/upload', methods=['POST'])
+@main.route('/upload', methods=['POST', 'OPTIONS'])
 def upload_file():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response, 200
+    
     global current_document_content  # Access global variable
     
-    if 'file' not in request.files:
-        return jsonify({"error": "No file part"}), 400
+    try:
+        if 'file' not in request.files:
+            logger.error("Upload request missing 'file' field")
+            return jsonify({"error": "No file part"}), 400
 
-    file = request.files['file']
-    if not file.filename:
-        return jsonify({"error": "No selected file"}), 400
+        file = request.files['file']
+        if not file.filename:
+            logger.error("Upload request has empty filename")
+            return jsonify({"error": "No selected file"}), 400
 
-    # Validate file extension
-    filename = file.filename.lower()
-    allowed_extensions = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
-    if not any(filename.endswith(ext) for ext in allowed_extensions):
-        return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"}), 400
+        # Validate file extension
+        filename = file.filename.lower()
+        allowed_extensions = ['.txt', '.pdf', '.docx', '.doc', '.md', '.adoc', '.zip']
+        if not any(filename.endswith(ext) for ext in allowed_extensions):
+            logger.error(f"Unsupported file type: {filename}")
+            return jsonify({"error": f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"}), 400
 
-    # Get room_id for progress tracking
-    room_id = request.form.get('room_id')
-    
-    from .progress_tracker import get_progress_tracker
-    progress_tracker = get_progress_tracker()
+        # Get room_id for progress tracking
+        room_id = request.form.get('room_id')
+        
+        from .progress_tracker import get_progress_tracker
+        progress_tracker = get_progress_tracker()
 
-    logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
+        logger.info(f"File uploaded: {file.filename} (Room: {room_id})")
+        
+        # Validate file size (Flask should handle this automatically, but let's be explicit)
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        max_size = 50 * 1024 * 1024  # 50MB
+        if file_size > max_size:
+            logger.error(f"File too large: {file_size} bytes (max: {max_size})")
+            return jsonify({"error": f"File too large. Maximum size: {max_size // (1024*1024)}MB"}), 400
+        
+        logger.info(f"File size: {file_size} bytes")
     
-    # Validate file size (Flask should handle this automatically, but let's be explicit)
-    file.seek(0, 2)  # Seek to end
-    file_size = file.tell()
-    file.seek(0)  # Reset to beginning
-    
-    max_size = 50 * 1024 * 1024  # 50MB
-    if file_size > max_size:
-        return jsonify({"error": f"File too large. Maximum size: {max_size // (1024*1024)}MB"}), 400
-    
-    logger.info(f"File size: {file_size} bytes")
+    except Exception as e:
+        logger.error(f"Error in upload validation: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Upload validation failed: {str(e)}"}), 500
 
     try:
         # Stage 1: Uploading Document (10%)
@@ -772,7 +848,6 @@ def upload_file():
         if 'sentence-highlight' in html_content:
             logger.warning("🧹 Cleaning existing sentence highlighting from uploaded document...")
             # Remove all sentence highlighting spans but keep the content
-            import re
             # Remove opening span tags with sentence-highlight class
             html_content = re.sub(r'<span[^>]*sentence-highlight[^>]*>', '', html_content)
             # Remove closing span tags
@@ -794,9 +869,28 @@ def upload_file():
                 progress_tracker.fail_session(room_id, error_msg)
             return jsonify({"error": error_msg}), 400
         
-        # Stage 3: Breaking into Sentences (50%)
+        # 🚧 DOCUMENT REVIEW GATE - Reviewer-first analysis
+        # ⚠️ NON-NEGOTIABLE: This must happen AFTER parsing, BEFORE sentence extraction
+        # 
+        # DO NOT move this earlier "for convenience" - that breaks the reviewer-first architecture.
+        # Extracting sentences before this gate reintroduces sentence-first bias.
+        # 
+        # This gate determines whether sentence-level analysis is warranted.
+        # It answers: "Would a human reviewer pause here?"
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 2, "Identifying sentence boundaries and structure...")
+            progress_tracker.update_stage(room_id, 2, "Understanding document structure and goal...")
+        
+        from core.document_review_gate import run_document_review_gate
+        document_review = run_document_review_gate(html_content, file.filename)
+        
+        if document_review.blocking:
+            logger.warning(f"Warning: Document has blocking structural issues - but continuing with sentence-level analysis")
+
+        
+        # Stage 3: Breaking into Sentences (50%)
+        # Only proceed if document structure is sound
+        if progress_tracker and room_id:
+            progress_tracker.update_stage(room_id, 3, "Identifying sentence boundaries and structure...")
         
         # Store the original HTML content for highlighting
         # Extract sentences that preserve HTML structure while also having plain text for analysis
@@ -830,24 +924,45 @@ def upload_file():
         current_sentences_list = sentences
 
         # Stage 4: Analyzing with Rules (80%)
+        # CONDITIONAL ANALYSIS - Only analyze sentences that need it
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 3, "Applying grammar, style, and readability rules...")
+            analysis_scope = document_review.analysis_scope
+            if analysis_scope == "minimal":
+                progress_tracker.update_stage(room_id, 4, "Spot-checking document clarity...")
+            elif analysis_scope == "targeted":
+                progress_tracker.update_stage(room_id, 4, "Analyzing flagged sections for clarity...")
+            else:
+                progress_tracker.update_stage(room_id, 4, "Applying grammar, style, and readability rules...")
         
         sentence_data = []
         total_sentences = len(sentences)
+        analyzed_count = 0  # Track how many sentences we actually analyze
+        
+        # Import the gating function
+        from core.document_review_gate import should_analyze_sentence
         
         for index, sent in enumerate(sentences):
             # Update substep progress for analysis
+            # Update substep progress for analysis
             if progress_tracker and room_id and total_sentences > 0:
-                substep_progress = int(75 + (index / total_sentences) * 5)  # 75-80% range
+                substep_progress = int(60 + (index / total_sentences) * 34)  # 60-94% range
                 progress_tracker.update_progress(room_id, substep_progress, 
                     f"Analyzing sentence {index + 1} of {total_sentences}...")
             
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
             
+            # 🚧 GATED ANALYSIS - Only analyze if needed
+            should_analyze = should_analyze_sentence(index, plain_text_sentence, document_review)
+            
+            if should_analyze:
+                analyzed_count += 1
+                logger.debug(f"🔍 Analyzing sentence {index} (flagged by document review)")
+            else:
+                logger.debug(f"⏭️ Skipping sentence {index} (not in analysis scope)")
+            
             # Debug: Log sentence content to understand the issue
-            logger.info(f"Processing sentence {index}: '{plain_text_sentence[:100]}...'")
+            logger.debug(f"Processing sentence {index}: '{plain_text_sentence[:100]}...'")
             
             # AGGRESSIVE CLEANING: Handle malformed HTML attributes that somehow got into sentence text
             if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
@@ -868,9 +983,40 @@ def upload_file():
                 logger.warning(f"✅ Cleaned sentence {index}: '{clean_text[:100]}...'")
                 plain_text_sentence = clean_text
             
-            feedback, readability_scores, quality_score = analyze_sentence(plain_text_sentence, rules)
+            # Apply rules ONLY if sentence should be analyzed
+            if should_analyze:
+                # Get adjacent sentences for context-aware analysis
+                previous_sentence = None
+                next_sentence = None
+                
+                if index > 0:
+                    # Get previous sentence from already processed sentences
+                    previous_sentence = sentence_data[index - 1]['sentence'] if sentence_data else None
+                
+                if index < len(sentences) - 1:
+                    # Get next sentence (if available)
+                    try:
+                        next_sent = sentences[index + 1]
+                        next_sentence = next_sent.text if hasattr(next_sent, 'text') else str(next_sent)
+                    except (IndexError, AttributeError):
+                        next_sentence = None
+                
+                feedback, readability_scores, quality_score = analyze_sentence(
+                    plain_text_sentence, 
+                    rules,
+                    previous_sentence=previous_sentence,
+                    next_sentence=next_sentence
+                )
+                analysis_skipped = False
+            else:
+                # Skip analysis - reviewer chose not to comment
+                # Note: Silence ≠ perfection. Silence = no comment warranted.
+                feedback = []
+                readability_scores = {}
+                quality_score = None  # Not scored
+                analysis_skipped = True
             
-            # Add sentence index to each feedback item for UI linking
+            # Store analysis_skipped flag for transparency
             enhanced_feedback = []
             for item in feedback:
                 if isinstance(item, dict):
@@ -892,6 +1038,7 @@ def upload_file():
                 "feedback": enhanced_feedback,
                 "readability_scores": readability_scores,
                 "quality_score": quality_score,
+                "analysis_skipped": analysis_skipped,
                 "start": sent.start_char,
                 "end": sent.end_char
             })
@@ -916,7 +1063,10 @@ def upload_file():
         
         # Stage 5: Generating Report (100%)
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 4, "Compiling insights and quality metrics...")
+            progress_tracker.update_stage(room_id, 5, "Compiling insights and quality metrics...")
+        
+        # Log analysis efficiency
+        logger.info(f"📊 Analysis complete: {analyzed_count}/{total_sentences} sentences analyzed ({document_review.analysis_scope} scope)")
         
         quality_index = calculate_quality_index(total_sentences, total_errors)
 
@@ -924,17 +1074,41 @@ def upload_file():
             "totalSentences": total_sentences,
             "totalWords": len(plain_text.split()),
             "avgQualityScore": quality_index,
-            "message": "Content analysis completed."
+            "message": "Content analysis completed.",
+            "analysis_scope": document_review.analysis_scope,
+            "document_type": document_review.document_type,
+            "analyzed_sentences": analyzed_count  # NEW: transparency metric
         }
 
         # Complete progress tracking
         if progress_tracker and room_id:
-            progress_tracker.complete_session(room_id, success=True, 
-                final_message=f"Analysis complete! Found {total_errors} issues in {total_sentences} sentences.")
+            scope_msg = {
+                "minimal": "Quick review complete",
+                "targeted": f"Focused review complete - analyzed {analyzed_count} key sections",
+                "full": f"Comprehensive review complete"
+            }.get(document_review.analysis_scope, "Review complete")
+            
+            final_msg = f"{scope_msg} - Found {total_errors} issues"
+            if document_review.issues:
+                final_msg += f" ({len(document_review.issues)} document-level)"
+            
+            progress_tracker.complete_session(room_id, success=True, final_message=final_msg)
+
+        # Save this scan to the current user's private history
+        try:
+            save_scan_history(
+                filename=file.filename,
+                issue_count=total_errors,
+                word_count=len(plain_text.split()),
+                quality_score=int(quality_index) if quality_index else 0
+            )
+        except Exception as hist_err:
+            logger.warning(f"Could not save scan history: {hist_err}")
 
         # Return the result
         return jsonify({
             "content": html_content,  # For display
+            "document_review": document_review.to_ui(),  # NEW: document-level insights
             "sentences": sentence_data,
             "report": aggregated_report,
             "room_id": room_id  # Include room_id in response
@@ -1109,11 +1283,20 @@ def ai_suggestion():
             else:
                 issue_type = "General"
 
-        issue_obj = {
-            "message": feedback_text,        # the rule feedback text
-            "context": sentence_context,     # the original sentence
-            "issue_type": issue_type,
-        }
+        # Check if UI passed a full rule decision (has decision_type/reviewer_rationale)
+        ui_issue = data.get('issue')
+        if ui_issue and isinstance(ui_issue, dict) and 'decision_type' in ui_issue and 'reviewer_rationale' in ui_issue:
+            # Use the full rule decision from the UI
+            issue_obj = ui_issue
+            logger.info(f"Using full rule decision from UI: decision_type={ui_issue.get('decision_type')}")
+        else:
+            # Build minimal issue object for enrichment
+            issue_obj = {
+                "message": feedback_text,        # the rule feedback text
+                "context": sentence_context,     # the original sentence
+                "issue_type": issue_type,
+            }
+            logger.info(f"Building minimal issue object for enrichment")
 
         logger.info("Getting enhanced AI suggestion with RAG context...")
         result = get_enhanced_ai_suggestion(
@@ -1173,42 +1356,35 @@ def ai_suggestion():
         logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
                     f"(length: {len(ai_answer)})")
         
-        # As a last safety net, if suggestion is empty, derive a deterministic one
+        # As a last safety net, if suggestion is empty, use validation fallback
         if not suggestion:
-            logger.warning("Empty suggestion from RAG; using deterministic fallback.")
-            from .ai_improvement import AISuggestionEngine
-            # Use a lightweight engine instance for fallback rewrite
-            fallback_engine = AISuggestionEngine()
-            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
-            ai_answer = ai_answer or "Deterministic fallback rewrite."
-            logger.info(f"🔧 ENDPOINT: Used fallback suggestion: '{suggestion[:100]}...'")
+            logger.warning("Empty suggestion from AI; validation likely rejected output.")
+            # Check if validation returned fallback_guidance
+            if result.get('validation_failed') and result.get('fallback_guidance'):
+                fallback_guidance = result['fallback_guidance']
+                suggestion = ""  # Keep empty - no valid AI suggestion available
+                ai_answer = fallback_guidance.get('guidance', ai_answer or "Review the sentence and address the detected issue.")
+                logger.info("🔧 ENDPOINT: Using validation fallback guidance")
+            else:
+                # No AI suggestion available
+                suggestion = ""
+                ai_answer = ai_answer or f"Consider: {feedback_text}"
+                logger.info("🔧 ENDPOINT: No AI suggestion available")
         else:
-            logger.info(f"🔧 ENDPOINT: Using RAG suggestion: '{suggestion[:100]}...'")
+            logger.info(f"🔧 ENDPOINT: Using AI suggestion: '{suggestion[:100]}...'")
 
         # Guard against "No exact solution…" leaking through
-        if "no exact solution" in suggestion.lower():
-            logger.warning("Found 'no exact solution' in suggestion, using fallback")
-            from .ai_improvement import AISuggestionEngine
-            fallback_engine = AISuggestionEngine()
-            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
+        if suggestion and "no exact solution" in suggestion.lower():
+            logger.warning("Found 'no exact solution' in suggestion, clearing it")
+            suggestion = ""
             if not ai_answer:
-                ai_answer = "Applied deterministic rewrite to resolve the issue."
+                ai_answer = f"Manual review needed for: {feedback_text}"
 
         # 4) Build response
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context,
                          document_type, result.get("method", "rag_rewrite"), response_time)
 
-        # Guard against “No exact solution…” leaking through
-        if "no exact solution" in suggestion.lower():
-            from .ai_improvement import AISuggestionEngine
-            fallback_engine = AISuggestionEngine()
-            fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            suggestion = (fallback.get("suggestion") or "").strip()
-            if not ai_answer:
-                ai_answer = "Applied deterministic rewrite to resolve the issue."
 
         # Type safety: Ensure all response fields are strings (not None or other types)
         suggestion = str(suggestion) if suggestion is not None else ""
@@ -1251,7 +1427,14 @@ def ai_suggestion():
             "primary_ai": "local",
             "issue_detection": "rule_based"
         }),
-        "note": f"Generated using {result.get('method', 'rag_rewrite')}"
+        "note": f"Generated using {result.get('method', 'rag_rewrite')}",
+        # ✅ CRITICAL: Pass through all UI rendering flags
+        "is_semantic_explanation": result.get("is_semantic_explanation", False),
+        "is_guidance_only": result.get("is_guidance_only", False),
+        "is_reviewer_rationale": result.get("is_reviewer_rationale", False),
+        "guidance_category": result.get("guidance_category", "readability"),
+        "semantic_explanation": result.get("semantic_explanation", ""),
+        "decision_type": result.get("decision_type", "")
     })
 
     except Exception as e:
@@ -1360,8 +1543,53 @@ def performance_dashboard():
         return jsonify(dashboard_data)
         
     except Exception as e:
-        logger.error(f"Error getting dashboard data: {str(e)}")
+        logger.error(f"Error getting dashboard data: {str(e)}") 
         return jsonify({"error": "Failed to get dashboard data"}), 500
+
+
+# ── Per-User Scan History ─────────────────────────────────────────────────────
+
+@main.route('/api/history', methods=['GET'])
+@login_required
+def get_user_history():
+    """Return the scan history for the currently logged-in user only."""
+    try:
+        from .models import ScanHistory
+        scans = (ScanHistory.query
+                 .filter_by(user_id=current_user.id)
+                 .order_by(ScanHistory.scanned_at.desc())
+                 .limit(50)
+                 .all())
+        return jsonify({
+            'scans': [s.to_dict() for s in scans],
+            'total': len(scans)
+        })
+    except Exception as e:
+        logger.error(f"Error fetching user history: {e}")
+        return jsonify({'scans': [], 'total': 0})
+
+
+def save_scan_history(filename, issue_count=0, word_count=0, quality_score=0):
+    """Save a scan record linked to the current user. Safe to call anywhere."""
+    try:
+        from flask_login import current_user as cu
+        if not cu or not cu.is_authenticated:
+            return
+        from .models import ScanHistory
+        from . import db
+        record = ScanHistory(
+            user_id=cu.id,
+            filename=filename or 'Untitled Document',
+            issue_count=int(issue_count),
+            word_count=int(word_count),
+            quality_score=int(quality_score)
+        )
+        db.session.add(record)
+        # Increment analysis_count on User
+        cu.analysis_count = (cu.analysis_count or 0) + 1
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"Error saving scan history: {e}")
 
 @main.route('/rag/stats', methods=['GET'])
 def rag_stats():
