@@ -1164,15 +1164,7 @@
                         <small class="text-muted" id="issuesDescription">No issues detected</small>
                     </div>
 
-                    <!-- Smart Insights -->
-                    <div class="smart-insights mb-3">
-                        <div class="fw-bold mb-2"><i class="fas fa-lightbulb"></i> Smart Insights</div>
-                        <div id="smartInsightsList">
-                            <div class="insight-item text-muted">
-                                <i class="fas fa-info-circle"></i> Upload text to get personalized insights
-                            </div>
-                        </div>
-                    </div>
+
                 </div>
             </div>
 
@@ -2671,12 +2663,22 @@
                 <div class="mb-3">
                     <div class="text-light mb-2"><strong>📚 Knowledge Sources:</strong></div>
                     <div class="sources-container">
-                        ${aiSuggestion.sources.map(source => `
-                            <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2">
-                                <small class="text-muted">${(source && source.type === 'guideline') ? '📋 Writing Guidelines' : '📄 Document Context'}</small>
-                                <div class="source-content">${source && source.content ? source.content : 'Knowledge source content'}</div>
+                        ${aiSuggestion.sources.map(source => {
+                            const isRule = (source && source.rule_id && source.rule_id.startsWith('rule_'));
+                            const sourceLabel = isRule ? '📋 Resident Rule Engine' : '📄 Knowledge Base (ChromaDB)';
+                            const sourceTitle = source && (source.rule_id || source.source || 'Knowledge Source');
+                            return `
+                            <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2 border-start border-3 ${isRule ? 'border-primary' : 'border-success'}">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-info"><strong>${sourceLabel}</strong></small>
+                                    <small class="text-muted opacity-75">ID: ${sourceTitle}</small>
+                                </div>
+                                <div class="source-content text-light mt-1" style="font-size: 0.85rem; max-height: 80px; overflow: hidden; text-overflow: ellipsis;">
+                                    ${source && source.content ? source.content : 'No preview available'}
+                                </div>
                             </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 </div>
                 ` : ''}
@@ -3035,8 +3037,7 @@
         function updateWritingGoalsAnalytics() {
             console.log('Selected writing goals:', selectedWritingGoals);
 
-            // Update dashboard insights based on selected goals
-            updateSmartInsights();
+
         }
 
         function updateDocumentMetrics(content, sentences) {
@@ -3070,128 +3071,9 @@
                 issues === 0 ? 'No issues detected' : `${issues} issue${issues > 1 ? 's' : ''} found`;
         }
 
-        function updateSmartInsights() {
-            const insights = [];
-            const container = document.getElementById('smartInsightsList');
 
-            // Generate insights based on selected goals and document state
-            if (selectedWritingGoals.includes('clarity')) {
-                insights.push({
-                    icon: 'fas fa-eye',
-                    text: 'Focus on clear, simple language',
-                    priority: 'high'
-                });
-            }
 
-            if (selectedWritingGoals.includes('conciseness')) {
-                insights.push({
-                    icon: 'fas fa-compress-alt',
-                    text: 'Look for opportunities to reduce word count',
-                    priority: 'medium'
-                });
-            }
 
-            if (selectedWritingGoals.includes('engagement')) {
-                insights.push({
-                    icon: 'fas fa-heart',
-                    text: 'Consider adding more engaging examples',
-                    priority: 'medium'
-                });
-            }
-
-            // Clear and populate insights
-            container.innerHTML = '';
-            insights.forEach(insight => {
-                const div = document.createElement('div');
-                div.className = `insight-item ${insight.priority === 'high' ? 'active' : ''}`;
-                div.innerHTML = `<i class="${insight.icon}"></i> ${insight.text}`;
-                container.appendChild(div);
-            });
-
-            if (insights.length === 0) {
-                container.innerHTML = '<div class="insight-item text-muted"><i class="fas fa-info-circle"></i> Select writing goals to see personalized insights</div>';
-            }
-        }
-
-        // Function to update smart insights based on document analysis
-        function updateSmartInsightsFromDocument(sentences) {
-            const insights = [];
-            const container = document.getElementById('smartInsightsList');
-
-            // Analyze document patterns
-            const totalIssues = sentences.reduce((count, s) => count + (s.feedback ? s.feedback.length : 0), 0);
-            const longSentences = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && f.message.includes('Long sentence'))).length;
-            const grammarIssues = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && (f.message.includes('grammar') || f.message.includes('verb')))).length;
-            const repeatedWords = sentences.filter(s => s.feedback && s.feedback.some(f => f.message && typeof f.message === 'string' && f.message.includes('repeated'))).length;
-
-            // Calculate quality score to determine overall message
-            const sentenceCount = sentences.length;
-            const qualityScore = sentenceCount > 0 ? Math.max(0, Math.round((1 - totalIssues / sentenceCount) * 100)) : 0;
-
-            // Generate targeted insights
-            if (longSentences > 0 && selectedWritingGoals.includes('conciseness')) {
-                insights.push({
-                    icon: 'fas fa-scissors',
-                    text: `Break down ${longSentences} long sentence${longSentences > 1 ? 's' : ''} for better readability`,
-                    priority: 'high'
-                });
-            }
-
-            if (grammarIssues > 0 && selectedWritingGoals.includes('professionalism')) {
-                insights.push({
-                    icon: 'fas fa-check-circle',
-                    text: `Fix ${grammarIssues} grammar issue${grammarIssues > 1 ? 's' : ''} to improve professionalism`,
-                    priority: 'high'
-                });
-            }
-
-            if (repeatedWords > 0 && selectedWritingGoals.includes('clarity')) {
-                insights.push({
-                    icon: 'fas fa-sync-alt',
-                    text: `Reduce word repetition in ${repeatedWords} sentence${repeatedWords > 1 ? 's' : ''}`,
-                    priority: 'medium'
-                });
-            }
-
-            if (selectedWritingGoals.includes('engagement') && totalIssues < 3) {
-                insights.push({
-                    icon: 'fas fa-heart',
-                    text: 'Consider adding more vivid examples or storytelling elements',
-                    priority: 'low'
-                });
-            }
-
-            if (selectedWritingGoals.includes('accessibility') && longSentences > 2) {
-                insights.push({
-                    icon: 'fas fa-universal-access',
-                    text: 'Simplify complex sentences for better accessibility',
-                    priority: 'medium'
-                });
-            }
-
-            // Clear and populate insights
-            container.innerHTML = '';
-            insights.sort((a, b) => {
-                const priorityOrder = { high: 3, medium: 2, low: 1 };
-                return priorityOrder[b.priority] - priorityOrder[a.priority];
-            });
-
-            insights.forEach(insight => {
-                const div = document.createElement('div');
-                div.className = `insight-item ${insight.priority === 'high' ? 'active' : ''}`;
-                div.innerHTML = `<i class="${insight.icon}"></i> ${insight.text}`;
-                container.appendChild(div);
-            });
-
-            // Show overall quality message when no specific insights are generated
-            if (insights.length === 0) {
-                if (qualityScore < 90) {
-                    container.innerHTML = '<div class="insight-item text-warning"><i class="fas fa-chart-line"></i> To improve the writing standards, consider reviewing for clarity, conciseness, and grammatical accuracy</div>';
-                } else {
-                    container.innerHTML = '<div class="insight-item text-muted"><i class="fas fa-star"></i> Excellent! Your document aligns well with your writing goals</div>';
-                }
-            }
-        }
 
         function showSuccessToast(message) {
             const toast = document.createElement('div');
@@ -3932,8 +3814,7 @@
                 feedbackContent.appendChild(qualitySummary);
             }
 
-            // Update smart insights based on document analysis
-            updateSmartInsightsFromDocument(sentences);
+
         }
         // Clean feedback text
         function cleanFeedback(feedback) {
@@ -3965,32 +3846,74 @@
             }
         });
 
-        // Export functionality - Enhanced with more details
-        document.getElementById('exportBtn').addEventListener('click', () => {
-            // Gather feedback data
-            let csvContent = "Sentence,Feedback\n";
-            document.querySelectorAll('.sentence').forEach((sentenceSpan) => {
-                const idx = sentenceSpan.dataset.index;
-                // Find all feedback for this sentence
-                const feedbacks = [];
-                document.querySelectorAll(`.feedback-item[data-index="${idx}"]`).forEach(fb => {
-                    feedbacks.push(fb.innerText.replace(/"/g, '""'));
-                });
-                if (feedbacks.length) {
-                    csvContent += `"${sentenceSpan.innerText.replace(/"/g, '""')}","${feedbacks.join('; ')}"\n`;
-                }
+        // Export functionality - Enhanced with PDF/Word Support & Detailed Data
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            const format = confirm("Export as PDF? (Cancel for Word/DOCX)") ? 'pdf' : 'docx';
+            const documentContent = document.getElementById('documentContent').innerHTML;
+            
+            // Gather Metrics
+            const metrics = {
+                score: document.getElementById('qualityScore')?.innerText.replace('%', '') || '-',
+                words: document.getElementById('wordCount')?.innerText || '0',
+                sentences: document.getElementById('sentenceCount')?.innerText || '0'
+            };
+
+            // Gather all Issues from the feedback section
+            const issues = [];
+            document.querySelectorAll('.feedback-item').forEach(item => {
+                const title = item.querySelector('strong')?.innerText || 'Issue';
+                const description = item.querySelector('p')?.innerText || item.innerText;
+                issues.push({ title, description });
             });
 
-            // Download as CSV
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'feedback_export.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const filename = document.getElementById('uploadBtnText')?.innerText !== 'Upload & Analyze' 
+                ? document.getElementById('uploadBtnText').innerText.replace('...', '') 
+                : 'Analyzed_Document';
+
+            if (!documentContent || documentContent.trim() === '<h4>Document Content</h4>') {
+                alert("No content available to export. Please upload a document first.");
+                return;
+            }
+
+            try {
+                // Show loading state
+                document.getElementById('exportBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+                document.getElementById('exportBtn').disabled = true;
+
+                const response = await fetch('/api/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        format: format,
+                        content: documentContent,
+                        filename: filename,
+                        metrics: metrics,
+                        issues: issues
+                    })
+                });
+
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.${format === 'pdf' ? 'pdf' : 'docx'}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    const err = await response.json();
+                    alert("Export failed: " + (err.error || "Unknown error"));
+                }
+            } catch (error) {
+                console.error("Export error:", error);
+                alert("Failed to connect to export service.");
+            } finally {
+                // Restore button state
+                document.getElementById('exportBtn').innerHTML = '<i class="fas fa-download"></i> Export';
+                document.getElementById('exportBtn').disabled = false;
+            }
         });
 
         // History functionality

@@ -902,6 +902,10 @@ class IntelligentAISuggestionEngine:
                 suggestion, explanation = self._parse_ai_response(ai_response, sentence_context)
                 logger.info(f"📝 Parsed suggestion: '{suggestion[:100]}...'")
                 
+                # Add source attribution to the explanation for UI transparency
+                if context_count > 0:
+                    explanation = f"**Based on knowledge from your uploaded documents:**\n\n{explanation}"
+                
                 return {
                     "suggestion": suggestion,
                     "ai_answer": explanation,

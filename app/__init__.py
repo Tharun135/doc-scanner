@@ -163,5 +163,43 @@ def create_app():
         app.register_blueprint(minimal_agent_bp)
         print("✅ Minimal agent endpoints created!")
 
+    # ── Background Cleanup Task ───────────────────────────────────────────────
+    def start_cleanup_thread(app):
+        import threading
+        import time
+        from datetime import datetime, timedelta
+
+        def cleanup_task():
+            with app.app_context():
+                upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'uploads')
+                if not os.path.exists(upload_dir):
+                    return
+
+                while True:
+                    try:
+                        print(f"🧹 Running background cleanup (at {datetime.now().strftime('%H:%M:%S')})...")
+                        count = 0
+                        now = time.time()
+                        for f in os.listdir(upload_dir):
+                            f_path = os.path.join(upload_dir, f)
+                            # Check if file is older than 24 hours (86400 seconds)
+                            if os.stat(f_path).st_mtime < now - 86400:
+                                os.remove(f_path)
+                                count += 1
+                        if count > 0:
+                            print(f"✅ Cleaned up {count} old file(s) from uploads folder.")
+                    except Exception as e:
+                        print(f"⚠️ Cleanup task error: {e}")
+                    
+                    # Run once every hour (3600 seconds)
+                    time.sleep(3600)
+
+        thread = threading.Thread(target=cleanup_task, daemon=True)
+        thread.start()
+
+    # Start the cleanup thread
+    start_cleanup_thread(app)
+
     app.socketio = socketio
     return app
+

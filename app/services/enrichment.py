@@ -51,6 +51,52 @@ def enrich_issue_with_solution(issue):
         
         return issue
 
+def enrich_issues_with_rag(issues):
+    """
+    Enrich a list of issues with RAG suggestions.
+    This is used by the rule-based system to get AI help.
+    """
+    if not issues:
+        return []
+    
+    enriched_issues = []
+    for issue in issues:
+        # If it's just a string, convert to dict
+        if isinstance(issue, str):
+            issue = {"message": issue, "context": ""}
+            
+        enriched = enrich_issue_with_solution(issue)
+        enriched_issues.append(enriched)
+        
+    return enriched_issues
+
+def ingest_document_to_rag(text, doc_id, product="docscanner", version="1.0"):
+    """
+    Ingest a document into the RAG system for future retrieval.
+    """
+    try:
+        # Add tools folder to path
+        tools_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tools")
+        if tools_path not in sys.path:
+            sys.path.append(tools_path)
+            
+        from enhanced_rag_integration import get_enhanced_rag_integration
+        
+        integration = get_enhanced_rag_integration()
+        chunk_count = integration.ingest_document(
+            document_text=text,
+            source_doc_id=doc_id,
+            product=product,
+            version=version
+        )
+        
+        logger.info(f"[ENRICH] Ingested {doc_id}: {chunk_count} chunks created")
+        return chunk_count
+        
+    except Exception as e:
+        logger.error(f"[ENRICH] Ingestion failed for {doc_id}: {e}")
+        return 0
+
 # Test function when run directly
 if __name__ == "__main__":
     test_issue = {

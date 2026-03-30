@@ -11,14 +11,19 @@ import re
 
 # Import enrichment service with proper relative import
 try:
-    from app.services.enrichment import enrich_issues_with_rag
-except ImportError:
+    import sys
+    import os
+    # Add tools folder to sys.path for enhanced_rag modules
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'tools'))
+    
     try:
-        from ..services.enrichment import enrich_issues_with_rag
+        from app.services.enrichment import enrich_issues_with_rag
     except ImportError:
-        # Fallback if service not available
-        enrich_issues_with_rag = None
-        logging.warning("RAG enrichment service not available")
+        from ..services.enrichment import enrich_issues_with_rag
+except ImportError:
+    # Fallback if service not available
+    enrich_issues_with_rag = None
+    logging.warning("RAG enrichment service not available")
 
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
 RAG_ENABLED = True  # Enabled for RAG functionality
@@ -124,11 +129,22 @@ def check_with_rag(content: str, rule_name: str = "unknown",
         List of suggestion strings
     """
     # Early return if RAG is disabled for performance
-    if not RAG_ENABLED:
+    if not RAG_ENABLED or enrich_issues_with_rag is None:
         return []
     
-    # This was causing the slowdown - just return empty for now
-    return []
+    # Simple list format for basic RAG check
+    raw_issues = [{"message": f"Check this for {rule_name}: {description}", "context": content}]
+    
+    # Call enrichment service
+    enriched = enrich_issues_with_rag(raw_issues)
+    
+    suggestions = []
+    if enriched and len(enriched) > 0:
+        suggestion = enriched[0].get("proposed_rewrite", "")
+        if suggestion and suggestion != content:
+            suggestions.append(suggestion)
+            
+    return suggestions
 
 def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any], 
                    rule_name: str = "unknown", 

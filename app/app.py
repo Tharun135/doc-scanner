@@ -923,6 +923,16 @@ def upload_file():
         global current_sentences_list
         current_sentences_list = sentences
 
+        # 🧠 RAG INGESTION: Add document to knowledge base for better context
+        try:
+            from .services.enrichment import ingest_document_to_rag
+            # Run ingestion in background or synchronously for now
+            # Use filename as doc_id
+            ingest_document_to_rag(plain_text, file.filename)
+            logger.info(f"✅ Document ingested into RAG: {file.filename}")
+        except Exception as rag_e:
+            logger.warning(f"⚠️ RAG ingestion failed: {rag_e}")
+
         # Stage 4: Analyzing with Rules (80%)
         # CONDITIONAL ANALYSIS - Only analyze sentences that need it
         if progress_tracker and room_id:
@@ -1911,3 +1921,181 @@ def debug_ai():
     debug_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'debug_ai_frontend.html')
     with open(debug_file_path, 'r', encoding='utf-8') as f:
         return f.read()
+
+# ── Export Functionality ───────────────────────────────────────────────────
+
+@main.route('/api/export', methods=['POST'])
+def export_document():
+    """Export the processed document to PDF or Word."""
+    try:
+        from flask import send_file
+        import io
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        export_format = data.get('format', 'pdf').lower()
+        html_content = data.get('content', '')
+        filename = data.get('filename', 'Analyzed_Document')
+        metrics = data.get('metrics', {})
+        issues = data.get('issues', [])
+        
+        if not html_content:
+            return jsonify({"error": "No content to export"}), 400
+            
+        # Remove any file extension from filename if present
+        base_filename = os.path.splitext(filename)[0]
+        
+        if export_format == 'pdf':
+            return export_to_pdf(html_content, base_filename, metrics, issues)
+        elif export_format == 'docx' or export_format == 'word':
+            return export_to_docx(html_content, base_filename, metrics, issues)
+
+        else:
+            return jsonify({"error": f"Unsupported export format: {export_format}"}), 400
+            
+    except Exception as e:
+        logger.error(f"Export error: {str(e)}", exc_info=True)
+        return jsonify({"error": f"Failed to export document: {str(e)}"}), 500
+
+def export_to_pdf(html_content, filename, metrics=None, issues=None):
+    """Generate PDF using fpdf2 with Summary and Issues."""
+    from fpdf import FPDF
+    from bs4 import BeautifulSoup
+    from flask import send_file
+    import io
+    
+    def safe_text(txt):
+        """Clean text to avoid PDF font encoding errors."""
+        if not txt: return ""
+        # Technical fix: Replace common non-latin-1 characters
+        replacements = {
+            "•": "-", "–": "-", "—": "-", 
+            "“": '"', "”": '"', "‘": "'", "’": "'"
+        }
+        for char, repl in replacements.items():
+            txt = txt.replace(char, repl)
+        # Final safety: encode and decode to latin-1 (PDF standard font limit)
+        return txt.encode('latin-1', 'replace').decode('latin-1')
+
+    try:
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_margins(left=20, top=20, right=20)
+        
+        # 1. Title
+        pdf.set_font("Helvetica", "B", 18)
+        pdf.cell(0, 10, safe_text(filename.replace('_', ' ')), ln=True, align='C')
+        pdf.ln(5)
+        
+        # 2. Summary Section
+        if metrics:
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.cell(0, 10, "Document Summary", ln=True)
+            pdf.set_font("Helvetica", size=10)
+            score = metrics.get('score', '-')
+            words = metrics.get('words', 0)
+            pdf.cell(0, 7, f"Quality Score: {score}% | Word Count: {words}", ln=True)
+            pdf.ln(5)
+            pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+            pdf.ln(5)
+        
+        # 3. Document Body
+        soup = BeautifulSoup(html_content, "html.parser")
+        pdf.set_font("Helvetica", size=11)
+        
+        for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li']):
+            text = safe_text(element.get_text().strip())
+            if not text: continue
+            
+            pdf.set_x(20)
+            if element.name.startswith('h'):
+                pdf.ln(5)
+                level = int(element.name[1])
+                pdf.set_font("Helvetica", "B", 12 + (6 - level))
+                pdf.multi_cell(0, 10, text)
+                pdf.set_font("Helvetica", size=11)
+            else:
+                if element.name == 'li':
+                    text = f"  - {text}"
+                pdf.multi_cell(0, 7, text)
+                pdf.ln(2)
+        
+        # 4. Detailed Issues Section
+        if issues and len(issues) > 0:
+            pdf.add_page()
+            pdf.set_font("Helvetica", "B", 14)
+            pdf.cell(0, 10, "Detailed Feedback & Issues", ln=True)
+            pdf.ln(5)
+            
+            for i, issue in enumerate(issues, 1):
+                pdf.set_font("Helvetica", "B", 10)
+                pdf.multi_cell(0, 7, safe_text(f"{i}. {issue.get('title', 'Issue')}"))
+                pdf.set_font("Helvetica", size=10)
+                pdf.multi_cell(0, 6, safe_text(f"Suggestion: {issue.get('description', '')}"))
+                pdf.ln(4)
+
+        # Save to buffer
+        output = io.BytesIO()
+        pdf_bytes = pdf.output()
+        output.write(pdf_bytes)
+        output.seek(0)
+        
+        return send_file(output, mimetype='application/pdf', as_attachment=True, download_name=f"{filename}.pdf")
+
+    except Exception as e:
+        logger.error(f"PDF generic error: {e}")
+        raise e
+
+def export_to_docx(html_content, filename, metrics=None, issues=None):
+    """Generate DOCX with Summary and Issues."""
+    from docx import Document
+    from bs4 import BeautifulSoup
+    from flask import send_file
+    import io
+    
+    try:
+        doc = Document()
+        doc.add_heading(filename.replace('_', ' '), 0)
+        
+        # 1. Summary
+        if metrics:
+            p = doc.add_paragraph()
+            p.add_run('Quality Score: ').bold = True
+            p.add_run(f"{metrics.get('score', '-')}% | ")
+            p.add_run('Words: ').bold = True
+            p.add_run(str(metrics.get('words', 0)))
+        
+        # 2. Main content
+        soup = BeautifulSoup(html_content, "html.parser")
+        for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'li']):
+            text = element.get_text().strip()
+            if not text: continue
+                
+            if element.name == 'h1': doc.add_heading(text, level=1)
+            elif element.name == 'h2': doc.add_heading(text, level=2)
+            elif element.name == 'h3': doc.add_heading(text, level=3)
+            elif element.name == 'li': doc.add_paragraph(text, style='List Bullet')
+            else: doc.add_paragraph(text)
+            
+        # 3. Issues
+        if issues and len(issues) > 0:
+            doc.add_page_break()
+            doc.add_heading('Detailed Issues & Feedback', level=1)
+            for issue in issues:
+                p = doc.add_paragraph(style='List Number')
+                p.add_run(issue.get('title', 'Issue')).bold = True
+                doc.add_paragraph(f"Suggestion: {issue.get('description', '')}", style='Body Text')
+        
+        # Save to buffer
+        output = io.BytesIO()
+        doc.save(output)
+        output.seek(0)
+        
+        return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document', as_attachment=True, download_name=f"{filename}.docx")
+
+    except Exception as e:
+        logger.error(f"DOCX generic error: {e}")
+        raise e

@@ -436,14 +436,26 @@ IMPROVED: """
                                         else:
                                             proposed_rewrite = sentence_context  # Don't add "Improved:" prefix
                                 
-                                # Return enhanced RAG response with title case protection
+                                # Return enhanced RAG response with title case protection and CLEAR source attribution
                                 proposed_rewrite = _fix_title_case_issues(proposed_rewrite)
-                                issue["solution_text"] = ai_response
+                                
+                                # Create a more descriptive source string for the UI
+                                primary_source = "Knowledge Base"
+                                if sources:
+                                    primary_source = sources[0].get('rule_id', 'Knowledge Base')
+                                    if primary_source.startswith('rule_'):
+                                        primary_source = "Resident Rule Engine"
+                                
+                                # Format the explanation to show the source clearly
+                                formatted_explanation = f"**Based on {primary_source}:**\n\n{ai_response}"
+                                
+                                issue["solution_text"] = formatted_explanation
                                 issue["proposed_rewrite"] = proposed_rewrite
                                 issue["sources"] = sources
                                 issue["method"] = "enhanced_rag_chromadb_ollama"
                                 issue["confidence"] = "high"
                                 
+                                logger.info(f"[ENHANCED RAG] Response attributed to: {primary_source}")
                                 return issue
                         
                         else:
