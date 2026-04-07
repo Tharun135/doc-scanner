@@ -211,6 +211,9 @@ REQUIREMENTS:
 3. Maintain the original meaning and intent
 4. Make the writing clearer and more professional
 5. Follow technical documentation best practices
+6. NEVER invent new technical information, quantities, or product features.
+7. ONLY rewrite what is provided in the input sentence or the RAG knowledge context.
+8. If a quantity like "multiple" is mentioned, do NOT guess a specific number (like "ten") unless it's explicitly stated in the RAG context.
 
 OUTPUT FORMAT:
 CORRECTED: [Your improved sentence here]

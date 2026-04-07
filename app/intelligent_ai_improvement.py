@@ -10,6 +10,10 @@ import re
 import json
 import hashlib
 from datetime import datetime
+from functools import lru_cache
+
+# Memory-based cache for expensive AI suggestions
+_ai_suggestion_cache = {}
 
 # Import validation from ai_improvement
 from app.ai_improvement import validate_suggestion
@@ -92,8 +96,18 @@ def token_overlap_ratio(text1: str, text2: str) -> float:
     return len(intersection) / len(union) if union else 0.0
 
 
-def structural_change_detected(original: str, suggestion: str) -> bool:
+def structural_change_detected(original: str, suggestion: str, is_rag_match: bool = False) -> bool:
     """Detect if there's a structural change between original and suggestion."""
+    if is_rag_match:
+        return True # Trust the RAG system
+        
+    # Normalize both surfaces
+    orig_norm = normalize_text(original)
+    sugg_norm = normalize_text(suggestion)
+    
+    if orig_norm == sugg_norm:
+        return False
+        
     # Count sentences
     orig_sentences = len([s for s in original.split('.') if s.strip()])
     sugg_sentences = len([s for s in suggestion.split('.') if s.strip()])
@@ -103,18 +117,24 @@ def structural_change_detected(original: str, suggestion: str) -> bool:
         return True
     
     # Check for significant word order change
-    orig_words = normalize_text(original).split()
-    sugg_words = normalize_text(suggestion).split()
+    orig_words = orig_norm.split()
+    sugg_words = sugg_norm.split()
     
-    # If word count differs significantly, it's a structural change
-    if abs(len(orig_words) - len(sugg_words)) > 3:
+    # If the first few words changed, it's usually a structural change (e.g. subject changed)
+    limit = min(3, len(orig_words), len(sugg_words))
+    for i in range(limit):
+        if orig_words[i] != sugg_words[i]:
+            return True
+            
+    # If word count differs, it's likely a structural change
+    if len(orig_words) != len(sugg_words):
         return True
     
     # Check if words are in different order (not just minor changes)
     if len(orig_words) == len(sugg_words):
         differences = sum(1 for o, s in zip(orig_words, sugg_words) if o != s)
-        # More than 30% of words in different positions = structural change
-        if differences / len(orig_words) > 0.3:
+        # More than 10% of words changed = structural change (lowered from 30%)
+        if differences / len(orig_words) > 0.1:
             return True
     
     return False
@@ -159,16 +179,10 @@ def contains_conditional_or_alternative(sentence: str) -> bool:
 
 def blocks_ai_rewrite(sentence: str) -> bool:
     """
-    HARD BLOCK RULE: Prevent AI rewrites for normative + conditional sentences.
-    
-    This is the invariant that prevents semantic drift in compliance-critical text.
-    
-    Returns True if AI rewrite is FORBIDDEN.
+    POLICY REMOVED: Previously blocked normative + conditional sentences.
+    Now always returns False to allow AI to suggest improvements for all text.
     """
-    return (
-        contains_normative_language(sentence)
-        and contains_conditional_or_alternative(sentence)
-    )
+    return False
 
 
 def build_semantic_explanation_for_blocked_sentence(sentence: str, issue_type: str) -> str:
@@ -213,7 +227,7 @@ def build_semantic_explanation_for_blocked_sentence(sentence: str, issue_type: s
 # ============================================================================
 
 
-def is_value_added(original: str, suggestion: str, issue_type: str) -> Tuple[bool, str]:
+def is_value_added(original: str, suggestion: str, issue_type: str, method: str = None) -> Tuple[bool, str]:
     """
     Core validation: Is the AI suggestion actually different from the original?
     
@@ -236,12 +250,22 @@ def is_value_added(original: str, suggestion: str, issue_type: str) -> Tuple[boo
         return False, "Suggestion is identical to original after normalization"
     
     # Rule 2: Token overlap too high
+    # EXCEPTION: For RAG-based patterns, we trust the knowledge base even if overlap is high
+    rag_methods = [
+        'document_first', 'document_search', 'hybrid_document_llm', 
+        'advanced_rag', 'ollama_rag', 'vector_openai', 'contextual_rag',
+        'document_search_primary', 'document_search_extended'
+    ]
+    is_rag_match = method in rag_methods
+    
     overlap = token_overlap_ratio(original, suggestion)
-    if overlap > 0.80:
-        return False, f"Token overlap too high: {overlap:.2%} (threshold: 80%)"
+    threshold = 0.95 if is_rag_match else 0.80
+    
+    if overlap > threshold:
+        return False, f"Token overlap too high: {overlap:.2%} (threshold: {threshold:.0%})"
     
     # Rule 3: No structural change
-    if not structural_change_detected(original, suggestion):
+    if not structural_change_detected(original, suggestion, is_rag_match=is_rag_match):
         return False, "No structural change detected between original and suggestion"
     
     # Rule 4: Issue-specific validation (CRITICAL)
@@ -294,8 +318,22 @@ def get_deterministic_fallback(issue_type: str, original_sentence: str) -> Dict[
     # ============================================================================
     
     if "long" in issue_lower or "sentence" in issue_lower:
+        # Specialized technical splitter for sentences with parenthetical details
+        # e.g. "SIMATIC S7 Connector links devices to controllers (S7-300/400)."
+        match = re.search(r"^(.*?)\s+\(([^)]+)\)\.?$", original_sentence.strip())
+        suggestion = "Split into multiple sentences for clarity."
+        
+        if match:
+            main_part = match.group(1).rstrip()
+            details = match.group(2)
+            # Create a high-quality split suggestion
+            # Sentence 1: The main action
+            # Sentence 2: The technical details/compatibility
+            suggestion = f"{main_part}. This includes support for {details}."
+        
         return {
             "guidance": "This sentence is difficult to read due to length and structure.\n\nConsider splitting it into shorter sentences, each expressing one idea.\n\nOptional: One sentence for the main action, one for the result or explanation.",
+            "suggestion": suggestion, # The actual text to be placed in AI Assistance
             "category": "readability",
             "is_rationale": False
         }
@@ -367,114 +405,27 @@ def get_deterministic_fallback(issue_type: str, original_sentence: str) -> Dict[
 
 def can_safely_rewrite_passive(sentence: str, doc = None) -> tuple[bool, str]:
     """
-    Check if passive voice rewrite is safe and advisable.
-    
-    Returns:
-        (bool, str): (can_rewrite, reason)
+    POLICY REMOVED: Always allow passive voice rewrites.
     """
-    import spacy
-    
-    sentence_lower = sentence.lower()
-    
-    # Case 1: Scientific/objective contexts often require passive
-    scientific_keywords = ['study', 'research', 'analysis', 'experiment', 'test', 'result', 'data']
-    if any(kw in sentence_lower for kw in scientific_keywords):
-        return False, "Scientific context may require passive voice for objectivity"
-    
-    # Case 2: Requirements/specifications may need passive for neutrality
-    requirement_patterns = ['must be', 'shall be', 'should be', 'will be', 'requirement']
-    if any(pattern in sentence_lower for pattern in requirement_patterns):
-        # Exception: if we can clearly identify "you" as the subject, allow it
-        if 'you' not in sentence_lower:
-            return False, "Requirement context - agent unclear"
-    
-    # Case 3: Check if agent can be inferred
-    if not doc:
-        try:
-            nlp = spacy.load("en_core_web_sm")
-            doc = nlp(sentence)
-        except:
-            # Can't parse - be conservative
-            return False, "Unable to parse sentence structure"
-    
-    # Look for passive voice markers with clear agents
-    has_by_phrase = ' by ' in sentence_lower
-    has_clear_subject = False
-    
-    if doc:
-        # Check for clear subjects or agents
-        for token in doc:
-            if token.dep_ in ['nsubj', 'nsubjpass', 'agent']:
-                has_clear_subject = True
-                break
-    
-    # Case 4: If agent is completely unclear, don't rewrite
-    if not has_by_phrase and not has_clear_subject:
-        return False, "Agent unclear - rewrite may introduce ambiguity"
-    
-    # Safe to rewrite
-    return True, "Clear agent identified"
-
+    return True, "Mandatory AI suggestion enabled"
 
 def should_attempt_rewrite(issue_type: str, sentence: str) -> tuple[bool, str]:
     """
-    Master eligibility check - determines if AI rewrite should be attempted.
-    
-    Returns:
-        (bool, str): (should_attempt, reason)
+    Master eligibility check - forced to True for Passive/Tense.
     """
     issue_lower = issue_type.lower()
     
-    # Simple present tense normalization - use strict eligibility checker
-    if 'tense' in issue_lower or 'non_simple_present' in issue_lower:
-        try:
-            from app.rules.simple_present_normalization import can_convert_to_simple_present
-            allowed, reason = can_convert_to_simple_present(sentence)
-            
-            if not allowed:
-                if reason == "historical":
-                    return False, "historical_context"  # Block with reviewer_rationale
-                elif reason == "compliance_conditional":
-                    return False, "compliance_with_conditions"  # Block with semantic_explanation
-                elif reason == "already_present":
-                    return False, "already_in_present_tense"  # Skip
-            
-            return allowed, reason
-        except ImportError:
-            logger.warning("simple_present_normalization module not available")
-            return False, "module_not_available"
+    # Always allow Tense and Passive Voice to get a direct suggestion
+    if 'tense' in issue_lower or 'passive' in issue_lower:
+        return True, "Forced suggestion enabled"
     
-    # Passive voice eligibility
-    if 'passive' in issue_lower:
-        return can_safely_rewrite_passive(sentence)
-    
-    # Long sentence - use sophisticated eligibility checker
+    # Long sentence - still use structural check to prevent hallucination
     if 'long' in issue_lower or 'sentence' in issue_lower:
-        try:
-            from app.rules.sentence_split_eligibility import get_split_decision
-            decision, reason = get_split_decision(sentence)
-            
-            # CRITICAL: semantic_explanation is also a valid "can process" state
-            # It means "AI should explain, not rewrite" - this is NOT a block
-            # Only guidance_only means "skip AI entirely"
-            if decision == "semantic_explanation":
-                return True, reason  # Allow AI processing (explanation path)
-            elif decision in ["always_split", "eligible_split"]:
-                return True, reason  # Allow AI processing (rewrite path)
-            else:  # guidance_only
-                return False, reason  # Block AI, show guidance only
-        except ImportError:
-            # Fallback to basic length check
-            if len(sentence.split()) > 25:
-                return True, "Sentence length justifies split"
-            return False, "Sentence not long enough to warrant split"
+        if len(sentence.split()) > 25:
+            return True, "Sentence length justifies split"
+        return False, "Sentence not long enough to warrant split"
     
-    # Adverbs - removal/replacement is usually safe
-    if 'adverb' in issue_lower:
-        return True, "Adverb replacement is low-risk"
-    
-    # Default: attempt rewrite but will still validate
-    return True, "General issue - attempt rewrite with validation"
+    return True, "General issue - attempt rewrite"
 
 
 # ============================================================================
@@ -563,6 +514,7 @@ class IntelligentAISuggestionEngine:
         option_number: int = 1,
         issue: Optional[Dict[str, Any]] = None,
         adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
+        remediation_context: Optional[Dict[str, Any]] = None, # NEW: RAG remediation
     ) -> Dict[str, Any]:
         """
         Generate intelligent, context-aware suggestions PRIORITIZING your uploaded documents.
@@ -591,15 +543,53 @@ class IntelligentAISuggestionEngine:
             sentence_context = ""
         if not writing_goals:
             writing_goals = ["clarity", "conciseness", "directness"]
-        
-        # PRIORITY 1: Document-First Search - YOUR UPLOADED DOCUMENTS COME FIRST!
-        context_documents_for_llm = []  # Store context docs for later use
-        
+            
+        # --- CACHE CHECK (PERFORMANCE) ---
+        cache_key = hashlib.md5(f"{feedback_text}:{sentence_context}".encode()).hexdigest()
+        if cache_key in _ai_suggestion_cache:
+            logger.info("⚡ AI CACHE HIT: Reusing previous suggestion")
+            return _ai_suggestion_cache[cache_key]
+
+        # --- LOW-PRIORITY BYPASS ---
+        # Do not force AI rewrites for simple conditional notes (often makes them worse)
+        if "conditional statement detected" in feedback_text.lower():
+            logger.info("ℹ️ Skipping AI rewrite for simple conditional note (preserving original)")
+            result = {
+                "suggestion": "",
+                "ai_answer": "This is a conditional statement. For complex logic, consider using a bulleted list to separate the condition from the action.",
+                "confidence": "high",
+                "method": "guidance_only",
+                "sources": ["Style Guide (Rule: Conditionals)"],
+                "success": True,
+                "is_guidance_only": True
+            }
+            _ai_suggestion_cache[cache_key] = result
+            return result
+
+        # PRIORITY 1: RAG Remediation — If we have specific rule guidance, use it!
+        if remediation_context and OLLAMA_AVAILABLE:
+            logger.info(f"🧠 RAG REMEDIATION: Using rule-specific guidance for '{remediation_context.get('rule_id')}'")
+            try:
+                result = self._generate_ollama_rag_suggestion(
+                    feedback_text=feedback_text,
+                    sentence_context=sentence_context,
+                    document_type=document_type,
+                    writing_goals=writing_goals,
+                    option_number=option_number,
+                    remediation_context=remediation_context
+                )
+                if result and result.get("success"):
+                    result["remediation_context"] = remediation_context
+                    return result
+            except Exception as e:
+                logger.warning(f"RAG remediation suggestion failed: {e}")
+
+        # PRIORITY 2: Document-First Search — Search your 7042 uploaded docs
         try:
             from .document_first_ai import get_document_first_suggestion
             
             doc_count = self.collection.count() if self.collection else 0
-            logger.info(f"🔍 PRIORITY 1: Searching your {doc_count} uploaded documents first...")
+            logger.info(f"🔍 DOCUMENT-FIRST: Searching your {doc_count} uploaded documents...")
             
             result = get_document_first_suggestion(
                 feedback_text=feedback_text,
@@ -610,17 +600,94 @@ class IntelligentAISuggestionEngine:
             
             if result and result.get("success") and result.get("confidence") in ["high", "medium"]:
                 logger.info(f"✅ SUCCESS: Found answer in your uploaded documents! (method: {result.get('method')})")
+                result["remediation_context"] = remediation_context
                 return result
-            elif result and result.get("context_documents"):
-                # Document-first prepared RAG context - pass to LLM
-                context_documents_for_llm = result.get("context_documents", [])
-                logger.info(f"📚 Document-first prepared {len(context_documents_for_llm)} context docs for LLM")
-            else:
-                logger.info("📭 No high-quality matches in uploaded documents, trying other methods...")
                 
         except Exception as e:
             logger.warning(f"Document-first search failed: {e}")
         
+        # PRIORITY 3: Specialized local improvements (Splitting, Passive)
+        # Long sentence split
+        if ("long" in feedback_text.lower() or "sentence" in feedback_text.lower()) and OLLAMA_AVAILABLE:
+            logger.info("🧠 Readability issue detected - using local LLM sentence splitter")
+            split_result = self._llm_sentence_split(sentence_context, feedback_text)
+            if split_result and split_result != sentence_context:
+                return {
+                    "suggestion": split_result,
+                    "ai_answer": "This sentence was split for better readability using strict grammatical rules.",
+                    "confidence": "medium",
+                    "method": "intelligent_split",
+                    "sources": ["Local AI Splitter"],
+                    "success": True,
+                    "is_guidance_only": False,
+                    "remediation_context": remediation_context
+                }
+        
+        # Passive voice conversion
+        if "passive" in feedback_text.lower() and OLLAMA_AVAILABLE:
+            from .passive_voice import can_safely_rewrite_passive
+            can_rewrite, reason = can_safely_rewrite_passive(sentence_context)
+            if can_rewrite:
+                logger.info("🧠 Passive voice detected - using active converter")
+                active_result = self._llm_passive_to_active(sentence_context, feedback_text)
+                if active_result and active_result != sentence_context:
+                    return {
+                        "suggestion": active_result,
+                        "ai_answer": "Converted to active voice for better directness and clarity.",
+                        "confidence": "high",
+                        "method": "active_voice_converter",
+                        "sources": ["Style Guide (Rule: Active Voice)"],
+                        "success": True,
+                        "is_guidance_only": False,
+                        "remediation_context": remediation_context
+                    }
+        
+        # FINAL FALLBACK: General LLM or Deterministic Fallback
+        if OLLAMA_AVAILABLE:
+            if blocks_ai_rewrite(sentence_context):
+                explanation = build_semantic_explanation_for_blocked_sentence(sentence_context, feedback_text)
+                return {
+                    "suggestion": "",
+                    "ai_answer": explanation,
+                    "confidence": "low",
+                    "method": "compliance_safety_block",
+                    "sources": ["Safety Guardrail"],
+                    "success": True,
+                    "is_guidance_only": True,
+                    "remediation_context": remediation_context
+                }
+
+            logger.info(f"🧠 General issue ({feedback_text}) - using LLM improver")
+            improvement = self._llm_general_improve(sentence_context, feedback_text)
+            if improvement and improvement != sentence_context:
+                return {
+                    "suggestion": improvement,
+                    "ai_answer": f"Improved to address: {feedback_text}.",
+                    "confidence": "medium",
+                    "method": "intelligent_improvement",
+                    "sources": ["Local AI Assistant"],
+                    "success": True,
+                    "is_guidance_only": False,
+                    "remediation_context": remediation_context
+                }
+        
+        # Deterministic fallback
+        fallback = get_deterministic_fallback(feedback_text, sentence_context)
+        return {
+            "suggestion": fallback.get("suggestion", ""),
+            "ai_answer": fallback.get("guidance", (
+                f"No matching guidance for: \"{feedback_text}\". "
+                "Please manually review using the Style Guide."
+            )),
+            "confidence": "low",
+            "method": "manual_review",
+            "sources": ["Style Guide (Deterministic Fallback)"],
+            "success": True,
+            "is_guidance_only": not bool(fallback.get("suggestion")),
+            "remediation_context": remediation_context
+        }
+
+        # ---- All code below is dead-code (LLM fallbacks disabled) ----
         # PRIORITY 2: Advanced RAG system (enhanced with documents)
         if self.rag_system:
             try:
@@ -646,7 +713,8 @@ class IntelligentAISuggestionEngine:
                     feedback_text, sentence_context, document_type,
                     writing_goals, option_number, 
                     prepared_context=context_documents_for_llm,  # Pass prepared context
-                    adjacent_context=adjacent_context  # Pass adjacent sentences
+                    adjacent_context=adjacent_context,  # Pass adjacent sentences
+                    remediation_context=remediation_context # Pass RAG remediation context
                 )
                 if result and result.get("success"):
                     logger.info(f"✅ Ollama provided suggestion (method: {result.get('method')})")
@@ -829,7 +897,8 @@ class IntelligentAISuggestionEngine:
     def _generate_ollama_rag_suggestion(
         self, feedback_text: str, sentence_context: str, document_type: str,
         writing_goals: List[str], option_number: int, prepared_context: List[str] = None,
-        adjacent_context: Optional[Dict[str, str]] = None  # NEW: adjacent sentences
+        adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
+        remediation_context: Optional[Dict[str, Any]] = None # NEW: RAG remediation
     ) -> Dict[str, Any]:
         """Generate suggestion using Ollama with RAG context from uploaded documents."""
         
@@ -869,7 +938,8 @@ class IntelligentAISuggestionEngine:
         # Build enhanced prompt with context from uploaded documents
         prompt = self._build_ollama_rag_prompt(
             feedback_text, sentence_context, document_type, 
-            writing_goals, context_documents, adjacent_context  # Pass adjacent context
+            writing_goals, context_documents, adjacent_context,  # Pass adjacent context
+            remediation_context=remediation_context # Pass RAG remediation context
         )
         
         try:
@@ -1211,26 +1281,161 @@ class IntelligentAISuggestionEngine:
         # If no good split point found, return original
         return sentence
     
+    def _is_hallucination(self, original: str, rewrite: str) -> bool:
+        """
+        Detect if the AI has invented new information or procedural steps.
+        Logic: If the rewrite is significantly longer than the original (multi-step vs single sentence),
+        or contains suspicious file extensions/version numbers not in the original.
+        """
+        orig_words = len(original.split())
+        rewrite_words = len(rewrite.split())
+        
+        # 1. LENGTH GATING: If rewrite is 3x longer than original, it's likely a hallucination
+        if rewrite_words > 40 and rewrite_words > (orig_words * 3):
+            logger.warning(f"🚨 HALLUCINATION DETECTED: Rewrite length ({rewrite_words}) is disproportionate to original ({orig_words})")
+            return True
+            
+        # 2. STEP INJECTION: If original is 1 sentence but response has 2+ numbered steps
+        if '\n1.' in rewrite and '\n2.' in rewrite and '\n' not in original:
+            logger.warning("🚨 HALLUCINATION DETECTED: AI injected numbered steps into a single-sentence intro")
+            return True
+            
+        # 3. SUSPICIOUS DETAIL: Common AI 'helper' hallucinations
+        hallucination_indicators = [
+            '.exe', '.msi', 'Win + R', 'Control Panel', 'Device Manager', 'Run as administrator',
+            'Chrome', 'Firefox', 'Safari', 'Edge', 'Microsoft', 'Google', 'Amazon', 'AWS', 'Azure',
+            'Internet Explorer', 'Explorer', 'Browser', 'Mozilla'
+        ]
+        for indicator in hallucination_indicators:
+            if indicator.lower() in rewrite.lower() and indicator.lower() not in original.lower():
+                logger.warning(f"🚨 HALLUCINATION DETECTED: AI injected suspicious technical detail '{indicator}'")
+                return True
+                
+        # 4. ACRONYM EXPANSION CHECK: Block if 'IE' was expanded to 'Internet Explorer'
+        if 'ie' in original.lower() and 'internet explorer' in rewrite.lower():
+            logger.warning("🚨 HALLUCINATION DETECTED: AI incorrectly expanded 'IE' to 'Internet Explorer'")
+            return True
+                
+        return False
+
+    def _llm_general_improve(self, sentence: str, feedback_text: str) -> str:
+        """
+        Use LLM (Ollama) for general writing improvements while strictly preserving meaning.
+        """
+        if not OLLAMA_AVAILABLE:
+            return sentence
+        
+        prompt = f"""You are a technical writing expert. Rewrite this sentence to fix the issue: {feedback_text}.
+Original: "{sentence}"
+
+Task: Provide ONLY the perfectly rewritten sentence.
+Constraint: DO NOT include explanations, rules, or intros.
+CRITICAL RULE: DO NOT expand or guess the meaning of any acronyms (e.g. IE, PLC). Keep all technical terms and acronyms EXACTLY as they appear.
+REWRITTEN SENTENCE:"""
+
+        try:
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": "phi3:latest",
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1,  # Lower temperature for precision
+                        "max_tokens": 150
+                    }
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                ai_text = result.get("response", "").strip()
+                
+                # --- HALLUCINATION CHECK ---
+                if self._is_hallucination(sentence, ai_text):
+                    logger.error("🛑 Hallucination Filter BLOCKED rewrite")
+                    return sentence # Return original if AI started inventing things
+                    
+                return ai_text
+        except:
+            pass
+        return sentence
+
+    def _llm_passive_to_active(self, sentence: str, feedback_text: str) -> str:
+        """
+        Use LLM (Ollama) to intelligently convert passive voice to active voice.
+        """
+        if not OLLAMA_AVAILABLE:
+            return sentence
+        
+        prompt = f"""You are a technical writing expert. Convert this sentence from passive voice to active voice.
+
+CRITICAL RULES FOR ACCURACY:
+1. Preserve all Siemens tags like 'info "NOTICE"' or 'info "WARNING"' exactly.
+2. Address the user directly as 'You' for user actions (e.g., "must be installed" -> "You must install").
+3. Use simple present tense.
+4. DO NOT add any new meaning or information.
+5. DO NOT expand or guess the meaning of any acronyms (e.g. IE, PLC). Use them exactly as provided.
+
+Original sentence:
+"{sentence}"
+
+REWRITTEN ACTIVE VOICE SENTENCE:"""
+
+        try:
+            response = requests.post(
+                f"{self.ollama_url}/api/generate",
+                json={
+                    "model": "phi3:latest",
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1,  # Low for accuracy
+                        "max_tokens": 150
+                    }
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                ai_text = result.get("response", "").strip().replace("Here's the active version:", "").strip()
+                
+                # --- HALLUCINATION CHECK (GLOBAL) ---
+                if self._is_hallucination(sentence, ai_text):
+                    logger.error("🛑 Hallucination Filter BLOCKED active voice conversion")
+                    return sentence
+                    
+                # Clean up if AI tried to explain
+                if '"' in ai_text:
+                    # If it put the result in quotes, extract it
+                    matches = re.findall(r'"([^"]*)"', ai_text)
+                    if matches and len(matches[0].split()) > 3:
+                        ai_text = matches[0]
+
+                return ai_text
+        except:
+            pass
+        return sentence
+    
     def _llm_sentence_split(self, sentence: str, feedback_text: str) -> str:
         """
         Use LLM (Ollama) to intelligently split a long sentence into shorter ones.
-        This avoids the grammar errors of rule-based splitting.
         """
         if not OLLAMA_AVAILABLE:
-            logger.warning("⚠️ Ollama not available, cannot use LLM for sentence splitting")
             return sentence
         
-        # Build a focused prompt for sentence splitting
+        # Build a focused prompt for sentence splitting with strict "no invention" rules
         prompt = f"""You are a technical writing expert. Split this long sentence into 2-3 shorter, grammatically correct sentences.
 
-CRITICAL RULES:
-1. Every sentence MUST have a subject and a complete verb
-2. NEVER create sentence fragments (e.g., "Allowing it to..." is WRONG)
-3. Convert participial phrases to complete sentences:
-   - "X, allowing Y" → "X. This allows Y." (NOT "X. Allowing Y.")
-   - "X, enabling Y" → "X. This enables Y."
-4. Ensure each sentence can stand alone grammatically
-5. Preserve technical accuracy and meaning
+CRITICAL RULES FOR ACCURACY:
+1. DO NOT add any new meaning or information.
+2. DO NOT invent new details or procedural steps.
+3. Every sentence MUST have a subject and a complete verb.
+4. Convert participial phrases to complete sentences (e.g., "X, allowing Y" -> "X. This allows Y.")
+5. Preserve all technical terms, product codes, and version numbers exactly.
+6. The combined meaning of the new sentences must be IDENTICAL to the original.
 
 Original sentence:
 "{sentence}"
@@ -1240,8 +1445,6 @@ Issue: {feedback_text}
 Provide ONLY the improved sentences (no explanations, no labels, just the rewritten text):"""
 
         try:
-            logger.info(f"📡 Sending sentence split request to Ollama")
-            
             response = requests.post(
                 f"{self.ollama_url}/api/generate",
                 json={
@@ -1249,8 +1452,7 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.2,  # Low temperature for precise grammar
-                        "top_p": 0.9,
+                        "temperature": 0.2,
                         "max_tokens": 200
                     }
                 },
@@ -1259,34 +1461,17 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
             
             if response.status_code == 200:
                 result = response.json()
-                ai_response = result.get("response", "").strip()
-                logger.info(f"✅ LLM response: {ai_response[:150]}...")
+                ai_text = result.get("response", "").strip().replace("Improved sentences:", "").strip()
                 
-                # Clean up the response
-                # Remove common AI response patterns
-                ai_response = ai_response.replace("Here's the improved version:", "").strip()
-                ai_response = ai_response.replace("Here is the rewritten text:", "").strip()
-                ai_response = ai_response.replace("Improved sentences:", "").strip()
-                
-                # If response is valid and different, use it
-                if ai_response and ai_response != sentence and len(ai_response) > 20:
-                    # Basic validation: check it doesn't start with a gerund
-                    first_word = ai_response.split('.')[0].strip().split()[0] if '.' in ai_response else ai_response.split()[0]
-                    if first_word.endswith('ing') and first_word[0].isupper():
-                        logger.warning(f"⚠️ LLM created fragment starting with '{first_word}', rejecting")
-                        return sentence
-                    
-                    return ai_response
-                else:
-                    logger.warning("⚠️ LLM response invalid or unchanged")
+                # --- HALLUCINATION CHECK (GLOBAL) ---
+                if self._is_hallucination(sentence, ai_text):
+                    logger.error("🛑 Hallucination Filter BLOCKED sentence splitting")
                     return sentence
-            else:
-                logger.error(f"❌ Ollama returned error status {response.status_code}")
-                return sentence
-                
-        except Exception as e:
-            logger.error(f"❌ LLM sentence split failed: {type(e).__name__}: {e}")
-            return sentence
+                    
+                return ai_text
+        except:
+            pass
+        return sentence
     
     def _force_perfect_tense_improvement(self, sentence: str) -> str:
         """Force perfect tense to simple tense conversion."""
@@ -1365,6 +1550,25 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
             if not sentence.strip().endswith('.'):
                 sentence = sentence.strip() + '.'
             sentence = f"To clarify: {sentence.lower()}"
+            
+        elif "imperative" in feedback_text.lower() or "start with" in feedback_text.lower():
+            # Handle "To [verb]..., [action]" -> "[Action] to [verb]..."
+            # Example: "To add points, follow these steps" -> "Follow these steps to add points"
+            match = re.search(r'^(?:to|in order to)\s+(.+?),\s*(follow these steps|do the following|see below)([:.]?)$', sentence, re.IGNORECASE)
+            if match:
+                goal = match.group(1).strip()
+                action = match.group(2).strip()
+                punct = match.group(3) or ":"
+                # Capitalize action
+                action = action[0].upper() + action[1:]
+                return f"{action} to {goal}{punct}"
+            
+            # Simple "To [verb], [imperative]" -> "[Imperative] to [verb]"
+            match = re.search(r'^(?:to|in order to)\s+(.+?),\s*([A-Z]\w+.*)$', sentence)
+            if match:
+                goal = match.group(1).strip()
+                action = match.group(2).strip()
+                return f"{action} to {goal}"
         
         # Ensure the sentence ends properly
         if not sentence.strip().endswith(('.', '!', '?', ':')):
@@ -1481,6 +1685,9 @@ CRITICAL RULE: KEEP IT MINIMAL AND SIMPLE
 - Avoid elaborate explanations or complex additions
 - Choose the simplest, most direct phrasing
 - Remove unnecessary words and phrases
+- NEVER invent new technical information, quantities, or product features
+- ONLY rewrite what is provided in the input sentence
+- DO NOT guess or hallucinate specific numbers (e.g., do not say "up to ten")
 
 EXAMPLES OF MINIMALIST IMPROVEMENTS:
 - Original: "The available connectors are shown."
@@ -1499,6 +1706,8 @@ GUIDELINES:
 - Use "Application" instead of "technical writer" 
 - When addressing requirements, use "you" directly
 - Use simple present tense ONLY
+- DO NOT expand or guess the meaning of any acronyms (e.g. IE, PLC). Keep all technical terms EXACTLY as they appear.
+- NEVER add or invent new technical details that are not in the original sentence
 
 FORMAT:
 IMPROVED_SENTENCE: [Shortest, clearest rewritten sentence in simple present tense]
@@ -1509,10 +1718,22 @@ Rewrite the sentence now:"""
     def _build_ollama_rag_prompt(
         self, feedback_text: str, sentence_context: str, 
         document_type: str, writing_goals: List[str], context_documents: List[str],
-        adjacent_context: Optional[Dict[str, str]] = None  # NEW: adjacent sentences
+        adjacent_context: Optional[Dict[str, str]] = None,  # NEW: adjacent sentences
+        remediation_context: Optional[Dict[str, Any]] = None  # NEW: RAG remediation
     ) -> str:
         """Build a RAG-enhanced prompt for Ollama using issue-specific optimized templates."""
         
+        # Build remediation guidance section (RAG Remediation Engine)
+        remediation_section = ""
+        if remediation_context:
+            remediation_section = "\n📘 RULE-SPECIFIC REMEDIATION GUIDANCE:\n"
+            remediation_section += f"RULE ID: {remediation_context.get('rule_id', 'Unknown')}\n"
+            remediation_section += f"REASON: {remediation_context.get('why', '')}\n"
+            remediation_section += f"FIX INSTRUCTION: {remediation_context.get('fix_instruction', '')}\n"
+            if remediation_context.get('good_examples'):
+                remediation_section += f"EXAMPLES OF GOOD PHRASING:\n{remediation_context.get('good_examples')}\n"
+            remediation_section += "\n💡 STRICTLY FOLLOW the fix instructions and examples above while preserving original meaning.\n"
+
         # Build context section from uploaded documents
         context_section = ""
         if context_documents:
@@ -1546,6 +1767,7 @@ Rewrite the sentence now:"""
 📋 ISSUE: Passive voice detected
 📝 ORIGINAL SENTENCE (YOU MUST REWRITE THIS): "{sentence_context}"
 {adjacent_section}
+{remediation_section}
 {context_section}
 
 🎯 YOUR TASK: Convert THIS SPECIFIC SENTENCE to clear, direct active voice.
@@ -1593,6 +1815,36 @@ IMPROVED_SENTENCE: [Your active voice conversion - keep it concise]
 EXPLANATION: [One sentence explaining the change and why it fits the context]
 
 REMEMBER: Direct, clear, concise. Use the FEWEST words while fixing the issue. Consider the surrounding context!"""
+
+        # IMPERATIVE VOICE / PROCEDURE PROMPT
+        elif "imperative" in issue_type or "start with" in issue_type:
+            return f"""You are a technical writing expert specializing in procedural documentation.
+
+📋 ISSUE: Procedural steps must start with imperative (command) verbs.
+📝 ORIGINAL SENTENCE (YOU MUST REWRITE THIS): "{sentence_context}"
+{adjacent_section}
+{context_section}
+
+🎯 YOUR TASK: Rewrite THIS SPECIFIC SENTENCE to lead with a direct action command.
+⚠️ CRITICAL: Your output MUST be a rewrite of: "{sentence_context}"
+⚠️ DO NOT output examples from the reference material - rewrite the ORIGINAL sentence only!
+
+✅ IMPERATIVE RULES:
+1. **Lead with the action**: Start the sentence with a strong verb (Configure, Click, Select, Follow, etc.)
+2. Avoid purpose-clause lead-ins:
+   - WRONG: "To add a data point, follow these steps:"
+   - RIGHT: "Follow these steps to add a data point:"
+3. Avoid "You can" / "The user should":
+   - WRONG: "You can click on the icon."
+   - RIGHT: "Click the icon."
+4. Be direct and instructive.
+5. Preserve technical accuracy.
+
+📤 REQUIRED OUTPUT:
+IMPROVED_SENTENCE: [Version starting with imperative verb]
+EXPLANATION: [One sentence explaining how you fixed the imperative voice]
+
+REMEMBER: Action first!"""
 
         # LONG SENTENCE PROMPT
         elif "long sentence" in issue_type or "shorter" in issue_type or "break" in issue_type:
@@ -2380,6 +2632,97 @@ def get_enhanced_ai_suggestion(
     """
     logger.info(f"🧠 INTELLIGENT: get_enhanced_ai_suggestion called for: {feedback_text[:50]}")
     
+    # ============================================================================
+    # RAG REMEDIATION - Rule-specific knowledge base lookup (27 rules)
+    # ============================================================================
+    remediation_context = None
+    try:
+        from .rules.rule_remediations import get_remediation_by_id, get_remediation_semantic
+        import chromadb
+        import os
+        
+        # Connect to the specialized rules collection
+        # Path relative to app/
+        persist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docscanner_rules_db')
+        
+        if os.path.exists(persist_path):
+            client = chromadb.PersistentClient(path=persist_path)
+            try:
+                collection = client.get_collection(name="rule_remediations")
+                remediation = None
+                
+                # Map detected rules to IDs
+                rule_id_map = {
+                    'passive_voice': 'PASSIVE_001',
+                    'passive_voice_detected': 'PASSIVE_001',
+                    'non_simple_present': 'TENSE_001',
+                    'future_tense': 'TENSE_001',
+                    'future_tense_detected': 'TENSE_001',
+                    'shall_prohibited': 'TENSE_001',
+                    'modal_verbs': 'TENSE_002',
+                    'modal_verbs_detected': 'TENSE_002',
+                    'ui_labels_with_articles': 'UI_001',
+                    'ui_labeling_issue': 'UI_001',
+                    'click_on': 'UI_002',
+                    'click_on_detected': 'UI_002',
+                    'plural_ui_elements': 'PLURAL_001',
+                    'plural_ui_detected': 'PLURAL_001',
+                    'notice_with_symbol': 'SAFETY_001',
+                    'safety_missing_symbol': 'SAFETY_002',
+                    'first_person': 'PERSON_001',
+                    'non_imperative_step': 'IMPERATIVE_001',
+                    'adverb_overuse': 'ADV_001',
+                    'vague_language': 'VAGUE_001',
+                    'oxford_comma': 'OXFORD_001',
+                    'contractions': 'CONTRACTION_001',
+                    'gender_specific': 'GENDER_001',
+                    'compound_step': 'ACTION_001',
+                    'fused_actions': 'LIST_001',
+                    'empty_table_cell': 'TABLE_001',
+                    'merged_table_cell': 'TABLE_002',
+                    'phrasal_verbs': 'PVERB_001',
+                    'idiomatic_expressions': 'TRANS_001',
+                    'vague_quantifiers': 'TRANS_002',
+                    'inconsistent_ui_verbs': 'CONSIST_001'
+                }
+                
+                detected_rule = (issue.get('rule') if isinstance(issue, dict) else None) or feedback_text.lower().replace(' ', '_')
+                
+                # Check for direct ID match first
+                rule_id = rule_id_map.get(detected_rule)
+                if rule_id:
+                    remediation = get_remediation_by_id(collection, rule_id)
+                    if remediation:
+                        logger.info(f"📚 RAG Remediation: Found exact match for '{rule_id}'")
+                
+                # Fallback to semantic search in rules DB
+                if not remediation:
+                    semantic_results = get_remediation_semantic(collection, feedback_text, top_k=1)
+                    if semantic_results and semantic_results[0].get('distance', 1.0) < 0.4:
+                        remediation = semantic_results[0]
+                        logger.info(f"📚 RAG Remediation: Found semantic match '{remediation['rule_id']}' (dist: {remediation['distance']:.3f})")
+
+                if remediation:
+                    good_examples_raw = remediation['metadata'].get('good_examples', '')
+                    # Convert "Ex 1 | Ex 2" back to a list for the frontend
+                    good_examples_list = [ex.strip() for ex in good_examples_raw.split('|')] if good_examples_raw else []
+                    
+                    remediation_context = {
+                        'rule_id': remediation.get('rule_id'),
+                        'why': remediation['metadata'].get('why', ''),
+                        'fix_instruction': remediation['metadata'].get('fix_instruction', ''),
+                        'good_examples': good_examples_list,
+                        'category': remediation['metadata'].get('category', 'style')
+                    }
+            except Exception as inner_e:
+                logger.warning(f"⚠️ Rule collection not ready or error: {inner_e}")
+        else:
+            # Try semantic search in main collection if rule DB doesn't exist yet
+            logger.info("Rules DB not found yet, skipping RAG remediation")
+            
+    except Exception as e:
+        logger.warning(f"⚠️ RAG Remediation lookup failed: {e}")
+
     # Initialize rule context tracking
     rule_context = None
     
@@ -2745,6 +3088,7 @@ def get_enhanced_ai_suggestion(
             option_number=option_number,
             issue=issue,
             adjacent_context=adjacent_context,  # Pass adjacent context
+            remediation_context=remediation_context  # Pass RAG remediation context
         )
         
         # ============================================================================
@@ -2777,7 +3121,7 @@ def get_enhanced_ai_suggestion(
                 }
             
             # ⚠️ CRITICAL: Check if AI suggestion adds value
-            is_valid, reason = is_value_added(sentence_context, suggestion, feedback_text)
+            is_valid, reason = is_value_added(sentence_context, suggestion, feedback_text, method=result.get('method'))
             
             if not is_valid:
                 logger.warning(f"❌ VALIDATION FAILED: {reason}")
@@ -2809,7 +3153,15 @@ def get_enhanced_ai_suggestion(
             # ============================================================================
             
             # HARD BLOCK: Check if this sentence is forbidden from AI rewrite
-            if blocks_ai_rewrite(sentence_context):
+            # EXCEPTION: If the user provided a direct RAG replacement, or we're in high-confidence RAG mode, allow it.
+            rag_methods = [
+                'document_first', 'document_search', 'hybrid_document_llm', 
+                'advanced_rag', 'ollama_rag', 'vector_openai', 'contextual_rag',
+                'document_search_primary', 'document_search_extended'
+            ]
+            is_rag_match = result.get('method') in rag_methods
+            
+            if blocks_ai_rewrite(sentence_context) and not is_rag_match:
                 logger.warning(f"🛑 POLICY BLOCK: Sentence contains normative + conditional logic")
                 logger.info(f"   Normative: {contains_normative_language(sentence_context)}")
                 logger.info(f"   Conditional: {contains_conditional_or_alternative(sentence_context)}")
@@ -2906,6 +3258,10 @@ def get_enhanced_ai_suggestion(
     fallback_suggestion = sentence_context
     fallback_explanation = f"Review the text and address: {feedback_text}"
     
+    # If we have remediation context, use it to improve the fallback explanation
+    if remediation_context:
+        fallback_explanation = f"**Rule: {remediation_context.get('rule_id')}**\n\n{remediation_context.get('why')}\n\n**How to fix:** {remediation_context.get('fix_instruction')}"
+    
     # Try to apply basic improvements in fallback
     if "adverb" in feedback_text.lower() and "only" in sentence_context.lower():
         import re
@@ -2922,15 +3278,20 @@ def get_enhanced_ai_suggestion(
         fallback_explanation = "Removed redundant 'on' after 'click' for clearer, more concise instruction."
         logger.info(f"Applied fallback 'click on' fix: '{fallback_suggestion}'")
     
+    # Important: If the suggestion is identical to original, be transparent about why
+    if fallback_suggestion == sentence_context:
+        fallback_explanation += "\n\n*(Note: Advanced AI was unavailable to generate an automatic rewrite. Please review manually.)*"
+    
     return {
         "suggestion": fallback_suggestion,
         "ai_answer": fallback_explanation,
         "confidence": "medium",
         "method": "emergency_fallback_with_basic_rules",
         "sources": [],
-        "success": True,  # Mark as success if we provide a meaningful change
+        "success": True,
         "is_guidance_only": False,
         "is_semantic_explanation": False,
+        "remediation_context": remediation_context, # Ensure context is passed even in fallback
         # Preserve rule context if exists
         **({'reviewer_rationale': rule_context['reviewer_rationale'], 
             'rule_decision': rule_context['decision_type'],

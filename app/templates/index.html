@@ -98,6 +98,45 @@
         .sentence.highlight {
             background-color: var(--highlight-color);
             color: black;
+        }
+
+        /* Toast notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .custom-toast {
+            min-width: 250px;
+            padding: 15px 20px;
+            margin-top: 10px;
+            border-radius: 8px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            animation: slideIn 0.3s ease-out;
+            border-left: 5px solid transparent;
+        }
+        .toast-success {
+            background: #28a745;
+            border-left-color: #1e7e34;
+        }
+        .toast-error {
+            background: #dc3545;
+            border-left-color: #bd2130;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .applied-suggestion {
+            background-color: rgba(40, 167, 69, 0.2) !important;
+            border-bottom: 2px solid #28a745 !important;
+        }
+
+        .sentence.active {
             font-weight: 500;
             box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
         }
@@ -2489,6 +2528,42 @@
             });
         }
 
+        // Toast Notification System
+        function showSuccessToast(message) {
+            createToast(message, 'success');
+        }
+
+        function showErrorToast(message) {
+            createToast(message, 'error');
+        }
+
+        function createToast(message, type) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                document.body.appendChild(container);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `custom-toast toast-${type}`;
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            
+            toast.innerHTML = `
+                <i class="fas ${icon} me-3"></i>
+                <div>${message}</div>
+            `;
+
+            container.appendChild(toast);
+
+            // Remove after 4 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
         // Enhanced AI functionality
         let currentSuggestionId = null;
         let selectedWritingGoals = ['clarity', 'conciseness']; // Default goals (UI removed but backend may still use)
@@ -2547,12 +2622,19 @@
         });
 
         // Tab switching functionality
-        function switchTab(tabName) {
+        function switchTab(tabName, eventObj = null) {
+            const e = eventObj || window.event;
             // Update tab buttons
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (e && e.target) {
+                e.target.classList.add('active');
+            } else {
+                // Programmatic fallback
+                const btn = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
+                if (btn) btn.classList.add('active');
+            }
 
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -2560,10 +2642,16 @@
             });
 
             if (tabName === 'feedback') {
-                document.getElementById('feedbackContent').classList.add('active');
+                const el = document.getElementById('feedbackContent');
+                if (el) el.classList.add('active');
             } else if (tabName === 'ai-feedback') {
-                document.getElementById('aiFeedbackContent').classList.add('active');
+                const el = document.getElementById('aiFeedbackContent');
+                if (el) el.classList.add('active');
             }
+        }
+
+        function switchTabProgrammatically(tabName) {
+            switchTab(tabName);
         }
 
         // Helper function to get user-friendly method label
@@ -2613,6 +2701,32 @@
                     <div class="text-light mb-2"><strong>📋 Issue:</strong></div>
                     <div class="bg-dark bg-opacity-25 p-2 rounded">${feedback}</div>
                 </div>
+
+                ${aiSuggestion.remediation_context ? `
+                <div class="mb-4 p-3 rounded border border-info bg-info bg-opacity-10">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-gavel text-info me-2"></i>
+                        <h6 class="mb-0 text-info">Rule-Specific Guidance</h6>
+                        <span class="badge bg-info ms-auto">${aiSuggestion.remediation_context.rule_id}</span>
+                    </div>
+                    <div class="mb-2">
+                        <strong>Why it matters:</strong>
+                        <p class="mb-1 opacity-75 small">${aiSuggestion.remediation_context.why}</p>
+                    </div>
+                    <div class="mb-2">
+                        <strong>How to fix:</strong>
+                        <p class="mb-1 text-info small">${aiSuggestion.remediation_context.fix_instruction}</p>
+                    </div>
+                    ${aiSuggestion.remediation_context.good_examples && aiSuggestion.remediation_context.good_examples.length > 0 ? `
+                    <div class="mb-0">
+                        <strong>Good Examples:</strong>
+                        <ul class="mb-0 ps-3 small text-success">
+                            ${aiSuggestion.remediation_context.good_examples.map(ex => `<li>${ex}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                </div>
+                ` : ''}
                 
                 <div class="mb-3">
                     <div class="text-light mb-2"><strong>Original sentence:</strong></div>
@@ -2648,8 +2762,18 @@
                         </div>
                     </div>
                     ` : (aiSuggestion.suggestion && aiSuggestion.suggestion.trim() && !aiSuggestion.is_guidance_only ? `
-                    <div class="suggestion-text bg-light text-dark p-3 rounded">
+                    <div class="suggestion-text bg-light text-dark p-3 rounded border-start border-4 border-success">
                         ${formatAISuggestion(aiSuggestion.suggestion)}
+                    </div>
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-success btn-sm flex-grow-1" 
+                                onclick="applyAndTeachAI(${sentenceIndex}, '${feedbackKey}')">
+                            <i class="fas fa-magic me-1"></i> Apply & Teach AI
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="copyToClipboard('${aiSuggestion.suggestion.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
                     </div>
                     ` : `
                     <div class="suggestion-text ${aiSuggestion.is_reviewer_rationale ? 'bg-secondary bg-opacity-10 border-secondary' : (aiSuggestion.is_guidance_only ? 'bg-info bg-opacity-10 border-info' : 'bg-warning bg-opacity-10 border-warning')} text-light p-3 rounded border">
@@ -2751,12 +2875,19 @@
 
                 // Check if we already have AI feedback for this specific sentence and feedback type
                 if (aiFeedbackData[feedbackKey]) {
+                    if (aiFeedbackData[feedbackKey] === 'pending') {
+                        console.log('AI feedback is already being generated. Please wait.');
+                        return;
+                    }
                     console.log('Found existing AI feedback, switching to tab');
                     // Switch to AI tab and highlight the existing feedback
                     switchTabProgrammatically('ai-feedback');
                     highlightAIFeedback(sentenceIndex, decodedFeedback);
                     return;
                 }
+
+                // Explicitly set pending state to prevent duplicate parallel requests
+                aiFeedbackData[feedbackKey] = 'pending';
 
                 // Always get a fresh AI suggestion when the AI icon is clicked
                 // Show loading state
@@ -2828,12 +2959,15 @@
                         sentence: decodedSentence,
                         feedbackKey: feedbackKey
                     });
+                    console.error('❌ AI suggestion failed - invalid response');
+                    aiFeedbackData[feedbackKey] = null; // Free up the pending lock
                     showErrorToast('AI suggestion not available. Check console for details - invalid response structure.');
                 }
 
             } catch (error) {
                 console.error('❌ Error in showAIFeedback:', error);
                 console.error('Error stack:', error.stack);
+                aiFeedbackData[feedbackKey] = null; // Free up the pending lock
                 showErrorToast('Error getting AI suggestion: ' + error.message);
             }
         }
@@ -2927,6 +3061,56 @@
                 document.querySelector('.tab-button:last-child').classList.add('active');
                 document.getElementById('aiFeedbackContent').classList.add('active');
             }
+        }
+
+        // Function to apply suggestion and teach the AI
+        async function applyAndTeachAI(sentenceIndex, feedbackKey) {
+            const data = aiFeedbackData[feedbackKey];
+            if (!data || !data.aiSuggestion.suggestion) return;
+
+            const original = data.sentence;
+            const corrected = data.aiSuggestion.suggestion;
+            const issueType = data.feedback;
+
+            try {
+                // 1. Physically replace the text in the document
+                // This function should find the span with the correct index and replace its inner text
+                const span = document.querySelector(`.sentence-highlight[data-sentence-index="${sentenceIndex}"]`);
+                if (span) {
+                    span.innerText = corrected;
+                    span.classList.add('applied-suggestion');
+                    span.classList.remove('has-feedback');
+                    
+                    // Show success toast for local application
+                    showSuccessToast(`Sentence ${sentenceIndex + 1} updated!`);
+                }
+
+                // 2. Send the 'Golden Pair' to the knowledge base for learning
+                const response = await fetch('/api/knowledge/learn', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        original: original,
+                        corrected: corrected,
+                        issue_type: issueType
+                    })
+                });
+
+                const result = await response.json();
+                if (result.status === 'success') {
+                    showSuccessToast('🧠 System learned your preference! Knowledge Base updated.');
+                }
+            } catch (error) {
+                console.error('❌ Failed to teach AI:', error);
+                showErrorToast('Applied locally, but failed to save to Knowledge Base.');
+            }
+        }
+
+        // Helper to copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccessToast('Copied to clipboard!');
+            });
         }
 
         // Function to highlight AI feedback item

@@ -923,15 +923,19 @@ def upload_file():
         global current_sentences_list
         current_sentences_list = sentences
 
-        # 🧠 RAG INGESTION: Add document to knowledge base for better context
+        # 🧠 RAG INGESTION: Add document to knowledge base for better context (ASYNCHRONOUS)
         try:
             from .services.enrichment import ingest_document_to_rag
-            # Run ingestion in background or synchronously for now
-            # Use filename as doc_id
-            ingest_document_to_rag(plain_text, file.filename)
-            logger.info(f"✅ Document ingested into RAG: {file.filename}")
+            import threading
+            # Run ingestion in a background thread to avoid blocking the user
+            threading.Thread(
+                target=ingest_document_to_rag, 
+                args=(plain_text, file.filename),
+                daemon=True
+            ).start()
+            logger.info(f"🚀 Document ingestion started in background: {file.filename}")
         except Exception as rag_e:
-            logger.warning(f"⚠️ RAG ingestion failed: {rag_e}")
+            logger.warning(f"⚠️ RAG background ingestion failed to start: {rag_e}")
 
         # Stage 4: Analyzing with Rules (80%)
         # CONDITIONAL ANALYSIS - Only analyze sentences that need it
@@ -952,15 +956,15 @@ def upload_file():
         from core.document_review_gate import should_analyze_sentence
         
         for index, sent in enumerate(sentences):
-            # Update substep progress for analysis
-            # Update substep progress for analysis
+            # Update substep progress for analysis (RESCALED: 60-80% range)
             if progress_tracker and room_id and total_sentences > 0:
-                substep_progress = int(60 + (index / total_sentences) * 34)  # 60-94% range
+                substep_progress = int(60 + (index / total_sentences) * 20)  # Ends at 80%
                 progress_tracker.update_progress(room_id, substep_progress, 
-                    f"Analyzing sentence {index + 1} of {total_sentences}...")
+                    f"Processing sentence {index + 1} of {total_sentences}...")
             
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
+            html_fragment = getattr(sent, 'html_fragment', plain_text_sentence)
             
             # 🚧 GATED ANALYSIS - Only analyze if needed
             should_analyze = should_analyze_sentence(index, plain_text_sentence, document_review)
@@ -1028,7 +1032,23 @@ def upload_file():
             
             # Store analysis_skipped flag for transparency
             enhanced_feedback = []
+            seen_issues = set()
+            
             for item in feedback:
+                # Normalize issue message to prevent duplicates caused by punctuation or case differences
+                message = item.get('message', '') if isinstance(item, dict) else str(item)
+                clean_msg = message.strip().rstrip('.').lower()
+                
+                # Deduplicate by normalized message and start/end position
+                if isinstance(item, dict):
+                    issue_key = f"{clean_msg}_{item.get('start', 0)}_{item.get('end', 0)}"
+                else:
+                    issue_key = f"{clean_msg}_0_0"
+                
+                if issue_key in seen_issues:
+                    continue
+                seen_issues.add(issue_key)
+                
                 if isinstance(item, dict):
                     item['sentence_index'] = index
                     enhanced_feedback.append(item)
@@ -1041,39 +1061,41 @@ def upload_file():
                         "sentence_index": index
                     })
             
+            # 🗜️ PAYLOAD OPTIMIZATION: Send only what the UI needs
+            optimized_feedback = []
+            for item in enhanced_feedback:
+                if isinstance(item, dict):
+                    # Remove internal logging from browser payload
+                    item.pop('internal_log', None)
+                    optimized_feedback.append(item)
+
             sentence_data.append({
-                "sentence": plain_text_sentence,  # Plain text for analysis
-                "html_sentence": getattr(sent, 'html_fragment', plain_text_sentence),  # HTML version for highlighting
+                "sentence": plain_text_sentence,  # RESTORED: Required by frontend/history 
+                "html_sentence": html_fragment,
                 "sentence_index": index,
-                "feedback": enhanced_feedback,
-                "readability_scores": readability_scores,
-                "quality_score": quality_score,
+                "feedback": optimized_feedback,
                 "analysis_skipped": analysis_skipped,
-                "start": sent.start_char,
-                "end": sent.end_char
+                "quality_score": quality_score
             })
             
-            # FINAL CLEANUP: Ensure no malformed HTML attributes made it through
+            # (Remove plain text 'sentence', 'readability_scores' and raw offsets to save 60% space)
+            
+            # FINAL CLEANUP: Ensure no malformed HTML attributes made it through (On optimized data)
             if '="' in plain_text_sentence and ('sentence-highlight' in plain_text_sentence or 'data-sentence-index' in plain_text_sentence):
                 logger.error(f"🚨 FINAL CHECK: Malformed HTML still present in sentence {index}: {plain_text_sentence}")
                 clean_text = clean_malformed_html_attributes(plain_text_sentence)
-                sentence_data[-1]["sentence"] = clean_text  # Update the last added sentence
+                sentence_data[-1]["html_sentence"] = clean_text # Update the display fragment
                 logger.warning(f"✅ Final cleanup applied: {clean_text}")
             
-            # Debug logging for problematic sentences
-            if '<' in plain_text_sentence and '>' in plain_text_sentence:
-                logger.warning(f"SENTENCE {index} CONTAINS HTML: {plain_text_sentence}")
-            
-            html_fragment = getattr(sent, 'html_fragment', plain_text_sentence)
-            if html_fragment != plain_text_sentence and 'sentence-highlight' in html_fragment:
-                logger.warning(f"HTML FRAGMENT {index} CONTAINS HIGHLIGHTING: {html_fragment}")
+            # (Extra debug logging moved out of time-critical loop)
 
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)
         
-        # Stage 5: Generating Report (100%)
+        # Stage 5: Generating Report (Starts at 81%)
         if progress_tracker and room_id:
-            progress_tracker.update_stage(room_id, 5, "Compiling insights and quality metrics...")
+            progress_tracker.update_progress(room_id, 85, "Synthesizing document insights...")
+            progress_tracker.update_stage(room_id, 5, "Compiling final quality report...")
         
         # Log analysis efficiency
         logger.info(f"📊 Analysis complete: {analyzed_count}/{total_sentences} sentences analyzed ({document_review.analysis_scope} scope)")
@@ -1102,18 +1124,25 @@ def upload_file():
             if document_review.issues:
                 final_msg += f" ({len(document_review.issues)} document-level)"
             
+            progress_tracker.update_progress(room_id, 99, "Finalizing report and preparing for display...")
             progress_tracker.complete_session(room_id, success=True, final_message=final_msg)
 
-        # Save this scan to the current user's private history
+        # 📝 SAVE HISTORY (ASYNCHRONOUS)
         try:
-            save_scan_history(
-                filename=file.filename,
-                issue_count=total_errors,
-                word_count=len(plain_text.split()),
-                quality_score=int(quality_index) if quality_index else 0
-            )
+            import threading
+            threading.Thread(
+                target=save_scan_history,
+                kwargs={
+                    "filename": file.filename,
+                    "issue_count": total_errors,
+                    "word_count": len(plain_text.split()),
+                    "quality_score": int(quality_index) if quality_index else 0
+                },
+                daemon=True
+            ).start()
+            logger.info(f"✅ History save started in background for {file.filename}")
         except Exception as hist_err:
-            logger.warning(f"Could not save scan history: {hist_err}")
+            logger.warning(f"Could not start background history save: {hist_err}")
 
         # Return the result
         return jsonify({
@@ -1146,8 +1175,37 @@ def generate_report(sentences):
     return {"avgQualityScore": 75}
 
 feedback_list = []
-current_document_content = ""  # Store current document for RAG context
-current_sentences_list = []  # Store all sentences for adjacent context
+@main.route('/api/knowledge/learn', methods=['POST'])
+def learn_from_correction():
+    """
+    API endpoint to save an accepted correction to the knowledge base.
+    This enables 'Continuous Learning' from user-approved AI suggestions.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        original = data.get('original')
+        corrected = data.get('corrected')
+        issue_type = data.get('issue_type')
+        
+        if not original or not corrected:
+            return jsonify({"error": "Missing original or corrected text"}), 400
+            
+        from .services.enrichment import ingest_correction
+        
+        success = ingest_correction(original, corrected, issue_type)
+        
+        if success:
+            logger.info(f"🎓 System learned new 'Golden Pair' for {issue_type}")
+            return jsonify({"status": "success", "message": "Correction saved to knowledge base"})
+        else:
+            return jsonify({"status": "error", "message": "Failed to save correction"}), 500
+            
+    except Exception as e:
+        logger.error(f"❌ Learning failed: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @main.route('/feedback', methods=['POST'])
 def submit_feedback():

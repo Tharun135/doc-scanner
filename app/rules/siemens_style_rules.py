@@ -114,6 +114,12 @@ def check(sentence_text):
             "Do not use Latin abbreviations. Replace 'e.g.' with 'for example', 'such as', or 'including'. Replace 'i.e.' with 'that is' or 'in other words'.",
             "guide"
         ),
+        (
+            r"^to\s+.*,\s+follow\s+these\s+steps",
+            "Start procedural steps with imperative verbs",
+            "Siemens Style Guide recommends starting procedural steps with direct imperatives. Instead of 'To [action], follow these steps:', use 'Follow these steps to [action]:'.",
+            "rewrite"
+        ),
     ]
 
     sentence_lower = sentence_text.lower()

@@ -209,6 +209,9 @@ DEEP ANALYSIS REQUIRED:
 3. Evaluate the impact on readability and clarity
 4. Provide detailed reasoning for your choices
 5. Consider the target audience and documentation type
+6. NEVER invent new technical information, quantities, or product features.
+7. ONLY rewrite what is provided in the input sentence or the RAG knowledge context.
+8. If a quantity like "multiple" is mentioned, do NOT guess a specific number (like "ten") unless it's explicitly stated in the RAG context.
 
 DETAILED OUTPUT FORMAT:
 CORRECTED: [Your improved sentence]

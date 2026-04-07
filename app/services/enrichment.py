@@ -97,6 +97,37 @@ def ingest_document_to_rag(text, doc_id, product="docscanner", version="1.0"):
         logger.error(f"[ENRICH] Ingestion failed for {doc_id}: {e}")
         return 0
 
+def ingest_correction(original, corrected, issue_type, product="docscanner", version="1.0"):
+    """
+    Save a user-accepted correction back into the Knowledge Base as a 'Golden Pair'.
+    This enables the system to learn from its best suggestions.
+    """
+    try:
+        # Add tools folder to path
+        tools_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tools")
+        if tools_path not in sys.path:
+            sys.path.append(tools_path)
+            
+        from enhanced_rag_integration import get_enhanced_rag_integration
+        
+        # Format the correction as a rule entry
+        rule_text = f"Context: {issue_type}\nOriginal: {original}\nCorrected: {corrected}"
+        
+        integration = get_enhanced_rag_integration()
+        chunk_count = integration.ingest_document(
+            document_text=rule_text,
+            source_doc_id=f"learned_{hash(original)}",
+            product=product,
+            version=version,
+            metadata={"type": "learned_rule", "issue": issue_type}
+        )
+        
+        logger.info(f"[LEARN] Saved new golden pair for {issue_type}")
+        return True
+    except Exception as e:
+        logger.error(f"[LEARN] Learning failed: {e}")
+        return False
+
 # Test function when run directly
 if __name__ == "__main__":
     test_issue = {

@@ -449,20 +449,31 @@ class AdvancedRetriever:
             'embeddings_available': EMBEDDINGS_AVAILABLE,
             'tfidf_available': SKLEARN_AVAILABLE,
             'collection_count': 0,
-            'total_chunks': 0
+            'total_chunks': 0,
+            'golden_patterns_count': 0
         }
         
         if self.collection is not None:
             try:
-                stats['collection_count'] = self.collection.count()
-                stats['total_chunks'] = stats['collection_count']
-            except:
-                pass
-        
+                count = self.collection.count()
+                stats['collection_count'] = count
+                stats['total_chunks'] = count
+                
+                # Count golden patterns (chunks with is_golden_pattern=True in metadata)
+                # Note: ChromaDB prefix metadata with meta_ in our index_chunks method
+                results = self.collection.get(
+                    where={"meta_is_golden_pattern": True}
+                )
+                if results and 'ids' in results:
+                    stats['golden_patterns_count'] = len(results['ids'])
+                
+            except Exception as e:
+                logger.warning(f"Error getting collection stats: {e}")
+                
         if self.tfidf_matrix is not None:
             stats['tfidf_chunks'] = self.tfidf_matrix.shape[0]
             stats['tfidf_features'] = self.tfidf_matrix.shape[1]
-        
+            
         return stats
     
     def search_by_source_type(self, query: str, source_type: str, 

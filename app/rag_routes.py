@@ -452,27 +452,15 @@ def rag_dashboard():
                 'documents_count': 0
             }
         
-        # Generate realistic demo data if system is working but empty
-        if deps_available and stats['total_chunks'] == 0:
-            demo_stats = {
-                'total_chunks': 247,
-                'total_queries': 45,
-                'avg_relevance': 0.87,
-                'success_rate': 0.93,
-                'queries_today': 12,
-                'documents_count': 15,
-                'search_methods': 3,
-                'embedding_model': 'all-MiniLM-L6-v2',
-                'hybrid_available': True,
-                'chromadb_available': True,
-                'embeddings_available': True,
-                'retrieval_accuracy': 0.89,
-                'response_relevance': 0.85,
-                'context_precision': 0.91,
-                'user_satisfaction': 0.88,
-                'avg_search_time': 245
-            }
-            stats.update(demo_stats)
+        # If RAG is available but stats are still 0, try one more real retrieval check
+        if deps_available and stats.get('total_chunks', 0) == 0:
+            try:
+                # Just get the count directly from Chroma if possible via retriever
+                if retriever:
+                    real_stats = retriever.get_collection_stats()
+                    stats.update(real_stats)
+            except Exception as e:
+                logger.warning(f"Failed to get real stats: {e}")
         
         load_time = time.time() - start_time
         logger.info(f"✅ RAG dashboard loaded in {load_time:.2f}s (OPTIMIZED)")
@@ -1354,35 +1342,39 @@ def api_search():
         if not query:
             return jsonify({"success": False, "error": "Query is required"}), 400
         
-        # For demo purposes, return sample results
-        sample_results = [
-            {
-                "content": f"This is a relevant chunk about {query}. It contains detailed information that matches your search query.",
-                "score": 0.89,
-                "source": "technical_manual.pdf",
-                "chunk_id": "chunk_001"
-            },
-            {
-                "content": f"Another relevant section discussing {query} in detail with technical specifications.",
-                "score": 0.76,
-                "source": "user_guide.docx", 
-                "chunk_id": "chunk_045"
-            },
-            {
-                "content": f"Additional context about {query} from our knowledge base with practical examples.",
-                "score": 0.68,
-                "source": "best_practices.md",
-                "chunk_id": "chunk_123"
-            }
-        ]
+        # Perform REAL search using the retriever
+        if retriever is None:
+            init_rag_system()
         
-        return jsonify({
-            "success": True,
-            "query": query,
-            "results": sample_results,
-            "total_results": len(sample_results),
-            "search_time": "124ms"
-        })
+        if retriever is not None:
+            start_time = time.time()
+            # Use hybrid search for best results
+            results = retriever.retrieve_hybrid(query, n_results=5)
+            search_time_ms = int((time.time() - start_time) * 1000)
+            
+            formatted_results = []
+            for r in results:
+                formatted_results.append({
+                    "content": r.content,
+                    "score": round(r.relevance_score, 3),
+                    "source": r.metadata.get('source_doc_id', 'Unknown Source'),
+                    "chunk_id": r.chunk_id,
+                    "metadata": r.metadata
+                })
+            
+            return jsonify({
+                "success": True,
+                "query": query,
+                "results": formatted_results,
+                "total_results": len(formatted_results),
+                "search_time": f"{search_time_ms}ms"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Retriever not initialized",
+                "results": []
+            }), 500
         
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

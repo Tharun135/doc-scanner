@@ -45,11 +45,21 @@ def can_split_long_sentence(sentence: str) -> Tuple[bool, str]:
     if any(cond in s for cond in conditionals):
         return False, "Contains conditional logic - manual split safer"
     
-    # ❌ BLOCKER B: Logical OR/AND requirement chains
-    # These encode alternatives, not sequence
-    logical_alternatives = [" or ", " and/or ", " either ", " neither "]
+    # ❌ BLOCKER B: Logical OR/AND requirement chains (Complex alternatives)
+    # Only block if 'or' seems to connect clauses (contains verb structures)
+    # or is used in a very long list/complex structure.
+    # Safe: 'data points or tags', 'IP or FQDN'
+    # Risk: 'If you fail to do X, or if the system fails to do Y'
+    logical_alternatives = [" and/or ", " either ", " neither "]
     if any(alt in s for alt in logical_alternatives):
-        return False, "Contains logical alternatives - risk of breaking meaning"
+        return False, "Contains complex logical alternatives"
+    
+    # Check for ' or ' specifically - ignore simple NP or NP
+    if " or " in s:
+        # Simple heuristic: if ' or ' is followed by a common verb or 'if', it's complex
+        if re.search(r'\sor\s+(if|when|must|shall|should|can|will|you|the)\b', s):
+            return False, "Contains logical alternatives - risk of breaking meaning"
+        # Else, if it's just 'A or B', it's likely safe
     
     # ❌ BLOCKER C: Normative/compliance language
     # Auto-splitting compliance text is a legal/accuracy risk
@@ -218,8 +228,12 @@ def is_semantically_complex(sentence: str) -> bool:
     if _contains_conditionals(sentence):
         return True
     
-    # Has logical alternatives
-    if " or " in s or " either " in s or " neither " in s:
+    # Has logical alternatives (complex ones only)
+    if " either " in s or " neither " in s or " and/or " in s:
+        return True
+    
+    # Check for complex ' or ' (connecting clauses/requirements)
+    if " or " in s and re.search(r'\sor\s+(if|when|must|shall|should|can|will|you|the)\b', s):
         return True
     
     # Has normative language with conditions

@@ -174,10 +174,10 @@
             </div>
         </div>
 
-        <!-- 2. WHAT THE REVIEWER KNOWS -->
+        <!-- 2. WHAT THE REVIEWER KNOWS & GOLDEN PATTERNS -->
         <div class="row">
             <div class="col-md-6">
-                <div class="card">
+                <div class="card h-100">
                     <div class="card-body">
                         <h5 class="section-title">
                             <i class="fas fa-book me-2" style="color: #667eea;"></i>
@@ -197,8 +197,39 @@
                 </div>
             </div>
 
-            <!-- 3. HOW WELL KNOWLEDGE IS HELPING REVIEWS -->
+            <!-- Golden Patterns / Direct Replacements -->
             <div class="col-md-6">
+                <div class="card h-100 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="section-title mb-0">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                Golden Patterns
+                            </h5>
+                            <span class="badge bg-success">{{ stats.golden_patterns_count }} Patterns found</span>
+                        </div>
+                        
+                        <p class="mb-3" style="font-size: 0.95rem;">
+                            Direct "Before/After" rewrite patterns that allow the reviewer to bypass safety safeguards and provide exact sentence replacements.
+                        </p>
+                        
+                        <div class="p-3 bg-light rounded small border">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-shield-alt text-primary me-2"></i>
+                                <span><strong>Safeguard Bypass:</strong> Enabled for high-confidence matches.</span>
+                            </div>
+                            <div class="text-muted">
+                                These patterns are prioritized over general rules, ensuring your specific writing style is always used.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <!-- 3. HOW WELL KNOWLEDGE IS HELPING REVIEWS -->
+            <div class="col-12">
                 <div class="card">
                     <div class="card-body">
                         <h5 class="section-title">
@@ -206,47 +237,55 @@
                             How this knowledge is helping reviews
                         </h5>
                         
-                        <!-- Coverage Indicator -->
-                        <div class="mb-3 pb-3 border-bottom">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="indicator-label">Coverage:</span>
-                                <span class="indicator-value text-capitalize 
-                                    {% if health.coverage == 'limited' %}text-warning
-                                    {% elif health.coverage == 'moderate' %}text-info
-                                    {% else %}text-success{% endif %}">
-                                    {{ health.coverage }}
-                                </span>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <!-- Coverage Indicator -->
+                                <div class="mb-3 pb-3 border-bottom border-md-bottom-0">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="indicator-label">Coverage:</span>
+                                        <span class="indicator-value text-capitalize 
+                                            {% if health.coverage == 'limited' %}text-warning
+                                            {% elif health.coverage == 'moderate' %}text-info
+                                            {% else %}text-success{% endif %}">
+                                            {{ health.coverage }}
+                                        </span>
+                                    </div>
+                                    <p class="indicator-explanation mb-0">{{ health.coverage_explanation }}</p>
+                                </div>
                             </div>
-                            <p class="indicator-explanation mb-0">{{ health.coverage_explanation }}</p>
-                        </div>
-
-                        <!-- Confidence Indicator -->
-                        <div class="mb-3 pb-3 border-bottom">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="indicator-label">Reviewer confidence:</span>
-                                <span class="indicator-value text-capitalize
-                                    {% if health.confidence == 'low' %}text-danger
-                                    {% elif health.confidence == 'medium' %}text-warning
-                                    {% else %}text-success{% endif %}">
-                                    {{ health.confidence }}
-                                </span>
+                            
+                            <div class="col-md-4">
+                                <!-- Confidence Indicator -->
+                                <div class="mb-3 pb-3 border-bottom border-md-bottom-0">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="indicator-label">Reviewer confidence:</span>
+                                        <span class="indicator-value text-capitalize
+                                            {% if health.confidence == 'low' %}text-danger
+                                            {% elif health.confidence == 'medium' %}text-warning
+                                            {% else %}text-success{% endif %}">
+                                            {{ health.confidence }}
+                                        </span>
+                                    </div>
+                                    <p class="indicator-explanation mb-0">{{ health.confidence_explanation }}</p>
+                                </div>
                             </div>
-                            <p class="indicator-explanation mb-0">{{ health.confidence_explanation }}</p>
-                        </div>
-
-                        <!-- Fallback Usage Indicator -->
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="indicator-label">Generic fallback usage:</span>
-                                <span class="indicator-value text-capitalize
-                                    {% if health.fallback_usage == 'frequent' %}text-danger
-                                    {% elif health.fallback_usage == 'occasional' %}text-warning
-                                    {% elif health.fallback_usage == 'rare' %}text-success
-                                    {% else %}text-muted{% endif %}">
-                                    {{ health.fallback_usage }}
-                                </span>
+                            
+                            <div class="col-md-4">
+                                <!-- Fallback Usage Indicator -->
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="indicator-label">Generic fallback usage:</span>
+                                        <span class="indicator-value text-capitalize
+                                            {% if health.fallback_usage == 'frequent' %}text-danger
+                                            {% elif health.fallback_usage == 'occasional' %}text-warning
+                                            {% elif health.fallback_usage == 'rare' %}text-success
+                                            {% else %}text-muted{% endif %}">
+                                            {{ health.fallback_usage }}
+                                        </span>
+                                    </div>
+                                    <p class="indicator-explanation mb-0">{{ health.fallback_explanation }}</p>
+                                </div>
                             </div>
-                            <p class="indicator-explanation mb-0">{{ health.fallback_explanation }}</p>
                         </div>
                     </div>
                 </div>
@@ -534,11 +573,21 @@
             
             let html = '<div class="small">';
             data.results.forEach((result, index) => {
-                const score = Math.round(result.score * 100);
+                const relevanceScore = result.relevance_score || result.score || 0;
+                const scoreDisplay = Math.round(relevanceScore * 100);
+                const content = result.content || result.document || "";
+                
+                // Detect Golden Pattern in search results
+                const isGolden = content.toLowerCase().includes('passive') && 
+                                content.toLowerCase().includes('active');
+                
                 html += `
-                    <div class="border-start border-3 border-primary ps-2 mb-2">
-                        <div class="fw-bold">${index + 1}. Match ${score}%</div>
-                        <div class="text-muted">${result.content.substring(0, 150)}...</div>
+                    <div class="border-start border-3 ${isGolden ? 'border-warning' : 'border-primary'} ps-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="fw-bold">${index + 1}. Match ${scoreDisplay}%</div>
+                            ${isGolden ? '<span class="badge bg-warning text-dark" style="font-size: 0.7rem;">Golden Pattern</span>' : ''}
+                        </div>
+                        <div class="text-muted">${content.substring(0, 150)}...</div>
                     </div>
                 `;
             });

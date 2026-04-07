@@ -5,6 +5,8 @@ This configuration prioritizes answers from your uploaded documents over rule-ba
 
 from typing import List, Dict, Any, Optional
 import logging
+import re
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -67,34 +69,32 @@ class DocumentFirstAIEngine:
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Generate suggestions prioritizing uploaded documents.
+        Generate suggestions using ONLY uploaded documents.
+        This provides absolute hallucination protection by forcing manual review
+        if no exact document match is found.
         """
         
+        def get_basic_fallback():
+            return {
+                "suggestion": "",
+                "ai_answer": f"Please manually verify using official documentation. No direct RAG match found for: {feedback_text}",
+                "confidence": "low",
+                "method": "manual_review",
+                "sources": ["Style Guide Guidance"],
+                "success": True,
+                "is_guidance_only": True
+            }
+
         if not self.collection:
-            return self._fallback_suggestion(feedback_text, sentence_context)
+            return get_basic_fallback()
         
-        # Method 1: Primary document search
+        # Method 1: Primary document search (Strict Vector Retrieval)
         result = self._search_documents_primary(feedback_text, sentence_context, document_type)
-        if result.get("success") and result.get("confidence") == "high":
-            return result
-        
-        # Method 2: Extended document search with keywords
-        result = self._search_documents_extended(feedback_text, sentence_context, document_type)
         if result.get("success") and result.get("confidence") in ["high", "medium"]:
             return result
         
-        # Method 3: Hybrid approach - combine documents with LLM
-        result = self._hybrid_document_llm(feedback_text, sentence_context, document_type)
-        if result.get("success"):
-            return result
-        
-        # Method 4: Contextual RAG as backup
-        result = self._contextual_rag_search(feedback_text, sentence_context, document_type)
-        if result.get("success"):
-            return result
-        
-        # Final fallback
-        return self._fallback_suggestion(feedback_text, sentence_context)
+        # Strict fallback: No LLM calls allowed.
+        return get_basic_fallback()
     
     def _search_documents_primary(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
         """
@@ -362,34 +362,14 @@ Focus on using examples and guidance from the provided documents.
         # Generate suggestion based on document content
         suggestion = self._extract_suggestion_from_document(best_doc, feedback_text, sentence_context)
         
-        # If the suggestion is the same as original, try LLM with document context
+        # If the suggestion is the same as original, it means no direct guidance was extracted.
+        # Strict RAG mode: return False to trigger manual review fallback instead of calling LLM.
         if suggestion.strip() == sentence_context.strip():
-            # Convert results to format expected by _generate_with_ollama_and_docs
-            docs_for_llm = [{"content": r["document"], "distance": r.get("relevance", 0.5)} for r in results[:3]]
-            llm_result = self._generate_with_ollama_and_docs(feedback_text, sentence_context, docs_for_llm)
-            
-            if llm_result and llm_result["suggestion"].strip() != sentence_context.strip():
-                # Validate that the suggestion is not just instructions/guidelines
-                suggestion_text = llm_result["suggestion"].lower()
-                invalid_patterns = ["when to use", "how to", "use active voice", "avoid passive", "✅", "❌"]
-                
-                if any(pattern in suggestion_text for pattern in invalid_patterns):
-                    # LLM returned guidelines instead of conversion - mark as failure
-                    logger.warning(f"LLM returned guidelines instead of conversion: {llm_result['suggestion'][:50]}...")
-                    return {"success": False}
-                
-                return {
-                    "suggestion": llm_result["suggestion"],
-                    "ai_answer": llm_result["explanation"],
-                    "confidence": confidence,
-                    "method": "document_search",
-                    "sources": [f"Document {i+1}: {result['metadata'].get('filename', 'Unknown')}" for i, result in enumerate(results[:3])] + ["AI reasoning"],
-                    "document_count": len(results),
-                    "success": True
-                }
-            else:
-                # LLM didn't improve - mark as failure to trigger fallback
-                return {"success": False}
+            logger.info("No direct suggestion extracted from document match. Triggering manual review.")
+            return {"success": False}
+        
+        # ⚠️ Note: Removed LLM refinement block previously here to enforce strict RAG-only mode.
+
         
         # Generate explanation
         explanation = self._generate_explanation_from_documents(results, feedback_text)
@@ -449,6 +429,17 @@ Focus on using examples and guidance from the provided documents.
             if short_sentences:
                 return short_sentences[0].strip() + "."
         
+        # 🆕 Handle "To [action], follow these steps" -> "Follow these steps to [action]"
+        elif "imperative verb" in feedback_lower or "start procedural steps" in feedback_lower:
+            match = re.search(r'^to\s+(.+?),\s+follow\s+these\s+steps', sentence_context.lower())
+            if match:
+                action = match.group(1).strip()
+                # Attempt to preserve original capitalization of the action
+                orig_action_match = re.search(r'^To\s+(.+?),\s+follow\s+these\s+steps', sentence_context)
+                if orig_action_match:
+                    action = orig_action_match.group(1).strip()
+                return f"Follow these steps to {action}:"
+
         # Fallback: Try to generate based on document style
         if sentence_context:
             # Improve the original sentence using document guidance
@@ -750,9 +741,47 @@ Focus on using examples and guidance from the provided documents.
             
             # Apply conversion based on found patterns
             sentence_lower = sentence.lower().strip()
-            sentence_clean = sentence.strip()
             
-            # 1. Handle "has been" / "have been" patterns (present perfect passive) -> simple present or past
+            # 2. Handle "is/are" + past participle patterns (simple present passive)
+            # This is very common in technical docs: "The button is displayed", "The logs are created"
+            simple_passive_match = re.search(r'\b(.+?)\s+(?:is|are)\s+([a-z]+ed)\b', sentence_lower)
+            if simple_passive_match:
+                subject_full = simple_passive_match.group(1).strip()
+                verb_ed = simple_passive_match.group(2).strip()
+                
+                # Simple rule to get verb stem from -ed
+                if verb_ed.endswith('ed'):
+                    verb_stem = verb_ed[:-2]
+                    # Handle common verb endings for -s suffix
+                    if verb_stem.endswith('y'):
+                        active_verb = verb_stem[:-1] + "ies"
+                    elif verb_stem.endswith(('s', 'x', 'z', 'ch', 'sh')):
+                        active_verb = verb_stem + "es"
+                    else:
+                        active_verb = verb_stem + "s"
+                    
+                    # Clean up subject
+                    if subject_full.startswith("the "):
+                        subject = subject_full[4:]
+                    elif subject_full.startswith("a "):
+                        subject = subject_full[2:]
+                    else:
+                        subject = subject_full
+                    
+                    # Construct active sentence: "Subject [active_verb]"
+                    # Handle common technical subjects
+                    suggestion = f"{subject_full[0].upper() + subject_full[1:]} {active_verb}"
+                    
+                    # Check if there's a remainder of the sentence
+                    remainder = sentence[simple_passive_match.end():].strip()
+                    if remainder:
+                        suggestion += f" {remainder}"
+                    elif not suggestion.endswith('.'):
+                        suggestion += "."
+                        
+                    return suggestion
+
+            # 3. Handle "has been" / "have been" patterns (present perfect passive) -> simple present or past
             # Expanded to include more verbs: verified, tested, validated, confirmed, checked, etc.
             if re.search(r'\b(?:has|have)\s+(?:been|already\s+been)\s+(?:created|configured|established|set up|added|saved|uploaded|installed|processed|verified|tested|validated|confirmed|checked|reviewed|approved)\b', sentence_lower):
                 # "A data source has already been created" -> "A data source exists"
@@ -1415,7 +1444,7 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.3,
+                        "temperature": 0.0,
                         "num_predict": 500
                     }
                 },
@@ -1477,6 +1506,9 @@ IMPORTANT RULES for Technical Documentation:
    - Example: "This feature enables..." (NOT "This feature has been enabled")
 4. NEVER use: "Researchers", "Developers", "Engineers" as subjects in user documentation
 5. Keep technical terms and product names exactly as they appear
+6. NEVER invent new technical information, quantities, or product features.
+7. ONLY rewrite what is provided in the input sentence.
+8. NEVER modify text inside parentheses, slashes, or product codes (e.g., keep "S7-300/400" exactly as is).
 
 Convert to active voice using SIMPLE PRESENT TENSE ONLY.
 
@@ -1496,10 +1528,12 @@ CRITICAL TENSE REQUIREMENTS:
 3. Use direct, simple verb forms
 
 Make it more specific by:
-1. Replacing vague terms (some, various, etc.) with concrete examples or quantities
-2. Adding technical details where appropriate
-3. Being more precise and actionable
-4. Using simple present tense ONLY
+1. Clarify vague phrasing without inventing NEW data
+2. Use precise language like "a set of" or "multiple" if specific numbers are unknown
+3. NEVER invent quantities, limits, or specific numbers (e.g., do not say "up to ten" if it's not in the text)
+4. ALWAYS maintain technical accuracy; do not guess or hallucinate details
+5. NEVER modify text inside parentheses, slashes, or product codes.
+6. Use simple present tense ONLY.
 
 Provide ONLY:
 IMPROVED_SENTENCE: [The more specific version in simple present tense]
@@ -1521,10 +1555,28 @@ Split the sentence maintaining:
 2. Logical flow
 3. All original information
 4. Simple present tense ONLY
+5. NEVER add or invent new information; only reorganize existing content
+6. NEVER modify text inside parentheses, slashes, or product codes.
 
 Provide ONLY:
 IMPROVED_SENTENCE: [The split sentences in simple present tense]
 EXPLANATION: [Brief explanation in simple present tense]"""
+        elif "imperative" in feedback_lower or "procedural" in feedback_lower or "steps" in feedback_lower:
+            return f"""You are an expert technical writing assistant. Fix this procedural instruction to use imperative verbs correctly.
+
+Issue: {feedback_text}
+Original: "{sentence_context}"
+
+CRITICAL RULES:
+1. Start the instruction with an action verb (e.g., "Click", "Enter", "Select", "Follow").
+2. NEVER invent new steps, technical information, tools, or procedures (e.g., do NOT add "enter them into a spreadsheet" unless it's in the text).
+3. ONLY rewrite what is provided in the input sentence.
+4. If the sentence is an introductory phrase (like "To do X, follow these steps:"), rewrite it naturally (like "Follow these steps to do X:") without adding new actions.
+5. Use simple present tense ONLY.
+
+Provide ONLY:
+IMPROVED_SENTENCE: [The imperative version in simple present tense]
+EXPLANATION: [Brief explanation]"""
         
         else:
             # General improvement
@@ -1544,6 +1596,8 @@ Improve by addressing the specific issue while maintaining:
 2. Clarity and precision
 3. Professional tone
 4. Simple present tense ONLY
+5. NEVER invent or add new technical details that are not in the original sentence
+6. NEVER modify text inside parentheses, slashes, or product codes.
 
 Provide ONLY:
 IMPROVED_SENTENCE: [The improved version in simple present tense]

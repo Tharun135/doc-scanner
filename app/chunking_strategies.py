@@ -98,8 +98,14 @@ class TextChunker:
             chunks = self._chunk_by_paragraphs(content, chunk_size, document['id'])
         elif method == "semantic":
             chunks = self._chunk_semantic(content, chunk_size, document['id'], **kwargs)
+        elif method == "style_guide":
+            chunks = self._chunk_style_guide(content, document['id'])
         elif method == "adaptive":
-            chunks = self._chunk_adaptive(content, document['id'], **kwargs)
+            # Auto-detect if it's a style guide
+            if document.get('source_type') == 'style_guide' or "Good | Bad" in content or "Passive | Active" in content:
+                chunks = self._chunk_style_guide(content, document['id'])
+            else:
+                chunks = self._chunk_adaptive(content, document['id'], **kwargs)
         else:
             logger.warning(f"Unknown chunking method: {method}. Using fixed size.")
             chunks = self._chunk_fixed_size(content, chunk_size, document['id'])
@@ -344,6 +350,56 @@ class TextChunker:
         
         return chunks
     
+    def _chunk_style_guide(self, content: str, doc_id: str) -> List[Chunk]:
+        """
+        Specialized chunker for style guides.
+        Extracts 'Good/Bad' patterns and 'Passive/Active' examples.
+        """
+        chunks = []
+        chunk_id = 0
+        
+        # 1. Look for tables with Good/Bad or Passive/Active columns
+        table_pattern = re.compile(r'\|.*?(?:Good|Active).*?\|.*?(?:Bad|Passive).*?\|.*?\n\|[\s\-\|]+\n((?:\|.*?\|.*?\n)+)', re.IGNORECASE)
+        
+        matches = table_pattern.finditer(content)
+        for match in matches:
+            table_rows = match.group(1).strip().split('\n')
+            for row in table_rows:
+                cells = [c.strip() for c in row.split('|') if c.strip()]
+                if len(cells) >= 2:
+                    good_text = cells[0].replace('`', '').strip()
+                    bad_text = cells[1].replace('`', '').strip()
+                    
+                    # Store as a "Golden Pattern"
+                    # Format: { "passive": "...", "active": "..." } for document_first_ai compatibility
+                    pattern_content = f'# Golden Pattern\nPassive: {bad_text}\nActive: {good_text}'
+                    
+                    chunk = Chunk(
+                        id=f"{doc_id}_golden_{chunk_id:04d}",
+                        content=pattern_content,
+                        start_char=match.start(),
+                        end_char=match.end(),
+                        chunk_type="style_pattern",
+                        token_count=len(pattern_content.split()),
+                        word_count=len(pattern_content.split()),
+                        source_doc_id=doc_id,
+                        metadata={
+                            'is_golden_pattern': True,
+                            'original_bad': bad_text,
+                            'original_good': good_text
+                        }
+                    )
+                    chunks.append(chunk)
+                    chunk_id += 1
+        
+        # 2. Add standard chunks for the rest of the text to ensure full coverage
+        # Remove the tables to avoid double-indexing the same content in generic chunks
+        clean_content = table_pattern.sub('\n\n[Table Processed as Patterns]\n\n', content)
+        standard_chunks = self._chunk_by_paragraphs(clean_content, self.default_chunk_size, doc_id)
+        chunks.extend(standard_chunks)
+        
+        return chunks
+
     def _chunk_adaptive(self, content: str, doc_id: str, 
                        min_chunk_size: int = 200, max_chunk_size: int = 800) -> List[Chunk]:
         """

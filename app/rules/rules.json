@@ -2,22 +2,22 @@
   {
     "rule_id": "TENSE_001",
     "category": "tense",
-    "regex": "\\bwill\\b|\\bgoing to\\b|\\bshall\\b",
+    "regex": "\\bgoing to\\b|\\bshall\\b",
     "severity": "error",
-    "message": "Future tense not allowed in procedures.",
-    "suggestion": "Rewrite in simple present.",
-    "example_violation": "The system will start automatically.",
-    "example_correction": "The system starts automatically."
+    "message": "Future tense (going to/shall) is discouraged in procedures.",
+    "suggestion": "Rewrite in simple present or use 'will' for application actions.",
+    "example_violation": "The system shall start automatically.",
+    "example_correction": "The system starts automatically (or 'The system will start...')."
   },
   {
     "rule_id": "TENSE_002",
     "category": "tense",
-    "regex": "\\bcan\\b|\\bcould\\b|\\bmay\\b|\\bmight\\b|\\bshould\\b|\\bwould\\b",
+    "regex": "\\bmay\\b|\\bcould\\b|\\bmight\\b|\\bshould\\b|\\bwould\\b",
     "severity": "warn",
-    "message": "Modal verbs may weaken procedural clarity.",
-    "suggestion": "Consider using simple present for direct instructions.",
-    "example_violation": "You can click Save.",
-    "example_correction": "Click Save."
+    "message": "Modal verbs (except 'can') may weaken procedural clarity.",
+    "suggestion": "Use 'can' for user abilities or simple present for direct instructions.",
+    "example_violation": "You may click Save.",
+    "example_correction": "You can click Save."
   },
   {
     "rule_id": "UI_001",
@@ -62,12 +62,12 @@
   {
     "rule_id": "PERSON_001",
     "category": "voice",
-    "regex": "\\b(?:you|your|we|our|I|my|me)\\b",
+    "regex": "\\b(?:I|my|me)\\b",
     "severity": "error",
-    "message": "Avoid personal pronouns in technical documentation.",
-    "suggestion": "Use imperative mood or passive construction.",
-    "example_violation": "You should configure the system.",
-    "example_correction": "Configure the system."
+    "message": "Avoid first-person singular pronouns in technical documentation.",
+    "suggestion": "Use second-person (you) for users or first-person plural (we) for the application.",
+    "example_violation": "I will configure the system.",
+    "example_correction": "You will configure the system."
   },
   {
     "rule_id": "IMPERATIVE_001",

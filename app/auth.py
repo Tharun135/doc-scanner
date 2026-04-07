@@ -67,3 +67,44 @@ def register():
 def logout():
     logout_user()
     return redirect(url_for('auth.login'))
+
+
+@auth.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if user:
+            # Demo Shortcut: Skip actual email and go to reset page
+            return redirect(url_for('auth.reset_password', email=email))
+        else:
+            flash('No account found with that email.', 'danger')
+            return redirect(url_for('auth.forgot_password'))
+    return render_template('forgot_password.html')
+
+
+@auth.route('/reset-password/<email>', methods=['GET', 'POST'])
+def reset_password(email):
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('Invalid reset request.', 'danger')
+        return redirect(url_for('auth.login'))
+        
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
+        
+        if not password or password != confirm:
+            flash('Passwords do not match.', 'danger')
+            return redirect(url_for('auth.reset_password', email=email))
+            
+        if len(password) < 8:
+            flash('Password must be at least 8 characters.', 'danger')
+            return redirect(url_for('auth.reset_password', email=email))
+            
+        user.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        db.session.commit()
+        flash('Password updated successfully! Please log in.', 'success')
+        return redirect(url_for('auth.login'))
+        
+    return render_template('reset_password.html', email=email)
