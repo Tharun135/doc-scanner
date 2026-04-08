@@ -2518,8 +2518,8 @@
                 }
             });
 
-            // IMMEDIATE FEEDBACK DISPLAY - show issues right away
-            displayIssuesImmediately(sentences);
+            // IMMEDIATE FEEDBACK DISPLAY - removed to prevent duplication with renderContent
+            // displayIssuesImmediately(sentences);
 
             const endTime = performance.now();
             console.log(`✅ renderChart completed in ${(endTime - startTime).toFixed(2)}ms`);
@@ -3646,9 +3646,17 @@
             console.log('renderFeedbackWithAI called with:', feedback, sentence, sentenceIndex);
 
             for (const item of feedback) {
+                // PRECISION FIX: Deduplication check to prevent race conditions from creating duplicate cards
+                const existingCard = feedbackContainer.querySelector(`.feedback-item[data-sentence-index="${sentenceIndex}"][data-message="${encodeURIComponent(item.message)}"]`);
+                if (existingCard) {
+                    console.log(`Skipping duplicate card for sentence ${sentenceIndex}: ${item.message}`);
+                    continue;
+                }
+
                 const feedbackDiv = document.createElement('div');
                 feedbackDiv.className = 'feedback-item p-3 mb-2 border-start';
                 feedbackDiv.setAttribute('data-sentence-index', sentenceIndex);
+                feedbackDiv.setAttribute('data-message', encodeURIComponent(item.message)); // Used for deduplication
                 feedbackDiv.setAttribute('data-order', sentenceIndex); // For sorting
 
                 // Add hover functionality to highlight corresponding sentence
