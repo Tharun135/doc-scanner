@@ -291,8 +291,9 @@ RULE_REMEDIATIONS = [
             "The system generates the report automatically."
         ],
         "fix_instruction": (
-            "Identify the actor (system, user, application) and make it the subject. "
+            "Identify the specific product, component, or actor (e.g., IEM, user, application) from the context of the sentence and make it the subject. "
             "Convert the passive verb phrase ('is saved') to active ('saves'). "
+            "Avoid generic terms like 'The system' if the actual software name or component is mentioned in the sentence. "
             "If the actor is genuinely unknown, passive voice is acceptable — document the exception."
         ),
     },

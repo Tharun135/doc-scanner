@@ -1358,28 +1358,33 @@
 
             isProcessingQueue = true;
 
-            while (progressQueue.length > 0) {
-                const data = progressQueue.shift();
+            try {
+                while (progressQueue.length > 0) {
+                    const data = progressQueue.shift();
 
-                // Intelligent delay: enforce minimum time for NEW STAGES, 
-                // but allow rapid updates for substeps (like sentence increments)
-                const isNewStage = data.stage_name && data.stage_name !== lastStageSeen;
-                const requiredDelay = isNewStage ? MIN_STAGE_DELAY : 50;
+                    const isNewStage = data.stage_name && data.stage_name !== lastStageSeen;
+                    const requiredDelay = isNewStage ? MIN_STAGE_DELAY : 50;
 
-                const now = Date.now();
-                const timeSinceLast = now - lastProgressUpdate;
-                const delay = Math.max(0, requiredDelay - timeSinceLast);
+                    const now = Date.now();
+                    const timeSinceLast = now - lastProgressUpdate;
+                    const delay = Math.max(0, requiredDelay - timeSinceLast);
 
-                if (delay > 0) {
-                    await new Promise(r => setTimeout(r, delay));
+                    if (delay > 0) {
+                        await new Promise(r => setTimeout(r, delay));
+                    }
+
+                    try {
+                        updateRealTimeProgress(data);
+                    } catch (updateErr) {
+                        console.error('Error rendering progress UI:', updateErr);
+                    }
+                    
+                    lastProgressUpdate = Date.now();
+                    lastStageSeen = data.stage_name;
                 }
-
-                updateRealTimeProgress(data);
-                lastProgressUpdate = Date.now();
-                lastStageSeen = data.stage_name;
+            } finally {
+                isProcessingQueue = false;
             }
-
-            isProcessingQueue = false;
         }
 
         // Fallback progress simulation when WebSocket is not available
@@ -2130,12 +2135,18 @@
                 console.log('🏁 Progress journey complete, rendering results');
 
                 // 🚀 DISPLAY RESULTS
-                renderChart(result.report || {}, result.sentences || []);
-                renderContent(result.content || '', result.sentences || []);
+                try {
+                    renderChart(result.report || {}, result.sentences || []);
+                    renderContent(result.content || '', result.sentences || []);
+                } catch (renderError) {
+                    console.error('❌ Rendering error:', renderError);
+                    alert('Analysis finished, but there was an error displaying the results: ' + renderError.message);
+                }
 
                 // ✅ HIDE LOADER: Short hold at 100% state before closing
                 setTimeout(() => {
                     hideProgressLoader();
+                    document.getElementById('loadingOverlay').style.display = 'none'; // Force hide
                 }, 600);
 
                 return result;
@@ -2143,6 +2154,7 @@
             } catch (error) {
                 console.error('❌ Upload error:', error);
                 hideProgressLoader();
+                document.getElementById('loadingOverlay').style.display = 'none'; // Force hide
                 throw error; // Re-throw to be handled by calling function
             }
         }
@@ -3489,7 +3501,7 @@
                             const isPunctuationMatch = words[i].match(/^[.,!?;:]+$/);
                             const spacer = isPunctuationMatch ?
                                 '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,40}?' : // Loosened for punctuation (20->40)
-                                '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?';       // Normal for words
+                                '(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,150}?'; // Capped at 150 to prevent catastrophic backtracking!
                             pattern += spacer + part;
                         }
                     });
@@ -3546,7 +3558,7 @@
 
                 // Step 3: Global fallback if not found after last index
                 if (matchIndex === -1) {
-                    const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0)*?');
+                    const pattern = words.map(w => w.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')).join('(?:\\s|<[^>]*>|&nbsp;|&#160;|\\u00A0){0,150}?');
                     const regex = new RegExp(pattern, 'i');
                     const match = processedContent.match(regex);
 
