@@ -101,12 +101,13 @@ def extract_sentences_with_html_preservation(html_content):
             # For now, we favor leaf nodes.
             pass
             
-    for element in text_elements:
+    for block_idx, element in enumerate(text_elements):
         if not element.get_text().strip():
             continue
             
         # Get the HTML content of this element
         element_html = str(element)
+        tag_name = element.name # p, h1, etc.
         
         # Get the plain text version for analysis with a space separator to preserve word boundaries
         element_text = element.get_text(separator=' ')
@@ -125,10 +126,7 @@ def extract_sentences_with_html_preservation(html_content):
         i = 0
         while i < len(raw_fragments):
             current = raw_fragments[i]
-            # Recursively merge if current (or merged result) ends with a colon
-            # This handles: "Header: Subheader: Content"
             while i + 1 < len(raw_fragments) and re.search(r':\s*$', current):
-                logger.info(f"🔗 MERGING TECHNICAL SPEC: '{current}' + '{raw_fragments[i+1]}'")
                 current = f"{current} {raw_fragments[i+1]}"
                 i += 1
             merged_fragments.append(current)
@@ -139,15 +137,17 @@ def extract_sentences_with_html_preservation(html_content):
             # Find corresponding HTML fragment
             html_fragment = find_html_fragment_for_sentence(element_html, sent_text, element_text)
             
-            # Use a unified sentence class
+            # Use a unified sentence class with Block Info
             class SentenceObj:
-                def __init__(self, text, html_fragment):
+                def __init__(self, text, html_fragment, block_index, tag_name):
                     self.text = text.strip()
                     self.html_fragment = html_fragment
+                    self.block_index = block_index
+                    self.tag_name = tag_name # h1, p, li, etc.
                     self.start_char = 0
                     self.end_char = len(text)
             
-            sentences.append(SentenceObj(sent_text, html_fragment))
+            sentences.append(SentenceObj(sent_text, html_fragment, block_idx, tag_name))
     
     return sentences
 
@@ -956,11 +956,10 @@ def upload_file():
         from core.document_review_gate import should_analyze_sentence
         
         for index, sent in enumerate(sentences):
-            # Update substep progress for analysis (RESCALED: 60-80% range)
+            # Update substep progress for analysis (RESCALED: 30-80% range)
             if progress_tracker and room_id and total_sentences > 0:
-                substep_progress = int(60 + (index / total_sentences) * 20)  # Ends at 80%
-                progress_tracker.update_progress(room_id, substep_progress, 
-                    f"Processing sentence {index + 1} of {total_sentences}...")
+                substep_progress = 30 + int((index / total_sentences) * 50)
+                progress_tracker.update_progress(room_id, substep_progress, f"Analyzing {file.filename} ({index + 1}/{total_sentences})...")
             
             # Use the plain text version for analysis
             plain_text_sentence = sent.text
@@ -1070,9 +1069,11 @@ def upload_file():
                     optimized_feedback.append(item)
 
             sentence_data.append({
-                "sentence": plain_text_sentence,  # RESTORED: Required by frontend/history 
+                "sentence": plain_text_sentence,
                 "html_sentence": html_fragment,
                 "sentence_index": index,
+                "block_index": sent.block_index, # NEW: Paragraph/Section ID
+                "tag_name": sent.tag_name,       # NEW: p, h1, li, etc.
                 "feedback": optimized_feedback,
                 "analysis_skipped": analysis_skipped,
                 "quality_score": quality_score
@@ -1092,15 +1093,19 @@ def upload_file():
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)
         
-        # Stage 5: Generating Report (Starts at 81%)
+        # Stage 5: Generating Report (Starts at 91%)
         if progress_tracker and room_id:
-            progress_tracker.update_progress(room_id, 85, "Synthesizing document insights...")
+            progress_tracker.update_progress(room_id, 91, "Synthesizing document insights...")
             progress_tracker.update_stage(room_id, 5, "Compiling final quality report...")
         
         # Log analysis efficiency
         logger.info(f"📊 Analysis complete: {analyzed_count}/{total_sentences} sentences analyzed ({document_review.analysis_scope} scope)")
         
         quality_index = calculate_quality_index(total_sentences, total_errors)
+
+        # 🧠 STRUCTURAL ANALYSIS: Analyze paragraphs and sections for holistic meaning
+        from core.structural_analyzer import analyze_document_structure
+        structural_insights = analyze_document_structure(sentence_data, document_review.document_type)
 
         aggregated_report = {
             "totalSentences": total_sentences,
@@ -1109,7 +1114,8 @@ def upload_file():
             "message": "Content analysis completed.",
             "analysis_scope": document_review.analysis_scope,
             "document_type": document_review.document_type,
-            "analyzed_sentences": analyzed_count  # NEW: transparency metric
+            "analyzed_sentences": analyzed_count,
+            "structural_insights": structural_insights # NEW: Holistic block feedback
         }
 
         # Complete progress tracking
@@ -1124,7 +1130,7 @@ def upload_file():
             if document_review.issues:
                 final_msg += f" ({len(document_review.issues)} document-level)"
             
-            progress_tracker.update_progress(room_id, 99, "Finalizing report and preparing for display...")
+            progress_tracker.update_stage(room_id, 6, "Finalizing report and preparing for display...")
             progress_tracker.complete_session(room_id, success=True, final_message=final_msg)
 
         # 📝 SAVE HISTORY (ASYNCHRONOUS)
@@ -1242,12 +1248,18 @@ def ai_suggestion():
 
     data = request.get_json() or {}
     feedback_text   = data.get('feedback')
+    multiple_feedback = data.get('multiple_feedback', []) # NEW: For Master Fix
     sentence_context = data.get('sentence', '') or ''
     document_type   = data.get('document_type', 'general')
+    document_title  = data.get('document_title', 'Unknown Document') # NEW: Global Context
     writing_goals   = data.get('writing_goals', ['clarity', 'conciseness'])
     option_number   = data.get('option_number', 1)
     sentence_index  = data.get('sentence_index', -1)  # New: get sentence position
     
+    # If multiple_feedback provided but no feedback_text, use the first one as primary
+    if not feedback_text and multiple_feedback:
+        feedback_text = multiple_feedback[0]
+
     # Extract adjacent sentences for context
     adjacent_context = {}
     if sentence_index >= 0 and current_sentences_list:
@@ -1265,9 +1277,9 @@ def ai_suggestion():
                    f"next={bool(adjacent_context.get('next_sentence'))}")
 
     logger.info(f"AI suggestion request: feedback='{(feedback_text or '')[:50]}...', "
-                f"sentence='{sentence_context[:50]}...'")
+                f"sentence='{sentence_context[:50]}...', master_fix={bool(multiple_feedback)}")
 
-    if not feedback_text:
+    if not feedback_text and not multiple_feedback:
         logger.error("No feedback provided in AI suggestion request")
         return jsonify({"error": "No feedback provided"}), 400
 
@@ -1278,19 +1290,23 @@ def ai_suggestion():
     try:
         from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
         
-        logger.info("🧠 Trying hybrid intelligence (phi3:mini + llama3:8b)...")
+        logger.info(f"🧠 Trying hybrid intelligence {'(MASTER FIX)' if multiple_feedback else ''}...")
         hybrid_result = enhance_ai_suggestion_with_hybrid_intelligence(
             feedback_text=feedback_text,
             sentence_context=sentence_context, 
             document_type=document_type,
             complexity=data.get('complexity', 'default'),
-            adjacent_context=adjacent_context  # Pass adjacent sentences
+            adjacent_context=adjacent_context,
+            multiple_feedback=multiple_feedback,
+            document_metadata={'title': document_title},
+            rule_metadata=data.get('issue')  # PASS THE FULL RULE OBJECT
         )
         
         if hybrid_result.get('success'):
             response_time = time.time() - start_time
             track_suggestion(suggestion_id, feedback_text, sentence_context,
-                           document_type, hybrid_result.get('method', 'hybrid_intelligence'), response_time)
+                           document_type, hybrid_result.get('method', 'hybrid_intelligence'), response_time,
+                           suggested_text=hybrid_result.get('suggestion'))
             
             logger.info(f"✅ Hybrid intelligence success with {hybrid_result.get('model_used', 'unknown')}")
             
@@ -1321,7 +1337,8 @@ def ai_suggestion():
         if learned_suggestion:
             response_time = time.time() - start_time
             track_suggestion(suggestion_id, feedback_text, sentence_context,
-                             document_type, "learned_pattern", response_time)
+                             document_type, "learned_pattern", response_time,
+                             suggested_text=learned_suggestion)
             logger.info("Using learned pattern suggestion.")
             return jsonify({
                 "suggestion": learned_suggestion,                # concrete rewrite
@@ -1451,7 +1468,8 @@ def ai_suggestion():
         # 4) Build response
         response_time = time.time() - start_time
         track_suggestion(suggestion_id, feedback_text, sentence_context,
-                         document_type, result.get("method", "rag_rewrite"), response_time)
+                         document_type, result.get('method', 'intelligent_ai'), response_time,
+                         suggested_text=result.get('suggestion'))
 
 
         # Type safety: Ensure all response fields are strings (not None or other types)

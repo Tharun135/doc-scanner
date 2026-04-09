@@ -25,6 +25,7 @@ class SuggestionMetrics:
     suggestion_method: str
     response_time: float
     timestamp: datetime
+    suggested_text: Optional[str] = None
     user_rating: Optional[int] = None  # 1-5 scale
     user_feedback: Optional[str] = None
     was_helpful: Optional[bool] = None
@@ -54,6 +55,7 @@ class PerformanceMonitor:
                     suggestion_method TEXT,
                     response_time REAL,
                     timestamp TEXT,
+                    suggested_text TEXT,
                     user_rating INTEGER,
                     user_feedback TEXT,
                     was_helpful INTEGER,
@@ -90,11 +92,10 @@ class PerformanceMonitor:
             cursor = conn.cursor()
             
             cursor.execute('''
-                INSERT OR REPLACE INTO suggestion_metrics 
                 (suggestion_id, feedback_text, sentence_context, document_type, 
-                 suggestion_method, response_time, timestamp, user_rating, 
-                 user_feedback, was_helpful, was_implemented)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 suggestion_method, response_time, timestamp, suggested_text,
+                 user_rating, user_feedback, was_helpful, was_implemented)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 metrics.suggestion_id,
                 metrics.feedback_text,
@@ -103,6 +104,7 @@ class PerformanceMonitor:
                 metrics.suggestion_method,
                 metrics.response_time,
                 metrics.timestamp.isoformat(),
+                metrics.suggested_text,
                 metrics.user_rating,
                 metrics.user_feedback,
                 metrics.was_helpful,
@@ -147,6 +149,25 @@ class PerformanceMonitor:
                 query = f"UPDATE suggestion_metrics SET {', '.join(updates)} WHERE suggestion_id = ?"
                 cursor.execute(query, values)
                 conn.commit()
+            
+            # --- EVOLVING RAG LEARNING LOOP ---
+            # If the suggestion was implemented, save it as a "Golden Pattern" locally
+            if was_implemented:
+                try:
+                    cursor.execute(
+                        "SELECT sentence_context, suggested_text, feedback_text FROM suggestion_metrics WHERE suggestion_id = ?",
+                        (suggestion_id,)
+                    )
+                    row = cursor.fetchone()
+                    if row:
+                        original, suggested, feedback = row
+                        if suggested and suggested != original:
+                            # Index this into the local RAG corrections collection
+                            from .hybrid_intelligence_integration import record_golden_correction
+                            record_golden_correction(original, suggested, feedback)
+                            logger.info(f"🧠 LEARNED: Golden pattern saved for '{feedback}'")
+                except Exception as learner_e:
+                    logger.warning(f"⚠️ Learning loop failed: {learner_e}")
             
             conn.close()
             

@@ -12,10 +12,18 @@ This implements your hybrid intelligence approach:
 import json
 import requests
 import time
+import os
+import hashlib
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import logging
+
+try:
+    import chromadb
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -57,6 +65,64 @@ class HybridIntelligenceRAGSystem:
         
         self.load_rag_knowledge_base()
         self.load_ollama_config()
+        self.init_chroma()
+
+    def init_chroma(self):
+        """Initialize ChromaDB client for cross-reference consistency and RAG"""
+        self.chroma_client = None
+        self.doc_collection = None
+        self.knowledge_collection = None
+        if CHROMADB_AVAILABLE:
+            try:
+                db_path = os.path.join(os.getcwd(), "chroma_db")
+                self.chroma_client = chromadb.PersistentClient(path=db_path)
+                
+                # Collection for current/past document chunks
+                self.doc_collection = self.chroma_client.get_or_create_collection(name="doc_chunks")
+                
+                # Collection for learned rules and expert knowledge
+                self.knowledge_collection = self.chroma_client.get_or_create_collection(name="docscanner_knowledge")
+                
+                logger.info("ChromaDB initialized for Cross-Reference RAG (Documents + Knowledge)")
+            except Exception as e:
+                logger.error(f"Failed to init ChromaDB for RAG: {e}")
+                CHROMADB_AVAILABLE = False
+    
+    def add_learned_pattern(self, original: str, corrected: str, feedback: str):
+        """Add a learned correction pattern to the knowledge collection"""
+        if not CHROMADB_AVAILABLE or not self.knowledge_collection:
+            return False
+            
+        try:
+            # Create a unique ID based on original and feedback to avoid duplicates
+            id_str = f"{original.strip()}_{feedback.strip()}"
+            pattern_id = f"learned_{hashlib.md5(id_str.encode()).hexdigest()[:12]}"
+            
+            # Check if this exact pattern already exists
+            existing = self.knowledge_collection.get(ids=[pattern_id])
+            if existing and existing['ids']:
+                return True
+                
+            # Formatted document for semantic search
+            learn_doc = f"Issue: {feedback} | Original: {original} | Corrected: {corrected}"
+            
+            self.knowledge_collection.add(
+                ids=[pattern_id],
+                documents=[learn_doc],
+                metadatas=[{
+                    "type": "learned_correction",
+                    "original": original,
+                    "corrected": corrected,
+                    "feedback": feedback,
+                    "timestamp": time.time(),
+                    "is_golden_pattern": True
+                }]
+            )
+            logger.info(f"✅ RAG LEARNED: Indexed new golden pattern: {pattern_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save learned pattern: {e}")
+            return False
     
     def load_rag_knowledge_base(self):
         """Load RAG knowledge base from rules_rag_context.json"""
@@ -179,22 +245,48 @@ class HybridIntelligenceRAGSystem:
         else:
             return IntelligenceMode.DEFAULT
     
-    def build_hybrid_prompt(self, flagged_issue: FlaggedIssue, rag_context: dict, mode: IntelligenceMode) -> str:
-        """Build prompt optimized for the selected intelligence mode"""
+    def build_hybrid_prompt(self, flagged_issue: FlaggedIssue, rag_context: dict, mode: IntelligenceMode, multiple_issues: list = None, document_metadata: dict = None, adjacent_context: dict = None) -> str:
+        """Build prompt optimized for the selected intelligence mode, supporting Cross-Reference RAG"""
         
+        issue_text = flagged_issue.issue
+        if multiple_issues:
+            issue_text = "Multiple Issues: " + ", ".join(multiple_issues)
+
+        # 1. Internal Consistency Search (Same Document)
+        doc_insights = self.search_document_consistency(flagged_issue.sentence, document_metadata)
+        
+        # 2. Cross-Reference Knowledge Search (Learned from other docs/corrections)
+        cross_ref_knowledge = self.search_cross_reference_knowledge(flagged_issue.sentence)
+
         base_prompt = f"""You are a writing style expert specializing in technical documentation.
 
-TASK: Improve the following flagged sentence using the provided guidance.
+TASK: Improve the following flagged sentence by resolving ALL identified issues.
+"""
+        if document_metadata:
+            base_prompt += f"DOCUMENT CONTEXT: Title='{document_metadata.get('title')}', Project='{document_metadata.get('project', 'DocScanner')}'\n"
 
-FLAGGED SENTENCE: "{flagged_issue.sentence}"
-ISSUE TYPE: {flagged_issue.issue}
+        if doc_insights:
+            base_prompt += f"\nESTABLISHED TERMINOLOGY IN THIS DOCUMENT:\n{doc_insights}\n"
+            
+        if cross_ref_knowledge:
+            base_prompt += f"\nCROSS-REFERENCE EXPERT KNOWLEDGE (Learned Patterns):\n{cross_ref_knowledge}\n"
 
-RAG GUIDANCE:
-- Rule: {rag_context.get('suggestion', 'Improve writing quality')}
-- Context: {rag_context.get('context', 'Apply best practices')}"""
+        if adjacent_context:
+            if adjacent_context.get('previous_sentence'):
+                base_prompt += f"PREVIOUS SENTENCE: {adjacent_context['previous_sentence']}\n"
+            
+            base_prompt += f"FLAGGED SENTENCE: \"{flagged_issue.sentence}\"\n"
+            
+            if adjacent_context.get('next_sentence'):
+                base_prompt += f"NEXT SENTENCE: {adjacent_context['next_sentence']}\n"
+        else:
+            base_prompt += f"FLAGGED SENTENCE: \"{flagged_issue.sentence}\"\n"
 
-        if rag_context.get('examples'):
-            base_prompt += f"\n- Examples: {', '.join(rag_context['examples'])}"
+        base_prompt += f"""
+ISSUE(S): {issue_text}
+
+RAG GUIDANCE (Rules):
+{self._format_multi_rag_context(rag_context, multiple_issues)}"""
 
         if flagged_issue.context:
             base_prompt += f"\n\nSURROUNDING CONTEXT: {flagged_issue.context}"
@@ -204,36 +296,100 @@ RAG GUIDANCE:
             base_prompt += """
 
 DEEP ANALYSIS REQUIRED:
-1. Analyze the sentence structure and context thoroughly
-2. Consider multiple improvement approaches
-3. Evaluate the impact on readability and clarity
-4. Provide detailed reasoning for your choices
-5. Consider the target audience and documentation type
-6. NEVER invent new technical information, quantities, or product features.
-7. ONLY rewrite what is provided in the input sentence or the RAG knowledge context.
-8. If a quantity like "multiple" is mentioned, do NOT guess a specific number (like "ten") unless it's explicitly stated in the RAG context.
+1. Analyze the sentence structure and all listed issues thoroughly
+2. Generate ONE unified rewrite that fixes every issue simultaneously
+3. Maintain technical accuracy and professional tone
+4. Provide detailed reasoning for how each issue was addressed
+5. NEVER invent new technical information or product features.
 
 DETAILED OUTPUT FORMAT:
-CORRECTED: [Your improved sentence]
-ANALYSIS: [Deep analysis of the issue and your approach]
-REASONING: [Detailed explanation of your corrections]
-ALTERNATIVES: [Other possible improvements considered]
-EXPLANATION: [User-friendly summary]"""
+CORRECTED: [Your improved sentence resolving ALL issues]
+ANALYSIS: [Analysis of how the different issues interact and your solution]
+REASONING: [How you applied the RAG guidance for each specific violation]
+EXPLANATION: [User-friendly summary of the improvements]"""
         
         else:  # FAST or DEFAULT mode
             base_prompt += """
 
 EFFICIENT ANALYSIS:
-1. Apply the RAG guidance directly
-2. Make clear, focused improvements
+1. Apply the RAG guidance for all issues
+2. Make clear, focused improvements in a single unified sentence
 3. Maintain original meaning and intent
 
 CONCISE OUTPUT FORMAT:
-CORRECTED: [Your improved sentence]
-REASONING: [How you applied the guidance]
-EXPLANATION: [Brief explanation of the improvement]"""
+CORRECTED: [Your improved sentence resolving ALL issues]
+REASONING: [How you applied the composite guidance]
+EXPLANATION: [Brief explanation of the fixes]"""
 
         return base_prompt
+
+    def search_document_consistency(self, query_sentence: str, metadata: dict = None) -> str:
+        """Search the current document for similar patterns to ensure consistency"""
+        if not CHROMADB_AVAILABLE or not self.doc_collection:
+            return ""
+        
+        try:
+            filename = metadata.get('title') if metadata else None
+            where_clause = {"source": filename} if filename else None
+            
+            results = self.doc_collection.query(
+                query_texts=[query_sentence],
+                n_results=3,
+                where=where_clause
+            )
+            
+            if not results or not results['documents'] or len(results['documents'][0]) == 0:
+                return ""
+            
+            insights = []
+            for doc in results['documents'][0]:
+                if doc.strip() != query_sentence.strip():
+                    insights.append(f"- \"{doc.strip()}\"")
+            
+            return "\n".join(insights[:2]) if insights else ""
+        except Exception as e:
+            logger.warning(f"Consistency search failed: {e}")
+            return ""
+
+    def search_cross_reference_knowledge(self, query_sentence: str) -> str:
+        """Search across all documents and learned corrections for best practices"""
+        if not CHROMADB_AVAILABLE or not self.knowledge_collection:
+            return ""
+        
+        try:
+            results = self.knowledge_collection.query(
+                query_texts=[query_sentence],
+                n_results=2
+            )
+            
+            if not results or not results['documents'] or len(results['documents'][0]) == 0:
+                return ""
+            
+            knowledge = []
+            for doc in results['documents'][0]:
+                # Format learned knowledge nicely
+                # Learned rules often look like "Context: ... Original: ... Corrected: ..."
+                knowledge.append(f"- Learned Pattern: {doc.strip()}")
+            
+            return "\n".join(knowledge)
+        except Exception as e:
+            logger.warning(f"Cross-reference search failed: {e}")
+            return ""
+
+    def _format_multi_rag_context(self, primary_context: dict, multiple_issues: list = None) -> str:
+        """Helper to format guidance for one or more issues"""
+        if not multiple_issues:
+            return f"- Rule: {primary_context.get('suggestion', 'Improve writing quality')}\n- Context: {primary_context.get('context', 'Apply best practices')}"
+        
+        lines = []
+        for issue in multiple_issues:
+            ctx = self.rag_knowledge_base.get(issue, {})
+            if ctx:
+                lines.append(f"• ISSUE: {issue}")
+                lines.append(f"  - Guidance: {ctx.get('suggestion')}")
+                lines.append(f"  - Context: {ctx.get('context')}")
+        
+        return "\n".join(lines) if lines else "- Apply general technical writing best practices."
     
     def call_ollama_chat(self, prompt: str, model: str, mode: IntelligenceMode) -> Optional[str]:
         """Call Ollama using the chat API with hybrid intelligence"""
@@ -337,35 +493,35 @@ EXPLANATION: [Brief explanation of the improvement]"""
                 "repeat_penalty": 1.1
             }
     
-    def generate_hybrid_solution(self, flagged_issue: FlaggedIssue) -> dict:
+    def generate_hybrid_solution(self, flagged_issue: FlaggedIssue, multiple_issues: list = None, document_metadata: dict = None, adjacent_context: dict = None) -> dict:
         """
-        Generate solution using hybrid intelligence model selection
-        
-        This is your main method that implements:
-        - RAG context retrieval
-        - Intelligent model selection
-        - Optimized prompting for each model
+        Generate solution using hybrid intelligence model selection.
+        Supports single issue or multiple issues list (Master Fix), global context, and flow.
         """
         
-        # Step 1: Retrieve RAG context
-        rag_context = self.rag_knowledge_base.get(flagged_issue.issue, {})
+        # Step 1: Retrieve RAG context (use primary issue if list etc.)
+        primary_issue = flagged_issue.issue
+        rag_context = self.rag_knowledge_base.get(primary_issue, {})
         
-        if not rag_context:
+        if not rag_context and not multiple_issues:
             return {
                 "success": False,
-                "error": f"No RAG context found for issue: {flagged_issue.issue}",
+                "error": f"No RAG context found for issue: {primary_issue}",
                 "model_used": None,
                 "intelligence_mode": None
             }
         
-        # Step 2: Determine intelligence mode
+        # Step 2: Determine intelligence mode (escalate to DEEP for multiple issues)
         intelligence_mode = self.determine_intelligence_mode(flagged_issue)
+        if (multiple_issues and len(multiple_issues) > 1) or document_metadata or adjacent_context:
+            intelligence_mode = IntelligenceMode.DEEP
+            
         selected_model = self.model_map[intelligence_mode]
         
-        logger.info(f"Selected {intelligence_mode.value} mode with model {selected_model}")
+        logger.info(f"Selected {intelligence_mode.value} mode with global context awareness")
         
         # Step 3: Build optimized prompt
-        prompt = self.build_hybrid_prompt(flagged_issue, rag_context, intelligence_mode)
+        prompt = self.build_hybrid_prompt(flagged_issue, rag_context, intelligence_mode, multiple_issues, document_metadata, adjacent_context)
         
         # Step 4: Call appropriate model
         llm_response = self.call_ollama_chat(prompt, selected_model, intelligence_mode)
@@ -391,7 +547,8 @@ EXPLANATION: [Brief explanation of the improvement]"""
             "alternatives": parsed_response.get("alternatives", ""),  # Deep mode only
             "model_used": selected_model,
             "intelligence_mode": intelligence_mode.value,
-            "rag_context": rag_context
+            "rag_context": rag_context,
+            "is_master_fix": bool(multiple_issues)
         }
     
     def parse_hybrid_response(self, response: str, mode: IntelligenceMode) -> dict:

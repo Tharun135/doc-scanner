@@ -493,9 +493,6 @@ class EnhancedAISuggestionSystem:
                 logger.warning("⚠️ Smart rule suggestion failed validation")
         else:
             logger.info("⚠️ No smart rule match found")
-                rule_suggestion["suggestion"] = validated
-                logger.info("✅ Using smart rule suggestion")
-                return rule_suggestion
         
         # Layer 2: RAG Context + LLM Integration
         if self.rag_retriever and self.llm_integrator:

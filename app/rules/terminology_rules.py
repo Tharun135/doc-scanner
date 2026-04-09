@@ -29,8 +29,6 @@ def _get_nlp():
 
 # Example terminology dictionary (customize for your manuals)
 TERMINOLOGY = {
-    "login": "log in (verb) / login (noun)",
-    "setup": "set up (verb) / setup (noun)",
     "click on": "click",
     "shut down": "power off",
     "USB stick": "USB drive"
@@ -70,6 +68,22 @@ def check(content):
             # Example: flagging ambiguous abbreviations
             if token.text.upper() in ["GUI", "API", "DB"]:
                 suggestions.append(f"Spell out abbreviation '{token.text}' at first use.")
+
+            if token.text.lower() == "setup":
+                # Only flag as wrong if used as a VERB and has no compound relation (like "Setup documentation")
+                if token.pos_ == "VERB":
+                    # If it's part of a compound noun or has no direct object, it's likely misclassified
+                    # Also check if the token itself is a compound modifier
+                    is_compound = (token.dep_ == "compound") or any(child.dep_ == "compound" for child in token.children)
+                    has_obj = any(child.dep_ in ["dobj", "obj"] for child in token.children)
+                    
+                    if not is_compound and (has_obj or token.dep_ == "ROOT"):
+                        suggestions.append("Use 'set up' (verb) instead of 'setup' for actions.")
+            
+            # Only flag 'login' if used as a verb (where it should be 'log in')
+            if token.text.lower() == "login":
+                if token.pos_ == "VERB":
+                    suggestions.append("Use 'log in' (verb) instead of 'login' for actions.")
 
             # Example: consistency check for hyphenated terms
             if token.text.lower() in ["e-mail", "email"]:

@@ -227,6 +227,12 @@
         }
 
         /* Active highlight for selected issues - Highest Specificity & Recursive */
+        .document-section .sentence-highlight.block-highlight {
+            background: rgba(111, 66, 193, 0.4); /* Purple highlight for architectural blocks */
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(111, 66, 193, 0.3);
+        }
+
         .document-section .sentence-highlight.highlight {
             background-color: #00bcd4 !important;
             color: #ffffff !important;
@@ -1247,6 +1253,10 @@
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
+                                    <button class="tab-button" onclick="switchTab('structural-feedback')">
+                                        <i class="fas fa-sitemap me-1"></i>
+                                        Architecture
+                                    </button>
                                 </div>
                                 <div class="tab-content active" id="feedbackContent">
                                     <h5 class="mb-3">Document Issues</h5>
@@ -1257,6 +1267,16 @@
                                     <div class="text-muted text-center py-4">
                                         <i class="fas fa-robot fa-2x mb-2"></i>
                                         <p>Click the AI icon next to any issue to get intelligent suggestions</p>
+                                    </div>
+                                </div>
+                                <div class="tab-content" id="structural-feedback">
+                                    <h5 class="mb-3">Document Architecture & Flow</h5>
+                                    <div id="structuralInsightsList">
+                                        <!-- Structural insights will be populated here -->
+                                        <div class="text-muted text-center py-4">
+                                            <i class="fas fa-sitemap fa-2x mb-2"></i>
+                                            <p>Architecture analysis will appear here after document processing</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1467,14 +1487,17 @@
 
             // ETA update logic removed (HTML element deleted)
 
-            // If completed, update to final state but DON'T hide immediately
-            // The hide call will happen in the fetch success handler after rendering
-            if (data.completed) {
-                console.log('🏁 Progress reached 100%, waiting for content results...');
+            // If completed from server, stay at the reported percentage (e.g., 95%) 
+            // until the client-side rendering explicitly hits 100%
+            if (data.completed && data.percentage >= 95) {
+                console.log('🏁 Server analysis complete, syncing results...');
+                document.getElementById('stageName').textContent = 'Syncing Results...';
+                document.getElementById('stageDescription').textContent = 'Transferring analysis data to your view...';
+            } else if (data.percentage >= 100) {
                 document.getElementById('progressPercentage').textContent = '100%';
                 document.getElementById('progressBar').style.width = '100%';
-                document.getElementById('stageName').textContent = 'Finalizing...';
-                document.getElementById('stageDescription').textContent = 'Displaying results...';
+                document.getElementById('stageName').textContent = 'Ready';
+                document.getElementById('stageDescription').textContent = 'Document analysis complete!';
             }
         }
 
@@ -2119,35 +2142,32 @@
                 // This prevents jumping to 100% if the backend is very fast
                 console.log('⏳ Processing finished, waiting for progress animation to catch up...');
 
-                // Add final 100% completion event to queue
+                // ✅ SYNCING STATE: Update UI to show we are now working locally in the browser
                 queueProgressUpdate({
-                    percentage: 100,
-                    message: "Finalizing report...",
-                    stage_name: "Complete",
-                    completed: true
+                    percentage: 98,
+                    message: "Rendering document and issues...",
+                    stage_name: "Rendering",
+                    completed: false
                 });
 
-                // Wait for queue to drain
+                // Wait for queue to drain so user sees the "Rendering" step
                 while (isProcessingQueue || progressQueue.length > 0) {
-                    await new Promise(r => setTimeout(r, 100));
+                    await new Promise(r => setTimeout(r, 50));
                 }
 
-                console.log('🏁 Progress journey complete, rendering results');
+                console.log('🏁 Data received, starting visual render');
 
                 // 🚀 DISPLAY RESULTS
                 try {
+                    window.lastReport = result.report || {}; 
+                    // renderContent will now handle hiding the loader when its internal promises finish
                     renderChart(result.report || {}, result.sentences || []);
                     renderContent(result.content || '', result.sentences || []);
                 } catch (renderError) {
                     console.error('❌ Rendering error:', renderError);
                     alert('Analysis finished, but there was an error displaying the results: ' + renderError.message);
-                }
-
-                // ✅ HIDE LOADER: Short hold at 100% state before closing
-                setTimeout(() => {
                     hideProgressLoader();
-                    document.getElementById('loadingOverlay').style.display = 'none'; // Force hide
-                }, 600);
+                }
 
                 return result;
 
@@ -2596,6 +2616,7 @@
                 const sentence = button.getAttribute('data-sentence');
                 const fullSuggestion = button.getAttribute('data-full-suggestion') || '';
                 const itemData = button.getAttribute('data-item') || '';
+                const multipleFeedbackRaw = button.getAttribute('data-multiple-feedback') || ''; // NEW: For Master Fix
 
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
@@ -2620,16 +2641,18 @@
                 const decodedSentence = decodeURIComponent(sentence);
                 const decodedFullSuggestion = fullSuggestion ? decodeURIComponent(fullSuggestion) : '';
                 const decodedItem = itemData ? JSON.parse(decodeURIComponent(itemData)) : null;
+                const decodedMultipleFeedback = multipleFeedbackRaw ? JSON.parse(decodeURIComponent(multipleFeedbackRaw)) : null;
 
                 console.log('Decoded attributes:', {
                     sentenceIndex: sentenceIndex,
                     feedback: decodedFeedback,
                     sentence: decodedSentence,
                     fullSuggestion: decodedFullSuggestion,
-                    item: decodedItem
+                    item: decodedItem,
+                    multipleFeedback: decodedMultipleFeedback
                 });
 
-                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem);
+                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem, decodedMultipleFeedback);
             }
         });
 
@@ -2658,6 +2681,9 @@
                 if (el) el.classList.add('active');
             } else if (tabName === 'ai-feedback') {
                 const el = document.getElementById('aiFeedbackContent');
+                if (el) el.classList.add('active');
+            } else if (tabName === 'structural-feedback') {
+                const el = document.getElementById('structural-feedback');
                 if (el) el.classList.add('active');
             }
         }
@@ -2702,11 +2728,12 @@
             const methodLabel = getMethodLabel(aiSuggestion.method);
             aiDiv.innerHTML = `
                 <div class="d-flex align-items-center mb-3">
-                    <i class="fas fa-robot me-2"></i>
+                    <i class="fas ${aiSuggestion.is_master_fix ? 'fa-magic' : 'fa-robot'} me-2" ${aiSuggestion.is_master_fix ? 'style="color: #6f42c1;"' : ''}></i>
                     <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
                     <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
-                    <span class="ai-enhancement-badge ms-2">${methodLabel}</span>
+                    <span class="ai-enhancement-badge ms-2" ${aiSuggestion.is_master_fix ? 'style="background: #6f42c1; color: white;"' : ''}>${aiSuggestion.is_master_fix ? 'Master Fix' : methodLabel}</span>
                     ${methodLabel && methodLabel.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
+                    ${aiSuggestion.is_master_fix ? '<span class="badge ms-2" style="border: 1px solid #6f42c1; color: #6f42c1;">✨ Orchestrated</span>' : ''}
                 </div>
                 
                 <div class="mb-3">
@@ -2774,16 +2801,19 @@
                         </div>
                     </div>
                     ` : (aiSuggestion.suggestion && aiSuggestion.suggestion.trim() && !aiSuggestion.is_guidance_only ? `
-                    <div class="suggestion-text bg-light text-dark p-3 rounded border-start border-4 border-success">
-                        ${formatAISuggestion(aiSuggestion.suggestion)}
-                    </div>
+                    <div class="mb-2 text-light opacity-75 small"><i class="fas fa-pencil-alt me-1"></i> Edit suggestion if needed:</div>
+                    <textarea class="suggestion-editor w-100 p-3 rounded" 
+                              id="editor_${feedbackKey}" 
+                              style="background: #fff; color: #222; border: 2px solid #28a745; min-height: 80px; font-family: inherit; font-size: 0.95em; resize: vertical;"
+                              oninput="updateInternalSuggestion('${feedbackKey}', this.value)">${aiSuggestion.suggestion}</textarea>
+                    
                     <div class="mt-3 d-flex gap-2">
                         <button class="btn btn-success btn-sm flex-grow-1" 
                                 onclick="applyAndTeachAI(${sentenceIndex}, '${feedbackKey}')">
                             <i class="fas fa-magic me-1"></i> Apply & Teach AI
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" 
-                                onclick="copyToClipboard('${aiSuggestion.suggestion.replace(/'/g, "\\'")}')">
+                                onclick="copyToClipboard(document.getElementById('editor_${feedbackKey}').value)">
                             <i class="fas fa-copy"></i>
                         </button>
                     </div>
@@ -2865,7 +2895,7 @@
         }
 
         // Function to handle AI feedback icon click
-        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null) {
+        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null, multipleFeedback = null) {
             try {
                 console.log('=== SHOW AI FEEDBACK DEBUG ===');
                 console.log('Parameters received:', {
@@ -2913,7 +2943,7 @@
                     item: item
                 });
 
-                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item);
+                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item, multipleFeedback);
                 console.log('getAISuggestion returned:', aiSuggestion);
                 console.log('🔍 Response structure check:', {
                     hasSuggestion: aiSuggestion?.suggestion,
@@ -3076,17 +3106,27 @@
         }
 
         // Function to apply suggestion and teach the AI
+        // Update internal data when user edits the suggestion (RLHF)
+        function updateInternalSuggestion(feedbackKey, newValue) {
+            if (aiFeedbackData[feedbackKey] && aiFeedbackData[feedbackKey].aiSuggestion) {
+                aiFeedbackData[feedbackKey].aiSuggestion.suggestion = newValue;
+                console.log(`Updated internal suggestion for ${feedbackKey}`);
+            }
+        }
+
+        // Function to handle clicking "Apply & Teach AI" (RLHF)
         async function applyAndTeachAI(sentenceIndex, feedbackKey) {
             const data = aiFeedbackData[feedbackKey];
             if (!data || !data.aiSuggestion.suggestion) return;
 
+            // Get the current value from the editor (just in case)
+            const editor = document.getElementById(`editor_${feedbackKey}`);
+            const corrected = editor ? editor.value : data.aiSuggestion.suggestion;
             const original = data.sentence;
-            const corrected = data.aiSuggestion.suggestion;
             const issueType = data.feedback;
 
             try {
                 // 1. Physically replace the text in the document
-                // This function should find the span with the correct index and replace its inner text
                 const span = document.querySelector(`.sentence-highlight[data-sentence-index="${sentenceIndex}"]`);
                 if (span) {
                     span.innerText = corrected;
@@ -3097,7 +3137,7 @@
                     showSuccessToast(`Sentence ${sentenceIndex + 1} updated!`);
                 }
 
-                // 2. Send the 'Golden Pair' to the knowledge base for learning
+                // 2. Send the 'Golden Pair' to the knowledge base for learning (RLHF)
                 const response = await fetch('/api/knowledge/learn', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3357,6 +3397,29 @@
             });
         }
 
+        function highlightBlock(blockIndex) {
+            console.log(`🔍 Attempting to highlight block #${blockIndex}...`);
+            // Remove existing highlights
+            unhighlightAllSentences();
+
+            // Find all sentences in this block
+            const blockSentences = document.querySelectorAll(`.sentence-highlight[data-block-index="${blockIndex}"]`);
+            if (blockSentences.length > 0) {
+                blockSentences.forEach(sentence => {
+                    sentence.classList.add('block-highlight');
+                });
+
+                // Scroll the first sentence of the block into view
+                blockSentences[0].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                // Show a brief toast
+                showSuccessToast(`Highlighted Block #${blockIndex}`);
+            }
+        }
+
         function highlightFeedbackForSentence(sentenceIndex) {
             // Remove any existing feedback highlights
             document.querySelectorAll('.feedback-item.highlighted').forEach(item => {
@@ -3601,7 +3664,8 @@
 
                 // Final application:
                 if (matchIndex !== -1 && matchText) {
-                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}">${matchText}</span>`;
+                    const blockIndex = sentenceData.block_index !== undefined ? sentenceData.block_index : -1;
+                    const replacement = `<span class="sentence-highlight${feedbackClass}" id="content-sentence-${index}" data-sentence-index="${index}" data-block-index="${blockIndex}">${matchText}</span>`;
 
                     processedContent = processedContent.substring(0, matchIndex) +
                         replacement +
@@ -3643,105 +3707,129 @@
         async function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
             const feedbackContainer = document.getElementById('feedbackContent');
 
-            console.log('renderFeedbackWithAI called with:', feedback, sentence, sentenceIndex);
+            if (!feedback || feedback.length === 0) return;
 
-            for (const item of feedback) {
-                // PRECISION FIX: Deduplication check to prevent race conditions from creating duplicate cards
-                const existingCard = feedbackContainer.querySelector(`.feedback-item[data-sentence-index="${sentenceIndex}"][data-message="${encodeURIComponent(item.message)}"]`);
-                if (existingCard) {
-                    console.log(`Skipping duplicate card for sentence ${sentenceIndex}: ${item.message}`);
-                    continue;
+            // Group all issues for a single sentence into one card if there's more than one
+            if (feedback.length > 1) {
+                // MASTER FIX: If there are multiple issues, add a single consolidated card
+                const masterFixCard = createFeedbackCard({
+                    message: feedback.map(f => f.message).join(" | "),
+                    isMasterFix: true,
+                    multipleFeedback: feedback.map(f => f.message)
+                }, sentence, sentenceIndex, feedbackContainer);
+                
+                if (masterFixCard) {
+                    insertFeedbackCard(masterFixCard, sentenceIndex, feedbackContainer);
                 }
-
-                const feedbackDiv = document.createElement('div');
-                feedbackDiv.className = 'feedback-item p-3 mb-2 border-start';
-                feedbackDiv.setAttribute('data-sentence-index', sentenceIndex);
-                feedbackDiv.setAttribute('data-message', encodeURIComponent(item.message)); // Used for deduplication
-                feedbackDiv.setAttribute('data-order', sentenceIndex); // For sorting
-
-                // Add hover functionality to highlight corresponding sentence
-                feedbackDiv.addEventListener('mouseenter', () => {
-                    highlightSentence(sentenceIndex);
-                    feedbackDiv.classList.add('highlighted');
-                });
-
-                feedbackDiv.addEventListener('mouseleave', () => {
-                    unhighlightAllSentences();
-                    feedbackDiv.classList.remove('highlighted');
-                });
-
-                // Add click functionality to scroll to sentence
-                feedbackDiv.addEventListener('click', (e) => {
-                    // Don't trigger if clicking on AI icon or its children
-                    if (!e.target.closest('.ai-feedback-icon')) {
-                        scrollToSentence(sentenceIndex);
-                    }
-                });
-
-                console.log('Processing feedback item:', item);
-                console.log('Creating AI button for sentence:', sentenceIndex);
-
-                // Create wrapper div
-                const wrapperDiv = document.createElement('div');
-                wrapperDiv.className = 'd-flex justify-content-between align-items-start';
-                wrapperDiv.style.gap = '12px';
-
-                // Create content div (left side)
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'flex-grow-1';
-                contentDiv.innerHTML = `
-                    <div class="mb-2">
-                        <strong>📋 Issue:</strong> ${item.message}
-                    </div>
-                    <div class="mb-1">
-                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
-                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
-                    </div>
-                    <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
-                        "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
-                    </div>
-                `;
-
-                // Create AI button (right side) - as a proper DOM element
-                const aiButton = document.createElement('button');
-                aiButton.className = 'ai-feedback-icon';
-                aiButton.setAttribute('data-sentence-index', sentenceIndex);
-                aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
-                aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
-                aiButton.setAttribute('data-full-suggestion', encodeURIComponent(item.full_suggestion || ''));
-                // Store full item for rule authority check
-                aiButton.setAttribute('data-item', encodeURIComponent(JSON.stringify(item)));
-                aiButton.setAttribute('title', 'Get AI-powered suggestions for this issue');
-                aiButton.setAttribute('aria-label', 'Get AI suggestions');
-                aiButton.innerHTML = '<i class="fas fa-robot"></i>';
-
-                // Assemble the structure
-                wrapperDiv.appendChild(contentDiv);
-                wrapperDiv.appendChild(aiButton);
-                feedbackDiv.appendChild(wrapperDiv);
-
-                console.log('✅ AI button created as DOM element for sentence:', sentenceIndex);
-
-                // Insert in the correct order
-                const existingItems = Array.from(feedbackContainer.querySelectorAll('.feedback-item[data-order]'));
-                let inserted = false;
-
-                for (let existingItem of existingItems) {
-                    const existingOrder = parseInt(existingItem.getAttribute('data-order'));
-                    if (sentenceIndex < existingOrder) {
-                        feedbackContainer.insertBefore(feedbackDiv, existingItem);
-                        inserted = true;
-                        break;
-                    }
-                }
-
-                if (!inserted) {
-                    feedbackContainer.appendChild(feedbackDiv);
+            } else {
+                // Otherwise, just render the single issue card
+                const card = createFeedbackCard(feedback[0], sentence, sentenceIndex, feedbackContainer);
+                if (card) {
+                    insertFeedbackCard(card, sentenceIndex, feedbackContainer);
                 }
             }
         }
 
-        async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null) {
+        // Helper to create a feedback card
+        function createFeedbackCard(item, sentence, sentenceIndex, container) {
+            const messageId = item.isMasterFix ? "MASTER_FIX" : item.message;
+            
+            // PRECISION FIX: Deduplication check
+            const existingCard = container.querySelector(`.feedback-item[data-sentence-index="${sentenceIndex}"][data-message="${encodeURIComponent(messageId)}"]`);
+            if (existingCard) return null;
+
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = `feedback-item p-3 mb-2 border-start ${item.isMasterFix ? 'master-fix-item' : ''}`;
+            if (item.isMasterFix) {
+                feedbackDiv.style.borderLeftColor = '#6f42c1'; // Purple for master fix
+                feedbackDiv.style.backgroundColor = 'rgba(111, 66, 193, 0.05)';
+            }
+            
+            feedbackDiv.setAttribute('data-sentence-index', sentenceIndex);
+            feedbackDiv.setAttribute('data-message', encodeURIComponent(messageId));
+            feedbackDiv.setAttribute('data-order', sentenceIndex);
+
+            // Hover and click behaviors
+            feedbackDiv.addEventListener('mouseenter', () => { highlightSentence(sentenceIndex); feedbackDiv.classList.add('highlighted'); });
+            feedbackDiv.addEventListener('mouseleave', () => { unhighlightAllSentences(); feedbackDiv.classList.remove('highlighted'); });
+            feedbackDiv.addEventListener('click', (e) => {
+                if (!e.target.closest('.ai-feedback-icon')) scrollToSentence(sentenceIndex);
+            });
+
+            const wrapperDiv = document.createElement('div');
+            wrapperDiv.className = 'd-flex justify-content-between align-items-start';
+            wrapperDiv.style.gap = '12px';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'flex-grow-1';
+            
+            let label = item.isMasterFix ? '✨ Master Fix' : '📋 Issue';
+            let messageText = item.message;
+
+            // If it's a grouped Master Fix, format the messages as a list
+            if (item.isMasterFix && item.multipleFeedback) {
+                messageText = `<div class="mb-1"><strong>Multiple issues detected:</strong></div>`;
+                messageText += `<ul class="mb-0 mt-1" style="padding-left: 1.2rem; font-size: 0.95em;">`;
+                item.multipleFeedback.forEach(f => {
+                    messageText += `<li class="mb-1">${f}</li>`;
+                });
+                messageText += `</ul>`;
+            }
+            
+            contentDiv.innerHTML = `
+                <div class="mb-2">
+                    <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
+                    ${item.isMasterFix ? messageText : ''}
+                </div>
+                <div class="mb-1">
+                    <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                    <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
+                </div>
+                <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
+                    "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
+                </div>
+            `;
+
+            const aiButton = document.createElement('button');
+            aiButton.className = `ai-feedback-icon ${item.isMasterFix ? 'master-fix' : ''}`;
+            aiButton.setAttribute('data-sentence-index', sentenceIndex);
+            aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
+            aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
+            
+            if (item.isMasterFix && item.multipleFeedback) {
+                aiButton.setAttribute('data-multiple-feedback', encodeURIComponent(JSON.stringify(item.multipleFeedback)));
+                aiButton.setAttribute('title', 'Master Fix: Resolve all issues at once');
+            } else {
+                aiButton.setAttribute('title', 'Get AI-powered suggestions');
+            }
+            
+            aiButton.innerHTML = item.isMasterFix ? '<i class="fas fa-magic"></i>' : '<i class="fas fa-robot"></i>';
+            if (item.isMasterFix) aiButton.style.color = '#6f42c1';
+
+            wrapperDiv.appendChild(contentDiv);
+            wrapperDiv.appendChild(aiButton);
+            feedbackDiv.appendChild(wrapperDiv);
+            
+            return feedbackDiv;
+        }
+
+        // Helper to insert card in order
+        function insertFeedbackCard(card, sentenceIndex, container) {
+            const existingItems = Array.from(container.querySelectorAll('.feedback-item[data-order]'));
+            let inserted = false;
+
+            for (let existingItem of existingItems) {
+                const existingOrder = parseInt(existingItem.getAttribute('data-order'));
+                if (sentenceIndex < existingOrder) {
+                    container.insertBefore(card, existingItem);
+                    inserted = true;
+                    break;
+                }
+            }
+            if (!inserted) container.appendChild(card);
+        }
+
+        async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null, multipleFeedback = null) {
             try {
                 // Safe document type retrieval - fallback to 'technical' if element doesn't exist
                 let documentType = 'technical';
@@ -3797,10 +3885,16 @@
                     }
                 }
 
+                const documentTitle = document.getElementById('uploadBtnText')?.innerText !== 'Upload & Analyze' 
+                    ? document.getElementById('uploadBtnText').innerText.replace('...', '').trim() 
+                    : 'Untitled Document';
+
                 const requestData = {
                     feedback: coreIssue,
+                    multiple_feedback: multipleFeedback,
                     sentence: cleanSentence,
                     document_type: documentType,
+                    document_title: documentTitle, // NEW: For Global Context
                     writing_goals: selectedWritingGoals || ['clarity', 'conciseness'],
                     option_number: optionNumber
                 };
@@ -3912,6 +4006,16 @@
                 </div>
             `;
             aiFeedbackContent.scrollTop = 0; // Reset scroll position to top
+            
+            const structuralList = document.getElementById('structuralInsightsList');
+            if (structuralList) {
+                structuralList.innerHTML = `
+                    <div class="text-muted text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                        <p>Processing structural insights...</p>
+                    </div>
+                `;
+            }
 
             // Clear AI feedback data and any cached sentence data
             aiFeedbackData = {};
@@ -3933,6 +4037,11 @@
 
             // Add the enhanced content to document - IMMEDIATE
             documentContent.appendChild(originalContentDiv);
+
+            // Populate Structural Insights if they exist in window.lastReport (which should come from processSingleFile)
+            if (window.lastReport && window.lastReport.structural_insights) {
+                renderStructuralInsights(window.lastReport.structural_insights);
+            }
 
             // Add click handlers to the newly created sentence spans - IMMEDIATE
             addContentSentenceHandlers();
@@ -3973,12 +4082,46 @@
                 // Process feedback in sequential order (async, in background)
                 feedbackPromises.sort((a, b) => a.index - b.index);
 
-                // Execute promises sequentially to maintain order
+                // Execute promises sequentially to maintain order, catching errors to prevent chain breakage
                 feedbackPromises.reduce((prevPromise, current) => {
-                    return prevPromise.then(() => current.promise);
-                }, Promise.resolve());
+                    return prevPromise.then(() => current.promise.catch(err => {
+                        console.error(`❌ Error rendering feedback for index ${current.index}:`, err);
+                    }));
+                }, Promise.resolve()).finally(() => {
+                    // Remove ALL loading indicators to prevent orphans
+                    document.querySelectorAll('.feedback-loading').forEach(el => el.remove());
+                    console.log('✅ All feedback rendering attempts completed.');
+                    
+                    // ✅ FINAL COMPLETION: Hide the overlay ONLY after everything is on screen
+                    setTimeout(() => {
+                        updateRealTimeProgress({
+                            percentage: 100,
+                            message: "Report Ready",
+                            stage_name: "Complete",
+                            completed: true
+                        });
+                        
+                        setTimeout(() => {
+                            hideProgressLoader();
+                            document.getElementById('loadingOverlay').style.display = 'none';
+                        }, 400);
+                    }, 200);
+                });
+            } else {
+                // If no feedback found, ensure we still hide the loader
+                setTimeout(() => {
+                    updateRealTimeProgress({
+                        percentage: 100,
+                        message: "Report Ready",
+                        stage_name: "Complete",
+                        completed: true
+                    });
+                    setTimeout(() => {
+                        hideProgressLoader();
+                        document.getElementById('loadingOverlay').style.display = 'none';
+                    }, 500);
+                }, 500);
             }
-
             // If no feedback found, show a message
             if (feedbackCount === 0) {
                 const noIssuesDiv = document.createElement('div');
@@ -4017,9 +4160,53 @@
                 `;
                 feedbackContent.appendChild(qualitySummary);
             }
-
-
         }
+
+        // Function to render structural insights (Paragraph/Section analysis)
+        function renderStructuralInsights(insights) {
+            const list = document.getElementById('structuralInsightsList');
+            if (!list) return;
+
+            if (!insights || insights.length === 0) {
+                list.innerHTML = `
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Document structure looks healthy! No major paragraph or section issues detected.
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = '';
+            insights.forEach(insight => {
+                const card = document.createElement('div');
+                card.className = `card mb-3 border-start border-4 ${insight.severity === 'high' ? 'border-danger' : 'border-warning'}`;
+                card.style.background = 'rgba(255, 255, 255, 0.05)';
+                card.style.color = '#fff';
+                
+                card.innerHTML = `
+                    <div class="card-body p-3 insight-clickable-card" style="cursor: pointer; transition: background 0.2s;" 
+                         onclick="highlightBlock(${insight.block_index})">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge ${insight.severity === 'high' ? 'bg-danger' : 'bg-warning'} text-dark">
+                                <i class="fas ${insight.type === 'structural' ? 'fa-align-left' : 'fa-brain'} me-1"></i>
+                                ${insight.type.replace('_', ' ').toUpperCase()}
+                            </span>
+                            ${insight.block_index !== undefined ? `<small class="text-muted">Block #${insight.block_index}</small>` : ''}
+                        </div>
+                        <h6 class="mb-2" style="color: #6c5ce7;">${insight.target || 'Overall Structure'}</h6>
+                        <p class="mb-0 small" style="opacity: 0.9;">${insight.message}</p>
+                        <div class="mt-2 text-primary" style="font-size: 0.75rem;">
+                             <i class="fas fa-search me-1"></i> Click to locate block in document
+                        </div>
+                    </div>
+                `;
+                
+                list.appendChild(card);
+            });
+        }
+
+
         // Clean feedback text
         function cleanFeedback(feedback) {
             const tempDiv = document.createElement('div');

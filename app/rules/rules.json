@@ -72,7 +72,7 @@
   {
     "rule_id": "IMPERATIVE_001",
     "category": "voice",
-    "regex": "^(?:To|In order to|For)\\s+[a-z]+",
+    "regex": "^(?:To|In order to|For)\\s+[a-z]+(?!.*:)(?!.*,\\s*(?:see|refer|consult|view)\\b)",
     "severity": "warn",
     "message": "Start procedural steps with imperative verbs.",
     "suggestion": "Begin with action verb (Configure, Click, Select, etc.).",
@@ -130,19 +130,9 @@
     "example_correction": "1. Click Save.\n2. Close the dialog."
   },
   {
-    "rule_id": "PASSIVE_001",
-    "category": "voice",
-    "regex": "\\b(?:is|are|was|were|be|been|being)\\s+\\w+ed\\b",
-    "severity": "warn",
-    "message": "Passive voice detected.",
-    "suggestion": "Prefer active voice for procedures: 'System displays result' not 'Result is displayed'.",
-    "example_violation": "The file is saved automatically.",
-    "example_correction": "The system saves the file automatically."
-  },
-  {
     "rule_id": "CONDITIONAL_001",
     "category": "procedure",
-    "regex": "\\bif\\b.*,\\s*(?:then\\s+)?[a-z]+",
+    "regex": "\\bif\\b.*,\\s*(?:then\\s+)?[a-z]+(?!.*:)",
     "severity": "info",
     "message": "Conditional statement detected.",
     "suggestion": "Consider separating condition from action for clarity.",
@@ -158,16 +148,6 @@
     "suggestion": "Reference specific singular UI elements by exact label.",
     "example_violation": "Click one of the buttons.",
     "example_correction": "Click Save or Cancel."
-  },
-  {
-    "rule_id": "ARTICLE_001",
-    "category": "article",
-    "regex": "\\b(?:the|a|an)\\s+(?:following|below|above|next)\\b",
-    "severity": "warn",
-    "message": "Unnecessary article with positional reference.",
-    "suggestion": "Remove article: 'See following table' not 'See the following table'.",
-    "example_violation": "Complete the following steps.",
-    "example_correction": "Complete these steps."
   },
   {
     "rule_id": "GENDER_001",
@@ -218,16 +198,6 @@
     "suggestion": "Remove colon, rewrite heading.",
     "example_violation": "Steps:\n1. Click Save.",
     "example_correction": "Steps\n1. Click Save."
-  },
-  {
-    "rule_id": "TABLE_001",
-    "category": "table",
-    "regex": "\\|\\s*\\|",
-    "severity": "error",
-    "message": "Empty table cell detected.",
-    "suggestion": "Provide data or use '—'.",
-    "example_violation": "| Value | Speed |\n|       | 1500  |",
-    "example_correction": "| Value | Speed |\n| —     | 1500  |"
   },
   {
     "rule_id": "TABLE_002",

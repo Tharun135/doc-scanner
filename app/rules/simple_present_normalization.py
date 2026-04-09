@@ -250,9 +250,15 @@ def detect_verb_tense(sentence: str) -> str:
     has_future = False
     
     for token in doc:
-        if token.pos_ == "AUX" or token.pos_ == "VERB":
-            if token.tag_ in PAST_TENSE_TAGS:
+        if token.pos_ in {"AUX", "VERB"}:
+            if token.tag_ == "VBD":
                 has_past = True
+            elif token.tag_ == "VBN":
+                # Check if it has an auxiliary verb (is/was/has/had removed)
+                # If no auxiliary, it's likely a participle used as an adjective (e.g., "downloaded projects")
+                has_aux = any(child.dep_.startswith("aux") for child in token.children)
+                if has_aux:
+                    has_past = True
             elif token.tag_ in PRESENT_TAGS:
                 has_present = True
             elif token.lower_ in FUTURE_MARKERS:

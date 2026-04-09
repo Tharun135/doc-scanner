@@ -269,29 +269,15 @@ class AISuggestionEngine:
                 else:
                     suggestion = text  # Keep original if can't improve
                     
-                return {
-                    "suggestion": suggestion,
-                    "ai_answer": f"Converted passive 'is needed' to active voice using 'Use' for clearer, more direct instruction. This makes the sentence more actionable and easier to follow.",
-                    "confidence": "high",
-                    "method": "smart_passive_conversion",
-                    "sources": ["Siemens Style Guide: Use active voice for clarity"],
-                    "original_sentence": text,
-                    "success": True
-                }
+                explanation = "Converted passive 'is needed' to active voice using 'Use' for clearer, more direct instruction. This makes the sentence more actionable and easier to follow."
+                return f"{suggestion}\nWHY: {explanation}"
             
 
             
             # General passive voice guidance without broken automatic conversion
             else:
-                return {
-                    "suggestion": text,  # Keep original - don't break it
-                    "ai_answer": "Consider converting to active voice by identifying who or what performs the action. For example: change 'The file was created by the system' to 'The system creates the file'. This makes sentences clearer and more direct.",
-                    "confidence": "medium",
-                    "method": "smart_rule_based",
-                    "sources": ["Siemens Style Guide: Prefer active voice for clarity"],
-                    "original_sentence": text,
-                    "success": True
-                }
+                explanation = "Consider converting to active voice by identifying who or what performs the action. For example: change 'The file was created by the system' to 'The system creates the file'. This makes sentences clearer and more direct."
+                return f"{text}\nWHY: {explanation}"
 
         # 3) Long sentence → split
         long_issue = ("long sentence" in feedback_text.lower()) or (len(text.split()) >= 22)

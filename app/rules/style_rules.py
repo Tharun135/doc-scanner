@@ -91,7 +91,8 @@ def check(content):
             # Subjective/technical adverbs that may be intentional
             subjective_adverbs = {
                 'properly', 'correctly', 'appropriately', 'specifically', 
-                'exactly', 'directly', 'explicitly', 'clearly', 'successfully'
+                'exactly', 'directly', 'explicitly', 'clearly', 'successfully',
+                'only'
             }
             
             for token in sent:
@@ -99,16 +100,8 @@ def check(content):
                     adverb_lower = token.text.lower()
                     
                     if adverb_lower in subjective_adverbs:
-                        # DECISION: no_change - Technical/domain-specific term
-                        suggestions.append({
-                            'text': sent.text.strip(),
-                            'start': 0,
-                            'end': len(sent.text.strip()),
-                            'message': f"Adverb '{token.text}' detected",
-                            'decision_type': 'no_change',
-                            'rule': 'style_adverbs',
-                            'reviewer_rationale': f"'{token.text}' may be intentional and domain-specific. In technical contexts, terms like 'properly configured' or 'correctly installed' convey specific technical meaning that would be lost if removed. Consider whether this adverb clarifies a technical requirement."
-                        })
+                        # Skip technically valid or domain-specific terms
+                        continue
                     else:
                         # DECISION: guide - Suggest consideration
                         suggestions.append({

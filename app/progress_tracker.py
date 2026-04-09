@@ -35,11 +35,12 @@ class ProgressTracker:
             'start_time': time.time(),
             'stages': [
                 {'name': 'Uploading', 'description': 'Receiving and validating your document...', 'percentage': 5},
-                {'name': 'Parsing', 'description': 'Extracting text and structure...', 'percentage': 15},
-                {'name': 'Understanding', 'description': 'Analyzing document structure and goals...', 'percentage': 30},
-                {'name': 'Extracting', 'description': 'Identifying sentence boundaries...', 'percentage': 45},
-                {'name': 'Analyzing', 'description': 'Applying grammar and style rules...', 'percentage': 60},
-                {'name': 'Reporting', 'description': 'Compiling insights and quality metrics...', 'percentage': 95}
+                {'name': 'Parsing', 'description': 'Extracting text and structure...', 'percentage': 10},
+                {'name': 'Understanding', 'description': 'Analyzing document structure and goals...', 'percentage': 20},
+                {'name': 'Extracting', 'description': 'Identifying sentence boundaries...', 'percentage': 25},
+                {'name': 'Analyzing', 'description': 'Applying grammar and style rules...', 'percentage': 30},
+                {'name': 'Reporting', 'description': 'Compiling insights and quality metrics...', 'percentage': 85},
+                {'name': 'Finalizing', 'description': 'Preparing results for display...', 'percentage': 95}
             ]
         }
         
@@ -100,11 +101,11 @@ class ProgressTracker:
         session = self.active_sessions[room_id]
         elapsed_time = time.time() - session['start_time']
         
-        # Send completion event
+        # Send completion event - Hold at 95% to allow for network transfer and browser rendering
         completion_data = {
-            'percentage': 100,
-            'message': final_message,
-            'stage_name': 'Complete',
+            'percentage': 95,
+            'message': 'Transferring report to browser...',
+            'stage_name': 'Finalizing',
             'success': success,
             'elapsed_time': round(elapsed_time, 2),
             'completed': True

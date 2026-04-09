@@ -357,33 +357,6 @@ RULE_REMEDIATIONS = [
     },
 
     {
-        "id": "ARTICLE_001",
-        "category": "Clarity & Precision",
-        "severity": "info",
-        "rule": "Remove unnecessary articles before positional references ('the following', 'the below').",
-        "why": (
-            "'The following' and 'the below' are set phrases that function as adjectives. "
-            "Adding 'the' before them is redundant. Additionally, 'below' as a positional "
-            "reference is fragile in single-sourced or reordered content."
-        ),
-        "detection_pattern": ["the following", "the below", "the above"],
-        "bad_examples": [
-            "Refer to the following table for details.",
-            "See the below steps.",
-            "As shown in the above figure."
-        ],
-        "good_examples": [
-            "Refer to the following table.",
-            "Complete the following steps.",
-            "As shown in Figure 3."
-        ],
-        "fix_instruction": (
-            "Remove 'the' when it precedes 'following'. Replace 'the below' with 'the following'. "
-            "Replace 'the above' with a specific cross-reference (e.g., 'Figure 3', 'Table 2')."
-        ),
-    },
-
-    {
         "id": "JARGON_001",
         "category": "Clarity & Precision",
         "severity": "warning",
@@ -610,31 +583,6 @@ RULE_REMEDIATIONS = [
     # ─────────────────────────────────────────
     # 8. TABLES
     # ─────────────────────────────────────────
-    {
-        "id": "TABLE_001",
-        "category": "Tables",
-        "severity": "error",
-        "rule": "Empty table cells are prohibited.",
-        "why": (
-            "Empty cells are ambiguous — they may mean 'not applicable', 'unknown', "
-            "'same as above', or 'intentionally blank'. Translation engines and screen readers "
-            "cannot interpret intent. Each cell must contain a value or an explicit placeholder."
-        ),
-        "detection_pattern": ["<td></td>", "| |", "empty cell"],
-        "bad_examples": [
-            "| Parameter | Default | Description |\n|-----------|---------|-------------|\n| Timeout   |         | Max wait    |"
-        ],
-        "good_examples": [
-            "| Parameter | Default | Description |\n|-----------|---------|-------------|\n| Timeout   | 30 s    | Max wait    |",
-            "Use 'N/A' for not applicable, '—' for intentionally empty, or a specific value."
-        ],
-        "fix_instruction": (
-            "Fill every empty cell with: the actual value, 'N/A' (not applicable), "
-            "'—' (intentionally blank, defined in table legend), or a descriptive placeholder. "
-            "Never leave a cell empty without explicit notation."
-        ),
-    },
-
     {
         "id": "TABLE_002",
         "category": "Tables",

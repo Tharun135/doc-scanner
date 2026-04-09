@@ -113,6 +113,10 @@ def check(content, previous_sentence=None, next_sentence=None):
             continue
             
         if token.dep_ == "auxpass":
+            # PRECISISON FIX: Whitelist technical state verbs that are appropriate in passive/state form
+            target_verb = token.head.lemma_.lower()
+            if target_verb in ['abstract', 'integrate', 'store', 'equip', 'locate', 'configure', 'setup', 'set']:
+                continue
             # ============================================================
             # CONTEXT ANALYSIS: Determine if passive should be converted
             # ============================================================

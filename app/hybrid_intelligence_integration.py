@@ -10,6 +10,10 @@ integrate phi3:mini and llama3:8b models with your RAG system.
 import sys
 import os
 import re
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 # Add the parent directory and tools directory to the path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -48,7 +52,10 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
     sentence_context, 
     document_type='general', 
     complexity='default',
-    adjacent_context=None  # NEW: adjacent sentences
+    adjacent_context=None,  # NEW: adjacent sentences
+    multiple_feedback=None,  # NEW: list of all feedback messages for Master Fix
+    document_metadata=None,   # NEW: global document metadata (title, etc)
+    rule_metadata=None       # NEW: direct data from the rule engine
 ):
     """
     Enhance AI suggestions using hybrid intelligence (phi3:mini + llama3:8b)
@@ -58,6 +65,9 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
     
     Args:
         adjacent_context: Dict with 'previous_sentence' and/or 'next_sentence' keys
+        multiple_feedback: List of all feedback strings for this sentence
+        document_metadata: Dict with 'title', 'version', etc.
+        rule_metadata: Dict containing 'category', 'rule_id', etc.
     """
     if not HYBRID_SYSTEM_AVAILABLE:
         return {
@@ -70,6 +80,46 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
         }
     
     try:
+        # Get the hybrid system
+        hybrid_system = get_hybrid_system()
+        
+        # 🟢 SELF-EVOLVING RAG: Check for high-confidence learned patterns first
+        # This allows the system to recall your previous successful fixes instantly
+        try:
+            if hybrid_system and hasattr(hybrid_system, 'knowledge_collection'):
+                # Search for near-exact matches of this sentence + feedback
+                search_query = f"Issue: {feedback_text} | Original: {sentence_context}"
+                results = hybrid_system.knowledge_collection.query(
+                    query_texts=[search_query],
+                    n_results=1,
+                    where={"type": "learned_correction"}
+                )
+                
+                if (results and results['metadatas'] and results['metadatas'][0] and 
+                    results['distances'] and results['distances'][0][0] < 0.1):
+                    
+                    match = results['metadatas'][0][0]
+                    logger.info(f"🧠 RAG RECALL: Found high-confidence match (dist: {results['distances'][0][0]:.4f})")
+                    
+                    return {
+                        'success': True,
+                        'suggestion': match.get('corrected'),
+                        'ai_answer': f"Recalled your previous successful fix for this pattern. (Matched '{match.get('feedback')}')",
+                        'confidence': 'high',
+                        'method': 'learned_rag_recall',
+                        'model_used': 'rag_memory',
+                        'intelligence_mode': 'instant',
+                        'processing_time': 0,
+                        'sources': ['Self-Evolved RAG Memory'],
+                        'context_used': {
+                            'document_type': document_type,
+                            'issue_type': 'Learned Pattern',
+                            'original_match': match.get('original')
+                        }
+                    }
+        except Exception as rag_e:
+            logger.warning(f"⚠️ Learned RAG recall check failed: {rag_e}")
+
         # Special handling for requirement sentences to use "you" instead of "developer"
         if ("passive" in feedback_text.lower() and 
             "requirement must be met" in sentence_context.lower()):
@@ -91,31 +141,51 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
                 }
             }
         
-        # Get the hybrid system
-        hybrid_system = get_hybrid_system()
-        
-        # Determine issue type from feedback
+        # Determine issue type - STRATEGY: Prefer Metadata > Keyword Match > Default
         issue_type = "General"
-        feedback_lower = feedback_text.lower()
         
-        if "passive" in feedback_lower:
-            issue_type = "Passive voice"
-        elif "adverb" in feedback_lower:
-            issue_type = "Adverb overuse"  
-        elif "long sentence" in feedback_lower:
-            issue_type = "Long sentences"
-        elif "vague" in feedback_lower:
-            issue_type = "Vague terms"
-        elif "complex" in feedback_lower:
-            issue_type = "Complex sentences"
-        elif "redundant" in feedback_lower:
-            issue_type = "Redundant phrases"
-        elif "click on" in feedback_lower or "modal" in feedback_lower:
-            issue_type = "Modal fluff"
-        elif "unclear" in feedback_lower:
-            issue_type = "Unclear antecedents"
-        elif "tone" in feedback_lower:
-            issue_type = "Inappropriate tone"
+        # 1. Use metadata from the rule engine if available (Universal mapping)
+        if rule_metadata and isinstance(rule_metadata, dict):
+            category = rule_metadata.get('category', '').lower()
+            category_mapping = {
+                'voice': 'Passive voice',
+                'adverb': 'Adverb overuse',
+                'consistency': 'Consistency',
+                'procedural': 'Procedural clarity',
+                'tone': 'Inappropriate tone',
+                'grammar': 'Grammar and usage',
+                'style': 'Technical style',
+                'structural': 'Document structure'
+            }
+            if category in category_mapping:
+                issue_type = category_mapping[category]
+                logger.info(f"📍 Mapped issue to '{issue_type}' using rule metadata")
+        
+        # 2. Fallback to keyword matching if metadata didn't resolve it
+        if issue_type == "General":
+            feedback_lower = feedback_text.lower()
+            if "passive" in feedback_lower:
+                issue_type = "Passive voice"
+            elif "adverb" in feedback_lower:
+                issue_type = "Adverb overuse"  
+            elif "long sentence" in feedback_lower:
+                issue_type = "Long sentences"
+            elif "consistency" in feedback_lower or "consistent" in feedback_lower:
+                issue_type = "Consistency"
+            elif "vague" in feedback_lower:
+                issue_type = "Vague terms"
+            elif "imperative" in feedback_lower:
+                issue_type = "Procedural steps"
+            elif "complex" in feedback_lower:
+                issue_type = "Complex sentences"
+            elif "redundant" in feedback_lower:
+                issue_type = "Redundant phrases"
+            elif "click on" in feedback_lower or "modal" in feedback_lower:
+                issue_type = "Modal fluff"
+            elif "unclear" in feedback_lower:
+                issue_type = "Unclear antecedents"
+            elif "tone" in feedback_lower:
+                issue_type = "Inappropriate tone"
         
         # Create flagged issue object
         flagged_issue = FlaggedIssue(
@@ -127,7 +197,14 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
         )
         
         # Generate hybrid intelligence solution
-        result = hybrid_system.generate_hybrid_solution(flagged_issue)
+        # Pass multiple feedback items if available (Master Fix)
+        # Pass document metadata for global context
+        result = hybrid_system.generate_hybrid_solution(
+            flagged_issue, 
+            multiple_issues=multiple_feedback,
+            document_metadata=document_metadata,
+            adjacent_context=adjacent_context  # NEW: Surrounding sentences
+        )
         
         if result.get('success'):
             # Post-process suggestion to fix common generation artifacts
@@ -367,3 +444,14 @@ def batch_hybrid_suggestions(issues_list):
             'success': False,
             'error': f'Batch processing failed: {str(e)}'
         }
+
+def record_golden_correction(original_sentence: str, corrected_sentence: str, feedback_text: str):
+    """Bridge function to record a high-quality human-approved correction into RAG memory"""
+    try:
+        hybrid_system = get_hybrid_system()
+        if hybrid_system and hasattr(hybrid_system, 'add_learned_pattern'):
+            return hybrid_system.add_learned_pattern(original_sentence, corrected_sentence, feedback_text)
+        return False
+    except Exception as e:
+        logger.warning(f"Failed to record golden correction: {e}")
+        return False

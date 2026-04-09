@@ -71,8 +71,8 @@ def check(content):
         if re.match(r'^\|\s*---.*\|\s*$', sent_text) or '| --- |' in sent_text:
             continue
             
-        # Skip markdown table rows (containing multiple | characters)
-        if sent_text.count('|') >= 3 and ('| --- |' in sent_text or re.match(r'^\|.*\|.*\|', sent_text)):
+        # Skip markdown table rows (lines containing multiple | characters)
+        if sent_text.count('|') >= 2:
             continue
             
         if len(sent) > 25:
