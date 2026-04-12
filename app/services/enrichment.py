@@ -6,8 +6,19 @@ Uses enhanced RAG integration for improved accuracy.
 import logging
 import sys
 import os
+import concurrent.futures
+from typing import List, Dict, Any
 
 logger = logging.getLogger(__name__)
+
+# Try to import skip logic
+try:
+    from app.rules.rag_rule_helper import should_skip_ai
+except ImportError:
+    try:
+        from ..rules.rag_rule_helper import should_skip_ai
+    except ImportError:
+        def should_skip_ai(): return False
 
 def enrich_issue_with_solution(issue):
     """
@@ -15,10 +26,10 @@ def enrich_issue_with_solution(issue):
     and enhanced RAG system for improved AI writing suggestions.
     """
     try:
-        # Add enhanced_rag directory to Python path
-        enhanced_rag_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "enhanced_rag")
-        if enhanced_rag_path not in sys.path:
-            sys.path.append(enhanced_rag_path)
+        # Add tools/ directory to Python path (this is where enhanced_rag_integration.py lives)
+        tools_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "tools")
+        if tools_path not in sys.path:
+            sys.path.append(tools_path)
         
         # Import enhanced system
         from enhanced_rag_integration import enhanced_enrich_issue_with_solution
@@ -51,24 +62,98 @@ def enrich_issue_with_solution(issue):
         
         return issue
 
-def enrich_issues_with_rag(issues):
+def enrich_issues_with_rag(issues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Enrich a list of issues with RAG suggestions.
-    This is used by the rule-based system to get AI help.
+    Enrich a list of issues with RAG suggestions using parallel processing.
+    Groups issues by sentence to minimize AI calls and deduplicate work.
     """
     if not issues:
         return []
+        
+    logger.info(f"[ENRICH] Starting enrichment for {len(issues)} raw issues")
     
-    enriched_issues = []
-    for issue in issues:
-        # If it's just a string, convert to dict
+    # --- PHASE 1: SENTENCE-LEVEL GROUPING ---
+    # Map unique_sentence -> list of issues for that sentence
+    sentence_map = {}
+    
+    for i, issue in enumerate(issues):
         if isinstance(issue, str):
             issue = {"message": issue, "context": ""}
+            issues[i] = issue
             
-        enriched = enrich_issue_with_solution(issue)
-        enriched_issues.append(enriched)
+        ctx = issue.get("context", "").strip()
+        if not ctx: continue
         
-    return enriched_issues
+        if ctx not in sentence_map:
+            sentence_map[ctx] = []
+        sentence_map[ctx].append(issue)
+        
+    unique_sentences = list(sentence_map.keys())
+    logger.info(f"[ENRICH] Grouped {len(issues)} issues into {len(unique_sentences)} unique sentences")
+    
+    # --- PHASE 2: LAZY LOADING CHECK ---
+    if should_skip_ai():
+        logger.info(f"[ENRICH] ⚡ Lazy Mode Active: Returning placeholders for {len(unique_sentences)} segments")
+        # Update all issues to indicate enrichment is needed
+        for issue in issues:
+            issue["needs_enrichment"] = True
+            issue["method"] = "lazy_rag_placeholder"
+            # Add a user-friendly message if one doesn't exist
+            if not issue.get("message"):
+                issue["message"] = "Potential issue detected. Click to analyze with AI."
+        return issues
+
+    # --- PHASE 3: PARALLEL ENRICHMENT BY SENTENCE ---
+    # We use a smaller pool (5) to avoid thrashing local Ollama
+    max_workers = min(len(unique_sentences), 5)
+    sentence_results = {}
+    
+    if max_workers > 0:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Task: Enrich a sentence which may contain multiple issues
+            def process_sentence(ctx):
+                sentence_issues = sentence_map[ctx]
+                # If there are multiple issues, we pass them as a list to the enhanced system
+                # The enhanced system will handle multiple feedback strings in one prompt
+                if len(sentence_issues) > 1:
+                    # Combine messages
+                    combined_msg = " | ".join(set(iss.get("message", "") for iss in sentence_issues))
+                    root_issue = sentence_issues[0].copy()
+                    root_issue["message"] = combined_msg
+                    # Mark that it has multiple issues for the prompt generator
+                    root_issue["multiple_issues"] = [iss.get("message", "") for iss in sentence_issues]
+                    return enrich_issue_with_solution(root_issue)
+                else:
+                    return enrich_issue_with_solution(sentence_issues[0])
+
+            # Submit unique sentences
+            future_to_ctx = {executor.submit(process_sentence, ctx): ctx for ctx in unique_sentences}
+            
+            for future in concurrent.futures.as_completed(future_to_ctx):
+                ctx = future_to_ctx[future]
+                try:
+                    sentence_results[ctx] = future.result()
+                except Exception as e:
+                    logger.error(f"[ENRICH] Failed to process sentence '{ctx[:30]}...': {e}")
+                    # Fallback: create basic result
+                    sentence_results[ctx] = sentence_map[ctx][0]
+
+    # --- PHASE 3: RECONSTRUCTION ---
+    # Map back to the original issues list
+    final_results = []
+    for issue in issues:
+        ctx = issue.get("context", "").strip()
+        if ctx in sentence_results:
+            # We want each issue to have the solution for its sentence
+            # Even if it was part of a group, the proposed_rewrite is for the sentence
+            res = sentence_results[ctx].copy()
+            # Restore the original message so the UI knows which rule this result belongs to
+            res["message"] = issue.get("message", "")
+            final_results.append(res)
+        else:
+            final_results.append(issue)
+            
+    return final_results
 
 def ingest_document_to_rag(text, doc_id, product="docscanner", version="1.0"):
     """

@@ -28,6 +28,24 @@ except ImportError:
 # EMERGENCY TOGGLE: Set to False to disable RAG for performance
 RAG_ENABLED = True  # Enabled for RAG functionality
 
+# LAZY LOADING TOGGLE: If True, detection won't block on AI solutions
+RAG_SKIP_PREFETCH = True 
+
+def should_skip_ai():
+    """Determine if we should skip AI enrichment during detection phase"""
+    # Check global toggle
+    if RAG_SKIP_PREFETCH:
+        return True
+    
+    # Allow dynamic override via context if needed
+    try:
+        from flask import request
+        if request and request.args.get('enrich') == '0':
+            return True
+    except:
+        pass
+    return False
+
 # Import RAG system - try DocScanner Ollama first, then other systems
 try:
     import sys
@@ -135,6 +153,19 @@ def check_with_rag(content: str, rule_name: str = "unknown",
     # Simple list format for basic RAG check
     raw_issues = [{"message": f"Check this for {rule_name}: {description}", "context": content}]
     
+    # ON-DEMAND OPTIMIZATION: Skip AI during extraction
+    if should_skip_ai():
+        logger.debug(f"[ENRICH] Skipping upfront AI for {rule_name} (Lazy Mode)")
+        return [{
+            "text": content,
+            "start": 0,
+            "end": len(content),
+            "message": f"Potential {rule_name} issue detected. Click to analyze with AI.",
+            "rule": rule_name,
+            "needs_enrichment": True,
+            "method": "lazy_rag_placeholder"
+        }]
+
     # Call enrichment service
     enriched = enrich_issues_with_rag(raw_issues)
     
@@ -202,6 +233,19 @@ def check_with_rag_advanced(content: str, rule_patterns: Dict[str, Any],
                 "context": text_content[:200]  # First 200 chars as context
             }
         
+        # ON-DEMAND OPTIMIZATION: Skip AI during extraction
+        if should_skip_ai():
+            suggestions.append({
+                "text": issue.get("text", ""),
+                "start": issue.get("start", 0),
+                "end": issue.get("end", 0),
+                "message": issue.get("message", ""),
+                "method": "rule_based_prefetch",
+                "rule": rule_name,
+                "needs_enrichment": True
+            })
+            continue
+
         # Try RAG first
         rag_suggestion = None
         if RAG_AVAILABLE:
@@ -465,6 +509,13 @@ def detect_modal_verb_issues(content: str, text_content: str) -> List[Dict[str, 
                 "sentence": target_sentence
             })
     
-    issues = enrich_issues_with_rag(issues)
+    if not should_skip_ai():
+        issues = enrich_issues_with_rag(issues)
+    else:
+        # Mark issues for later enrichment
+        for issue in issues:
+            issue["needs_enrichment"] = True
+            issue["method"] = "lazy_rag_placeholder"
+    
     return issues
 

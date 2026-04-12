@@ -1422,8 +1422,8 @@
                 { percentage: 95, message: "Generating final report...", stage_name: "Report" }
             ];
 
-            let currentStage = 0;
-
+            let fallbackInterval;
+            
             const updateProgress = () => {
                 if (currentStage < stages.length) {
                     const stage = stages[currentStage];
@@ -1436,17 +1436,32 @@
                         completed: false
                     });
                     currentStage++;
-                    setTimeout(updateProgress, 500); // Slower updates for better visibility
+                    fallbackInterval = setTimeout(updateProgress, 1500); // Slower updates to match AI pace better
                 } else {
-                    // Completion
+                    // Hold at 95% while waiting for backend
                     updateRealTimeProgress({
-                        percentage: 100,
-                        message: "Analysis complete!",
-                        stage_name: "Complete",
-                        completed: true,
-                        success: true
+                        percentage: 95,
+                        message: "Processing with AI... this may take a few minutes.",
+                        stage_name: "Analyzing",
+                        completed: false
                     });
-                    if (onComplete) onComplete();
+                    
+                    // Periodically check if upload is complete by firing onComplete 
+                    const checkCompletion = () => {
+                        if (onComplete && onComplete()) {
+                           // Done
+                           updateRealTimeProgress({
+                                percentage: 100,
+                                message: "Analysis complete!",
+                                stage_name: "Complete",
+                                completed: true,
+                                success: true
+                            });
+                        } else {
+                            setTimeout(checkCompletion, 1000);
+                        }
+                    };
+                    checkCompletion();
                 }
             };
 
@@ -2108,7 +2123,9 @@
                         if (uploadCompleted && resultData) {
                             console.log('✅ Fallback progress complete, showing results');
                             renderChart(resultData.report || {}, resultData.sentences || []);
+                            return true;
                         }
+                        return false;
                     });
                 }
 

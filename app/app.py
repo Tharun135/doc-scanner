@@ -955,6 +955,14 @@ def upload_file():
         # Import the gating function
         from core.document_review_gate import should_analyze_sentence
         
+        # 🚀 LAZY RAG OPTIMIZATION: Ensure AI pre-fetch is skipped during extraction phase
+        try:
+            from rules import rag_rule_helper
+            rag_rule_helper.RAG_SKIP_PREFETCH = True
+            logger.info("⚡ RAG Lazy Mode: Forced Active for extraction phase")
+        except Exception as e:
+            logger.warning(f"Could not force Lazy RAG: {e}")
+
         for index, sent in enumerate(sentences):
             # Update substep progress for analysis (RESCALED: 30-80% range)
             if progress_tracker and room_id and total_sentences > 0:
@@ -1209,8 +1217,43 @@ def learn_from_correction():
         else:
             return jsonify({"status": "error", "message": "Failed to save correction"}), 500
             
+@main.route('/api/enrich_issue', methods=['POST'])
+def enrich_issue_on_demand():
+    """
+    On-demand AI enrichment endpoint.
+    Called by the frontend when a user clicks an issue to get the detailed AI suggestion.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        sentence = data.get('sentence', '')
+        message = data.get('message', '')
+        
+        if not sentence:
+            return jsonify({"error": "Missing sentence context"}), 400
+            
+        logger.info(f"🧠 On-demand enrichment requested for: {sentence[:30]}...")
+        
+        from .services.enrichment import enrich_issue_with_solution
+        
+        # Prepare the issue object for enrichment
+        issue_to_enrich = {
+            "context": sentence,
+            "message": message,
+            "text": sentence,
+            "start": 0,
+            "end": len(sentence)
+        }
+        
+        # Call the enrichment service (non-blocking for other users)
+        enriched = enrich_issue_with_solution(issue_to_enrich)
+        
+        return jsonify(enriched)
+        
     except Exception as e:
-        logger.error(f"❌ Learning failed: {e}")
+        logger.error(f"❌ On-demand enrichment failed: {e}")
         return jsonify({"error": str(e)}), 500
 
 @main.route('/feedback', methods=['POST'])

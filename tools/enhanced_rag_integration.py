@@ -6,21 +6,75 @@ This file provides drop-in replacements and integration helpers.
 import logging
 import os
 import sys
+import time
+import requests
+import json
+import threading
 from typing import Dict, Any, Optional, List
 
-# Add enhanced_rag to path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'enhanced_rag'))
+# --- Performance Optimizations ---
+# Global client pooling and caching to avoid severe latency
+_chroma_client = None
+_chroma_collections = {}
+_suggestion_cache = {}  # (sentence, feedback_text) -> result
+_cache_lock = threading.Lock()
+_CACHE_FILE = os.path.join(os.path.dirname(__file__), "rag_cache.json")
 
-try:
-    from enhanced_rag import (
-        get_enhanced_rag_system,
-        get_enhanced_store,
-        quick_setup
-    )
-    ENHANCED_RAG_AVAILABLE = True
-except ImportError as e:
-    print(f"⚠️ Enhanced RAG not available: {e}")
-    ENHANCED_RAG_AVAILABLE = False
+def _load_disk_cache():
+    """Load cached suggestions from disk at startup"""
+    global _suggestion_cache
+    if os.path.exists(_CACHE_FILE):
+        try:
+            with open(_CACHE_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # Convert string keys back to tuples for dict keys
+                _suggestion_cache = {}
+                for k, v in data.items():
+                    if "|" in k:
+                        parts = k.split("|", 1)
+                        _suggestion_cache[(parts[0], parts[1])] = v
+                    else:
+                        # Legacy support
+                        _suggestion_cache[(k, "unknown")] = v
+                logger.info(f"[ENHANCED RAG] Loaded {len(_suggestion_cache)} suggestions from disk cache")
+        except Exception as e:
+            logger.warning(f"[ENHANCED RAG] Failed to load disk cache: {e}")
+
+def _save_disk_cache():
+    """Save cached suggestions to disk safely"""
+    try:
+        with _cache_lock:
+            # Convert tuple keys to strings for JSON serialization
+            serializable_cache = {f"{k[0]}|{k[1]}": v for k, v in _suggestion_cache.items()}
+            # Atomic-ish write: write to temp first then rename
+            temp_file = _CACHE_FILE + ".tmp"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                json.dump(serializable_cache, f, indent=2, ensure_ascii=False)
+            if os.path.exists(_CACHE_FILE):
+                os.remove(_CACHE_FILE)
+            os.rename(temp_file, _CACHE_FILE)
+    except Exception as e:
+        logger.warning(f"[ENHANCED RAG] Failed to save disk cache: {e}")
+
+# Load cache on module load
+_load_disk_cache()
+
+def _get_from_cache(sentence, feedback):
+    """Retrieve from cache with proper key formatting"""
+    key = (sentence.strip(), feedback.strip())
+    # Try exact match first
+    if key in _suggestion_cache:
+        return _suggestion_cache[key]
+    
+    # Try string-key match (for legacy or complex keys)
+    str_key = f"{sentence.strip()}|{feedback.strip()}"
+    # This is handled by the persistence logic above
+    return None
+
+# ---------------------------------
+
+# enhanced_rag optional package - not required for core functionality
+ENHANCED_RAG_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -265,21 +319,44 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
     Enhanced version of enrich_issue_with_solution with proper RAG integration.
     Uses ChromaDB for retrieval and Ollama for generation with robust fallbacks.
     """
-    import chromadb
-    import requests
-    import time
-    
     feedback_text = issue.get("message", "")
     sentence_context = issue.get("context", "")
     rule_id = issue.get("issue_type", "unknown")
     
+    # --- PERFORMANCE OPTIMIZATION: CACHE CHECK ---
+    cache_key = (sentence_context.strip(), feedback_text.strip())
+    
+    with _cache_lock:
+        if cache_key in _suggestion_cache:
+            logger.info(f"[ENHANCED RAG] [CACHE HIT] Reusing previous result for: {sentence_context[:30]}...")
+            return _suggestion_cache[cache_key].copy()
+    # --------------------------------------------
+    
+    # --- PERFORMANCE OPTIMIZATION: FAST TRACK ---
+    # Don't hit AI for extremely short, trivial sentences that aren't improveable 
+    # or don't provide enough context for RAG to be useful.
+    if len(sentence_context.strip()) < 15 and "case" not in feedback_text.lower():
+        logger.info(f"[ENHANCED RAG] [FAST TRACK] Skipping AI for short trivial sentence: '{sentence_context}'")
+        issue["solution_text"] = f"Original text is too short for meaningful AI enrichment: {sentence_context}"
+        issue["proposed_rewrite"] = sentence_context
+        issue["method"] = "fast_track_skip"
+        _suggestion_cache[cache_key] = issue
+        return issue
+    # --------------------------------------------
+
     logger.info(f"[ENHANCED RAG] Processing: {feedback_text[:50]}... | Context: {sentence_context[:50]}...")
     
     # Step 1: Try ChromaDB + Ollama RAG (the real RAG system)
     try:
-        # Connect to ChromaDB
-        client = chromadb.PersistentClient(path="./chroma_db")
-        collections = client.list_collections()
+        import chromadb
+        global _chroma_client, _chroma_collections
+        
+        # Connect to ChromaDB (Connection Pooling)
+        if _chroma_client is None:
+            logger.info("[ENHANCED RAG] Initializing persistent ChromaDB client...")
+            _chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        
+        collections = _chroma_client.list_collections()
         
         if collections:
             # Use the first available collection (preferably docscanner_rules)
@@ -293,7 +370,11 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
                 collection_name = collections[0].name
                 
             if collection_name:
-                collection = client.get_collection(collection_name)
+                # Reuse collection object if already loaded
+                if collection_name not in _chroma_collections:
+                    _chroma_collections[collection_name] = _chroma_client.get_collection(collection_name)
+                    
+                collection = _chroma_collections[collection_name]
                 
                 # Query ChromaDB for relevant writing rules
                 query_text = f"{feedback_text} {sentence_context} {rule_id}"
@@ -326,7 +407,19 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
                     # Try Ollama with retrieved context
                     try:
                         # Create enhanced prompt with RAG context
-                        if "passive voice" in feedback_text.lower():
+                        multiple_issues = issue.get("multiple_issues", [])
+                        
+                        if multiple_issues:
+                            issues_list = "\n".join([f"- {iss}" for iss in multiple_issues])
+                            enhanced_prompt = f"""Based on these writing rules:
+{rag_context}
+
+Address the following writing issues in the sentence below:
+{issues_list}
+
+ORIGINAL: "{sentence_context}"
+IMPROVED: """
+                        elif "passive voice" in feedback_text.lower():
                             enhanced_prompt = f"""Based on these writing rules:
 
 {rag_context}
@@ -374,7 +467,7 @@ IMPROVED: """
                                 'num_predict': 100,
                                 'num_ctx': 1500
                             }
-                        }, timeout=8)  # 8 second timeout
+                        }, timeout=30)  # 30 second timeout
                         
                         if response.status_code == 200:
                             result = response.json()
@@ -414,27 +507,11 @@ IMPROVED: """
                                 
                                 # Apply simple deterministic fixes if AI didn't provide good correction
                                 if proposed_rewrite == sentence_context or not proposed_rewrite.strip():
-                                    # Use our enhanced rule-specific corrections
-                                    from enhanced_rag.rule_specific_corrections import get_rule_specific_correction
-                                    
-                                    # Determine rule type from feedback
-                                    rule_type = "general"
-                                    if "passive voice" in feedback_text.lower():
-                                        rule_type = "passive-voice"
-                                    elif "capital" in feedback_text.lower():
-                                        rule_type = "capitalization"
-                                    elif "long sentence" in feedback_text.lower():
-                                        rule_type = "long-sentence"
-                                    
-                                    corrected = get_rule_specific_correction(sentence_context, rule_type, feedback_text)
-                                    if corrected != sentence_context:
-                                        proposed_rewrite = corrected
+                                    # Inline rule-specific deterministic corrections
+                                    if "sentence case" in feedback_text.lower() or "capital" in feedback_text.lower():
+                                        proposed_rewrite = sentence_context[0].upper() + sentence_context[1:] if len(sentence_context) > 1 else sentence_context.upper()
                                     else:
-                                        # Legacy fallbacks for specific cases
-                                        if "sentence case" in feedback_text.lower() or "capital" in feedback_text.lower():
-                                            proposed_rewrite = sentence_context[0].upper() + sentence_context[1:] if len(sentence_context) > 1 else sentence_context.upper()
-                                        else:
-                                            proposed_rewrite = sentence_context  # Don't add "Improved:" prefix
+                                        proposed_rewrite = sentence_context  # Keep original, no spurious prefix
                                 
                                 # Return enhanced RAG response with title case protection and CLEAR source attribution
                                 proposed_rewrite = _fix_title_case_issues(proposed_rewrite)
@@ -456,6 +533,14 @@ IMPROVED: """
                                 issue["confidence"] = "high"
                                 
                                 logger.info(f"[ENHANCED RAG] Response attributed to: {primary_source}")
+                                
+                                # CACHE STORE: Save for future identical sentences in this session
+                                with _cache_lock:
+                                    _suggestion_cache[cache_key] = issue.copy()
+                                
+                                # Persist to disk
+                                _save_disk_cache()
+                                
                                 return issue
                         
                         else:
@@ -481,31 +566,15 @@ IMPROVED: """
                         # Apply deterministic correction based on rule type
                         proposed_rewrite = sentence_context
                         
-                        # Use enhanced rule-specific corrections
-                        from enhanced_rag.rule_specific_corrections import get_rule_specific_correction
-                        
-                        # Determine rule type from feedback
-                        rule_type = "general"
-                        if "passive voice" in feedback_text.lower():
-                            rule_type = "passive-voice"
-                        elif "capital" in feedback_text.lower():
-                            rule_type = "capitalization"
-                        elif "long sentence" in feedback_text.lower():
-                            rule_type = "long-sentence"
-                        
-                        corrected = get_rule_specific_correction(sentence_context, rule_type, feedback_text)
-                        if corrected != sentence_context:
-                            proposed_rewrite = corrected
-                        else:
-                            # Legacy fallbacks
-                            if "sentence case" in feedback_text.lower() or "capital letter" in feedback_text.lower():
-                                proposed_rewrite = sentence_context[0].upper() + sentence_context[1:] if len(sentence_context) > 1 else sentence_context.upper()
-                            elif "long sentence" in feedback_text.lower() and len(sentence_context) > 80:
-                                # Simple sentence breaking
-                                mid_point = len(sentence_context) // 2
-                                split_point = sentence_context.find(' ', mid_point)
-                                if split_point > 0:
-                                    proposed_rewrite = sentence_context[:split_point] + ". " + sentence_context[split_point+1:].capitalize()
+                        # Inline deterministic rule-specific corrections
+                        if "sentence case" in feedback_text.lower() or "capital letter" in feedback_text.lower():
+                            proposed_rewrite = sentence_context[0].upper() + sentence_context[1:] if len(sentence_context) > 1 else sentence_context.upper()
+                        elif "long sentence" in feedback_text.lower() and len(sentence_context) > 80:
+                            # Simple sentence breaking
+                            mid_point = len(sentence_context) // 2
+                            split_point = sentence_context.find(' ', mid_point)
+                            if split_point > 0:
+                                proposed_rewrite = sentence_context[:split_point] + ". " + sentence_context[split_point+1:].capitalize()
                         
                         logger.info(f"[ENHANCED RAG] ✅ ChromaDB-only success with deterministic correction")
                         
@@ -533,45 +602,9 @@ IMPROVED: """
     # Step 2: Enhanced fallback (still better than original system)
     logger.info("[ENHANCED RAG] Using enhanced fallback with comprehensive corrections")
     
-    # Apply comprehensive rule engine for better fallback
-    try:
-        from enhanced_rag.comprehensive_rule_engine import get_comprehensive_correction
-        
-        result = get_comprehensive_correction(
-            text=sentence_context,
-            rule_id=rule_id,
-            document_content=feedback_text,
-            document_type="general"
-        )
-        
-        if result.get('corrected') and result['corrected'] != sentence_context:
-            issue["solution_text"] = result.get('explanation', f"Applied {rule_id} correction")
-            issue["proposed_rewrite"] = result['corrected']
-            issue["sources"] = []
-            issue["method"] = "enhanced_comprehensive_fallback"
-            issue["confidence"] = "medium"
-            
-            logger.info(f"[ENHANCED RAG] ✅ Comprehensive fallback success")
-            return issue
+    # Step 3: Simple deterministic fallback (inline - no external package needed)
+    proposed_rewrite = sentence_context  # default: keep original
     
-    except Exception as e:
-        logger.warning(f"[ENHANCED RAG] Comprehensive fallback error: {e}")
-    
-    # Step 3: Simple deterministic fallback using enhanced rule-specific corrections
-    from enhanced_rag.rule_specific_corrections import get_rule_specific_correction
-    
-    # Determine rule type from feedback
-    rule_type = "general"
-    if "passive voice" in feedback_text.lower():
-        rule_type = "passive-voice"
-    elif "capital" in feedback_text.lower():
-        rule_type = "capitalization"
-    elif "long sentence" in feedback_text.lower():
-        rule_type = "long-sentence"
-    
-    proposed_rewrite = get_rule_specific_correction(sentence_context, rule_type, feedback_text)
-    
-    # If rule-specific correction didn't help, try legacy fallbacks
     if proposed_rewrite == sentence_context:
         if "sentence case" in feedback_text.lower() or "capital letter" in feedback_text.lower():
             # Fix capitalization
