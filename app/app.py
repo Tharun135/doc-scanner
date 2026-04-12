@@ -1217,6 +1217,10 @@ def learn_from_correction():
         else:
             return jsonify({"status": "error", "message": "Failed to save correction"}), 500
             
+    except Exception as e:
+        logger.error(f"❌ learning correction failed: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @main.route('/api/enrich_issue', methods=['POST'])
 def enrich_issue_on_demand():
     """
@@ -1282,7 +1286,7 @@ def ai_suggestion():
     """
     global current_document_content, current_sentences_list
 
-    print("🔧 ENDPOINT: AI suggestion endpoint called")
+    print("[DEBUG] ENDPOINT: AI suggestion endpoint called")
     logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
 
     from .intelligent_ai_improvement import get_enhanced_ai_suggestion

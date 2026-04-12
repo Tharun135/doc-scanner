@@ -153,18 +153,10 @@ def check_with_rag(content: str, rule_name: str = "unknown",
     # Simple list format for basic RAG check
     raw_issues = [{"message": f"Check this for {rule_name}: {description}", "context": content}]
     
-    # ON-DEMAND OPTIMIZATION: Skip AI during extraction
+    # ON-DEMAND OPTIMIZATION: Skip AI during extraction to keep upload instant
     if should_skip_ai():
-        logger.debug(f"[ENRICH] Skipping upfront AI for {rule_name} (Lazy Mode)")
-        return [{
-            "text": content,
-            "start": 0,
-            "end": len(content),
-            "message": f"Potential {rule_name} issue detected. Click to analyze with AI.",
-            "rule": rule_name,
-            "needs_enrichment": True,
-            "method": "lazy_rag_placeholder"
-        }]
+        logger.debug(f"[ENRICH] Skipping RAG check for {rule_name} during extraction phase")
+        return []
 
     # Call enrichment service
     enriched = enrich_issues_with_rag(raw_issues)

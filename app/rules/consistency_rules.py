@@ -85,7 +85,7 @@ def check(content):
     # Domain-specific consistency checks via RAG
     # ------------------------------
     if RAG_HELPER_AVAILABLE:
-        rag_suggestions = check_with_rag(text_content, rule_type="consistency")
+        rag_suggestions = check_with_rag(text_content, rule_name="consistency")
         suggestions.extend(rag_suggestions)
 
     return suggestions

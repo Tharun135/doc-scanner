@@ -133,7 +133,7 @@ def check(content):
     # RAG-based contextual style checks (if available)
     # ------------------------------
     if RAG_HELPER_AVAILABLE:
-        rag_suggestions = check_with_rag(text_content, rule_type="style")
+        rag_suggestions = check_with_rag(text_content, rule_name="style")
         suggestions.extend(rag_suggestions)
 
     return suggestions

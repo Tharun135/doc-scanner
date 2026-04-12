@@ -20,6 +20,7 @@ import re
 import logging
 from typing import List, Dict, Any, Optional
 from bs4 import BeautifulSoup
+from app.contextual_validator import validate_contextual_accuracy
 
 logger = logging.getLogger(__name__)
 
@@ -621,6 +622,7 @@ def _calculate_score(
     notices: list,
     principles: list,
     naming: list,
+    contextual: list = [],
 ) -> int:
     """Calculate a weighted quality score out of 100."""
     # Weights for each category (higher = more impactful)
@@ -634,6 +636,7 @@ def _calculate_score(
         "notices": 1,
         "principles": 2.5,
         "naming": 0.5,
+        "contextual": 4.0,  # Critical semantic accuracy
     }
 
     total_weighted_issues = (
@@ -646,6 +649,7 @@ def _calculate_score(
         + len(notices) * weights["notices"]
         + len(principles) * weights["principles"]
         + len(naming) * weights["naming"]
+        + len(contextual) * weights.get("contextual", 4.0)
     )
 
     # Score: 100 minus deductions, floored at 0
@@ -667,11 +671,16 @@ def _generate_recommendations(
     notices: list,
     principles: list,
     naming: list,
+    contextual: list = [],
 ) -> List[str]:
     """Generate top 5 actionable recommendations based on detected issues."""
     recommendations = []
 
     # Priority order based on impact
+    if contextual:
+        recommendations.append(
+            f"Fix {len(contextual)} semantic contradiction(s) or technical inaccuracy. Your document deviates from the approved knowledge base."
+        )
     if structure:
         recommendations.append(
             f"Fix {len(structure)} structural issue(s)  improve heading hierarchy and section organization."
@@ -788,19 +797,25 @@ def review_document_quality(document_text: str, style_guide_text: str = "") -> D
     notice_issues = _check_notices(document_text)  # Use original to preserve !!!
     principle_violations = _check_documentation_principles(soup, plain_text)
     naming_issues = _check_naming_conventions(document_text)
+    
+    # 10. Contextual Accuracy (RAG-based Semantic check)
+    logger.info("  Running RAG Contextual Accuracy check...")
+    contextual_issues = validate_contextual_accuracy(plain_text)
 
     # Calculate score
     score = _calculate_score(
         structure_issues, style_violations, tone_issues,
         formatting_issues, list_issues, heading_issues,
-        notice_issues, principle_violations, naming_issues
+        notice_issues, principle_violations, naming_issues,
+        contextual_issues
     )
 
     # Generate recommendations
     recommendations = _generate_recommendations(
         structure_issues, style_violations, tone_issues,
         formatting_issues, list_issues, heading_issues,
-        notice_issues, principle_violations, naming_issues
+        notice_issues, principle_violations, naming_issues,
+        contextual_issues
     )
 
     total_issues = (
@@ -821,7 +836,9 @@ def review_document_quality(document_text: str, style_guide_text: str = "") -> D
         "heading_issues": heading_issues,
         "notice_issues": notice_issues,
         "documentation_principle_violations": principle_violations,
-        "naming_issues": naming_issues,
+        "naming_conventions": naming_issues,
+        "contextual_accuracy": contextual_issues,
+        "overall_score": score,
         "top_recommendations": recommendations,
     }
 

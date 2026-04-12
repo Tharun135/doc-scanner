@@ -500,9 +500,9 @@ class AISuggestionEngine:
 
 
 # Initialize the AI suggestion engine
-print("🔧 INIT: About to initialize AISuggestionEngine")
+print("[DEBUG] INIT: About to initialize AISuggestionEngine")
 ai_engine = AISuggestionEngine()
-print("🔧 INIT: AISuggestionEngine initialized successfully")
+print("[DEBUG] INIT: AISuggestionEngine initialized successfully")
 
 
 def get_enhanced_ai_suggestion(
@@ -520,7 +520,7 @@ def get_enhanced_ai_suggestion(
     Architecture: Smart Rules → RAG Context → LLM → Quality Filter
     This provides much better suggestions with proper validation.
     """
-    print(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
+    print(f"[DEBUG] FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
     logger.info(f"🔧 FUNCTION: get_enhanced_ai_suggestion called with feedback='{feedback_text[:30]}'")
     
     # Use the new enhanced AI system 

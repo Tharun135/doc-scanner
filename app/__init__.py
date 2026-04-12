@@ -8,11 +8,11 @@ import os
 try:
     from flask_socketio import SocketIO
     SOCKETIO_AVAILABLE = True
-    print("✅ Flask-SocketIO is available and will be used for real-time progress tracking")
+    print("[OK] Flask-SocketIO is available and will be used for real-time progress tracking")
 except ImportError as e:
     SOCKETIO_AVAILABLE = False
     SocketIO = None
-    print(f"⚠️ Flask-SocketIO not found ({e}). Real-time progress tracking will be disabled.")
+    print(f"[WARN] Flask-SocketIO not found ({e}). Real-time progress tracking will be disabled.")
 
 # Make flask_cors optional
 try:
@@ -56,12 +56,12 @@ def create_app():
     # Create all DB tables if they don't exist yet
     with app.app_context():
         db.create_all()
-        print("✅ User database initialized (app.db)")
+        print("[OK] User database initialized (app.db)")
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     if CORS_AVAILABLE:
         CORS(app)
-        print("✅ CORS enabled")
+        print("[OK] CORS enabled")
     else:
         @app.after_request
         def add_cors_headers(response):
@@ -69,7 +69,7 @@ def create_app():
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
             return response
-        print("✅ Manual CORS headers added")
+        print("[OK] Manual CORS headers added")
 
     # ── File upload settings ─────────────────────────────────────────────────
     app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
@@ -88,7 +88,7 @@ def create_app():
     # Auth blueprint (login / register / logout)
     from .auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
-    print("✅ Auth blueprint registered (login/register/logout)")
+    print("[OK] Auth blueprint registered (login/register/logout)")
 
     # Main scanner blueprint
     from .app import main as main_blueprint
@@ -98,29 +98,29 @@ def create_app():
     try:
         from .rag_routes import rag, init_rag_system
         app.register_blueprint(rag)
-        print("✅ RAG system registered - will initialize on first use!")
+        print("[OK] RAG system registered - will initialize on first use!")
         try:
             import sys
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
             from rag_performance_optimizer import preload_rag_dashboard_data
             preload_rag_dashboard_data()
-            print("🚀 RAG dashboard preloading started in background...")
+            print("[START] RAG dashboard preloading started in background...")
         except ImportError:
             print("Note: RAG performance optimization not available (optional feature)")
         except Exception as opt_e:
             print(f"Note: RAG performance optimization not available: {opt_e}")
     except Exception as e:
         print(f"Warning: Could not import full RAG system: {e}")
-        print("⚠️ Loading minimal RAG system...")
+        print("[WARN] Loading minimal RAG system...")
         try:
             from .rag_routes_minimal import rag, init_rag_system
             app.register_blueprint(rag)
             init_rag_system()
-            print("✅ Minimal RAG system loaded successfully!")
+            print("[OK] Minimal RAG system loaded successfully!")
         except Exception as e2:
             print(f"Error: Could not load minimal RAG system: {e2}")
-            print("⚠️ Running without RAG capabilities")
+            print("[WARN] Running without RAG capabilities")
 
     # ── SocketIO event handlers ───────────────────────────────────────────────
     if SOCKETIO_AVAILABLE and socketio:
@@ -146,7 +146,7 @@ def create_app():
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from agent.flask_routes_fixed import agent_bp
         app.register_blueprint(agent_bp)
-        print("✅ Agent blueprint loaded successfully!")
+        print("[OK] Agent blueprint loaded successfully!")
     except ImportError as e:
         print(f"Warning: Could not import agent blueprint: {e}")
         from flask import Blueprint, jsonify, request
@@ -161,7 +161,7 @@ def create_app():
             return jsonify({"message": "Analysis complete", "issues": []})
 
         app.register_blueprint(minimal_agent_bp)
-        print("✅ Minimal agent endpoints created!")
+        print("[OK] Minimal agent endpoints created!")
 
     # ── Background Cleanup Task ───────────────────────────────────────────────
     def start_cleanup_thread(app):
@@ -177,7 +177,7 @@ def create_app():
 
                 while True:
                     try:
-                        print(f"🧹 Running background cleanup (at {datetime.now().strftime('%H:%M:%S')})...")
+                        print(f"[CLEAN] Running background cleanup (at {datetime.now().strftime('%H:%M:%S')})...")
                         count = 0
                         now = time.time()
                         for f in os.listdir(upload_dir):
@@ -187,9 +187,9 @@ def create_app():
                                 os.remove(f_path)
                                 count += 1
                         if count > 0:
-                            print(f"✅ Cleaned up {count} old file(s) from uploads folder.")
+                            print(f"[OK] Cleaned up {count} old file(s) from uploads folder.")
                     except Exception as e:
-                        print(f"⚠️ Cleanup task error: {e}")
+                        print(f"[WARN] Cleanup task error: {e}")
                     
                     # Run once every hour (3600 seconds)
                     time.sleep(3600)
@@ -212,10 +212,10 @@ def create_app():
                     persist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docscanner_rules_db')
                     ingest_into_chromadb(persist_path=persist_path)
                 except Exception as e:
-                    print(f"⚠️ Rule ingestion background task error: {e}")
+                    print(f"[WARN] Rule ingestion background task error: {e}")
 
         threading.Thread(target=run_ingestion, daemon=True).start()
-        print("🚀 Rule remediation ingestion scheduled in background...")
+        print("[START] Rule remediation ingestion scheduled in background...")
     except ImportError:
         print("Note: Rule remediations module not found (optional feature)")
     except Exception as e:

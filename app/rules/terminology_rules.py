@@ -94,7 +94,7 @@ def check(content):
     # RAG-based contextual terminology checks
     # ------------------------------
     if RAG_HELPER_AVAILABLE:
-        rag_suggestions = check_with_rag(text_content, rule_type="terminology")
+        rag_suggestions = check_with_rag(text_content, rule_name="terminology")
         suggestions.extend(rag_suggestions)
 
     return suggestions

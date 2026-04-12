@@ -802,7 +802,7 @@ def ingest_into_chromadb(persist_path: str = "./docscanner_rules_db"):
 
     # Upsert so re-runs don't duplicate
     collection.upsert(documents=documents, metadatas=metadatas, ids=ids)
-    print(f"✅ Ingested {len(RULE_REMEDIATIONS)} rules into '{persist_path}/rule_remediations'")
+    print(f"[OK] Ingested {len(RULE_REMEDIATIONS)} rules into '{persist_path}/rule_remediations'")
     return collection
 
 

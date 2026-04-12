@@ -23,7 +23,7 @@ class ModelConfig:
     max_tokens: int = 400
     top_p: float = 0.85
     repeat_penalty: float = 1.1
-    timeout: int = 30
+    timeout: int = 60
 
 @dataclass
 class SuggestionConfig:

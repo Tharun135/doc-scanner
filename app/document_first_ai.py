@@ -69,18 +69,19 @@ class DocumentFirstAIEngine:
         **kwargs
     ) -> Dict[str, Any]:
         """
-        Generate suggestions using ONLY uploaded documents.
-        This provides absolute hallucination protection by forcing manual review
-        if no exact document match is found.
+        Generate suggestions using a tiered retrieval approach.
+        1. Try Primary Document Match (Strict)
+        2. Try Hybrid Document-LLM Match (Reasoning over snippets)
+        3. Try Extended keyword search
         """
         
         def get_basic_fallback():
             return {
                 "suggestion": "",
-                "ai_answer": f"Please manually verify using official documentation. No direct RAG match found for: {feedback_text}",
+                "ai_answer": f"Analysis complete: No high-confidence match in the current local knowledge base. Manual review is recommended for: '{feedback_text}'",
                 "confidence": "low",
-                "method": "manual_review",
-                "sources": ["Style Guide Guidance"],
+                "method": "advanced_semantic_failure",
+                "sources": ["Style Guide (Fallback)"],
                 "success": True,
                 "is_guidance_only": True
             }
@@ -88,12 +89,22 @@ class DocumentFirstAIEngine:
         if not self.collection:
             return get_basic_fallback()
         
-        # Method 1: Primary document search (Strict Vector Retrieval)
+        # TIER 1: Primary document search (Strict Vector Retrieval)
         result = self._search_documents_primary(feedback_text, sentence_context, document_type)
-        if result.get("success") and result.get("confidence") in ["high", "medium"]:
+        if result.get("success") and result.get("confidence") == "high":
             return result
         
-        # Strict fallback: No LLM calls allowed.
+        # TIER 2: Hybrid Document-LLM Reasoning (THE BRAINS)
+        # Loosening the search to find "Actor" context for passive conversion
+        hybrid_result = self._hybrid_document_llm(feedback_text, sentence_context, document_type)
+        if hybrid_result.get("success"):
+            return hybrid_result
+
+        # TIER 3: Extended search
+        extended_result = self._search_documents_extended(feedback_text, sentence_context, document_type)
+        if extended_result.get("success"):
+            return extended_result
+        
         return get_basic_fallback()
     
     def _search_documents_primary(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
@@ -206,35 +217,52 @@ class DocumentFirstAIEngine:
             logger.error(f"Extended document search failed: {e}")
         
         return {"success": False}
-    
+        
     def _hybrid_document_llm(self, feedback_text: str, sentence_context: str, document_type: str) -> Dict[str, Any]:
         """
         Combine document search with LLM reasoning for better suggestions.
+        Focuses on synthesizing an active voice subject from context.
         """
         try:
-            # Get relevant documents
+            # Get relevant documents using multiple search prongs
             relevant_docs = []
             
-            # Search with broader criteria
-            results = self.collection.query(
-                query_texts=[f"{feedback_text} {sentence_context}"],
-                n_results=8,
-                include=["documents", "metadatas", "distances"]
-            )
+            # Prong 1: Conceptual search (what is this sentence about?)
+            # Prong 2: Action search (what does 'filtered' mean in this doc?)
+            search_queries = [
+                f"{feedback_text} {sentence_context}",
+                f"How is the {sentence_context} handled in Industrial Edge?",
+                f"What system component controls the {sentence_context}?"
+            ]
             
-            if results["documents"] and results["documents"][0]:
-                for i, doc in enumerate(results["documents"][0]):
-                    distance = results["distances"][0][i] if results["distances"] else 1.0
-                    if distance < 0.8:  # Include more documents with lower threshold
-                        relevant_docs.append({
-                            "content": doc,
-                            "distance": distance
-                        })
+            seen_contents = set()
+            
+            for query in search_queries:
+                results = self.collection.query(
+                    query_texts=[query],
+                    n_results=10,
+                    include=["documents", "metadatas", "distances"]
+                )
+                
+                if results["documents"] and results["documents"][0]:
+                    for i, doc in enumerate(results["documents"][0]):
+                        distance = results["distances"][0][i] if results["distances"] else 1.0
+                        # Accept broader matches for hybrid reasoning
+                        if distance < 0.95: 
+                            content_snippet = doc[:1000] # Increase snippet size for better context
+                            if content_snippet not in seen_contents:
+                                relevant_docs.append({
+                                    "content": content_snippet,
+                                    "distance": distance,
+                                    "metadata": results["metadatas"][0][i] if results["metadatas"] else {}
+                                })
+                                seen_contents.add(content_snippet)
             
             if relevant_docs:
-                # Try Ollama with document context
+                # Limit to top results to avoid context overflow
+                relevant_docs.sort(key=lambda x: x["distance"])
                 suggestion = self._generate_with_ollama_and_docs(
-                    feedback_text, sentence_context, relevant_docs
+                    feedback_text, sentence_context, relevant_docs[:5]
                 )
                 
                 if suggestion:
@@ -243,79 +271,56 @@ class DocumentFirstAIEngine:
                         "ai_answer": suggestion["explanation"],
                         "confidence": "high",
                         "method": "hybrid_document_llm",
-                        "sources": [f"Knowledge base: {len(relevant_docs)} documents", "AI reasoning"],
-                        "document_count": len(relevant_docs),
+                        "sources": [f"Knowledge base: {len(relevant_docs)} snippets", "AI synthesis"],
                         "success": True
                     }
             
         except Exception as e:
-            logger.error(f"Hybrid document-LLM failed: {e}")
+            logger.error(f"Hybrid document-LLM reasoning failed: {e}")
         
         return {"success": False}
     
     def _generate_with_ollama_and_docs(self, feedback_text: str, sentence_context: str, relevant_docs: List[Dict]) -> Optional[Dict]:
         """
-        Use Ollama with document context to generate suggestions.
+        Use Ollama with expanded document context to generate suggestions.
         """
         try:
             import requests
             
             # Build context from documents
             context_text = "\n\n".join([
-                f"Document {i+1}: {doc['content'][:400]}..." 
-                for i, doc in enumerate(relevant_docs[:3])
+                f"Reference {i+1} (from '{doc['metadata'].get('source', 'Industrial Edge Documentation')}'): {doc['content']}" 
+                for i, doc in enumerate(relevant_docs)
             ])
-            
-            # Enhanced prompt based on the specific issue type
-            if "passive voice" in feedback_text.lower() or "must be" in sentence_context:
-                prompt = f"""You are an expert technical writing assistant specializing in converting passive voice to active voice for technical documentation.
-
-PASSIVE VOICE CONVERSION CONTEXT:
+            # Specialized prompt for Active Voice within Industrial Edge context
+            if "passive voice" in feedback_text.lower():
+                prompt = f"""You are a senior technical writer for Industrial Edge documentation.
+REFERENCE CONTEXT FROM UPLOADED DOCUMENTS:
 {context_text}
 
-TASK: Convert THIS SPECIFIC passive voice sentence to active voice.
-Issue: {feedback_text}
+TASK: Convert this passive sentence to ACTIVE VOICE based on the context above.
 Passive Sentence: "{sentence_context}"
 
-IMPORTANT: DO NOT provide general instructions or guidelines. ONLY convert the given sentence.
+REASONING RULES:
+1. Scan the REFERENCES above for the component or system that controls the "{sentence_context}".
+2. Look for keywords like 'The IE Connector', 'The IE Management System', or 'The App'.
+3. If no specific actor is found, use 'The IE System' as the most plausible subject.
 
-RULES for Technical Documentation:
-1. For system/product features: Use the system/product name as the subject
-   - Example: "The SIMATIC S7+ Connector implements..." (not "Researchers implement...")
-2. For user actions: Use "you" as the subject
-   - Example: "You must create..." (not "The user creates...")
-3. For capabilities: Use the feature/component as the subject
-   - Example: "This feature enables..." or "The system provides..."
-4. NEVER use: "Researchers", "Developers", "Engineers", "Scientists" as subjects
-5. Keep technical terms and product names exactly as they appear
-
-Based on the examples in the context documents:
-- Look for patterns like "must be created" → "you must create" 
-- Follow the conversion steps: identify subject/verb/object, move object to subject position, convert verb to active form
-- For sentences with "must be", "should be", "needs to be" - use "you" as the active subject
-
-RESPOND WITH ONLY THESE TWO LINES:
-IMPROVED_SENTENCE: [The active voice version of the sentence above]
-EXPLANATION: [One sentence explaining the conversion]
-
-DO NOT include any other text, guidelines, or instructions in your response.
+OUTPUT FORMAT:
+IMPROVED_SENTENCE: [The active version]
+EXPLANATION: [Brief reason, e.g. 'The IE System is the active agent for display operations according to the documentation.']
 """
             else:
-                prompt = f"""You are an expert technical writing assistant. Use the provided context from uploaded documents to improve the sentence.
-
-Context from uploaded documents:
+                prompt = f"""You are an expert technical writing assistant. Use the provided context from your uploaded documentation to improve the sentence.
+REFERENCE CONTEXT:
 {context_text}
 
-Writing Issue: {feedback_text}
-Original Sentence: "{sentence_context}"
+TASK: Improve this sentence: "{sentence_context}"
+ISSUE: {feedback_text}
 
-Based on the context documents, provide:
-1. IMPROVED_SENTENCE: A better version that addresses the issue
-2. EXPLANATION: Why this improvement is better, referencing the context
-
-IMPORTANT: Always use "Application" instead of "technical writer" in your suggestions.
-
-Focus on using examples and guidance from the provided documents.
+OUTPUT FORMAT:
+IMPROVED_SENTENCE: [Your improvement]
+EXPLANATION: [Brief reason referencing documentation context]
 """
             
             response = requests.post(
@@ -329,7 +334,7 @@ Focus on using examples and guidance from the provided documents.
                         "max_tokens": 400
                     }
                 },
-                timeout=25.0
+                timeout=45.0
             )
             
             if response.status_code == 200:
@@ -362,11 +367,18 @@ Focus on using examples and guidance from the provided documents.
         # Generate suggestion based on document content
         suggestion = self._extract_suggestion_from_document(best_doc, feedback_text, sentence_context)
         
-        # If the suggestion is the same as original, it means no direct guidance was extracted.
-        # Strict RAG mode: return False to trigger manual review fallback instead of calling LLM.
+        # If the suggestion is the same as original, don't just fail.
+        # Allow it to proceed to LLM refinement if enabled.
         if suggestion.strip() == sentence_context.strip():
-            logger.info("No direct suggestion extracted from document match. Triggering manual review.")
-            return {"success": False}
+            logger.info("No direct suggestion extracted from document match. Allowing enrichment.")
+            # We return success: True but keep the original suggestion so the next layer can improve it
+            return {
+                "suggestion": sentence_context,
+                "ai_answer": "Extracting guidance from documentation...",
+                "confidence": "low",
+                "method": "document_match_needs_refinement",
+                "success": True
+            }
         
         # ⚠️ Note: Removed LLM refinement block previously here to enforce strict RAG-only mode.
 

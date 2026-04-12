@@ -92,15 +92,9 @@ def enrich_issues_with_rag(issues: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     logger.info(f"[ENRICH] Grouped {len(issues)} issues into {len(unique_sentences)} unique sentences")
     
     # --- PHASE 2: LAZY LOADING CHECK ---
+    # We no longer return placeholders here. If AI is skipped, just return the issues as-is.
     if should_skip_ai():
-        logger.info(f"[ENRICH] ⚡ Lazy Mode Active: Returning placeholders for {len(unique_sentences)} segments")
-        # Update all issues to indicate enrichment is needed
-        for issue in issues:
-            issue["needs_enrichment"] = True
-            issue["method"] = "lazy_rag_placeholder"
-            # Add a user-friendly message if one doesn't exist
-            if not issue.get("message"):
-                issue["message"] = "Potential issue detected. Click to analyze with AI."
+        logger.info(f"[ENRICH] ⚡ Lazy Mode Active: Skipping batch enrichment for {len(unique_sentences)} segments")
         return issues
 
     # --- PHASE 3: PARALLEL ENRICHMENT BY SENTENCE ---

@@ -8,7 +8,7 @@ try:
     RAG_HELPER_AVAILABLE = True
 except ImportError:
     RAG_HELPER_AVAILABLE = False
-    print("⚠️ RAG rule helper not available - using standard grammar rules only")
+    print("[WARN] RAG rule helper not available - using standard grammar rules only")
     import logging
     logging.debug(f"RAG helper not available for {__name__} - using basic rules")
 
@@ -29,7 +29,7 @@ def _get_nlp():
             # Increase max_length to handle large documents
             nlp.max_length = 3000000
         except OSError:
-            print("⚠️ spaCy model en_core_web_sm not found - grammar rules disabled")
+            print("[WARN] spaCy model en_core_web_sm not found - grammar rules disabled")
             nlp = False
     return nlp if nlp is not False else None
 
@@ -103,7 +103,7 @@ def check(content):
     # RAG-based contextual checks (if available)
     # ------------------------------
     if RAG_HELPER_AVAILABLE:
-        rag_suggestions = check_with_rag(text_content, rule_type="grammar")
+        rag_suggestions = check_with_rag(text_content, rule_name="grammar")
         suggestions.extend(rag_suggestions)
 
     return suggestions

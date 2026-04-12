@@ -12,6 +12,9 @@ import json
 import threading
 from typing import Dict, Any, Optional, List
 
+# --- Logging setup ---
+logger = logging.getLogger(__name__)
+
 # --- Performance Optimizations ---
 # Global client pooling and caching to avoid severe latency
 _chroma_client = None
@@ -75,8 +78,6 @@ def _get_from_cache(sentence, feedback):
 
 # enhanced_rag optional package - not required for core functionality
 ENHANCED_RAG_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
 
 def _fix_title_case_issues(text: str) -> str:
     """
@@ -354,7 +355,8 @@ def enhanced_enrich_issue_with_solution(issue: dict) -> dict:
         # Connect to ChromaDB (Connection Pooling)
         if _chroma_client is None:
             logger.info("[ENHANCED RAG] Initializing persistent ChromaDB client...")
-            _chroma_client = chromadb.PersistentClient(path="./chroma_db")
+            # Use the correct path consistent with app/__init__.py
+            _chroma_client = chromadb.PersistentClient(path="./docscanner_rules_db")
         
         collections = _chroma_client.list_collections()
         
@@ -736,7 +738,65 @@ def setup_enhanced_rag_for_docscanner() -> bool:
         return False
 
 
-# Performance monitoring utility
+# --- Semantic Validation Support ---
+
+def query_knowledge_base(query_text: str, n_results: int = 3, collection_name: str = "docscanner_knowledge") -> List[Dict[str, Any]]:
+    """
+    Retrieve relevant chunks from the knowledge base for semantic validation.
+    """
+    global _chroma_client, _chroma_collections
+    
+    try:
+        import chromadb
+        if _chroma_client is None:
+            _chroma_client = chromadb.PersistentClient(path="./chroma_db")
+        
+        if collection_name not in _chroma_collections:
+            # Check if collection exists
+            collections = _chroma_client.list_collections()
+            col_names = [c.name for c in collections]
+            
+            if collection_name not in col_names:
+                # Fallback to the first knowledge-like collection
+                for name in col_names:
+                    if "knowledge" in name.lower():
+                        collection_name = name
+                        break
+                
+            if collection_name not in col_names:
+                logger.warning(f"[ENHANCED RAG] Knowledge collection '{collection_name}' not found")
+                return []
+                
+            _chroma_collections[collection_name] = _chroma_client.get_collection(collection_name)
+            
+        collection = _chroma_collections[collection_name]
+        results = collection.query(
+            query_texts=[query_text],
+            n_results=n_results
+        )
+        
+        formatted_results = []
+        if results and results.get('documents') and results['documents'][0]:
+            documents = results['documents'][0]
+            metadatas = results.get('metadatas', [[]])[0]
+            distances = results.get('distances', [[]])[0]
+            ids = results.get('ids', [[]])[0]
+            
+            for i in range(len(documents)):
+                formatted_results.append({
+                    "id": ids[i],
+                    "content": documents[i],
+                    "metadata": metadatas[i] if metadatas else {},
+                    "score": 1.0 - float(distances[i]) if distances else 0.5
+                })
+                
+        return formatted_results
+        
+    except Exception as e:
+        logger.error(f"[ENHANCED RAG] Knowledge query failed: {e}")
+        return []
+
+# ---------------------------------
 def monitor_enhanced_rag_performance():
     """Monitor and report enhanced RAG performance"""
     rag_integration = get_enhanced_rag_integration()
