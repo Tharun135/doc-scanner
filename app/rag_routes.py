@@ -1471,3 +1471,141 @@ def api_chunks():
         
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# NEW: Rule-first RAG endpoints (corrected architecture)
+# ---------------------------------------------------------------------------
+
+@rag.route('/review_sentence', methods=['POST'])
+def review_sentence_endpoint():
+    """
+    Evaluate a single sentence against style rules using the corrected RAG pipeline.
+
+    POST body (JSON):
+        {
+          "sentence":    "The configuration should be updated by the user.",
+          "use_llm":     true,          // optional, default true
+          "top_k":       3              // optional rules to retrieve, default 3
+        }
+
+    Returns structured feedback:
+        {
+          "sentence":    "...",
+          "compliant":   false,
+          "rule_id":     "RULE_002",
+          "violation":   "passive voice",
+          "explanation": "...",
+          "suggestion":  "Update the configuration.",
+          "severity":    "error",
+          "method":      "rag_gemini",
+          "retrieved_rules": ["RULE_002", "TENSE_002", "IMPERATIVE_001"]
+        }
+    """
+    try:
+        from app.rag.sentence_reviewer import review_sentence
+    except ImportError as exc:
+        return jsonify({"error": f"Sentence reviewer not available: {exc}"}), 503
+
+    data = request.get_json(silent=True) or {}
+    sentence = (data.get("sentence") or "").strip()
+    use_llm = bool(data.get("use_llm", True))
+    top_k = int(data.get("top_k", 3))
+
+    if not sentence:
+        return jsonify({"error": "sentence is required"}), 400
+
+    try:
+        result = review_sentence(sentence, top_k_final=top_k, use_llm=use_llm)
+        return jsonify(result)
+    except Exception as exc:
+        logger.error(f"[/rag/review_sentence] Error: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+
+@rag.route('/review_batch', methods=['POST'])
+def review_batch_endpoint():
+    """
+    Evaluate multiple sentences in one request.
+
+    POST body (JSON):
+        {
+          "sentences": ["Sent 1.", "Sent 2.", ...],
+          "use_llm":   true,
+          "top_k":     3
+        }
+
+    Returns list of feedback dicts.
+    """
+    try:
+        from app.rag.sentence_reviewer import review_document_sentences
+    except ImportError as exc:
+        return jsonify({"error": f"Sentence reviewer not available: {exc}"}), 503
+
+    data = request.get_json(silent=True) or {}
+    sentences = data.get("sentences", [])
+    use_llm = bool(data.get("use_llm", True))
+    top_k = int(data.get("top_k", 3))
+
+    if not sentences or not isinstance(sentences, list):
+        return jsonify({"error": "sentences must be a non-empty list"}), 400
+
+    try:
+        results = review_document_sentences(sentences, use_llm=use_llm)
+        violations = [r for r in results if not r.get("compliant", True)]
+        return jsonify({
+            "total": len(results),
+            "violations": len(violations),
+            "compliant": len(results) - len(violations),
+            "results": results,
+        })
+    except Exception as exc:
+        logger.error(f"[/rag/review_batch] Error: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+
+@rag.route('/ingest_rules', methods=['POST'])
+def ingest_rules_endpoint():
+    """
+    (Re-)ingest style rules into the ChromaDB rule vector store.
+
+    POST body (JSON, all optional):
+        { "force": false }   // if true, deletes and re-ingests all rules
+
+    This endpoint is idempotent when force=false.
+    """
+    try:
+        from app.rag.ingest_rules import ingest_style_rules
+    except ImportError as exc:
+        return jsonify({"error": f"Ingestion module not available: {exc}"}), 503
+
+    data = request.get_json(silent=True) or {}
+    force = bool(data.get("force", False))
+
+    try:
+        count = ingest_style_rules(force=force)
+        return jsonify({
+            "success": True,
+            "rules_in_store": count,
+            "message": f"Rule vector store now contains {count} rules.",
+        })
+    except Exception as exc:
+        logger.error(f"[/rag/ingest_rules] Error: {exc}")
+        return jsonify({"error": str(exc)}), 500
+
+
+@rag.route('/rule_store_status', methods=['GET'])
+def rule_store_status():
+    """Check the status of the rule vector store."""
+    try:
+        from app.rag.rule_vectorstore import get_rule_vectorstore
+        store = get_rule_vectorstore()
+        count = store.count()
+        return jsonify({
+            "ready": store.is_ready(),
+            "rules_count": count,
+            "collection": "style_rules_v2",
+            "status": "ok" if count > 0 else "empty — run /rag/ingest_rules to populate",
+        })
+    except Exception as exc:
+        return jsonify({"ready": False, "error": str(exc)}), 500
