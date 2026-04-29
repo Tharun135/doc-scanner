@@ -203,6 +203,14 @@
             line-height: 1.8;
         }
 
+        .original {
+            color: #ff6b6b;
+        }
+
+        .suggestion {
+            color: #51cf66;
+        }
+
         .sentence-highlight {
             transition: all 0.25s ease;
             cursor: pointer;
@@ -3765,6 +3773,7 @@
             feedbackDiv.setAttribute('data-sentence-index', sentenceIndex);
             feedbackDiv.setAttribute('data-message', encodeURIComponent(messageId));
             feedbackDiv.setAttribute('data-order', sentenceIndex);
+            feedbackDiv.setAttribute('data-issue-type', item.rule_id || item.category || 'unknown');
 
             // Hover and click behaviors
             feedbackDiv.addEventListener('mouseenter', () => { highlightSentence(sentenceIndex); feedbackDiv.classList.add('highlighted'); });
@@ -3793,19 +3802,40 @@
                 messageText += `</ul>`;
             }
             
-            contentDiv.innerHTML = `
-                <div class="mb-2">
-                    <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
-                    ${item.isMasterFix ? messageText : ''}
-                </div>
-                <div class="mb-1">
-                    <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
-                    <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
-                </div>
-                <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
-                    "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
-                </div>
-            `;
+            if (item.suggestion) {
+                contentDiv.innerHTML = `
+                    <div class="mb-2">
+                        <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
+                        ${item.isMasterFix ? messageText : ''}
+                    </div>
+                    <div class="mb-1 original" style="border-left: 2px solid #ff6b6b; padding-left: 8px; margin-bottom: 8px;">
+                        <span class="label" style="font-weight: 600; font-size: 0.85em;">Original:</span><br>
+                        "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
+                    </div>
+                    <div class="mb-2 suggestion" style="border-left: 2px solid #51cf66; padding-left: 8px;">
+                        <span class="label" style="font-weight: 600; font-size: 0.85em;">Suggestion:</span><br>
+                        ${item.suggestion}
+                    </div>
+                    <div class="mb-1 mt-2">
+                        <button class="btn btn-sm btn-success me-2" onclick="acceptChange(this, ${sentenceIndex}, \`${item.suggestion.replace(/`/g, '\\`')}\`)">Accept</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="rejectChange(this)">Reject</button>
+                    </div>
+                `;
+            } else {
+                contentDiv.innerHTML = `
+                    <div class="mb-2">
+                        <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
+                        ${item.isMasterFix ? messageText : ''}
+                    </div>
+                    <div class="mb-1">
+                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
+                    </div>
+                    <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
+                        "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
+                    </div>
+                `;
+            }
 
             const aiButton = document.createElement('button');
             aiButton.className = `ai-feedback-icon ${item.isMasterFix ? 'master-fix' : ''}`;
@@ -4721,6 +4751,62 @@
                     .catch(error => {
                         console.error('Error resetting settings:', error);
                     });
+            }
+        }
+        function acceptChange(button, sentenceIndex, suggestionText) {
+            const sentenceSpan = document.getElementById(`content-sentence-${sentenceIndex}`);
+            if (sentenceSpan) {
+                sentenceSpan.innerHTML = suggestionText;
+                
+                const item = button.closest('.feedback-item');
+                let issueType = 'unknown';
+                if (item) {
+                    issueType = item.getAttribute('data-issue-type') || 'unknown';
+                    item.style.opacity = '0.5';
+                    button.disabled = true;
+                    button.innerText = 'Accepted';
+                    const rejectBtn = item.querySelector('.btn-outline-secondary');
+                    if (rejectBtn) rejectBtn.style.display = 'none';
+                }
+                showSuccessToast('Suggestion applied to document');
+                
+                // Track action
+                fetch('/feedback-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: sentenceIndex,
+                        action: 'accept',
+                        issue_type: issueType
+                    })
+                });
+            } else {
+                showErrorToast('Could not find the sentence in the document');
+            }
+        }
+
+        function rejectChange(button) {
+            const item = button.closest('.feedback-item');
+            if (item) {
+                const sentenceIndex = item.getAttribute('data-sentence-index');
+                const issueType = item.getAttribute('data-issue-type') || 'unknown';
+                item.style.transition = 'all 0.3s ease';
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    item.style.display = 'none';
+                }, 300);
+                
+                // Track action
+                fetch('/feedback-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: sentenceIndex,
+                        action: 'reject',
+                        issue_type: issueType
+                    })
+                });
             }
         }
     </script>

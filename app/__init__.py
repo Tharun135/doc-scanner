@@ -27,6 +27,16 @@ db = SQLAlchemy()
 bcrypt = Bcrypt()
 login_manager = LoginManager()
 
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
+    LIMITER_AVAILABLE = True
+except ImportError:
+    limiter = None
+    LIMITER_AVAILABLE = False
+
+
 
 def create_app():
     app = Flask(__name__)
@@ -46,6 +56,9 @@ def create_app():
     login_manager.login_message = 'Please sign in to access Doc Scanner.'
     login_manager.login_message_category = 'warning'
     login_manager.init_app(app)
+    
+    if LIMITER_AVAILABLE:
+        limiter.init_app(app)
 
     from .models import User
 

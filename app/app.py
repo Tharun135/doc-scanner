@@ -482,7 +482,7 @@ def analyze_sentence(sentence, rules, previous_sentence=None, next_sentence=None
         "smog_index": textstat.smog_index(sentence),
         "automated_readability_index": textstat.automated_readability_index(sentence)
     }
-    quality_score = 55.0  # Placeholder for actual quality score calculation
+    quality_score = 100.0  # Base quality score
 
     # Apply each rule function to the sentence
     for rule_function in rules:
@@ -558,6 +558,21 @@ def analyze_sentence(sentence, rules, previous_sentence=None, next_sentence=None
                     if "full_suggestion" in item:
                         feedback_item["full_suggestion"] = item["full_suggestion"]
                     
+                    # RAG Smart Filter Integration
+                    issue_type = feedback_item.get("rule_id", item.get("rule", feedback_item.get("category", "")))
+                    
+                    # Deduct quality score based on specific issues
+                    if issue_type == "passive_voice":
+                        quality_score -= 10
+                    elif issue_type == "long_sentence":
+                        quality_score -= 15
+                    elif issue_type in ["unclear_sentence", "unclear"]:
+                        quality_score -= 20
+                    
+
+                    # Ensure score doesn't drop below 0
+                    quality_score = max(0, quality_score)
+                    
                     feedback.append(feedback_item)
                 else:
                     # Handle other formats by converting to string
@@ -571,18 +586,86 @@ def analyze_sentence(sentence, rules, previous_sentence=None, next_sentence=None
                     })
 
     return feedback, readability_scores, quality_score
-def calculate_quality_index(total_sentences, total_errors):
-    if total_sentences == 0:
-        return 0
-    return max(0, round(100 * (1 - (total_errors / total_sentences))))
+def calculate_quality_index(sentence_data):
+    if not sentence_data:
+        return 100
+
+    total_penalty = 0
+    for s in sentence_data:
+        for fb in s.get('feedback', []):
+            issue_type = fb.get("rule_id", fb.get("category", ""))
+            if issue_type == "passive_voice":
+                total_penalty += 10
+            elif issue_type == "long_sentence":
+                total_penalty += 15
+            elif issue_type in ["unclear_sentence", "unclear"]:
+                total_penalty += 20
+            else:
+                total_penalty += 5
+                
+    # Normalize penalty per 10 sentences to keep score meaningful
+    # Example: 20 penalty points in 10 sentences = -20 from 100.
+    normalized_penalty = (total_penalty / len(sentence_data)) * 10
+    score = round(100 - normalized_penalty)
+    return max(0, min(100, score))
 ############################
 # FLASK ROUTES
 ############################
+
+@main.route('/health')
+def health():
+    import requests
+    from app.services.rag_service import OLLAMA_HOST
+    status = {"status": "ok", "ollama": "unknown"}
+    try:
+        r = requests.get(OLLAMA_HOST, timeout=2)
+        status["ollama"] = "up" if r.status_code == 200 else "down"
+    except Exception:
+        status["ollama"] = "unreachable"
+    return jsonify(status)
 
 @main.route('/')
 @login_required
 def index():
     return render_template('index.html', user=current_user)
+
+@main.route('/feedback-action', methods=['POST'])
+def feedback_action():
+    try:
+        data = request.get_json()
+        sentence_id = data.get('id')
+        action = data.get('action') # 'accept' or 'reject'
+        issue_type = data.get('issue_type', 'unknown')
+        
+        logger.info(f"User Action Tracked: {action} on sentence index {sentence_id}")
+        
+        # Save to analytics file for feedback learning loop
+        import json
+        import os
+        
+        analytics_file = os.path.join(os.path.dirname(__file__), 'feedback_analytics.json')
+        
+        stats = {}
+        if os.path.exists(analytics_file):
+            with open(analytics_file, 'r') as f:
+                try:
+                    stats = json.load(f)
+                except:
+                    pass
+                    
+        if issue_type not in stats:
+            stats[issue_type] = {"accept": 0, "reject": 0}
+            
+        if action in ["accept", "reject"]:
+            stats[issue_type][action] += 1
+            
+        with open(analytics_file, 'w') as f:
+            json.dump(stats, f, indent=4)
+            
+        return jsonify({"status": "success", "message": "Action tracked"})
+    except Exception as e:
+        logger.error(f"Failed to track action: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @main.route('/start_upload', methods=['POST', 'OPTIONS'])
 def start_upload():
@@ -591,9 +674,15 @@ def start_upload():
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
         response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, X-API-KEY')
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response, 200
+        
+    EXPECTED_KEY = os.environ.get("DOCSCANNER_API_KEY")
+    if EXPECTED_KEY and request.headers.get("X-API-KEY") != EXPECTED_KEY:
+        # Check if they have an active session instead
+        if not current_user.is_authenticated:
+            return jsonify({"error": "Unauthorized"}), 401
     
     try:
         import uuid
@@ -616,6 +705,11 @@ def analyze_intelligent():
     """Intelligent AI analysis endpoint - returns JSON response."""
     logger.info("🧠 Intelligent analysis endpoint called")
     
+    EXPECTED_KEY = os.environ.get("DOCSCANNER_API_KEY")
+    if EXPECTED_KEY and request.headers.get("X-API-KEY") != EXPECTED_KEY:
+        if not current_user.is_authenticated:
+            return jsonify({"error": "Unauthorized"}), 401
+            
     try:
         # Get request data (could be JSON or form data)
         if request.is_json:
@@ -785,9 +879,14 @@ def upload_file():
     if request.method == 'OPTIONS':
         response = jsonify({"status": "ok"})
         response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, X-API-KEY')
         response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response, 200
+        
+    EXPECTED_KEY = os.environ.get("DOCSCANNER_API_KEY")
+    if EXPECTED_KEY and request.headers.get("X-API-KEY") != EXPECTED_KEY:
+        if not current_user.is_authenticated:
+            return jsonify({"error": "Unauthorized"}), 401
     
     global current_document_content  # Access global variable
     
@@ -1097,6 +1196,37 @@ def upload_file():
                 logger.warning(f"✅ Final cleanup applied: {clean_text}")
             
             # (Extra debug logging moved out of time-critical loop)
+            
+        # 🚀 ASYNC RAG BATCH PROCESSING
+        if progress_tracker and room_id:
+            progress_tracker.update_progress(room_id, 85, "Fetching AI suggestions in parallel...")
+            
+        rag_tasks = []
+        for s_data in sentence_data:
+            for fb in s_data.get('feedback', []):
+                issue_type = fb.get("rule_id", fb.get("category", ""))
+                if issue_type in ["passive_voice", "unclear_sentence", "long_sentence"]:
+                    rag_tasks.append((s_data['sentence'], issue_type, fb))
+
+        if rag_tasks:
+            from concurrent.futures import ThreadPoolExecutor
+            from app.services.rag_service import generate_suggestion, reset_rate_limit
+            
+            reset_rate_limit()
+            
+            def fetch_rag(task):
+                sentence, issue_type, fb = task
+                try:
+                    rag = generate_suggestion(sentence, issue_type)
+                    if rag and "suggestion" in rag:
+                        fb["suggestion"] = rag["suggestion"]
+                        if "prompt_version" in rag:
+                            fb["prompt_version"] = rag["prompt_version"]
+                except Exception as e:
+                    logger.error(f"Async RAG error: {e}")
+                    
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                list(executor.map(fetch_rag, rag_tasks))
 
         total_sentences = len(sentence_data)
         total_errors = sum(len(s['feedback']) for s in sentence_data)
@@ -1109,7 +1239,7 @@ def upload_file():
         # Log analysis efficiency
         logger.info(f"📊 Analysis complete: {analyzed_count}/{total_sentences} sentences analyzed ({document_review.analysis_scope} scope)")
         
-        quality_index = calculate_quality_index(total_sentences, total_errors)
+        quality_index = calculate_quality_index(sentence_data)
 
         # 🧠 STRUCTURAL ANALYSIS: Analyze paragraphs and sections for holistic meaning
         from core.structural_analyzer import analyze_document_structure
