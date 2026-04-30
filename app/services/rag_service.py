@@ -12,7 +12,7 @@ CONFIG = {
     "rag_top_k": int(os.getenv("RAG_TOP_K", 5)),
     "llm_timeout": int(os.getenv("LLM_TIMEOUT", 5)),
     "max_calls": int(os.getenv("MAX_CALLS", 50)),
-    "model": os.getenv("LLM_MODEL", "mistral")
+    "model": os.getenv("LLM_MODEL", "llama3")
 }
 
 PROMPT_VERSION = "v2.1"

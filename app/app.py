@@ -1557,7 +1557,7 @@ def ai_suggestion():
             "suggestion": result.get("suggestion", ""),
             "ai_answer": result.get("ai_answer", "Generated via Siemens Style Guide Engine"),
             "confidence": result.get("confidence", "Medium").lower(),
-            "method": "rag_engine",
+            "method": "style_guide_engine",
             "suggestion_id": suggestion_id,
             "processing_time": response_time
         })

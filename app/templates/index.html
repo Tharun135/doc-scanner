@@ -2705,15 +2705,14 @@
         // Helper function to get user-friendly method label
         function getMethodLabel(method) {
             const methodLabels = {
-                'reviewer_guidance': 'reviewer_guidance',
-                'manual_review': 'manual_review',
-                'validation_failed_no_value': 'reviewer_guidance',
-                'validation_failed_empty': 'manual_review',
-                'ollama_rag': 'ai_enhanced',
-                'vector_openai': 'ai_enhanced',
-                'advanced_rag': 'rag_enhanced',
-                'intelligent_analysis': 'ai_analysis',
-                'intelligent_pattern_match': 'smart_rewrite'
+                'style_guide_engine': 'Style Guide AI',
+                'reviewer_guidance': 'Reviewer Guidance',
+                'manual_review': 'Manual Review',
+                'ollama_rag': 'Style Guide AI',
+                'vector_openai': 'Style Guide AI',
+                'advanced_rag': 'Style Guide AI',
+                'intelligent_analysis': 'Style Guide AI',
+                'intelligent_pattern_match': 'Smart Rewrite'
             };
             return methodLabels[method] || method;
         }
@@ -2742,7 +2741,6 @@
                     <strong>Sentence ${sentenceIndex + 1} Analysis</strong>
                     <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
                     <span class="ai-enhancement-badge ms-2" ${aiSuggestion.is_master_fix ? 'style="background: #6f42c1; color: white;"' : ''}>${aiSuggestion.is_master_fix ? 'Master Fix' : methodLabel}</span>
-                    ${methodLabel && methodLabel.includes('rag') ? '<span class="rag-badge ms-2">🧠 RAG Enhanced</span>' : ''}
                     ${aiSuggestion.is_master_fix ? '<span class="badge ms-2" style="border: 1px solid #6f42c1; color: #6f42c1;">✨ Orchestrated</span>' : ''}
                 </div>
                 
