@@ -228,15 +228,5 @@
     "suggestion": "Replace with measurable or specific value.",
     "example_violation": "The device supports multiple modes.",
     "example_correction": "The device supports three modes."
-  },
-  {
-    "rule_id": "CONSIST_001",
-    "category": "consistency",
-    "regex": "(Click\\s\\w+.*\\bselect\\b)|(Select\\s\\w+.*\\bclick\\b)",
-    "severity": "error",
-    "message": "UI verb capitalization must be consistent within same procedure.",
-    "suggestion": "Use one verb form consistently: Click or Select.",
-    "example_violation": "Click Save. then select Exit.",
-    "example_correction": "Click Save. Click Exit."
   }
 ]

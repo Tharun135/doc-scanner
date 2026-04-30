@@ -848,6 +848,26 @@ def get_remediation_semantic(collection, flagged_sentence: str, top_k: int = 3) 
         })
     return extracted
 
+def get_ai_rewrite_for_rule(sentence: str, rule_id: str, heading_context: str = "", block_type: str = "") -> str:
+    """
+    Looks up the rule description by ID and requests an AI rewrite.
+    """
+    from .ai_rewriter import generate_rewrite
+    
+    rule_description = "Style Guide Violation"
+    for r in RULE_REMEDIATIONS:
+        if r["id"] == rule_id:
+            rule_description = r["rule"]
+            break
+            
+    return generate_rewrite(
+        sentence=sentence,
+        rule_id=rule_id,
+        rule_description=rule_description,
+        heading_context=heading_context,
+        block_type=block_type
+    )
+
 
 if __name__ == "__main__":
     ingest_into_chromadb()

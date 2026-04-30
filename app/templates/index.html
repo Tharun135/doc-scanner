@@ -1086,9 +1086,6 @@
                 <button class="btn btn-outline-light btn-sm me-2" id="historyBtn">
                     <i class="fas fa-history"></i> History
                 </button>
-                <a href="{{ url_for('rag.rag_dashboard') }}" class="btn btn-outline-light btn-sm me-2">
-                    <i class="fas fa-brain"></i> RAG Dashboard
-                </a>
                 <!-- Hybrid Intelligence Status -->
                 <div class="btn btn-outline-light btn-sm me-2" id="hybridIntelligenceStatus"
                     title="Hybrid Intelligence Status">
@@ -1158,7 +1155,6 @@
                             <button class="btn btn-gradient-intelligent w-100" type="button"
                                 id="intelligentAnalysisBtn">
                                 <i class="fas fa-brain"></i> Intelligent AI Analysis
-                                <span class="intelligent-badge">RAG-Powered</span>
                             </button>
                             <small class="text-muted d-block mt-1 text-center">
                                 <i class="fas fa-magic"></i> Context-aware suggestions using advanced AI
@@ -1261,30 +1257,15 @@
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
-                                    <button class="tab-button" onclick="switchTab('structural-feedback')">
-                                        <i class="fas fa-sitemap me-1"></i>
-                                        Architecture
-                                    </button>
                                 </div>
                                 <div class="tab-content active" id="feedbackContent">
                                     <h5 class="mb-3">Document Issues</h5>
                                     <!-- Feedback content will be populated here -->
                                 </div>
                                 <div class="tab-content" id="aiFeedbackContent">
-                                    <h5 class="mb-3">AI-Powered Suggestions</h5>
                                     <div class="text-muted text-center py-4">
                                         <i class="fas fa-robot fa-2x mb-2"></i>
                                         <p>Click the AI icon next to any issue to get intelligent suggestions</p>
-                                    </div>
-                                </div>
-                                <div class="tab-content" id="structural-feedback">
-                                    <h5 class="mb-3">Document Architecture & Flow</h5>
-                                    <div id="structuralInsightsList">
-                                        <!-- Structural insights will be populated here -->
-                                        <div class="text-muted text-center py-4">
-                                            <i class="fas fa-sitemap fa-2x mb-2"></i>
-                                            <p>Architecture analysis will appear here after document processing</p>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2642,13 +2623,15 @@
                 const fullSuggestion = button.getAttribute('data-full-suggestion') || '';
                 const itemData = button.getAttribute('data-item') || '';
                 const multipleFeedbackRaw = button.getAttribute('data-multiple-feedback') || ''; // NEW: For Master Fix
+                const issueType = button.getAttribute('data-issue-type') || 'unknown';
 
                 console.log('=== AI ICON CLICKED ===');
                 console.log('Button element:', button);
                 console.log('Raw attributes:', {
                     sentenceIndex: button.getAttribute('data-sentence-index'),
                     feedback: feedback,
-                    sentence: sentence
+                    sentence: sentence,
+                    issueType: issueType
                 });
 
                 // Validate we have required data
@@ -2667,6 +2650,7 @@
                 const decodedFullSuggestion = fullSuggestion ? decodeURIComponent(fullSuggestion) : '';
                 const decodedItem = itemData ? JSON.parse(decodeURIComponent(itemData)) : null;
                 const decodedMultipleFeedback = multipleFeedbackRaw ? JSON.parse(decodeURIComponent(multipleFeedbackRaw)) : null;
+                const decodedIssueType = decodeURIComponent(issueType);
 
                 console.log('Decoded attributes:', {
                     sentenceIndex: sentenceIndex,
@@ -2674,10 +2658,11 @@
                     sentence: decodedSentence,
                     fullSuggestion: decodedFullSuggestion,
                     item: decodedItem,
-                    multipleFeedback: decodedMultipleFeedback
+                    multipleFeedback: decodedMultipleFeedback,
+                    issueType: decodedIssueType
                 });
 
-                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem, decodedMultipleFeedback);
+                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem, decodedMultipleFeedback, decodedIssueType);
             }
         });
 
@@ -2920,14 +2905,15 @@
         }
 
         // Function to handle AI feedback icon click
-        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null, multipleFeedback = null) {
+        async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null, multipleFeedback = null, issueType = 'unknown') {
             try {
                 console.log('=== SHOW AI FEEDBACK DEBUG ===');
                 console.log('Parameters received:', {
                     sentenceIndex: sentenceIndex,
                     feedback: feedback,
                     sentence: sentence,
-                    fullSuggestion: fullSuggestion
+                    fullSuggestion: fullSuggestion,
+                    issueType: issueType
                 });
 
                 // Parameters are already decoded by the click handler
@@ -2965,10 +2951,11 @@
                 console.log('About to call getAISuggestion with:', {
                     feedback: decodedFeedback,
                     sentence: decodedSentence,
-                    item: item
+                    item: item,
+                    issueType: issueType
                 });
 
-                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item, multipleFeedback);
+                const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item, multipleFeedback, issueType);
                 console.log('getAISuggestion returned:', aiSuggestion);
                 console.log('🔍 Response structure check:', {
                     hasSuggestion: aiSuggestion?.suggestion,
@@ -3813,7 +3800,10 @@
                         "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
                     </div>
                     <div class="mb-2 suggestion" style="border-left: 2px solid #51cf66; padding-left: 8px;">
-                        <span class="label" style="font-weight: 600; font-size: 0.85em;">Suggestion:</span><br>
+                        <span class="label" style="font-weight: 600; font-size: 0.85em;">
+                            Suggestion
+                            ${item.confidence ? `<span class="badge ${item.confidence === 'High' ? 'bg-success' : item.confidence === 'Low' ? 'bg-danger' : 'bg-warning'} ms-1" style="font-size: 0.7em;">${item.confidence} Confidence</span>` : ''}
+                        </span><br>
                         ${item.suggestion}
                     </div>
                     <div class="mb-1 mt-2">
@@ -3842,6 +3832,7 @@
             aiButton.setAttribute('data-sentence-index', sentenceIndex);
             aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
             aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
+            aiButton.setAttribute('data-issue-type', encodeURIComponent(item.rule || item.rule_id || item.category || 'unknown'));
             
             if (item.isMasterFix && item.multipleFeedback) {
                 aiButton.setAttribute('data-multiple-feedback', encodeURIComponent(JSON.stringify(item.multipleFeedback)));
@@ -3876,7 +3867,7 @@
             if (!inserted) container.appendChild(card);
         }
 
-        async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null, multipleFeedback = null) {
+        async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null, multipleFeedback = null, issueType = 'unknown') {
             try {
                 // Safe document type retrieval - fallback to 'technical' if element doesn't exist
                 let documentType = 'technical';
@@ -3893,7 +3884,8 @@
                     feedbackType: typeof feedback,
                     sentenceType: typeof sentence,
                     feedbackLength: feedback?.length,
-                    sentenceLength: sentence?.length
+                    sentenceLength: sentence?.length,
+                    issueType: issueType
                 });
 
                 // Clean and validate required parameters
@@ -3943,7 +3935,8 @@
                     document_type: documentType,
                     document_title: documentTitle, // NEW: For Global Context
                     writing_goals: selectedWritingGoals || ['clarity', 'conciseness'],
-                    option_number: optionNumber
+                    option_number: optionNumber,
+                    issue_type: issueType
                 };
 
                 // Add full item if available (for rule authority check)

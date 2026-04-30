@@ -107,33 +107,33 @@ def create_app():
     from .app import main as main_blueprint
     app.register_blueprint(main_blueprint)
 
-    # RAG blueprint
-    try:
-        from .rag_routes import rag, init_rag_system
-        app.register_blueprint(rag)
-        print("[OK] RAG system registered - will initialize on first use!")
-        try:
-            import sys
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
-            from rag_performance_optimizer import preload_rag_dashboard_data
-            preload_rag_dashboard_data()
-            print("[START] RAG dashboard preloading started in background...")
-        except ImportError:
-            print("Note: RAG performance optimization not available (optional feature)")
-        except Exception as opt_e:
-            print(f"Note: RAG performance optimization not available: {opt_e}")
-    except Exception as e:
-        print(f"Warning: Could not import full RAG system: {e}")
-        print("[WARN] Loading minimal RAG system...")
-        try:
-            from .rag_routes_minimal import rag, init_rag_system
-            app.register_blueprint(rag)
-            init_rag_system()
-            print("[OK] Minimal RAG system loaded successfully!")
-        except Exception as e2:
-            print(f"Error: Could not load minimal RAG system: {e2}")
-            print("[WARN] Running without RAG capabilities")
+    # RAG blueprint - DISABLED per request to move to direct LLM
+    # try:
+    #     from .rag_routes import rag, init_rag_system
+    #     app.register_blueprint(rag)
+    #     print("[OK] RAG system registered - will initialize on first use!")
+    #     try:
+    #         import sys
+    #         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    #         sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
+    #         from rag_performance_optimizer import preload_rag_dashboard_data
+    #         preload_rag_dashboard_data()
+    #         print("[START] RAG dashboard preloading started in background...")
+    #     except ImportError:
+    #         print("Note: RAG performance optimization not available (optional feature)")
+    #     except Exception as opt_e:
+    #         print(f"Note: RAG performance optimization not available: {opt_e}")
+    # except Exception as e:
+    #     print(f"Warning: Could not import full RAG system: {e}")
+    #     print("[WARN] Loading minimal RAG system...")
+    #     try:
+    #         from .rag_routes_minimal import rag, init_rag_system
+    #         app.register_blueprint(rag)
+    #         init_rag_system()
+    #         print("[OK] Minimal RAG system loaded successfully!")
+    #     except Exception as e2:
+    #         print(f"Error: Could not load minimal RAG system: {e2}")
+    #         print("[WARN] Running without RAG capabilities")
 
     # ── SocketIO event handlers ───────────────────────────────────────────────
     if SOCKETIO_AVAILABLE and socketio:
@@ -213,26 +213,26 @@ def create_app():
     # Start the cleanup thread
     start_cleanup_thread(app)
 
-    # ── Rule Remediation Ingestion ───────────────────────────────────────────
-    try:
-        from .rules.rule_remediations import ingest_into_chromadb
-        import threading
-        # Run in background to not block app startup
-        def run_ingestion():
-            with app.app_context():
-                try:
-                    # Use a path relative to the app directory or as configured
-                    persist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docscanner_rules_db')
-                    ingest_into_chromadb(persist_path=persist_path)
-                except Exception as e:
-                    print(f"[WARN] Rule ingestion background task error: {e}")
-
-        threading.Thread(target=run_ingestion, daemon=True).start()
-        print("[START] Rule remediation ingestion scheduled in background...")
-    except ImportError:
-        print("Note: Rule remediations module not found (optional feature)")
-    except Exception as e:
-        print(f"Warning: Could not initialize rule remediations: {e}")
+    # ── Rule Remediation Ingestion - DISABLED ───────────────────────────────
+    # try:
+    #     from .rules.rule_remediations import ingest_into_chromadb
+    #     import threading
+    #     # Run in background to not block app startup
+    #     def run_ingestion():
+    #         with app.app_context():
+    #             try:
+    #                 # Use a path relative to the app directory or as configured
+    #                 persist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docscanner_rules_db')
+    #                 ingest_into_chromadb(persist_path=persist_path)
+    #             except Exception as e:
+    #                 print(f"[WARN] Rule ingestion background task error: {e}")
+    # 
+    #     threading.Thread(target=run_ingestion, daemon=True).start()
+    #     print("[START] Rule remediation ingestion scheduled in background...")
+    # except ImportError:
+    #     print("Note: Rule remediations module not found (optional feature)")
+    # except Exception as e:
+    #     print(f"Warning: Could not initialize rule remediations: {e}")
 
     app.socketio = socketio
     return app

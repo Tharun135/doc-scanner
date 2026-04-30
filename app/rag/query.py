@@ -3,7 +3,7 @@ import chromadb
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 client = chromadb.Client()
-collection = client.get_collection("docs")
+collection = client.get_or_create_collection("docs")
 
 def retrieve_context(query):
     query_embedding = model.encode([query])
