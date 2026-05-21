@@ -994,6 +994,87 @@ def debug_sentences():
     
     return jsonify(debug_info)
 
+@main.route('/detect_review_modes', methods=['POST'])
+def detect_review_modes():
+    """
+    Pre-upload endpoint: returns smart review mode suggestions based on
+    filename + optional first-500-chars snippet.
+
+    Request JSON:
+        { "filename": "Installation_Guide.pdf", "preview": "..." }
+
+    Response:
+        {
+          "detected_type": "procedure",
+          "suggested_modes": ["Style", "UX", "Release"],
+          "all_modes": [...],
+          "suggestions_rationale": { "Style": "...", ... }
+        }
+    """
+    data = request.get_json() or {}
+    filename = data.get("filename", "").lower()
+    preview = data.get("preview", "").lower()
+    combined = filename + " " + preview
+
+    ALL_MODES = ["Style", "SME", "UX", "Release", "Compliance", "Translation QA"]
+
+    MODE_DESCRIPTIONS = {
+        "Style": "Grammar, readability, tone, and style consistency",
+        "SME": "Technical accuracy and cross-reference validation",
+        "UX": "Task flow, usability, and content completeness",
+        "Release": "Completeness, section coverage, and release readiness",
+        "Compliance": "Standards adherence, terminology, and heading conventions",
+        "Translation QA": "Localization readiness and terminology consistency",
+    }
+
+    # Deterministic type detection (reuse existing logic)
+    doc_type = "unknown"
+    if any(k in combined for k in ["install", "setup", "deploy", "quick start"]):
+        doc_type = "installation"
+    elif any(k in combined for k in ["config", "settings", "parameter", "enable", "disable"]):
+        doc_type = "configuration"
+    elif any(k in combined for k in ["api", "reference", "endpoint", "rest", "swagger"]):
+        doc_type = "reference"
+    elif any(k in combined for k in ["troubleshoot", "error", "problem", "faq", "known issue"]):
+        doc_type = "troubleshooting"
+    elif any(k in combined for k in ["concept", "overview", "introduction", "what is", "architecture"]):
+        doc_type = "concept"
+    elif any(k in combined for k in ["release", "changelog", "version", "notes"]):
+        doc_type = "release_notes"
+    elif any(k in combined for k in ["procedure", "guide", "how to", "manual", "tutorial", "step"]):
+        doc_type = "procedure"
+
+    # Mode suggestions per doc type
+    TYPE_MODE_MAP = {
+        "procedure":      ["Style", "UX", "Release"],
+        "installation":   ["Style", "UX", "Release"],
+        "configuration":  ["Style", "SME", "UX"],
+        "reference":      ["SME", "Compliance"],
+        "concept":        ["Style", "UX"],
+        "troubleshooting": ["UX", "Release"],
+        "release_notes":  ["Release", "Compliance"],
+        "unknown":        ["Style"],
+    }
+
+    suggested = TYPE_MODE_MAP.get(doc_type, ["Style"])
+
+    rationale = {}
+    for mode in ALL_MODES:
+        if mode in suggested:
+            rationale[mode] = f"Recommended for {doc_type.replace('_', ' ')} documents."
+        else:
+            rationale[mode] = MODE_DESCRIPTIONS[mode]
+
+    logger.info(f"Review mode detection: {filename} → {doc_type} → {suggested}")
+    return jsonify({
+        "detected_type": doc_type,
+        "suggested_modes": suggested,
+        "all_modes": ALL_MODES,
+        "mode_descriptions": MODE_DESCRIPTIONS,
+        "suggestions_rationale": rationale,
+    })
+
+
 @main.route('/upload', methods=['POST', 'OPTIONS'])
 def upload_file():
     # Handle preflight OPTIONS request
@@ -1369,8 +1450,8 @@ def upload_file():
         
         quality_index = calculate_quality_index(sentence_data)
 
-        # 🧠 STRUCTURAL ANALYSIS: Analyze paragraphs and sections for holistic meaning
-        from core.structural_analyzer import analyze_document_structure
+        # 🧠 STRUCTURAL ANALYSIS: legacy block-level insights (preserved)
+        from core.structural_analyzer import analyze_document_structure, run_document_intelligence
         structural_insights = analyze_document_structure(sentence_data, document_review.document_type)
 
         aggregated_report = {
@@ -1381,8 +1462,26 @@ def upload_file():
             "analysis_scope": document_review.analysis_scope,
             "document_type": document_review.document_type,
             "analyzed_sentences": analyzed_count,
-            "structural_insights": structural_insights # NEW: Holistic block feedback
+            "structural_insights": structural_insights
         }
+
+        # 🔬 DOCUMENT INTELLIGENCE: Multi-level analysis pipeline
+        if progress_tracker and room_id:
+            progress_tracker.update_progress(room_id, 93, "Running document intelligence analysis...")
+
+        review_modes = request.form.getlist('review_modes') or ["Style", "UX", "Release"]
+        use_llm = request.form.get('use_llm', 'false').lower() == 'true'
+
+        document_intelligence = run_document_intelligence(
+            html_content=html_content,
+            filename=file.filename,
+            doc_type=document_review.document_type,
+            review_modes=review_modes,
+            sentence_data=sentence_data,
+            use_llm=use_llm,
+        )
+        logger.info(f"🔬 Document Intelligence: {document_intelligence.get('total_issues', 0)} issues, "
+                    f"health={document_intelligence.get('health_score', {}).get('total', 'N/A') if document_intelligence.get('health_score') else 'N/A'}/100")
 
         # Complete progress tracking
         if progress_tracker and room_id:
@@ -1391,11 +1490,12 @@ def upload_file():
                 "targeted": f"Focused review complete - analyzed {analyzed_count} key sections",
                 "full": f"Comprehensive review complete"
             }.get(document_review.analysis_scope, "Review complete")
-            
-            final_msg = f"{scope_msg} - Found {total_errors} issues"
+
+            doc_intel_issues = document_intelligence.get('total_issues', 0)
+            final_msg = f"{scope_msg} - Found {total_errors} sentence issues, {doc_intel_issues} document-level issues"
             if document_review.issues:
-                final_msg += f" ({len(document_review.issues)} document-level)"
-            
+                final_msg += f" ({len(document_review.issues)} structural)"
+
             progress_tracker.update_stage(room_id, 6, "Finalizing report and preparing for display...")
             progress_tracker.complete_session(room_id, success=True, final_message=final_msg)
 
@@ -1418,11 +1518,12 @@ def upload_file():
 
         # Return the result
         return jsonify({
-            "content": html_content,  # For display
-            "document_review": document_review.to_ui(),  # NEW: document-level insights
+            "content": html_content,
+            "document_review": document_review.to_ui(),
             "sentences": sentence_data,
             "report": aggregated_report,
-            "room_id": room_id  # Include room_id in response
+            "document_intelligence": document_intelligence,  # 🆕 Multi-level analysis
+            "room_id": room_id
         })
 
     except Exception as e:

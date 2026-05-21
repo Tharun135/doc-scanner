@@ -1074,6 +1074,209 @@
             border-color: var(--secondary-color);
             background: rgba(42, 155, 170, 0.2);
         }
+
+        /* ── Document Intelligence UI ────────────────────────────────── */
+        .review-mode-panel {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 0.85rem;
+            margin-bottom: 0.85rem;
+        }
+        .review-mode-panel h6 {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #adb5bd;
+            margin-bottom: 0.6rem;
+        }
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.25rem 0.55rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.06);
+            color: #ccc;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .mode-badge:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .mode-badge.active {
+            background: linear-gradient(135deg, #2A9BAA, #1a7a86);
+            border-color: #2A9BAA;
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(42,155,170,0.4);
+        }
+        .mode-badge.suggested::after {
+            content: '✓';
+            font-size: 0.65rem;
+            opacity: 0.8;
+        }
+        .doc-intel-panel {
+            padding: 0.5rem 0;
+        }
+        .health-radar-container {
+            display: flex;
+            justify-content: center;
+            margin: 0.5rem 0 1rem;
+        }
+        .health-total-badge {
+            display: inline-block;
+            font-size: 2rem;
+            font-weight: 800;
+            text-align: center;
+            background: linear-gradient(135deg, #2A9BAA, #FFD700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .di-category {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #2A9BAA;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .di-category:hover { background: rgba(255,255,255,0.1); }
+        .di-category.expanded { border-left-color: #FFD700; }
+        .di-category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .di-issue-count {
+            background: rgba(255,193,7,0.2);
+            color: #ffc107;
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+        }
+        .di-issue-count.zero {
+            background: rgba(40,167,69,0.2);
+            color: #28a745;
+        }
+        .di-issue-list { display: none; margin-top: 0.5rem; }
+        .di-category.expanded .di-issue-list { display: block; }
+        .di-issue-item {
+            background: rgba(0,0,0,0.2);
+            border-radius: 6px;
+            padding: 0.5rem 0.7rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .di-issue-item:hover {
+            background: rgba(42,155,170,0.25);
+            transform: translateX(3px);
+        }
+        .di-issue-item.di-active {
+            background: rgba(42,155,170,0.35);
+            border-left: 3px solid #2A9BAA;
+            padding-left: calc(0.7rem - 3px);
+        }
+        /* DI term highlight in document content — CLICK mode */
+        mark.di-highlight {
+            background: rgba(42,155,170,0.45);
+            color: inherit;
+            border-radius: 3px;
+            outline: 2px solid #2A9BAA;
+            box-shadow: 0 0 10px rgba(42,155,170,0.7);
+            animation: diPulse 1.5s ease-in-out 2;
+            padding: 0 2px;
+        }
+        mark.di-highlight.di-first {
+            background: rgba(42,155,170,0.75);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 0 18px rgba(42,155,170,0.9);
+        }
+        /* DI term highlight — HOVER mode (softer, no animation) */
+        mark.di-highlight.di-hover-mode {
+            background: rgba(42,155,170,0.2);
+            color: inherit;
+            outline: 2px dashed #2A9BAA;
+            box-shadow: none;
+            animation: none;
+        }
+        mark.di-highlight.di-hover-mode.di-first {
+            background: rgba(42,155,170,0.35);
+            color: inherit;
+            font-weight: 600;
+            box-shadow: 0 0 8px rgba(42,155,170,0.4);
+        }
+        @keyframes diPulse {
+            0%,100% { box-shadow: 0 0 10px rgba(42,155,170,0.7); }
+            50%      { box-shadow: 0 0 22px rgba(42,155,170,1);   }
+        }
+        .di-issue-item .rule-id {
+            font-family: monospace;
+            font-size: 0.7rem;
+            background: rgba(255,255,255,0.1);
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            margin-right: 0.4rem;
+        }
+        .di-issue-item .severity-major { color: #ff6b6b; }
+        .di-issue-item .severity-minor { color: #ffc107; }
+        .di-issue-item .severity-info  { color: #74b9ff; }
+        .di-section-tree {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .di-section-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.3rem 0.5rem;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .di-section-item:hover { background: rgba(255,255,255,0.07); }
+        .di-section-item .section-title {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
+        }
+        .section-level-badge {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            margin-right: 0.3rem;
+            font-family: monospace;
+        }
+        .dim-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.4rem;
+            font-size: 0.78rem;
+        }
+        .dim-bar-label { width: 90px; flex-shrink: 0; color: #adb5bd; }
+        .dim-bar-track {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .dim-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 1s ease;
+            background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+        }
+        .dim-bar-score { width: 28px; text-align: right; font-weight: 600; color: #FFD700; }
     </style>
 </head>
 
@@ -1145,6 +1348,23 @@
                             <h6>Selected Files:</h6>
                             <div id="fileListItems"></div>
                         </div>
+
+                        <!-- ── REVIEW MODE SELECTOR ──────────────────────── -->
+                        <div class="review-mode-panel" id="reviewModePanel">
+                            <h6><i class="fas fa-sliders-h me-1"></i> Review Mode
+                                <span id="reviewModeSuggestionBadge" class="badge ms-1" style="background:rgba(42,155,170,0.3);font-size:0.65rem;display:none;">Smart suggestions ready</span>
+                            </h6>
+                            <div class="d-flex flex-wrap gap-1" id="reviewModeBadges">
+                                <span class="mode-badge active" data-mode="Style" title="Grammar, readability, tone"><i class="fas fa-pen"></i> Style</span>
+                                <span class="mode-badge" data-mode="SME" title="Technical accuracy & cross-references"><i class="fas fa-microscope"></i> SME</span>
+                                <span class="mode-badge active" data-mode="UX" title="Task flow & completeness"><i class="fas fa-user"></i> UX</span>
+                                <span class="mode-badge active" data-mode="Release" title="Completeness & release readiness"><i class="fas fa-rocket"></i> Release</span>
+                                <span class="mode-badge" data-mode="Compliance" title="Standards adherence"><i class="fas fa-balance-scale"></i> Compliance</span>
+                                <span class="mode-badge" data-mode="Translation QA" title="Localization readiness"><i class="fas fa-language"></i> i18n</span>
+                            </div>
+                            <small class="text-muted d-block mt-1" id="reviewModeHint">Select one or more review lenses.</small>
+                        </div>
+
                         <button class="btn btn-primary w-100" type="submit">
                             <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
                             <span class="ai-enhancement-badge">AI Enhanced</span>
@@ -1249,18 +1469,31 @@
                             <!-- Tab Container -->
                             <div class="tab-container">
                                 <div class="tab-header">
-                                    <button class="tab-button active" onclick="switchTab('feedback')">
+                                    <button class="tab-button active" onclick="switchTab('feedback')" id="tabBtnSentence">
                                         <i class="fas fa-exclamation-triangle me-1"></i>
-                                        Issues
+                                        Sentence Issues
                                     </button>
-                                    <button class="tab-button" onclick="switchTab('ai-feedback')">
+                                    <button class="tab-button" onclick="switchTab('doc-intel')" id="tabBtnDocIntel">
+                                        <i class="fas fa-layer-group me-1"></i>
+                                        Document Intelligence
+                                        <span id="docIntelBadge" class="badge ms-1" style="background:#2A9BAA;display:none;">0</span>
+                                    </button>
+                                    <button class="tab-button" onclick="switchTab('ai-feedback')" id="tabBtnAI">
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
                                 </div>
                                 <div class="tab-content active" id="feedbackContent">
-                                    <h5 class="mb-3">Document Issues</h5>
-                                    <!-- Feedback content will be populated here -->
+                                    <h5 class="mb-3">Sentence-Level Issues</h5>
+                                    <!-- Sentence feedback populated here -->
+                                </div>
+                                <div class="tab-content" id="docIntelContent">
+                                    <div class="doc-intel-panel" id="docIntelPanel">
+                                        <div class="text-muted text-center py-4" id="docIntelEmpty">
+                                            <i class="fas fa-layer-group fa-2x mb-2"></i>
+                                            <p>Upload a document to see multi-level intelligence analysis.</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="tab-content" id="aiFeedbackContent">
                                     <div class="text-muted text-center py-4">
@@ -1277,7 +1510,350 @@
     </div>
 
     <script>
-        // WebSocket connection for real-time progress with fallback
+        // ── Review Mode selector ────────────────────────────────────────
+        (function() {
+            const badges = document.querySelectorAll('.mode-badge');
+            badges.forEach(b => {
+                b.addEventListener('click', () => {
+                    b.classList.toggle('active');
+                    updateReviewModeHint();
+                });
+            });
+
+            function updateReviewModeHint() {
+                const active = [...document.querySelectorAll('.mode-badge.active')]
+                    .map(b => b.dataset.mode);
+                const hint = document.getElementById('reviewModeHint');
+                if (hint) hint.textContent = active.length
+                    ? `Active: ${active.join(', ')}`
+                    : 'Select at least one review lens.';
+            }
+            updateReviewModeHint();
+        })();
+
+        function getActiveReviewModes() {
+            return [...document.querySelectorAll('.mode-badge.active')]
+                .map(b => b.dataset.mode);
+        }
+
+        async function fetchSmartModeSuggestions(filename) {
+            try {
+                const resp = await fetch('/detect_review_modes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const suggested = data.suggested_modes || [];
+                // Mark suggested modes (visual cue only — don't auto-select)
+                document.querySelectorAll('.mode-badge').forEach(b => {
+                    if (suggested.includes(b.dataset.mode)) {
+                        b.classList.add('suggested');
+                        b.title = (b.title || '') + ' — Recommended for this document type';
+                    } else {
+                        b.classList.remove('suggested');
+                    }
+                });
+                const badge = document.getElementById('reviewModeSuggestionBadge');
+                const hint  = document.getElementById('reviewModeHint');
+                if (badge) badge.style.display = 'inline';
+                if (hint) hint.textContent = `Detected: ${data.detected_type} — Suggested: ${suggested.join(', ')}`;
+            } catch (e) { /* non-fatal */ }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-button').forEach(function(b) { b.classList.remove('active'); });
+            var cmap = {'feedback':'feedbackContent','doc-intel':'docIntelContent','ai-feedback':'aiFeedbackContent'};
+            var bmap = {'feedback':'tabBtnSentence','doc-intel':'tabBtnDocIntel','ai-feedback':'tabBtnAI'};
+            var c = document.getElementById(cmap[tabName]);
+            var btn2 = document.getElementById(bmap[tabName]);
+            if (c) c.classList.add('active');
+            if (btn2) btn2.classList.add('active');
+        }
+
+        function escHtml(str) {
+            var d = document.createElement('div');
+            d.textContent = String(str || '');
+            return d.innerHTML;
+        }
+
+        function renderDocumentIntelligence(di) {
+            if (!di) return;
+            var panel = document.getElementById('docIntelPanel');
+            var empty = document.getElementById('docIntelEmpty');
+            if (!panel) return;
+            if (empty) empty.style.display = 'none';
+            var totalIssues = di.total_issues || 0;
+            var badge = document.getElementById('docIntelBadge');
+            if (badge) { badge.textContent = totalIssues; badge.style.display = totalIssues > 0 ? 'inline' : 'none'; }
+            var hs = di.health_score;
+            var modesHtml = (di.review_modes_active || []).map(function(m) {
+                return '<span class="badge me-1" style="background:#2A9BAA;font-size:0.7rem;">'+escHtml(m)+'</span>';
+            }).join('');
+            var dimsHtml = '';
+            if (hs) {
+                [['Structure',hs.structure],['Consistency',hs.consistency],['Completeness',hs.completeness],
+                 ['Readability',hs.readability],['Flow',hs.flow],['Cross-Refs',hs.cross_references],['Redundancy',hs.redundancy]
+                ].forEach(function(d) {
+                    dimsHtml += '<div class="dim-bar-row"><div class="dim-bar-label">'+d[0]+'</div>'
+                        +'<div class="dim-bar-track"><div class="dim-bar-fill" style="width:'+(d[1]||0)+'%"></div></div>'
+                        +'<div class="dim-bar-score">'+(d[1]||0)+'</div></div>';
+                });
+            }
+            var cats = [
+                {key:'section_issues',label:'Section Analysis',icon:'fa-sitemap'},
+                {key:'cross_reference_issues',label:'Cross-References',icon:'fa-link'},
+                {key:'consistency_issues',label:'Consistency',icon:'fa-equals'},
+                {key:'ia_issues',label:'Information Architecture',icon:'fa-project-diagram'},
+                {key:'flow_issues',label:'Narrative Flow',icon:'fa-water'},
+                {key:'completeness_issues',label:'Completeness',icon:'fa-tasks'}
+            ];
+            // Extract the best "term" to highlight for each issue type
+            function getIssueTerm(issue) {
+                // For consistency/XR: extract quoted term from message e.g. "siemens" appears...
+                var m = (issue.message||'').match(/[\u201c"\u2019']([^\u201d"']+)[\u201d"\u2019']/);
+                if (m) return m[1];
+                // For section issues: use section_title
+                if (issue.section_title) return issue.section_title;
+                // For flow/completeness: use section_id hint if any
+                if (issue.location) return issue.location;
+                return null;
+            }
+
+            function buildCat(cat) {
+                var issues = di[cat.key] || [];
+                var zc = issues.length === 0 ? 'zero' : '';
+                var expandedClass = issues.length > 0 ? ' expanded' : '';
+                var body = '';
+                issues.slice(0,5).forEach(function(issue) {
+                    var sev = issue.severity||'minor';
+                    var term = getIssueTerm(issue);
+                    var dataAttr = term ? ' data-di-term="'+escHtml(term)+'"' : '';
+                    var hoverAttr = term
+                        ? ' onmouseenter="highlightDIHover(this)" onmouseleave="restoreDIActiveHighlight(this)"'
+                        : '';
+                    var hint = term
+                        ? '<span style="float:right;font-size:0.68rem;opacity:0.55;"><i class="fas fa-search-location me-1"></i>Hover/click to locate</span>'
+                        : '';
+                    body += '<div class="di-issue-item" onclick="highlightDIIssue(this)"'+dataAttr+hoverAttr+'>';
+                    body += hint;
+                    body += '<span class="rule-id">'+escHtml(issue.rule_id||'')+'</span> '
+                        +'<span class="severity-'+sev+'">['+sev+']</span> '+escHtml(issue.message||'');
+                    if (issue.suggestion) body += '<div class="text-muted mt-1" style="font-size:0.75rem;"><i class="fas fa-lightbulb me-1"></i>'+escHtml(issue.suggestion)+'</div>';
+                    body += '</div>';
+                });
+                if (issues.length>5) body += '<div class="text-muted" style="font-size:0.75rem;padding:0.3rem 0.5rem;">+'+(issues.length-5)+' more</div>';
+                return '<div class="di-category'+expandedClass+'" onclick="if(event.target===this||event.target.classList.contains(\'di-category-header\')||event.target.closest(\'.di-category-header\')){toggleExpand(this)}">'
+                    +'<div class="di-category-header" onclick="toggleExpand(this.closest(\'.di-category\'))"><span><i class="fas '+cat.icon+' me-1"></i>'+cat.label+'</span>'
+                    +'<span class="di-issue-count '+zc+'">'+issues.length+'</span></div>'
+                    +'<div class="di-issue-list">'+body+'</div></div>';
+            }
+            var sections = di.sections || [];
+            var secTree = '';
+            sections.slice(0,20).forEach(function(s) {
+                var indent = ((s.level||1)-1)*12+8;
+                var zc2 = s.issue_count===0?'zero':'';
+                var sTitle = s.title || '';
+                var secDiv = document.createElement('div');
+                secDiv.className = 'di-section-item';
+                secDiv.style.paddingLeft = indent+'px';
+                secDiv.style.cursor = 'pointer';
+                secDiv.setAttribute('data-di-term', sTitle);
+                secDiv.innerHTML = '<span class="section-title"><span class="section-level-badge">H'+(s.level||'?')+'</span>'+escHtml(sTitle)+'</span>'
+                    +'<span class="di-issue-count '+zc2+'">'+(s.issue_count||0)+'</span>';
+                secDiv.onclick = function(){ highlightDITerm(this.getAttribute('data-di-term')); };
+                secDiv.onmouseenter = function(){ highlightDIHoverTerm(this.getAttribute('data-di-term')); };
+                secDiv.onmouseleave = restoreDIActiveHighlightGlobal;
+                secTree += secDiv.outerHTML;
+            });
+            var html = '<div class="mb-2 d-flex align-items-center gap-2 flex-wrap"><span class="fw-bold" style="font-size:0.85rem;"><i class="fas fa-layer-group me-1"></i> Document Intelligence</span>'
+                +modesHtml+'<span class="text-muted" style="font-size:0.75rem;">Doc type: <strong>'+escHtml(di.doc_type||'unknown')+'</strong></span></div>';
+            if (hs) html += '<div class="di-category mb-2" style="border-left-color:#FFD700;"><div class="di-category-header mb-1"><span><i class="fas fa-heartbeat me-1"></i> Document Health</span><span class="health-total-badge">'+(hs.total||0)+'/100</span></div>'+dimsHtml+'</div>';
+            if (secTree) html += '<div class="di-category expanded"><div class="di-category-header" onclick="toggleExpand(this.closest(\'.di-category\'))"><span><i class="fas fa-list-ul me-1"></i> Section Overview</span><span class="di-issue-count">'+sections.length+'</span></div><div class="di-issue-list di-section-tree">'+secTree+'</div></div>';
+            cats.forEach(function(cat) { html += buildCat(cat); });
+            panel.innerHTML = html;
+        }
+
+        function toggleExpand(el) {
+            if (el && el.classList) el.classList.toggle('expanded');
+        }
+
+        /* ── Document Intelligence Highlighting ─────────────────────── */
+        function clearDIHighlights() {
+            // Remove all mark.di-highlight from document content
+            var docSection = document.querySelector('.document-section');
+            if (!docSection) return;
+            docSection.querySelectorAll('mark.di-highlight').forEach(function(mark) {
+                var parent = mark.parentNode;
+                while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+                parent.removeChild(mark);
+            });
+            // Collapse active state on issue items
+            document.querySelectorAll('.di-issue-item.di-active').forEach(function(el) {
+                el.classList.remove('di-active');
+            });
+        }
+
+        function highlightDITerm(term) {
+            if (!term) return;
+            clearDIHighlights();
+            var docSection = document.querySelector('.document-section');
+            if (!docSection) return;
+
+            var count = 0;
+            var firstMark = null;
+
+            // Walk text nodes inside the document content, mark all occurrences
+            var walker = document.createTreeWalker(
+                docSection,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        // Skip nodes already inside a mark we just created
+                        if (node.parentElement && node.parentElement.tagName === 'MARK') return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                }
+            );
+
+            var textNodes = [];
+            while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+            var termLower = term.toLowerCase();
+            textNodes.forEach(function(node) {
+                var text = node.nodeValue;
+                var lower = text.toLowerCase();
+                var idx = lower.indexOf(termLower);
+                if (idx === -1) return;
+
+                // Replace all occurrences in this text node
+                var frag = document.createDocumentFragment();
+                var remaining = text;
+                var remainingLower = lower;
+                var offset = 0;
+                while (true) {
+                    var found = remainingLower.indexOf(termLower);
+                    if (found === -1) {
+                        frag.appendChild(document.createTextNode(remaining));
+                        break;
+                    }
+                    if (found > 0) frag.appendChild(document.createTextNode(remaining.slice(0, found)));
+                    var mark = document.createElement('mark');
+                    mark.className = 'di-highlight' + (count === 0 ? ' di-first' : '');
+                    mark.textContent = remaining.slice(found, found + term.length);
+                    frag.appendChild(mark);
+                    if (count === 0) firstMark = mark;
+                    count++;
+                    remaining = remaining.slice(found + term.length);
+                    remainingLower = remaining.toLowerCase();
+                }
+                node.parentNode.replaceChild(frag, node);
+            });
+
+            // Scroll first match into view in the document section
+            if (firstMark) {
+                firstMark.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            }
+
+            return count;
+        }
+
+        function highlightDIIssue(el) {
+            // Mark clicked card as active (persist)
+            document.querySelectorAll('.di-issue-item.di-active').forEach(function(e) { e.classList.remove('di-active'); });
+            el.classList.add('di-active');
+
+            var term = el.getAttribute('data-di-term');
+            if (!term) { clearDIHighlights(); return; }
+
+            var found = highlightDITerm(term); // solid click-mode highlights
+
+            var docSection = document.querySelector('.document-section');
+            if (docSection && found > 0) {
+                docSection.style.transition = 'box-shadow 0.3s';
+                docSection.style.boxShadow = '0 0 0 3px rgba(42,155,170,0.6)';
+                setTimeout(function() { docSection.style.boxShadow = ''; }, 800);
+            }
+        }
+
+        /* ── Hover highlighting (transient, softer) ── */
+
+        // Apply hover-mode marks without disturbing active click state
+        function highlightDIHoverTerm(term) {
+            if (!term) return;
+            clearDIHighlights();   // remove previous marks (hover or click)
+            var docSection = document.querySelector('.document-section');
+            if (!docSection) return;
+
+            var count = 0;
+            var firstMark = null;
+            var termLower = term.toLowerCase();
+
+            var walker = document.createTreeWalker(docSection, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(n) {
+                    return (n.parentElement && n.parentElement.tagName === 'MARK')
+                        ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            var textNodes = [];
+            while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+            textNodes.forEach(function(node) {
+                var text = node.nodeValue;
+                var lower = text.toLowerCase();
+                if (lower.indexOf(termLower) === -1) return;
+
+                var frag = document.createDocumentFragment();
+                var remaining = text;
+                var remainingLower = lower;
+                while (true) {
+                    var found = remainingLower.indexOf(termLower);
+                    if (found === -1) { frag.appendChild(document.createTextNode(remaining)); break; }
+                    if (found > 0) frag.appendChild(document.createTextNode(remaining.slice(0, found)));
+                    var mark = document.createElement('mark');
+                    // hover-mode = softer dashed style
+                    mark.className = 'di-highlight di-hover-mode' + (count === 0 ? ' di-first' : '');
+                    mark.textContent = remaining.slice(found, found + term.length);
+                    frag.appendChild(mark);
+                    if (count === 0) firstMark = mark;
+                    count++;
+                    remaining = remaining.slice(found + term.length);
+                    remainingLower = remaining.toLowerCase();
+                }
+                node.parentNode.replaceChild(frag, node);
+            });
+
+            // Scroll first match into view without jarring animation
+            if (firstMark) {
+                firstMark.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            }
+        }
+
+        // Called onmouseenter on a .di-issue-item
+        function highlightDIHover(el) {
+            var term = el.getAttribute('data-di-term');
+            if (!term) return;
+            highlightDIHoverTerm(term);
+        }
+
+        // Called onmouseleave on a .di-issue-item — restore the clicked item if any
+        function restoreDIActiveHighlight(el) {
+            restoreDIActiveHighlightGlobal();
+        }
+
+        // Used by both issue cards and section tree
+        function restoreDIActiveHighlightGlobal() {
+            clearDIHighlights();
+            var activeEl = document.querySelector('.di-issue-item.di-active');
+            if (activeEl) {
+                var activeTerm = activeEl.getAttribute('data-di-term');
+                if (activeTerm) highlightDITerm(activeTerm); // restore solid click highlight
+            }
+        }
+
+
         let socket = null;
         let socketConnected = false;
         let currentRoomId = null;
@@ -1581,7 +2157,7 @@
         }
 
         // Improved browse handling using direct triggers
-        window.triggerFileUpload = function () {
+        function triggerFileUpload() {
             console.log("🚀 triggerFileUpload called");
             const input = document.getElementById('multiFileInput');
             if (input) {
@@ -1589,9 +2165,9 @@
             } else {
                 console.error("❌ multiFileInput not found");
             }
-        };
+        }
 
-        window.triggerBatchUpload = function () {
+        function triggerBatchUpload() {
             console.log("🚀 triggerBatchUpload called");
             const input = document.getElementById('batchFileInput');
             if (input) {
@@ -1599,14 +2175,14 @@
             } else {
                 console.error("❌ batchFileInput not found");
             }
-        };
+        }
 
-        window.handleDropzoneClick = function (e) {
+        function handleDropzoneClick(e) {
             // Only trigger if we didn't click one of the internal buttons (to avoid double clicks)
             if (e.target.tagName !== 'BUTTON' && e.target.parentElement.tagName !== 'BUTTON') {
                 triggerFileUpload();
             }
-        };
+        }
 
         // Handle file input changes
         fileInput.addEventListener('change', (e) => {
@@ -1614,6 +2190,8 @@
             if (files.length > 0) {
                 selectedFiles = Array.from(files);
                 updateFileList();
+                // 🆕 Fetch smart review mode suggestions
+                fetchSmartModeSuggestions(files[0].name);
                 // Clear the input to allow selecting more files
                 e.target.value = '';
             }
@@ -2123,6 +2701,10 @@
                 formData.append('file', file);
                 formData.append('room_id', fileRoomId);  // Use local room ID
 
+                // 🆕 Append active review modes
+                const activeModes = getActiveReviewModes();
+                activeModes.forEach(mode => formData.append('review_modes', mode));
+
                 console.log('📤 Starting file upload...');
                 const response = await fetch('/upload', {
                     method: 'POST',
@@ -2169,6 +2751,10 @@
                     // renderContent will now handle hiding the loader when its internal promises finish
                     renderChart(result.report || {}, result.sentences || []);
                     renderContent(result.content || '', result.sentences || []);
+                    // 🆕 Render Document Intelligence panel
+                    if (result.document_intelligence) {
+                        renderDocumentIntelligence(result.document_intelligence);
+                    }
                 } catch (renderError) {
                     console.error('❌ Rendering error:', renderError);
                     alert('Analysis finished, but there was an error displaying the results: ' + renderError.message);
@@ -2666,38 +3252,6 @@
             }
         });
 
-        // Tab switching functionality
-        function switchTab(tabName, eventObj = null) {
-            const e = eventObj || window.event;
-            // Update tab buttons
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            if (e && e.target) {
-                e.target.classList.add('active');
-            } else {
-                // Programmatic fallback
-                const btn = document.querySelector(`.tab-button[onclick*="'${tabName}'"]`);
-                if (btn) btn.classList.add('active');
-            }
-
-            // Update tab content
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            if (tabName === 'feedback') {
-                const el = document.getElementById('feedbackContent');
-                if (el) el.classList.add('active');
-            } else if (tabName === 'ai-feedback') {
-                const el = document.getElementById('aiFeedbackContent');
-                if (el) el.classList.add('active');
-            } else if (tabName === 'structural-feedback') {
-                const el = document.getElementById('structural-feedback');
-                if (el) el.classList.add('active');
-            }
-        }
-
         function switchTabProgrammatically(tabName) {
             switchTab(tabName);
         }
@@ -3096,24 +3650,6 @@
             }
         }
 
-        // Function to switch tab programmatically
-        function switchTabProgrammatically(tabName) {
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-
-            if (tabName === 'feedback') {
-                document.querySelector('.tab-button:first-child').classList.add('active');
-                document.getElementById('feedbackContent').classList.add('active');
-            } else if (tabName === 'ai-feedback') {
-                document.querySelector('.tab-button:last-child').classList.add('active');
-                document.getElementById('aiFeedbackContent').classList.add('active');
-            }
-        }
 
         // Function to apply suggestion and teach the AI
         // Update internal data when user edits the suggestion (RLHF)
@@ -3405,6 +3941,9 @@
             document.querySelectorAll('.sentence.highlight').forEach(sentence => {
                 sentence.classList.remove('highlight');
             });
+
+            // Also clear any Document Intelligence term highlights
+            clearDIHighlights();
         }
 
         function highlightBlock(blockIndex) {
@@ -4931,4 +5470,4 @@
 
 </body>
 
-</html>
+</html>
