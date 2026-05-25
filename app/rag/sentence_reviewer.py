@@ -32,6 +32,20 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Load environment variables based on DOCSCANNER_MODE
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    env_mode = os.getenv("DOCSCANNER_MODE", "local")
+    env_file = f".env.{env_mode}"
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    env_path = os.path.join(project_root, env_file)
+    if os.path.exists(env_path):
+        load_dotenv(env_path, override=True)
+        logger.info(f"Loaded environment overrides from {env_path} (mode: {env_mode})")
+except Exception as e:
+    logger.warning(f"Failed to load environment variables in sentence_reviewer: {e}")
+
 # ---------------------------------------------------------------------------
 # Optional reranker
 # ---------------------------------------------------------------------------

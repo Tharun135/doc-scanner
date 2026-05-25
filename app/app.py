@@ -22,12 +22,21 @@ except ImportError:
     SPACY_IMPORT_SUCCESS = False
     spacy = None
 
-# Load environment variables from .env file
+# Load environment variables from .env file based on DOCSCANNER_MODE
 try:
     from dotenv import load_dotenv
     load_dotenv()
-    logger = logging.getLogger(__name__)
-    logger.info("Environment variables loaded from .env file")
+    env_mode = os.getenv("DOCSCANNER_MODE", "local")
+    env_file = f".env.{env_mode}"
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(project_root, env_file)
+    if os.path.exists(env_path):
+        load_dotenv(env_path, override=True)
+        logger = logging.getLogger(__name__)
+        logger.info(f"Loaded environment overrides from {env_path} (mode: {env_mode})")
+    else:
+        logger = logging.getLogger(__name__)
+        logger.info(f"Environment override file {env_path} not found. Using default environment configuration.")
 except ImportError:
     logger = logging.getLogger(__name__)
     logger.warning("python-dotenv not available - environment variables must be set manually")
@@ -1224,19 +1233,18 @@ def upload_file():
         global current_sentences_list
         current_sentences_list = sentences
 
-        # 🧠 RAG INGESTION: DISABLED per request
-        # try:
-        #     from .services.enrichment import ingest_document_to_rag
-        #     import threading
-        #     # Run ingestion in a background thread to avoid blocking the user
-        #     threading.Thread(
-        #         target=ingest_document_to_rag, 
-        #         args=(plain_text, file.filename),
-        #         daemon=True
-        #     ).start()
-        #     logger.info(f"🚀 Document ingestion started in background: {file.filename}")
-        # except Exception as rag_e:
-        #     logger.warning(f"⚠️ RAG background ingestion failed to start: {rag_e}")
+        # Store manuals locally and generate embeddings into ChromaDB collection 'manuals'
+        try:
+            from app.services.style_guide_service import ingest_manual_local
+            import threading
+            threading.Thread(
+                target=ingest_manual_local,
+                args=(plain_text, file.filename),
+                daemon=True
+            ).start()
+            logger.info(f"🚀 Manual local ingestion started in background: {file.filename}")
+        except Exception as local_rag_e:
+            logger.warning(f"⚠️ Local RAG manuals ingestion failed: {local_rag_e}")
 
         # Stage 4: Analyzing with Rules (80%)
         # CONDITIONAL ANALYSIS - Only analyze sentences that need it
@@ -1410,12 +1418,28 @@ def upload_file():
         if progress_tracker and room_id:
             progress_tracker.update_progress(room_id, 85, "Fetching AI suggestions in parallel...")
             
+        from app.services.style_guide_service import is_ambiguity_eligible
         rag_tasks = []
         for s_data in sentence_data:
             for fb in s_data.get('feedback', []):
                 issue_type = fb.get("rule_id", fb.get("category", ""))
-                if issue_type in ["passive_voice", "unclear_sentence", "long_sentence"]:
-                    rag_tasks.append((s_data['sentence'], issue_type, fb))
+                openai_eligible_issues = [
+                    "unclear_sentence", "vague_terms", "ambiguity",
+                    "terminology", "terminology_consistency", "siemens_style",
+                    "reviewer_feedback", "rag_reasoning",
+                    "passive_voice", "active_voice", "sg-av-001",
+                    "future_tense", "tense", "verb_tense",
+                    "sentence_length", "long_sentence", "readability",
+                    "grammar", "punctuation", "punctuation_spacing",
+                    "headings", "SG-HE-001", "SG-HE-002", "SG-HE-003", "SG-HE-004"
+                ]
+                if issue_type in openai_eligible_issues:
+                    # Ambiguity filtering (Only send if the sentence meets complexity/pronoun thresholds)
+                    if any(x in issue_type for x in ["unclear", "ambiguity", "vague"]):
+                        if is_ambiguity_eligible(s_data['sentence'], fb):
+                            rag_tasks.append((s_data['sentence'], issue_type, fb))
+                    else:
+                        rag_tasks.append((s_data['sentence'], issue_type, fb))
 
         if rag_tasks:
             from concurrent.futures import ThreadPoolExecutor
@@ -1434,7 +1458,12 @@ def upload_file():
                 except Exception as e:
                     logger.error(f"Async RAG error: {e}")
                     
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            # Prevent local CPU thrashing by running sequentially when using local LLM
+            is_local = os.getenv("ALLOW_CLOUD_LLM", "false").lower() != "true"
+            max_workers = 1 if is_local else 3
+            logger.info(f"Running style suggestions async RAG pipeline (max_workers={max_workers})")
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 list(executor.map(fetch_rag, rag_tasks))
 
         total_sentences = len(sentence_data)

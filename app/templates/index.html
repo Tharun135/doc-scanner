@@ -4326,43 +4326,19 @@
                 messageText += `</ul>`;
             }
             
-            if (item.suggestion) {
-                contentDiv.innerHTML = `
-                    <div class="mb-2">
-                        <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
-                        ${item.isMasterFix ? messageText : ''}
-                    </div>
-                    <div class="mb-1 original" style="border-left: 2px solid #ff6b6b; padding-left: 8px; margin-bottom: 8px;">
-                        <span class="label" style="font-weight: 600; font-size: 0.85em;">Original:</span><br>
-                        "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
-                    </div>
-                    <div class="mb-2 suggestion" style="border-left: 2px solid #51cf66; padding-left: 8px;">
-                        <span class="label" style="font-weight: 600; font-size: 0.85em;">
-                            Suggestion
-                            ${item.confidence ? `<span class="badge ${item.confidence === 'High' ? 'bg-success' : item.confidence === 'Low' ? 'bg-danger' : 'bg-warning'} ms-1" style="font-size: 0.7em;">${item.confidence} Confidence</span>` : ''}
-                        </span><br>
-                        ${item.suggestion}
-                    </div>
-                    <div class="mb-1 mt-2">
-                        <button class="btn btn-sm btn-success me-2" onclick="acceptChange(this, ${sentenceIndex}, \`${item.suggestion.replace(/`/g, '\\`')}\`)">Accept</button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="rejectChange(this)">Reject</button>
-                    </div>
-                `;
-            } else {
-                contentDiv.innerHTML = `
-                    <div class="mb-2">
-                        <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
-                        ${item.isMasterFix ? messageText : ''}
-                    </div>
-                    <div class="mb-1">
-                        <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
-                        <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
-                    </div>
-                    <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
-                        "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
-                    </div>
-                `;
-            }
+            contentDiv.innerHTML = `
+                <div class="mb-2">
+                    <strong style="${item.isMasterFix ? 'color: #6f42c1;' : ''}">${label}:</strong> ${item.isMasterFix ? '' : messageText}
+                    ${item.isMasterFix ? messageText : ''}
+                </div>
+                <div class="mb-1">
+                    <small class="text-muted">Sentence ${sentenceIndex + 1}</small>
+                    <i class="fas fa-link ms-2" style="cursor: pointer;" title="Click to view full context"></i>
+                </div>
+                <div class="mt-2 text-dark font-italic opacity-75" style="border-left: 2px solid #ddd; padding-left: 10px; font-size: 0.9em;">
+                    "${sentence.substring(0, 150)}${sentence.length > 150 ? '...' : ''}"
+                </div>
+            `;
 
             const aiButton = document.createElement('button');
             aiButton.className = `ai-feedback-icon ${item.isMasterFix ? 'master-fix' : ''}`;
