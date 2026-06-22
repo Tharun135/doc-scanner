@@ -1249,7 +1249,7 @@
                                         <i class="fas fa-exclamation-triangle me-1"></i>
                                         Issues
                                     </button>
-                                    <button class="tab-button" onclick="switchTab('ai-feedback')">
+                                    <button class="tab-button" onclick="switchTab('ai-feedback')" style="display: none;">
                                         <i class="fas fa-robot me-1"></i>
                                         AI Assistance
                                     </button>
@@ -1262,7 +1262,7 @@
                                     <h5 class="mb-3">Document Issues</h5>
                                     <!-- Feedback content will be populated here -->
                                 </div>
-                                <div class="tab-content" id="aiFeedbackContent">
+                                <div class="tab-content" id="aiFeedbackContent" style="display: none;">
                                     <h5 class="mb-3">AI-Powered Suggestions</h5>
                                     <div class="text-muted text-center py-4">
                                         <i class="fas fa-robot fa-2x mb-2"></i>
@@ -2669,7 +2669,7 @@
                     multipleFeedback: decodedMultipleFeedback
                 });
 
-                showAIFeedback(sentenceIndex, decodedFeedback, decodedSentence, decodedFullSuggestion, decodedItem, decodedMultipleFeedback);
+                openQuickFixModal(sentenceIndex, decodedFeedback, decodedSentence, decodedItem, decodedMultipleFeedback);
             }
         });
 
@@ -3478,6 +3478,19 @@
                 sentence.addEventListener('click', () => {
                     const sentenceIndex = parseInt(sentence.getAttribute('data-sentence-index'));
                     highlightFeedbackForSentence(sentenceIndex);
+                    
+                    // NEW: Automatically open the Quick Fix modal if this sentence has feedback
+                    if (sentence.classList.contains('has-feedback')) {
+                        const sentenceData = window.currentSentences[sentenceIndex];
+                        if (sentenceData && sentenceData.feedback && sentenceData.feedback.length > 0) {
+                            const isMaster = sentenceData.feedback.length > 1;
+                            const mainFeedback = isMaster ? sentenceData.feedback.map(f => f.message).join(" | ") : sentenceData.feedback[0].message;
+                            const multipleFeedback = isMaster ? sentenceData.feedback.map(f => f.message) : null;
+                            const firstItem = sentenceData.feedback[0];
+                            
+                            openQuickFixModal(sentenceIndex, mainFeedback, sentenceData.sentence, firstItem, multipleFeedback);
+                        }
+                    }
                 });
             });
         }
@@ -3770,7 +3783,18 @@
             feedbackDiv.addEventListener('mouseenter', () => { highlightSentence(sentenceIndex); feedbackDiv.classList.add('highlighted'); });
             feedbackDiv.addEventListener('mouseleave', () => { unhighlightAllSentences(); feedbackDiv.classList.remove('highlighted'); });
             feedbackDiv.addEventListener('click', (e) => {
-                if (!e.target.closest('.ai-feedback-icon')) scrollToSentence(sentenceIndex);
+                scrollToSentence(sentenceIndex);
+                
+                // NEW: Open the Quick Fix modal
+                const sentenceData = window.currentSentences[sentenceIndex];
+                if (sentenceData && sentenceData.feedback && sentenceData.feedback.length > 0) {
+                    const isMaster = sentenceData.feedback.length > 1;
+                    const mainFeedback = isMaster ? sentenceData.feedback.map(f => f.message).join(" | ") : sentenceData.feedback[0].message;
+                    const multipleFeedback = isMaster ? sentenceData.feedback.map(f => f.message) : null;
+                    const firstItem = sentenceData.feedback[0];
+                    
+                    openQuickFixModal(sentenceIndex, mainFeedback, sentenceData.sentence, firstItem, multipleFeedback);
+                }
             });
 
             const wrapperDiv = document.createElement('div');
@@ -4253,6 +4277,186 @@
                 document.getElementById('suggestionModal').style.display = 'none';
             }
         });
+
+        // NEW: Quick Fix modal and action functions
+        async function openQuickFixModal(sentenceIndex, feedback, sentence, item = null, multipleFeedback = null) {
+            const modal = document.getElementById('suggestionModal');
+            const loading = document.getElementById('suggestionLoading');
+            const textDiv = document.getElementById('suggestionText');
+            
+            if (!modal) return;
+            
+            // Show modal and loading state
+            modal.style.display = 'flex';
+            loading.style.display = 'block';
+            textDiv.innerHTML = '';
+            
+            try {
+                // Fetch suggestion using getAISuggestion
+                const result = await getAISuggestion(feedback, sentence, 1, item, multipleFeedback);
+                loading.style.display = 'none';
+                
+                if (!result) {
+                    textDiv.innerHTML = `
+                        <div class="alert alert-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-20">
+                            <i class="fas fa-exclamation-circle me-2"></i> Failed to generate suggestion. Please try again.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Format the matched rules if any (RAG evidence)
+                let rulesHtml = '';
+                if (result.sources && result.sources.length > 0) {
+                    rulesHtml = `
+                        <div class="mt-4 p-3 rounded" style="background: rgba(148, 163, 184, 0.08); border-left: 4px solid #06b6d4;">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-book text-info me-2"></i>
+                                <strong style="font-size: 0.95rem; color: #38bdf8;">Style Guide Reference (RAG):</strong>
+                            </div>
+                            <div style="font-size: 0.85rem; max-height: 120px; overflow-y: auto; color: #cbd5e1;">
+                                ${result.sources.map(src => {
+                                    if (typeof src === 'object') {
+                                        return `<div class="mb-2"><strong>${src.rule_id || src.source || 'Matched Rule'}:</strong> ${src.content || ''}</div>`;
+                                    } else {
+                                        return `<div class="mb-1">${src}</div>`;
+                                    }
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                // Generate content based on if there is a recommended rewrite
+                const hasRewrite = result.suggestion && result.suggestion.trim() !== '' && result.suggestion.trim().toLowerCase() !== sentence.trim().toLowerCase();
+                const feedbackKey = `${sentenceIndex}_${encodeURIComponent(feedback).replace(/[^a-zA-Z0-9]/g, '')}`;
+                
+                // Save results in aiFeedbackData so applyAndTeachAI works
+                aiFeedbackData[feedbackKey] = {
+                    sentenceIndex: sentenceIndex,
+                    feedback: feedback,
+                    sentence: sentence,
+                    aiSuggestion: result
+                };
+                
+                let modalContent = '';
+                
+                if (hasRewrite) {
+                    modalContent = `
+                        <div class="modal-body-content" style="color: #f8fafc;">
+                            <div class="mb-3">
+                                <span class="badge bg-warning text-dark p-2 mb-2" style="font-size: 0.85rem; font-weight: 600;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Detected Issue
+                                </span>
+                                <div class="p-3 rounded border-start border-3 border-warning" style="background: rgba(245, 158, 11, 0.1); font-weight: 500; color: #fef08a;">
+                                    ${feedback}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 mt-4">
+                                <label class="form-label text-muted font-weight-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8 !important;">Original Sentence</label>
+                                <div class="p-3 rounded text-muted" style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255,255,255,0.15); font-style: italic; line-height: 1.5; color: #94a3b8 !important;">
+                                    "${sentence}"
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 mt-4">
+                                <label class="form-label text-success font-weight-bold d-flex justify-content-between align-items-center" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #34d399 !important;">
+                                    <span>💡 Proposed Correction (Direct RAG Answer)</span>
+                                    <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.7rem;">Editable</span>
+                                </label>
+                                <textarea id="editor_${feedbackKey}" class="form-control" rows="3" style="font-size: 0.95rem; background: #0f172a; color: #f8fafc; border: 1px solid #10b981; line-height: 1.5; box-shadow: 0 0 10px rgba(16,185,129,0.1);">${result.suggestion}</textarea>
+                            </div>
+                            
+                            ${result.ai_answer ? `
+                            <div class="mt-3 p-3 rounded" style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; font-size: 0.9rem; line-height: 1.5; color: #e2e8f0;">
+                                <strong>Explanation:</strong> ${result.ai_answer}
+                            </div>
+                            ` : ''}
+                            
+                            ${rulesHtml}
+                            
+                            <div class="mt-4 pt-3 d-flex justify-content-end gap-2" style="border-top: 1px solid rgba(255,255,255,0.15);">
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-white px-3" style="border-color: rgba(255,255,255,0.2);" onclick="document.getElementById('suggestionModal').style.display='none'">Cancel</button>
+                                <button type="button" class="btn btn-sm btn-success d-flex align-items-center gap-2 px-4" onclick="applyQuickFix(${sentenceIndex}, '${feedbackKey}')">
+                                    <i class="fas fa-check"></i> Apply Correction
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Guidance-only or Policy block (Explain only)
+                    modalContent = `
+                        <div class="modal-body-content" style="color: #f8fafc;">
+                            <div class="mb-3">
+                                <span class="badge bg-warning text-dark p-2 mb-2" style="font-size: 0.85rem; font-weight: 600;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Detected Issue
+                                </span>
+                                <div class="p-3 rounded border-start border-3 border-warning" style="background: rgba(245, 158, 11, 0.1); font-weight: 500; color: #fef08a;">
+                                    ${feedback}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 mt-4">
+                                <label class="form-label text-muted font-weight-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8 !important;">Original Sentence</label>
+                                <div class="p-3 rounded text-muted" style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255,255,255,0.15); font-style: italic; line-height: 1.5; color: #94a3b8 !important;">
+                                    "${sentence}"
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 mt-4">
+                                <div class="alert alert-info d-flex align-items-start gap-3 p-3" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); color: #e0f2fe;">
+                                    <i class="fas fa-info-circle fa-lg mt-1 text-info"></i>
+                                    <div>
+                                        <h6 class="alert-heading font-weight-bold mb-1" style="color: #38bdf8;">Human Review Required</h6>
+                                        <p class="mb-0" style="font-size: 0.9rem; line-height: 1.5;">
+                                            ${result.ai_answer || result.semantic_explanation || 'No automatic correction can be safely suggested. Please review and revise manually.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            ${rulesHtml}
+                            
+                            <div class="mt-4 pt-3 d-flex justify-content-end" style="border-top: 1px solid rgba(255,255,255,0.15);">
+                                <button type="button" class="btn btn-sm btn-outline-secondary text-white px-4" style="border-color: rgba(255,255,255,0.2);" onclick="document.getElementById('suggestionModal').style.display='none'">Close</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                textDiv.innerHTML = modalContent;
+                
+            } catch (err) {
+                console.error("Error in openQuickFixModal:", err);
+                loading.style.display = 'none';
+                textDiv.innerHTML = `
+                    <div class="alert alert-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-20">
+                        <i class="fas fa-exclamation-circle me-2"></i> Error: ${err.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function applyQuickFix(sentenceIndex, feedbackKey) {
+            await applyAndTeachAI(sentenceIndex, feedbackKey);
+            document.getElementById('suggestionModal').style.display = 'none';
+            
+            // Dim/strike the corresponding feedback card in the sidebar
+            const cards = document.querySelectorAll(`.feedback-item[data-sentence-index="${sentenceIndex}"]`);
+            cards.forEach(card => {
+                card.style.opacity = '0.5';
+                card.style.textDecoration = 'line-through';
+                card.style.pointerEvents = 'none';
+                
+                // Also dim the robot/magic icon inside it
+                const icon = card.querySelector('.ai-feedback-icon');
+                if (icon) {
+                    icon.style.opacity = '0.3';
+                    icon.style.pointerEvents = 'none';
+                }
+            });
+        }
 
         // Export functionality - Enhanced with PDF/Word Support & Detailed Data
         document.getElementById('exportBtn').addEventListener('click', async () => {
@@ -4775,16 +4979,38 @@
             <!-- ETA Info Removed -->
         </div>
     </div>
+    <!-- Beautiful Premium Suggestion Modal -->
     <div id="suggestionModal"
-        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
-        <div
-            style="background:#fff; color:#222; padding:2rem; border-radius:8px; min-width:300px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
-            <button id="closeSuggestionModal" style="position:absolute; top:10px; right:10px;"
-                class="btn btn-sm btn-secondary">&times;</button>
-            <div id="suggestionLoading" style="display:none;">
-                <span class="spinner-border spinner-border-sm"></span> Generating suggestion...
+        style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(8px); z-index:9999; align-items:center; justify-content:center;">
+        <div class="card p-0 shadow-lg"
+            style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.1); border-radius:16px; width:100%; max-width:650px; max-height:85vh; overflow:hidden; display:flex; flex-direction:column; position:relative; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;">
+            
+            <!-- Modal Header -->
+            <div class="px-4 py-3 d-flex justify-content-between align-items-center" style="border-bottom:1px solid rgba(255,255,255,0.1); background: rgba(30,41,59,0.5);">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="background: linear-gradient(135deg, #6366f1, #a855f7); width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 12px rgba(168,85,247,0.4);">
+                        <i class="fas fa-wand-magic-sparkles text-white"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 font-weight-bold" style="font-size: 1.1rem; letter-spacing: 0.25px;">AI Smart Correction</h5>
+                        <small class="text-muted" style="font-size: 0.75rem;">Grounded in Siemens Style Guidelines</small>
+                    </div>
+                </div>
+                <button id="closeSuggestionModal" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; line-height:1; padding:0; cursor:pointer; transition:color 0.2s;" onmouseover="this.style.color='#f8fafc'" onmouseout="this.style.color='#94a3b8'">&times;</button>
             </div>
-            <div id="suggestionText"></div>
+            
+            <!-- Modal Body Container -->
+            <div style="padding:2rem; overflow-y:auto; flex:1;">
+                <!-- Loading State -->
+                <div id="suggestionLoading" style="display:none; text-align:center; padding:3rem 0;">
+                    <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <h6 class="text-info font-weight-bold">Querying AI Assistant...</h6>
+                    <p class="text-muted small">Retrieving guideline standards and generating rewrite</p>
+                </div>
+                
+                <!-- Dynamic Content Insertion -->
+                <div id="suggestionText"></div>
+            </div>
         </div>
     </div>
 

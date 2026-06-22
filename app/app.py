@@ -1576,26 +1576,42 @@ def ai_suggestion():
         logger.error(f"❌ Error type: {type(e).__name__}")
         response_time = time.time() - start_time
 
-        # Final fallback: generic but useful rewrite
-        from .ai_improvement import AISuggestionEngine
-        fallback_engine = AISuggestionEngine()
-        fallback = fallback_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-
         track_suggestion(suggestion_id, feedback_text, sentence_context,
-                         document_type, "basic_fallback", response_time)
+                         document_type, "rule_based_fallback", response_time)
 
-        # Ensure fallback values are strings
-        fallback_suggestion = str(fallback.get("suggestion", "Review and revise for clarity."))
-        
-        return jsonify({
-            "suggestion": fallback_suggestion,
-            "ai_answer": "AI enhancement unavailable. Using basic rule-based guidance.",
-            "confidence": "low",
-            "method": "basic_fallback",
-            "suggestion_id": suggestion_id,
-            "sources": [],
-            "note": "Using basic fallback suggestions"
-        })
+        # Use deterministic fallback that gives real, issue-specific guidance
+        try:
+            from .intelligent_ai_improvement import get_deterministic_fallback
+            from .ai_improvement import AISuggestionEngine
+            det_fallback = get_deterministic_fallback(feedback_text or "", sentence_context or "")
+            rewrite_engine = AISuggestionEngine()
+            rewrite = rewrite_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
+            rewrite_suggestion = str(rewrite.get("suggestion", "")).strip()
+            # Only use the rewrite if it actually changed the sentence
+            if rewrite_suggestion and rewrite_suggestion.lower().strip() != (sentence_context or "").lower().strip():
+                final_suggestion = rewrite_suggestion
+            else:
+                final_suggestion = ""
+            return jsonify({
+                "suggestion": final_suggestion,
+                "ai_answer": det_fallback.get("guidance", f"Consider revising: {feedback_text}"),
+                "confidence": "medium",
+                "method": "rule_based_fallback",
+                "suggestion_id": suggestion_id,
+                "sources": ["Writing style guidelines"],
+                "note": "Rule-based suggestion"
+            })
+        except Exception as fallback_error:
+            logger.error(f"❌ Fallback also failed: {fallback_error}")
+            return jsonify({
+                "suggestion": "",
+                "ai_answer": f"Consider revising this sentence to address: {feedback_text}",
+                "confidence": "low",
+                "method": "emergency_fallback",
+                "suggestion_id": suggestion_id,
+                "sources": [],
+                "note": "Emergency fallback"
+            })
 
 def generate_smart_suggestion(feedback_text):
     """Generate intelligent suggestions based on feedback content"""
