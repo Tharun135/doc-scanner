@@ -1,0 +1,24 @@
+{
+  "This chapter guides you through synchronizing the data model in IIH Essentials by adding assets, associating tags, and ensuring proper data flow from the PLC.|": {
+    "rule": "Long sentence",
+    "sentence": "This chapter guides you through synchronizing the data model in IIH Essentials by adding assets, associating tags, and ensuring proper data flow from the PLC.",
+    "context": "This chapter guides you through synchronizing the data model in IIH Essentials by adding assets, associating tags, and ensuring proper data flow from the PLC.",
+    "feedback": "Long sentence",
+    "solution_text": "**Based on PERSON_001:**\n\n\"In this section, we will guide you on how to sync your data model within IIH Essentials. This involves incorporating new items into it, linking descriptors for easy identification, and guaranteeing that information is correctly transferred from the Programmable Logic Controller (PLC).\"",
+    "proposed_rewrite": "This chapter guides you through synchronizing the data model in IIH Essentials by adding assets, associating tags, and ensuring proper data flow from the PLC.",
+    "sources": [
+      {
+        "rule_id": "PERSON_001",
+        "similarity": -0.499,
+        "preview": "Avoid first-person singular pronouns I, my, me in technical documentation. Use second-person you for"
+      },
+      {
+        "rule_id": "JARGON_001",
+        "similarity": -0.554,
+        "preview": "Avoid corporate jargon or unnecessarily complex words like utilize, leverage, facilitate, synergy, p"
+      }
+    ],
+    "method": "enhanced_rag_chromadb_ollama",
+    "confidence": "high"
+  }
+}
