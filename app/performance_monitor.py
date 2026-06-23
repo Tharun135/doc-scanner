@@ -92,6 +92,7 @@ class PerformanceMonitor:
             cursor = conn.cursor()
             
             cursor.execute('''
+                INSERT INTO suggestion_metrics
                 (suggestion_id, feedback_text, sentence_context, document_type, 
                  suggestion_method, response_time, timestamp, suggested_text,
                  user_rating, user_feedback, was_helpful, was_implemented)

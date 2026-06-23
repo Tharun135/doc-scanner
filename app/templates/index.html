@@ -4290,10 +4290,19 @@
             modal.style.display = 'flex';
             loading.style.display = 'block';
             textDiv.innerHTML = '';
+
+            // Animate the ellipsis dots on the loading subtitle
+            const dotsEl = document.getElementById('loadingDots');
+            let dotCount = 0;
+            const dotsInterval = setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                if (dotsEl) dotsEl.textContent = '.'.repeat(dotCount);
+            }, 450);
             
             try {
                 // Fetch suggestion using getAISuggestion
                 const result = await getAISuggestion(feedback, sentence, 1, item, multipleFeedback);
+                clearInterval(dotsInterval);
                 loading.style.display = 'none';
                 
                 if (!result) {
@@ -4340,7 +4349,7 @@
                 };
                 
                 let modalContent = '';
-                
+
                 if (hasRewrite) {
                     modalContent = `
                         <div class="modal-body-content" style="color: #f8fafc;">
@@ -4362,17 +4371,48 @@
                             
                             <div class="mb-3 mt-4">
                                 <label class="form-label text-success font-weight-bold d-flex justify-content-between align-items-center" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #34d399 !important;">
-                                    <span>💡 Proposed Correction (Direct RAG Answer)</span>
-                                    <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.7rem;">Editable</span>
+                                    <span>✏️ Proposed Correction</span>
+                                    <span class="badge bg-success bg-opacity-25 text-success" style="font-size: 0.7rem;">
+                                        ${(() => {
+                                            const m = result.method || '';
+                                            if (m.includes('ollama')) return '🤖 Local AI';
+                                            if (m.includes('gemini')) return '☁️ Gemini AI';
+                                            if (m.includes('rag')) return '📚 RAG';
+                                            if (m.includes('vector')) return '🔍 Vector Search';
+                                            return '⚡ Rule Engine';
+                                        })()}
+                                        &nbsp;· Editable
+                                    </span>
                                 </label>
-                                <textarea id="editor_${feedbackKey}" class="form-control" rows="3" style="font-size: 0.95rem; background: #0f172a; color: #f8fafc; border: 1px solid #10b981; line-height: 1.5; box-shadow: 0 0 10px rgba(16,185,129,0.1);">${result.suggestion}</textarea>
+                                <textarea id="editor_${feedbackKey}" class="form-control" rows="3" style="font-size: 0.95rem; background: #0f172a; color: #f8fafc; border: 1px solid #10b981; line-height: 1.5; box-shadow: 0 0 10px rgba(16,185,129,0.1);">${
+                                    // Strip any trailing \nWHY: block that may have leaked from the backend
+                                    (() => {
+                                        let s = result.suggestion || '';
+                                        const whyIdx = s.indexOf('\nWHY:');
+                                        if (whyIdx !== -1) s = s.substring(0, whyIdx).trim();
+                                        return s;
+                                    })()
+                                }</textarea>
                             </div>
                             
-                            ${result.ai_answer ? `
-                            <div class="mt-3 p-3 rounded" style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; font-size: 0.9rem; line-height: 1.5; color: #e2e8f0;">
-                                <strong>Explanation:</strong> ${result.ai_answer}
-                            </div>
-                            ` : ''}
+                            ${(() => {
+                                // Merge backend WHY: into ai_answer if present
+                                let explanation = result.ai_answer || '';
+                                const suggestion = result.suggestion || '';
+                                const whyIdx = suggestion.indexOf('\nWHY:');
+                                if (whyIdx !== -1 && !explanation) {
+                                    explanation = suggestion.substring(whyIdx + 5).trim();
+                                }
+                                if (!explanation) return '';
+                                return `
+                                <div class="mt-3 p-3 rounded" style="background: rgba(16, 185, 129, 0.08); border-left: 4px solid #10b981; font-size: 0.9rem; line-height: 1.5; color: #e2e8f0;">
+                                    <div class="d-flex align-items-center mb-1" style="gap:6px;">
+                                        <i class="fas fa-lightbulb text-warning" style="font-size:0.85rem;"></i>
+                                        <strong style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.4px; color:#34d399;">Why this change</strong>
+                                    </div>
+                                    <span style="opacity:0.9;">${explanation}</span>
+                                </div>`;
+                            })()}
                             
                             ${rulesHtml}
                             
@@ -4429,6 +4469,7 @@
                 
             } catch (err) {
                 console.error("Error in openQuickFixModal:", err);
+                clearInterval(dotsInterval);
                 loading.style.display = 'none';
                 textDiv.innerHTML = `
                     <div class="alert alert-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-20">
@@ -5002,10 +5043,53 @@
             <!-- Modal Body Container -->
             <div style="padding:2rem; overflow-y:auto; flex:1;">
                 <!-- Loading State -->
-                <div id="suggestionLoading" style="display:none; text-align:center; padding:3rem 0;">
-                    <div class="spinner-border text-info mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
-                    <h6 class="text-info font-weight-bold">Querying AI Assistant...</h6>
-                    <p class="text-muted small">Retrieving guideline standards and generating rewrite</p>
+                <div id="suggestionLoading" style="display:none; text-align:center; padding:3rem 1rem;">
+                    <!-- Animated spinner ring -->
+                    <div style="position:relative; width:64px; height:64px; margin:0 auto 1.5rem;">
+                        <div style="position:absolute; inset:0; border-radius:50%; border:4px solid rgba(99,102,241,0.15);"></div>
+                        <div style="position:absolute; inset:0; border-radius:50%; border:4px solid transparent; border-top-color:#6366f1; border-right-color:#a855f7; animation:spin 0.9s linear infinite;"></div>
+                        <div style="position:absolute; inset:10px; border-radius:50%; border:3px solid transparent; border-top-color:#06b6d4; animation:spin 1.4s linear infinite reverse;"></div>
+                        <i class="fas fa-wand-magic-sparkles" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#a855f7; font-size:1.1rem;"></i>
+                    </div>
+
+                    <!-- Primary heading -->
+                    <h6 style="font-size:1rem; font-weight:700; color:#c4b5fd; margin-bottom:0.5rem; letter-spacing:0.3px;">
+                        Querying AI Assistant
+                    </h6>
+
+                    <!-- Visible subtitle with animated dots -->
+                    <p style="font-size:0.9rem; color:#e2e8f0; margin-bottom:1.5rem; line-height:1.6; font-weight:500;">
+                        Retrieving guideline standards and generating rewrite<span id="loadingDots" style="display:inline-block; width:24px; text-align:left;"></span>
+                    </p>
+
+                    <!-- Progress steps -->
+                    <div style="display:flex; justify-content:center; gap:1.5rem; margin-top:0.5rem;">
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); display:flex; align-items:center; justify-content:center; animation:pulseFade 1.4s ease-in-out infinite;">
+                                <i class="fas fa-book" style="color:#818cf8; font-size:0.75rem;"></i>
+                            </div>
+                            <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Guidelines</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.4); display:flex; align-items:center; justify-content:center; animation:pulseFade 1.4s ease-in-out 0.3s infinite;">
+                                <i class="fas fa-magnifying-glass" style="color:#c084fc; font-size:0.75rem;"></i>
+                            </div>
+                            <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Matching</span>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+                            <div style="width:32px; height:32px; border-radius:8px; background:rgba(6,182,212,0.2); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; animation:pulseFade 1.4s ease-in-out 0.6s infinite;">
+                                <i class="fas fa-pen-nib" style="color:#22d3ee; font-size:0.75rem;"></i>
+                            </div>
+                            <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Rewriting</span>
+                        </div>
+                    </div>
+                    <style>
+                        @keyframes spin { to { transform: rotate(360deg); } }
+                        @keyframes pulseFade {
+                            0%, 100% { opacity: 0.4; transform: scale(0.95); }
+                            50% { opacity: 1; transform: scale(1.05); }
+                        }
+                    </style>
                 </div>
                 
                 <!-- Dynamic Content Insertion -->

@@ -89,7 +89,7 @@ RESPONSE:"""
                 'temperature': 0,
                 'num_predict': 300
             }
-        }, timeout=20)
+        }, timeout=60)
         
         if response.status_code == 200:
             result_text = response.json().get('response', '').strip()

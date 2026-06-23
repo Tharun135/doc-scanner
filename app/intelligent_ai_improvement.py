@@ -236,90 +236,300 @@ def is_value_added(original: str, suggestion: str, issue_type: str) -> Tuple[boo
 def get_deterministic_fallback(issue_type: str, original_sentence: str) -> Dict[str, str]:
     """
     Deterministic reviewer feedback per issue type.
-    Returns guidance with appropriate tone based on issue classification.
-    
-    Returns dict with:
-        - guidance: The reviewer message
-        - category: One of [objective, readability, compliance, style]
-        - is_rationale: True if explaining restraint vs prescribing action
+    Covers every rule category in rules.json so the generic fallback
+    is a true last resort rather than the default path.
     """
     issue_lower = issue_type.lower()
-    
-    # ============================================================================
-    # CATEGORY 1: OBJECTIVE CORRECTNESS ISSUES
-    # Action-oriented (firm)
-    # ============================================================================
-    
-    if any(word in issue_lower for word in ["ambiguous", "unclear", "missing", "undefined", "incomplete"]):
+
+    # UI Label / Plural (PLURAL_001, UI_001, UI_002)
+    if any(w in issue_lower for w in ["plural", "ui element", "ui label", "button", "menu", "tab", "dialog", "icon", "field"]):
         return {
-            "guidance": "This sentence is unclear or incomplete and may confuse readers.\n\nClarify the missing or ambiguous information so the requirement can be understood without inference.",
+            "guidance": (
+                "This sentence references a UI element by its generic plural name instead of its exact label.\n\n"
+                "Use the singular, exact label as it appears in the interface:\n"
+                "Instead of \'Modify the required fields\', write \'Enter a value in the <FieldName> field\' "
+                "or name each field explicitly."
+            ),
             "category": "objective",
             "is_rationale": False
         }
-    
-    # ============================================================================
-    # CATEGORY 2: READABILITY ISSUES (mechanical, low risk)
-    # Structural advice
-    # ============================================================================
-    
-    if "long" in issue_lower or "sentence" in issue_lower:
+
+    if any(w in issue_lower for w in ["click on", "article", "the button"]):
         return {
-            "guidance": "This sentence is difficult to read due to length and structure.\n\nConsider splitting it into shorter sentences, each expressing one idea.\n\nOptional: One sentence for the main action, one for the result or explanation.",
-            "category": "readability",
+            "guidance": (
+                "UI action verbs must be followed directly by the element label with no articles or \'button\'.\n\n"
+                "Correct:   Click Save\n"
+                "Incorrect: Click on the Save button"
+            ),
+            "category": "objective",
             "is_rationale": False
         }
-    
+
+    if any(w in issue_lower for w in ["consistency", "consistent"]):
+        return {
+            "guidance": (
+                "The procedure mixes UI action verbs inconsistently.\n\n"
+                "Choose one verb and use it throughout:\n"
+                "  - Use \'Click\' for mouse interaction\n"
+                "  - Use \'Select\' for choosing from a list or option group"
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
+    # Voice / Imperative (IMPERATIVE_001, PERSON_001)
+    if any(w in issue_lower for w in ["imperative", "procedural step", "action verb", "start with"]):
+        return {
+            "guidance": (
+                "Procedural steps must begin with an imperative verb.\n\n"
+                "Drop the introductory clause and start with the action:\n"
+                "Incorrect: To save the file, click Save\n"
+                "Correct:   Click Save"
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
+    if any(w in issue_lower for w in ["first-person", "first person", "singular pronoun"]):
+        return {
+            "guidance": (
+                "Technical documentation should not use first-person singular (I, my, me).\n\n"
+                "  - Use \'you\' to address the reader\n"
+                "  - Use \'the system\' or \'the application\' for software actions"
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
     if "passive" in issue_lower:
         return {
-            "guidance": "This sentence uses passive voice, which can make the actor unclear.\n\nConsider converting to active voice by identifying who performs the action and making them the subject.",
+            "guidance": (
+                "Passive voice hides who performs the action.\n\n"
+                "Identify the actor and make it the subject:\n"
+                "Incorrect: The file is saved by the system\n"
+                "Correct:   The system saves the file\n\n"
+                "For user instructions use imperative: \'Save the file.\'"
+            ),
             "category": "readability",
             "is_rationale": False
         }
-    
-    # ============================================================================
-    # CATEGORY 3: COMPLIANCE / CONDITIONAL COMPLEXITY
-    # Decision transparency
-    # ============================================================================
-    
-    if any(word in issue_lower for word in ["compliance", "normative", "conditional", "requirement", "obligation"]):
+
+    # Tense (TENSE_001, TENSE_002)
+    if any(w in issue_lower for w in ["future tense", "shall", "going to"]):
         return {
-            "guidance": "This sentence contains conditional or compliance-related logic.\n\nAutomatic rewriting is not suggested because changing the structure could alter the meaning.",
+            "guidance": (
+                "Avoid \'shall\' and \'going to\' in procedures.\n\n"
+                "Use simple present for system actions:\n"
+                "Incorrect: The system shall start automatically\n"
+                "Correct:   The system starts automatically"
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
+    if any(w in issue_lower for w in ["modal verb", "modal verbs", "weaken procedural"]):
+        return {
+            "guidance": (
+                "Modal verbs (may, could, might, should, would) weaken procedural instructions.\n\n"
+                "  - For user abilities: use \'can\'\n"
+                "  - For required steps: use simple present or imperative\n\n"
+                "Incorrect: You may click Save\n"
+                "Correct:   Click Save"
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    # Phrasal verbs (PVERB_001)
+    if any(w in issue_lower for w in ["phrasal", "hinder translation"]):
+        return {
+            "guidance": (
+                "Phrasal verbs are difficult to translate. Replace with a single verb:\n\n"
+                "  set up    -> configure\n"
+                "  shut down -> stop / power off\n"
+                "  turn on   -> enable / start\n"
+                "  log in    -> sign in / authenticate\n"
+                "  back up   -> save / archive"
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
+    # Contractions (CONTRACTION_001)
+    if any(w in issue_lower for w in ["contraction", "full form"]):
+        return {
+            "guidance": (
+                "Contractions are informal and should not appear in technical documentation.\n\n"
+                "Expand to full form:\n"
+                "  don\'t     -> do not\n"
+                "  doesn\'t   -> does not\n"
+                "  won\'t     -> will not\n"
+                "  can\'t     -> cannot\n"
+                "  shouldn\'t -> should not"
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
+    # Jargon / Vague (JARGON_001, VAGUE_001, TRANS_002)
+    if any(w in issue_lower for w in ["jargon", "corporate", "complex word", "unnecessarily"]):
+        return {
+            "guidance": (
+                "This word is corporate jargon. Replace with a plain alternative:\n\n"
+                "  utilize    -> use\n"
+                "  leverage   -> use / apply\n"
+                "  facilitate -> enable / help\n"
+                "  implement  -> apply / set up\n"
+                "  optimize   -> improve / tune"
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    if any(w in issue_lower for w in ["vague term", "imprecise", "reduce precision"]):
+        return {
+            "guidance": (
+                "This term is too vague. Replace with a specific noun or explicit list:\n\n"
+                "Incorrect: Configure the settings and stuff\n"
+                "Correct:   Configure the network, display, and security settings"
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    if "ambiguous quantity" in issue_lower or "specify amount" in issue_lower:
+        return {
+            "guidance": (
+                "Replace \'various\', \'multiple\', \'different\' with a specific count or list:\n\n"
+                "Incorrect: The device supports multiple modes\n"
+                "Correct:   The device supports three modes: Auto, Manual, and Standby"
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    # Adverb (ADV_001)
+    if "adverb" in issue_lower:
+        return {
+            "guidance": (
+                "Weak adverbs (simply, easily, quickly, basically, very, just) reduce precision.\n\n"
+                "Remove the adverb entirely:\n"
+                "Incorrect: Simply click the button\n"
+                "Correct:   Click the button"
+            ),
+            "category": "style",
+            "is_rationale": True
+        }
+
+    # Procedure / Structure (ACTION_001, LIST_001, CONDITIONAL_001)
+    if any(w in issue_lower for w in ["multiple action", "multiple step", "one action"]):
+        return {
+            "guidance": (
+                "Each step must contain exactly one action.\n\n"
+                "Split into separate numbered steps:\n"
+                "Incorrect: Click Save. Then close the dialog.\n"
+                "Correct:\n"
+                "  1. Click Save.\n"
+                "  2. Close the dialog."
+            ),
+            "category": "objective",
+            "is_rationale": False
+        }
+
+    if "conditional" in issue_lower:
+        return {
+            "guidance": (
+                "Conditional statements are clearer when separated from their action.\n\n"
+                "Incorrect: If an error occurs, click Retry\n"
+                "Correct:\n"
+                "  When an error occurs:\n"
+                "  1. Click Retry."
+            ),
             "category": "compliance",
             "is_rationale": True
         }
-    
-    # ============================================================================
-    # CATEGORY 4: STYLE / SUBJECTIVE PREFERENCE ISSUES  
-    # Reviewer rationale (non-actionable)
-    # ============================================================================
-    
-    if "adverb" in issue_lower:
+
+    # Safety (SAFETY_001, SAFETY_002)
+    if any(w in issue_lower for w in ["safety", "warning", "danger", "caution", "notice", "symbol", "alert"]):
         return {
-            "guidance": "This wording is stylistic rather than incorrect.\n\nThe current phrasing may be intentional, and replacing it requires a subjective choice. There is no single correct alternative, so no automatic rewrite is suggested.\n\nIf you want to tighten the sentence, consider whether the modifier adds meaningful information.",
-            "category": "style",
-            "is_rationale": True
+            "guidance": (
+                "Safety notices follow strict formatting:\n\n"
+                "  - DANGER / WARNING / CAUTION -> must include a safety alert symbol\n"
+                "  - NOTICE -> must NOT include symbols (property damage only)\n\n"
+                "Check both the signal word and presence/absence of the symbol."
+            ),
+            "category": "compliance",
+            "is_rationale": False
         }
-    
-    if any(word in issue_lower for word in ["tone", "voice", "style", "hedging", "weak"]):
+
+    # Inclusivity (GENDER_001)
+    if any(w in issue_lower for w in ["gender", "inclusive", "non-inclusive", "mankind"]):
         return {
-            "guidance": "This wording is stylistic rather than incorrect.\n\nThe current phrasing may be intentional, and replacing it requires a subjective choice. There is no single correct alternative, so no automatic rewrite is suggested.",
-            "category": "style",
-            "is_rationale": True
+            "guidance": (
+                "Use gender-neutral alternatives:\n\n"
+                "  he/she    -> they / the user\n"
+                "  his/her   -> their\n"
+                "  mankind   -> people / humanity\n"
+                "  man-hours -> work-hours / person-hours"
+            ),
+            "category": "objective",
+            "is_rationale": False
         }
-    
-    if "vague" in issue_lower:
+
+    # Translation / Localisation (TRANS_001)
+    if any(w in issue_lower for w in ["idiom", "locali", "translation", "localization"]):
         return {
-            "guidance": "This term is general rather than specific.\n\nConsider whether more precise language would improve clarity for your audience.",
+            "guidance": (
+                "Idioms are culture-specific and do not translate reliably.\n\n"
+                "Rewrite with literal language:\n"
+                "Incorrect: At the end of the day, the device restarts\n"
+                "Correct:   After processing completes, the device restarts"
+            ),
             "category": "readability",
             "is_rationale": False
         }
-    
-    # ============================================================================
-    # GENERIC FALLBACK
-    # ============================================================================
-    
+
+    # Punctuation (OXFORD_001)
+    if any(w in issue_lower for w in ["oxford", "comma", "series"]):
+        return {
+            "guidance": (
+                "Add a comma before the final conjunction in a list of three or more items:\n\n"
+                "Incorrect: Save, compile and deploy the file\n"
+                "Correct:   Save, compile, and deploy the file"
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    # Table (TABLE_002)
+    if any(w in issue_lower for w in ["table", "merged cell", "colspan", "rowspan"]):
+        return {
+            "guidance": (
+                "Merged table cells cause problems in export and translation.\n\n"
+                "Flatten the table so every cell is independent."
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    # Long sentence
+    if any(w in issue_lower for w in ["long", "length", "shorter"]):
+        return {
+            "guidance": (
+                "This sentence is too long to scan quickly.\n\n"
+                "Split it so each sentence expresses one idea. "
+                "Aim for under 20 words per sentence in procedural content."
+            ),
+            "category": "readability",
+            "is_rationale": False
+        }
+
+    # ── GENERIC FALLBACK (true last resort) ──────────────────────────────────────
     return {
-        "guidance": "This sentence could be improved for clarity and directness.\n\nConsider simplifying complex phrasing or breaking it into shorter statements.",
+        "guidance": (
+            "This sentence could be improved for clarity and directness.\n\n"
+            "Consider simplifying complex phrasing or breaking it into shorter statements."
+        ),
         "category": "readability",
         "is_rationale": False
     }
@@ -413,9 +623,9 @@ def should_attempt_rewrite(issue_type: str, sentence: str) -> tuple[bool, str]:
             logger.warning("simple_present_normalization module not available")
             return False, "module_not_available"
     
-    # Passive voice eligibility
+    # Passive voice eligibility - Delegate to RAG context
     if 'passive' in issue_lower:
-        return can_safely_rewrite_passive(sentence)
+        return True, "Delegating passive voice rewrite to intelligent RAG context"
     
     # Long sentence - use sophisticated eligibility checker
     if 'long' in issue_lower or 'sentence' in issue_lower:
@@ -765,7 +975,7 @@ class IntelligentAISuggestionEngine:
                         "max_tokens": 150
                     }
                 },
-                timeout=5.0
+                timeout=30.0
             )
             
             if response.status_code == 200:
@@ -857,7 +1067,7 @@ class IntelligentAISuggestionEngine:
                         "max_tokens": 150
                     }
                 },
-                timeout=5.0  # Fast timeout - Ollama health was confirmed at startup
+                timeout=30.0  # Increased timeout to allow LLM to generate complex responses
             )
             
             logger.info(f"📨 Ollama response status: {response.status_code}")

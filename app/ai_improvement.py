@@ -190,21 +190,37 @@ class AISuggestionEngine:
             feedback_text = "general improvement needed"
         if sentence_context is None:
             sentence_context = ""
+
+        suggestion = ""
+        ai_answer = ""
+
         if sentence_context.strip():
-            suggestion = self._generate_sentence_rewrite(feedback_text, sentence_context, option_number)
-            # Validate the suggestion to prevent malformed outputs
-            if '\nWHY:' in suggestion:
-                main_suggestion = suggestion.split('\nWHY:')[0].strip()
-                main_suggestion = validate_suggestion(sentence_context, main_suggestion)
-                explanation = suggestion.split('\nWHY:')[1].strip() if '\nWHY:' in suggestion else ""
-                suggestion = f"{main_suggestion}\nWHY: {explanation}" if explanation else main_suggestion
+            raw = self._generate_sentence_rewrite(feedback_text, sentence_context, option_number)
+            # Always split WHY: so the textarea gets a clean sentence
+            # and the explanation block gets the rationale
+            if '\nWHY:' in raw:
+                parts = raw.split('\nWHY:', 1)
+                clean_suggestion = parts[0].strip()
+                why_text = parts[1].strip()
+            else:
+                clean_suggestion = raw.strip()
+                why_text = ""
+
+            # Validate the cleaned suggestion
+            clean_suggestion = validate_suggestion(sentence_context, clean_suggestion)
+            suggestion = clean_suggestion
+            ai_answer = why_text if why_text else f"Review the text and address: {feedback_text}"
         else:
-            suggestion = f"Writing issue detected: {feedback_text}. Please review and improve this text for clarity, grammar, and style."
+            suggestion = sentence_context
+            ai_answer = f"Writing issue detected: {feedback_text}. Please review and improve this text for clarity, grammar, and style."
+
         if not suggestion or not str(suggestion).strip():
-            suggestion = f"Review and improve this text to address: {feedback_text}"
+            suggestion = sentence_context
+            ai_answer = f"Review and improve this text to address: {feedback_text}"
+
         return {
             "suggestion": suggestion,
-            "ai_answer": f"Review the text and address: {feedback_text}",
+            "ai_answer": ai_answer,
             "confidence": "medium",
             "method": "smart_fallback",
             "note": "Using smart fallback - AI unavailable",
@@ -325,24 +341,83 @@ class AISuggestionEngine:
                 out = _cleanup("Click the control to proceed")
             return f"{out}\nWHY: Removes modal/fluff to make instructions direct."
 
+        # 5) Ambiguous quantity (TRANS_002) — replace vague quantity words with [N] placeholder
+        quantity_issue = re.search(
+            r"(?i)ambiguous quantity|specify amount|specify context|\bvarious\b|\bmultiple\b",
+            feedback_text
+        ) or re.search(r"(?i)\b(various|multiple|several)\b", text)
+        # Only fire if the sentence actually contains a vague quantity word
+        quantity_match = re.search(r"(?i)\b(various|multiple|different|several)\b", text)
+        if quantity_issue and quantity_match:
+            # Replace the vague quantity with an [N] placeholder showing the user where to fill in
+            vague_word = quantity_match.group(0)
+            out = _cleanup(re.sub(r"(?i)\b" + re.escape(vague_word) + r"\b", "[N]", text, count=1))
+            if _differs(text, out):
+                why = (
+                    f"Replaced the vague quantity word '{vague_word}' with [N] as a placeholder. "
+                    "Insert the specific count or list the items explicitly (e.g., 'three configurations', "
+                    "'two modes: Auto and Manual')."
+                )
+                return f"{out}\nWHY: {why}"
+
         # --- Generic rewriter (last resort) ---
+        # This section applies broad stylistic improvements before giving up.
         s = text
 
-        # Make instruction style, if looks like UI guidance
-        s = re.sub(r"(?i)^you can\b", "", s).strip()
+        # R1: Remove leading filler openers
+        s = re.sub(r"(?i)^(please note that|note that|please be aware that|kindly note that)\s+", "", s).strip()
+        s = re.sub(r"(?i)^(it should be noted that|it is important to note that)\s+", "", s).strip()
+
+        # R2: "You can" → imperative
+        s = re.sub(r"(?i)^you\s+can\b", "", s).strip()
+        s = re.sub(r"(?i)^the user can\b", "", s).strip()
+        if s and s[0].islower():
+            s = s[0].upper() + s[1:]
+
+        # R3: Click-on hygiene
         s = re.sub(r"(?i)\bclick on\b", "click", s)
+
+        # R4: Jargon replacement
+        jargon_map = [
+            (r"(?i)\butilize\b", "use"),
+            (r"(?i)\bleverage\b", "use"),
+            (r"(?i)\bfacilitate\b", "enable"),
+            (r"(?i)\bimplement\b", "apply"),
+            (r"(?i)\bin order to\b", "to"),
+            (r"(?i)\bprior to\b", "before"),
+            (r"(?i)\bsubsequent to\b", "after"),
+            (r"(?i)\bwith respect to\b", "for"),
+            (r"(?i)\bdue to the fact that\b", "because"),
+            (r"(?i)\bat this point in time\b", "now"),
+            (r"(?i)\bat the present time\b", "currently"),
+        ]
+        for pattern, replacement in jargon_map:
+            s = re.sub(pattern, replacement, s)
+
+        # R5: "through the X page/dialog" → "on the X page/dialog"
         s = re.sub(r"(?i)\bthrough\s+(the\s+)?(.*?)(page|dialog|window)\b", r"on the \2\3", s)
 
-        # If still unchanged, produce a strong imperative alternative
-        out = _cleanup(s)
-        if not _differs(text, out):
-            # force a change: prefer imperative, short
-            if re.match(r"(?i)assign\b", text):
-                out = _cleanup("Provide a unique name. Add a description if required")
-            else:
-                out = _cleanup("Revise this sentence for clarity and directness (use active voice)")
+        # R6: Weak sentence-end phrases
+        s = re.sub(r"(?i),?\s*etc\.?\.?", ".", s)
+        s = re.sub(r"(?i)\band so on\.?", ".", s)
 
-        return f"{out}\nWHY: Applies concise, active, instruction-first phrasing."
+        out = _cleanup(s)
+
+        # R7: If nothing changed, attempt imperative transformation
+        if not _differs(text, out):
+            # Try dropping leading "The user should" / "Users should"
+            imp = re.sub(r"(?i)^(the user|users)\s+should\b", "", text).strip()
+            if imp and imp[0].islower():
+                imp = imp[0].upper() + imp[1:]
+            out = _cleanup(imp) if imp and _differs(text, _cleanup(imp)) else out
+
+        # R8: If still nothing changed, return the original sentence unchanged.
+        # Do NOT blindly prepend words — that changes meaning without fixing the issue.
+        # The UI will detect suggestion == original and show the guidance-only panel instead.
+
+        why = ("Removes filler words, replaces jargon, and converts to imperative style "
+               "for clearer, more direct technical writing.")
+        return f"{out}\nWHY: {why}"
 
     def _fix_passive_voice(self, sentence: str) -> str:
         s = sentence or ""
@@ -1081,7 +1156,7 @@ def validate_suggestion(original: str, suggestion: str) -> str:
     
     # Check for malformed punctuation patterns
     malformed_patterns = [
-        r'\w+\.\s+\w+',  # word. word (period inside sentence incorrectly)
+        r'\w+\.\s+[a-z]+',  # word. word (period inside sentence followed by lowercase)
         r'\s+\.\s+',      # space.space
         r'\w+\s+\.\s+\w+\s+\.',  # multiple incorrect periods
     ]

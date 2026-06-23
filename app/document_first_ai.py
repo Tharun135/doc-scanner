@@ -334,7 +334,7 @@ EXPLANATION: [Brief reason referencing documentation context]
                         "max_tokens": 400
                     }
                 },
-                timeout=5.0
+                timeout=30.0
             )
             
             if response.status_code == 200:
@@ -1167,7 +1167,7 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                         "max_tokens": 200
                     }
                 },
-                timeout=5.0
+                timeout=30.0
             )
             
             if response.status_code == 200:
@@ -1460,7 +1460,7 @@ Provide ONLY the improved sentences (no explanations, no labels, just the rewrit
                         "num_predict": 500
                     }
                 },
-                timeout=5
+                timeout=30
             )
             
             if response.status_code == 200:
