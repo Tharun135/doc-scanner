@@ -12,11 +12,15 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy only requirements first for better caching
 COPY deployment/requirements.txt ./requirements.txt
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Download spaCy model
 RUN python -m spacy download en_core_web_sm
@@ -32,8 +36,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
 
 # Copy application code
 COPY app/ ./app/
@@ -44,8 +48,8 @@ COPY wsgi.py ./
 # Create necessary directories (don't copy data/ as it will be mounted)
 RUN mkdir -p chroma_db data/uploads data/databases data/rag_knowledge logs
 
-# Make sure scripts are executable
-ENV PATH=/root/.local/bin:$PATH
+# Make sure scripts are executable via the venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
