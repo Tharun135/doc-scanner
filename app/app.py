@@ -433,6 +433,14 @@ def parse_txt(content_bytes):
 def load_rules():
     rules = []
     rules_folder = os.path.join(os.path.dirname(__file__), 'rules')
+    
+    # Files that are utilities or helpers and don't need a check function
+    ignore_files = {
+        'analytics.py', 'batch_processor.py', 'rag_rule_helper.py',
+        'title_utils.py', 'rule_remediations.py', 'verb_tense.py',
+        'anaphora_resolution.py', 'matcher.py', 'nominalizations.py'
+    }
+    
     for filename in os.listdir(rules_folder):
         if filename.endswith('.py') and filename != '__init__.py':
             module_name = filename[:-3]  # Remove .py extension
@@ -443,7 +451,7 @@ def load_rules():
                 if hasattr(module, "check"):
                     rules.append(module.check)
                     logger.info(f"Loaded rule: {filename} (Function: {module.check.__name__})")
-                else:
+                elif filename not in ignore_files:
                     logger.warning(f"Warning: {filename} does not have a `check` function")
             except ImportError as e:
                 logger.error(f"Failed to import rule {filename}: {e}")
