@@ -2828,6 +2828,25 @@ def get_enhanced_ai_suggestion(
             
             if not suggestion:
                 logger.warning("❌ VALIDATION FAILED: Empty suggestion in result")
+                
+                # 🚀 NEW: Try smart rule-based fallback before giving up
+                logger.info("   Attempting rescue with smart rule-based fallback...")
+                smart_fallback_result = intelligent_ai_engine._generate_intelligent_fallback(
+                    feedback_text, sentence_context, document_type, option_number, adjacent_context
+                )
+                
+                # Check if the smart fallback actually generated a meaningful difference
+                if smart_fallback_result and smart_fallback_result.get('suggestion'):
+                    fb_is_valid, fb_reason = is_value_added(sentence_context, smart_fallback_result['suggestion'], feedback_text)
+                    if fb_is_valid:
+                        logger.info(f"✅ RESCUE SUCCESS: Smart fallback generated valid suggestion ({fb_reason})")
+                        
+                        # Preserve rule context if it exists
+                        if rule_context:
+                            smart_fallback_result.update(rule_context)
+                            
+                        return smart_fallback_result
+
                 # Use deterministic fallback instead
                 fallback = get_deterministic_fallback(feedback_text, sentence_context)
                 return {
@@ -2852,6 +2871,26 @@ def get_enhanced_ai_suggestion(
                 logger.warning(f"❌ VALIDATION FAILED: {reason}")
                 logger.info(f"   Original: '{sentence_context[:100]}'")
                 logger.info(f"   Suggested: '{suggestion[:100]}'")
+                
+                # 🚀 NEW: Try smart rule-based fallback before giving up
+                logger.info("   Attempting rescue with smart rule-based fallback...")
+                smart_fallback_result = intelligent_ai_engine._generate_intelligent_fallback(
+                    feedback_text, sentence_context, document_type, option_number, adjacent_context
+                )
+                
+                # Check if the smart fallback actually generated a meaningful difference
+                if smart_fallback_result and smart_fallback_result.get('suggestion'):
+                    fb_is_valid, fb_reason = is_value_added(sentence_context, smart_fallback_result['suggestion'], feedback_text)
+                    if fb_is_valid:
+                        logger.info(f"✅ RESCUE SUCCESS: Smart fallback generated valid suggestion ({fb_reason})")
+                        
+                        # Preserve rule context if it exists
+                        if rule_context:
+                            smart_fallback_result.update(rule_context)
+                            
+                        return smart_fallback_result
+                
+                logger.info("   Rescue failed. Using deterministic guidance fallback.")
                 
                 # Use deterministic fallback instead of showing invalid AI output
                 fallback = get_deterministic_fallback(feedback_text, sentence_context)

@@ -144,6 +144,16 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
         # Determine issue type - STRATEGY: Prefer Metadata > Keyword Match > Default
         issue_type = "General"
         
+        # 0. Check Rule Authority to prevent overriding intentional no_change rules
+        if rule_metadata and isinstance(rule_metadata, dict):
+            decision_type = rule_metadata.get('decision_type')
+            if decision_type in ['no_change', 'guide', 'explain']:
+                logger.info(f"🛑 Hybrid AI skipping rewrite due to rule authority decision: {decision_type}")
+                return {
+                    'success': False,
+                    'error': f'Rule authority requested {decision_type}',
+                    'fallback_available': True
+                }
         # 1. Use metadata from the rule engine if available (Universal mapping)
         if rule_metadata and isinstance(rule_metadata, dict):
             category = rule_metadata.get('category', '').lower()
@@ -270,6 +280,38 @@ def enhance_ai_suggestion_with_hybrid_intelligence(
                     cleaned = _sanitize_suggestion(raw_suggestion, sentence_context)
             except Exception:
                 cleaned = _sanitize_suggestion(raw_suggestion, sentence_context)
+
+            # 🛡️ VALIDATION: Ensure the suggestion actually improves the sentence
+            try:
+                # 1. Structural value validation
+                from .intelligent_ai_improvement import is_value_added
+                is_valid, reason = is_value_added(sentence_context, cleaned, feedback_text)
+                
+                if not is_valid:
+                    logger.warning(f"❌ Hybrid AI validation failed: {reason}")
+                    return {
+                        'success': False,
+                        'error': f'Hybrid intelligence validation failed: {reason}',
+                        'fallback_available': True
+                    }
+                    
+                # 2. Strict tense validation if the issue is tense-related
+                if 'tense' in feedback_text.lower() or 'non_simple_present' in feedback_text.lower():
+                    try:
+                        from .rules.simple_present_normalization import validate_simple_present_rewrite
+                        valid_tense, tense_reason = validate_simple_present_rewrite(sentence_context, cleaned)
+                        if not valid_tense:
+                            logger.warning(f"❌ Hybrid AI tense validation failed: {tense_reason}")
+                            return {
+                                'success': False,
+                                'error': f'Tense validation failed: {tense_reason}',
+                                'fallback_available': True
+                            }
+                    except ImportError:
+                        pass
+                        
+            except Exception as val_e:
+                logger.warning(f"Validation check failed, continuing anyway: {val_e}")
 
             return {
                 'success': True,

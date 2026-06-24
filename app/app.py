@@ -558,6 +558,11 @@ def analyze_sentence(sentence, rules, previous_sentence=None, next_sentence=None
                     if "full_suggestion" in item:
                         feedback_item["full_suggestion"] = item["full_suggestion"]
                     
+                    # Preserve Rule Authority keys
+                    for key in ["decision_type", "reviewer_rationale", "rule", "ai_suggestion"]:
+                        if key in item:
+                            feedback_item[key] = item[key]
+                    
                     feedback.append(feedback_item)
                 else:
                     # Handle other formats by converting to string

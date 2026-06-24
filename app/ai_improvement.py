@@ -129,7 +129,7 @@ class AISuggestionEngine:
         # ✅ If caller passed an issue, enrich it first
         if issue:
             try:
-                from app.services.enrichment import enrich_issue_with_solution, _force_change
+                from app.services.enrichment import enrich_issue_with_solution
 
                 enriched  = enrich_issue_with_solution(issue)
 
@@ -143,7 +143,7 @@ class AISuggestionEngine:
                 if pr_raw and pr_raw != original:
                     pr = pr_raw
                 elif pr_raw:  # pr_raw exists but equals original
-                    pr = _force_change(original, pr_raw)
+                    pr = self._generate_sentence_rewrite(feedback_text, original, option_number)
                 else:
                     # Generate a meaningful fallback using the feedback
                     pr = self._generate_sentence_rewrite(feedback_text, original, option_number)
