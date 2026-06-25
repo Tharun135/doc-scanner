@@ -4455,11 +4455,16 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="mb-3 mt-4">
+                                <label for="manualFixInput_${sentenceIndex}" class="form-label text-muted font-weight-bold" style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8 !important;">Suggest your own fix</label>
+                                <textarea id="manualFixInput_${sentenceIndex}" class="form-control text-white" style="background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 6px; resize: vertical;" rows="2" placeholder="Type your corrected sentence here..."></textarea>
+                            </div>
                             
                             ${rulesHtml}
                             
-                            <div class="mt-4 pt-3 d-flex justify-content-end" style="border-top: 1px solid rgba(255,255,255,0.15);">
+                            <div class="mt-4 pt-3 d-flex justify-content-end gap-2" style="border-top: 1px solid rgba(255,255,255,0.15);">
                                 <button type="button" class="btn btn-sm btn-outline-secondary text-white px-4" style="border-color: rgba(255,255,255,0.2);" onclick="document.getElementById('suggestionModal').style.display='none'">Close</button>
+                                <button type="button" class="btn btn-sm px-4" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);" onclick="applyManualFix('${sentenceIndex}', '${feedbackKey}')">Apply & Teach AI</button>
                             </div>
                         </div>
                     `;
@@ -4477,6 +4482,27 @@
                     </div>
                 `;
             }
+        }
+
+        async function applyManualFix(sentenceIndex, feedbackKey) {
+            const inputEl = document.getElementById(`manualFixInput_${sentenceIndex}`);
+            if (!inputEl) return;
+            
+            const manualSentence = inputEl.value.trim();
+            if (!manualSentence) {
+                alert("Please enter a corrected sentence before applying.");
+                return;
+            }
+            
+            const data = aiFeedbackData[feedbackKey];
+            if (!data) return;
+            
+            // Set the manual fix as the suggestion so applyAndTeachAI can pick it up
+            if (!data.aiSuggestion) data.aiSuggestion = {};
+            data.aiSuggestion.suggestion = manualSentence;
+            
+            // Call the existing applyQuickFix
+            await applyQuickFix(sentenceIndex, feedbackKey);
         }
 
         async function applyQuickFix(sentenceIndex, feedbackKey) {

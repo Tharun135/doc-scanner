@@ -564,7 +564,8 @@ def can_safely_rewrite_passive(sentence: str, doc = None) -> tuple[bool, str]:
     requirement_patterns = ['must be', 'shall be', 'should be', 'will be', 'requirement']
     if any(pattern in sentence_lower for pattern in requirement_patterns):
         # Exception: if we can clearly identify "you" as the subject, allow it
-        if 'you' not in sentence_lower:
+        # Also allow if the system/agent is explicitly identified
+        if 'you' not in sentence_lower and 'the system' not in sentence_lower and 'by' not in sentence_lower:
             return False, "Requirement context - agent unclear"
     
     # Case 3: Check if agent can be inferred
@@ -623,8 +624,11 @@ def should_attempt_rewrite(issue_type: str, sentence: str) -> tuple[bool, str]:
             logger.warning("simple_present_normalization module not available")
             return False, "module_not_available"
     
-    # Passive voice eligibility - Delegate to RAG context
+    # Passive voice eligibility - Check if safe to rewrite
     if 'passive' in issue_lower:
+        allowed, reason = can_safely_rewrite_passive(sentence)
+        if not allowed:
+            return False, reason
         return True, "Delegating passive voice rewrite to intelligent RAG context"
     
     # Long sentence - use sophisticated eligibility checker
@@ -1262,7 +1266,29 @@ class IntelligentAISuggestionEngine:
                 return sentence
         
         # For other modal + be constructions
-        if "can" in sentence.lower() and "be" in sentence.lower():
+        if "must be" in sentence.lower():
+            import re
+            # e.g., "must be repeated" -> "you must repeat"
+            match = re.search(r'\bmust\s+be\s+([a-z]+ed)\b', sentence, re.IGNORECASE)
+            if match:
+                verb_ed = match.group(1).lower()
+                if verb_ed.endswith('ed'):
+                    verb_stem = verb_ed[:-2]
+                    if verb_ed == 'repeated':
+                        active_verb = 'repeat'
+                    elif verb_ed == 'submitted':
+                        active_verb = 'submit'
+                    elif verb_ed == 'configured':
+                        active_verb = 'configure'
+                    elif verb_ed == 'used':
+                        active_verb = 'use'
+                    else:
+                        active_verb = verb_stem if len(verb_stem) > 0 else verb_ed
+                    
+                    sentence = re.sub(r'\bmust\s+be\s+' + verb_ed + r'\b', f"you must {active_verb}", sentence, flags=re.IGNORECASE)
+                    logger.info(f"✅ 'must be' replacement applied: {sentence}")
+                    return sentence
+        elif "can" in sentence.lower() and "be" in sentence.lower():
             # Replace modal + be constructions
             sentence = re.sub(r'\bcan\s+be\s+', 'enables ', sentence, flags=re.IGNORECASE)
             logger.info(f"✅ Modal replacement applied: {sentence}")
