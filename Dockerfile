@@ -73,5 +73,5 @@ USER appuser
 # Pre-download ChromaDB ONNX model to prevent memory spikes and delays at runtime
 RUN python -c "import chromadb.utils.embedding_functions as ef; ef.DefaultEmbeddingFunction()(['test'])"
 
-# Command to run the app with gunicorn for production
-CMD ["python", "wsgi.py"]
+# Command to run the app directly to avoid gunicorn master process overhead
+CMD ["python", "run.py"]

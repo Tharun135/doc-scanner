@@ -41,7 +41,7 @@ logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug 
 logger = logging.getLogger(__name__)
 
 # Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-if SPACY_IMPORT_SUCCESS:
+if SPACY_IMPORT_SUCCESS and os.environ.get('FLASK_ENV') != 'production':
     try:
         # Try to load with reduced memory footprint
         nlp = spacy.load("en_core_web_sm", disable=["ner", "textcat"])
