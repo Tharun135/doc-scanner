@@ -814,19 +814,9 @@ def upload_file():
         global current_sentences_list
         current_sentences_list = sentences
 
-        # 🧠 RAG INGESTION: Add document to knowledge base for better context (ASYNCHRONOUS)
-        try:
-            from .services.enrichment import ingest_document_to_rag
-            import threading
-            # Run ingestion in a background thread to avoid blocking the user
-            threading.Thread(
-                target=ingest_document_to_rag, 
-                args=(plain_text, file.filename),
-                daemon=True
-            ).start()
-            logger.info(f"🚀 Document ingestion started in background: {file.filename}")
-        except Exception as rag_e:
-            logger.warning(f"⚠️ RAG background ingestion failed to start: {rag_e}")
+        # 🧠 RAG INGESTION: Removed to save memory. 
+        # User documents do not need to be added to the rules knowledge base.
+        logger.info(f"🚀 Document processing started: {file.filename}")
 
         # Stage 4: Analyzing with Rules (80%)
         # CONDITIONAL ANALYSIS - Only analyze sentences that need it
