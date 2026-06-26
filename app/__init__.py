@@ -99,17 +99,7 @@ def create_app():
         from .rag_routes import rag, init_rag_system
         app.register_blueprint(rag)
         print("[OK] RAG system registered - will initialize on first use!")
-        try:
-            import sys
-            sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'tools'))
-            from rag_performance_optimizer import preload_rag_dashboard_data
-            preload_rag_dashboard_data()
-            print("[START] RAG dashboard preloading started in background...")
-        except ImportError:
-            print("Note: RAG performance optimization not available (optional feature)")
-        except Exception as opt_e:
-            print(f"Note: RAG performance optimization not available: {opt_e}")
+        # Background RAG preload thread removed to prevent ONNX OOM crash
     except Exception as e:
         print(f"Warning: Could not import full RAG system: {e}")
         print("[WARN] Loading minimal RAG system...")
