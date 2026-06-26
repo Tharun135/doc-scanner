@@ -492,27 +492,18 @@ def retrieve_for_writing_feedback(query: str, retriever: AdvancedRetriever,
     Specialized retrieval function for writing feedback.
     Prioritizes style guides and writing rules.
     """
-    # First, try to get style-specific results
-    style_results = retriever.search_by_source_type(query, "style_guide", n_results=3)
+    # First, try to get style-specific results (only the absolute best match)
+    style_results = retriever.search_by_source_type(query, "style_guide", n_results=1)
     
-    # Then get general results
-    general_results = retriever.retrieve_contextual(query, document_context, n_results=5)
-    
-    # Combine and deduplicate
-    seen_content = set()
     combined_results = []
+    seen_content = set()
     
-    # Prioritize style guide results
+    # Prioritize style guide results (ensure they are actually relevant)
     for result in style_results:
-        if result.content not in seen_content:
+        # We only retrieve the absolute #1 match, so we can trust it and allow any score
+        if result.relevance_score >= 0.0 and result.content not in seen_content:
             result.metadata['prioritized'] = 'style_guide'
             combined_results.append(result)
             seen_content.add(result.content)
-    
-    # Add general results
-    for result in general_results:
-        if result.content not in seen_content and len(combined_results) < 5:
-            combined_results.append(result)
-            seen_content.add(result.content)
-    
+            
     return combined_results

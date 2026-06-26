@@ -50,7 +50,7 @@ def generate_smart_ai_suggestion(feedback_text: str, sentence: str) -> Optional[
             "ai_answer": f"{explanation} The word 'accordingly' often adds no meaningful information and can be replaced with clearer, more specific terms that provide actual guidance to the reader.",
             "confidence": "high",
             "method": "smart_rule_based",
-            "sources": ["Siemens Style Guide: Use specific, actionable language"],
+            "sources": ["Technical Style Guide: Use specific, actionable language"],
             "original_sentence": sentence,
             "success": True
         }
@@ -67,7 +67,7 @@ def generate_smart_ai_suggestion(feedback_text: str, sentence: str) -> Optional[
             "ai_answer": ai_answer,
             "confidence": "medium",
             "method": "smart_rule_based", 
-            "sources": ["Siemens Style Guide: Prefer active voice for clarity"],
+            "sources": ["Technical Style Guide: Prefer active voice for clarity"],
             "original_sentence": sentence,
             "success": True
         }
@@ -83,7 +83,7 @@ def generate_smart_ai_suggestion(feedback_text: str, sentence: str) -> Optional[
             "ai_answer": ai_answer,
             "confidence": "medium",
             "method": "smart_rule_based",
-            "sources": ["Siemens Style Guide: Keep sentences concise and focused"],
+            "sources": ["Technical Style Guide: Keep sentences concise and focused"],
             "original_sentence": sentence,
             "success": True
         }
@@ -117,7 +117,7 @@ def generate_smart_ai_suggestion(feedback_text: str, sentence: str) -> Optional[
             "ai_answer": f"{explanation} Imperative mood is more direct and actionable in technical documentation, making instructions clearer for users.",
             "confidence": "high",
             "method": "smart_rule_based",
-            "sources": ["Siemens Style Guide: Use imperative mood for instructions"],
+            "sources": ["Technical Style Guide: Use imperative mood for instructions"],
             "original_sentence": sentence,
             "success": True
         }
@@ -133,7 +133,7 @@ def generate_smart_ai_suggestion(feedback_text: str, sentence: str) -> Optional[
             "ai_answer": ai_answer,
             "confidence": "medium",
             "method": "smart_rule_based",
-            "sources": ["Siemens Style Guide: Write concisely"],
+            "sources": ["Technical Style Guide: Write concisely"],
             "original_sentence": sentence,
             "success": True
         }

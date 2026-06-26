@@ -1131,8 +1131,21 @@ def ai_suggestion():
     sources = []
     try:
         retriever = create_retriever()
-        query = f"{feedback_text} {sentence_context}"
-        rag_results = retrieve_for_writing_feedback(query, retriever, current_document_content)
+        
+        rag_results = []
+        seen_rules = set()
+        
+        # Split feedback_text by '|' to handle multiple issues in one sentence
+        issues = [issue.strip() for issue in feedback_text.split('|') if issue.strip()]
+        
+        for issue in issues:
+            query = f"{issue} {sentence_context}"
+            issue_results = retrieve_for_writing_feedback(query, retriever, current_document_content)
+            
+            for res in issue_results:
+                if res.content not in seen_rules:
+                    rag_results.append(res)
+                    seen_rules.add(res.content)
         
         for res in rag_results:
             rule_name = res.metadata.get('rule_id', res.metadata.get('issue_type', ''))

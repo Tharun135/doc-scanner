@@ -327,7 +327,7 @@ def _build_review_prompt(sentence: str, rules: List[Dict[str, Any]]) -> str:
             )
         rules_text = "\n\n".join(rule_lines)
 
-    prompt = f"""You are a technical writing reviewer for Siemens-style industrial documentation.
+    prompt = f"""You are a technical writing reviewer for industry-standard industrial documentation.
 
 Your task is to evaluate the sentence below against the provided style guide rules.
 

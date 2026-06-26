@@ -36,14 +36,15 @@ RUN apt-get update && apt-get install -y \
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
-# Copy application code
+# Copy application code and database
 COPY app/ ./app/
 COPY config/ ./config/
+COPY chroma_db/ ./chroma_db/
 COPY run.py ./
 COPY wsgi.py ./
 
 # Create necessary directories (don't copy data/ as it will be mounted)
-RUN mkdir -p chroma_db data/uploads data/databases data/rag_knowledge logs
+RUN mkdir -p data/uploads data/databases data/rag_knowledge logs
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
