@@ -16,6 +16,7 @@ dist/
 node_modules/
 data/
 *.sqlite3
+!chroma_db/chroma.sqlite3
 *.db
 uploads/
 .idea/
@@ -24,8 +25,9 @@ __pycache__
 *.pyc
 *.pyo
 *.pyd
-*.db
 *.sqlite3
+!chroma_db/chroma.sqlite3
+*.db
 .git
 .gitignore
 .env
