@@ -180,25 +180,10 @@ def create_app():
     start_cleanup_thread(app)
 
     # ── Rule Remediation Ingestion ───────────────────────────────────────────
-    try:
-        from .rules.rule_remediations import ingest_into_chromadb
-        import threading
-        # Run in background to not block app startup
-        def run_ingestion():
-            with app.app_context():
-                try:
-                    # Use a path relative to the app directory or as configured
-                    persist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'docscanner_rules_db')
-                    ingest_into_chromadb(persist_path=persist_path)
-                except Exception as e:
-                    print(f"[WARN] Rule ingestion background task error: {e}")
-
-        threading.Thread(target=run_ingestion, daemon=True).start()
-        print("[START] Rule remediation ingestion scheduled in background...")
-    except ImportError:
-        print("Note: Rule remediations module not found (optional feature)")
-    except Exception as e:
-        print(f"Warning: Could not initialize rule remediations: {e}")
+    # Removed redundant background Rule Remediation Ingestion
+    # This was creating a phantom ChromaDB instance in docscanner_rules_db,
+    # doubling ONNX memory usage (200MB -> 400MB) and causing instant OOM.
+    # We now pre-bake chroma_db into the Docker image instead.
 
     app.socketio = socketio
     return app
