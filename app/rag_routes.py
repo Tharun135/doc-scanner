@@ -485,6 +485,11 @@ def rag_dashboard():
             "satisfaction": [0.82, 0.85, 0.88, 0.90]
         }
         
+        try:
+            from .rules.rule_remediations import RULE_REMEDIATIONS
+        except ImportError:
+            RULE_REMEDIATIONS = []
+
         return render_template('rag/dashboard.html', 
                              stats=stats,
                              health=health_assessment,
@@ -501,7 +506,8 @@ def rag_dashboard():
                              queries_today=stats.get('queries_today', 12),
                              queries_percentage=15,
                              relevance_trend=5.2,
-                             failed_queries=3)
+                             failed_queries=3,
+                             rules=RULE_REMEDIATIONS)
     except Exception as e:
         # Ultimate fallback - return error page
         logger.error(f"Critical error in RAG dashboard: {e}")

@@ -1,0 +1,20 @@
+                
+                ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
+                <div class="mb-3">
+                    <div class="text-light mb-2"><strong>📚 Knowledge Sources:</strong></div>
+                    <div class="sources-container">
+                        ${aiSuggestion.sources.map(source => {
+                            const isRule = (source && source.rule_id && source.rule_id.startsWith('rule_'));
+                            const sourceLabel = isRule ? '📋 Resident Rule Engine' : '📄 Knowledge Base (ChromaDB)';
+                            const sourceTitle = source && (source.rule_id || source.source || 'Knowledge Source');
+                            return `
+                            <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2 border-start border-3 ${isRule ? 'border-primary' : 'border-success'}">
+                                <div class="d-flex justify-content-between">
+                                    <small class="text-info"><strong>${sourceLabel}</strong></small>
+                                    <small class="text-muted opacity-75">ID: ${sourceTitle}</small>
+                                </div>
+                                <div class="source-content text-light mt-1" style="font-size: 0.85rem; max-height: 80px; overflow: hidden; text-overflow: ellipsis;">
+                                    ${source && source.content ? source.content : 'No preview available'}
+                                </div>
+                            </div>
+                            `;

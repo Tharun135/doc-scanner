@@ -1,0 +1,267 @@
+134: .applied-suggestion {
+666: /* AI Enhancement Indicators */
+700: /* NEW: Intelligent AI Analysis Button Styles */
+773: .suggestion-card {
+880: /* Enhanced AI Writing Assistant Dashboard */
+1145: <span class="ai-enhancement-badge">AI Enhanced</span>
+1148: <!-- NEW: Intelligent AI Analysis Option -->
+1152: <i class="fas fa-brain"></i> Intelligent AI Analysis
+1156: <i class="fas fa-magic"></i> Context-aware suggestions using advanced AI
+1163: <!-- AI Writing Assistant Dashboard -->
+1166: <h5><i class="fas fa-brain"></i> AI Writing Assistant</h5>
+1254: AI Assistance
+1266: <h5 class="mb-3">AI-Powered Suggestions</h5>
+1269: <p>Click the AI icon next to any issue to get intelligent suggestions</p>
+1439: fallbackInterval = setTimeout(updateProgress, 1500); // Slower updates to match AI pace better
+1444: message: "Processing with AI... this may take a few minutes.",
+2030: // NEW: Intelligent AI Analysis Button Handler
+2041: btn.innerHTML = '<i class="fas fa-brain fa-spin"></i> Analyzing with AI...';
+2055: updateProgressMessage('🧠 Initializing Intelligent AI Analysis...');
+2575: renderFeedbackWithAI(feedback, sentence, index);
+2616: // Enhanced AI functionality
+2617: let currentSuggestionId = null;
+2619: let aiFeedbackData = {}; // Store AI feedback data by sentence index and feedback type
+2621: // Add event delegation for AI feedback icons
+2634: const fullSuggestion = button.getAttribute('data-full-suggestion') || '';
+2638: console.log('=== AI ICON CLICKED ===');
+2648: console.error('❌ Missing required data attributes on AI button:', {
+2659: const decodedFullSuggestion = fullSuggestion ? decodeURIComponent(fullSuggestion) : '';
+2667: fullSuggestion: decodedFullSuggestion,
+2728: // Function to add AI feedback to the AI tab
+2729: function addToAITab(sentenceIndex, feedback, sentence, aiSuggestion, feedbackKey) {
+2738: // Create AI feedback item with unique identifier
+2745: const methodLabel = getMethodLabel(aiSuggestion.method);
+2748: <i class="fas ${aiSuggestion.is_master_fix ? 'fa-magic' : 'fa-robot'} me-2" ${aiSuggestion.is_master_fix ? 'style="color: #6f42c1;"' : ''}></i>
+2750: <span class="confidence-indicator confidence-${aiSuggestion.confidence} ms-2"></span>
+2751: <span class="ai-enhancement-badge ms-2" ${aiSuggestion.is_master_fix ? 'style="background: #6f42c1; color: white;"' : ''}>${aiSuggestion.is_master_fix ? 'Master Fix' : methodLabel}</span>
+2753: ${aiSuggestion.is_master_fix ? '<span class="badge ms-2" style="border: 1px solid #6f42c1; color: #6f42c1;">✨ Orchestrated</span>' : ''}
+2761: ${aiSuggestion.remediation_context ? `
+2766: <span class="badge bg-info ms-auto">${aiSuggestion.remediation_context.rule_id}</span>
+2770: <p class="mb-1 opacity-75 small">${aiSuggestion.remediation_context.why}</p>
+2774: <p class="mb-1 text-info small">${aiSuggestion.remediation_context.fix_instruction}</p>
+2776: ${aiSuggestion.remediation_context.good_examples && aiSuggestion.remediation_context.good_examples.length > 0 ? `
+2780: ${aiSuggestion.remediation_context.good_examples.map(ex => `<li>${ex}</li>`).join('')}
+2794: <div class="text-light"><strong>${aiSuggestion.is_semantic_explanation ?
+2795: '🧠 Semantic Explanation (AI-Assisted)' :
+2796: (aiSuggestion.is_reviewer_rationale ?
+2798: (aiSuggestion.is_guidance_only ?
+2800: (aiSuggestion.decision_type === 'always_split' ?
+2805: onclick="regenerateAISuggestion(${sentenceIndex}, \`${feedback.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, \`${sentence.replace(/'/g, '\\\'').replace(/`/g, '\\`')}\`, '${feedbackKey}')"
+2806: title="Get a different suggestion">
+2810: ${aiSuggestion.is_semantic_explanation ? `
+2814: <p class="mb-0 mt-2">${aiSuggestion.semantic_explanation || 'AI explains the meaning and logical structure of this sentence.'}</p>
+2820: ` : (aiSuggestion.suggestion && aiSuggestion.suggestion.trim() && !aiSuggestion.is_guidance_only ? `
+2821: <div class="mb-2 text-light opacity-75 small"><i class="fas fa-pencil-alt me-1"></i> Edit suggestion if needed:</div>
+2822: <textarea class="suggestion-editor w-100 p-3 rounded"
+2825: oninput="updateInternalSuggestion('${feedbackKey}', this.value)">${aiSuggestion.suggestion}</textarea>
+2829: onclick="applyAndTeachAI(${sentenceIndex}, '${feedbackKey}')">
+2830: <i class="fas fa-magic me-1"></i> Apply & Teach AI
+2838: <div class="suggestion-text ${aiSuggestion.is_reviewer_rationale ? 'bg-secondary bg-opacity-10 border-secondary' : (aiSuggestion.is_guidance_only ? 'bg-info bg-opacity-10 border-info' : 'bg-warning bg-opacity-10 border-warning')} text-light p-3 rounded border">
+2839: <i class="fas ${aiSuggestion.is_reviewer_rationale ? 'fa-lightbulb' : (aiSuggestion.is_guidance_only ? 'fa-user-edit' : 'fa-info-circle')} me-2"></i>
+2840: ${aiSuggestion.ai_answer || 'No specific suggestion available. Please review manually.'}
+2845: ${aiSuggestion.sources && aiSuggestion.sources.length > 0 ? `
+2849: ${aiSuggestion.sources.map(source => {
+2905: // Store the AI feedback data with unique key
+2909: aiSuggestion: aiSuggestion,
+2914: // Function to handle AI feedback icon click
+2915: async function showAIFeedback(sentenceIndex, feedback, sentence, fullSuggestion = '', item = null, multipleFeedback = null) {
+2917: console.log('=== SHOW AI FEEDBACK DEBUG ===');
+2922: fullSuggestion: fullSuggestion
+2928: const decodedFullSuggestion = fullSuggestion;
+2935: // Check if we already have AI feedback for this specific sentence and feedback type
+2938: console.log('AI feedback is already being generated. Please wait.');
+2941: console.log('Found existing AI feedback, switching to tab');
+2942: // Switch to AI tab and highlight the existing feedback
+2944: highlightAIFeedback(sentenceIndex, decodedFeedback);
+2951: // Always get a fresh AI suggestion when the AI icon is clicked
+2953: console.log('Getting fresh AI suggestion...');
+2954: const loadingToast = showLoadingToast('Getting AI suggestions...');
+2956: // Get AI suggestion
+2957: console.log('About to call getAISuggestion with:', {
+2963: const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, 1, item, multipleFeedback);
+2964: console.log('getAISuggestion returned:', aiSuggestion);
+2966: hasSuggestion: aiSuggestion?.suggestion,
+2967: suggestionLength: aiSuggestion?.suggestion?.length,
+2968: hasAIAnswer: aiSuggestion?.ai_answer,
+2969: validationFailed: aiSuggestion?.validation_failed,
+2970: hasFallbackGuidance: aiSuggestion?.fallback_guidance,
+2971: method: aiSuggestion?.method
+2977: // Check if we have a valid response (either AI suggestion or validation fallback guidance)
+2978: const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' &&
+2979: aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
+2980: const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' &&
+2981: (aiSuggestion.validation_failed ||
+2982: (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
+2984: if (hasAISuggestion || hasValidationFallback) {
+2985: console.log('✅ AI response received, adding to tab');
+2986: console.log('AI suggestion object:', aiSuggestion);
+2989: if (hasValidationFallback && !hasAISuggestion) {
+2990: console.log('ℹ️ Validation fallback - showing guidance instead of AI suggestion');
+2992: if (!aiSuggestion.ai_answer && aiSuggestion.fallback_guidance) {
+2993: aiSuggestion.ai_answer = aiSuggestion.fallback_guidance.guidance ||
+2998: // Add to AI tab
+2999: addToAITab(sentenceIndex, decodedFeedback, decodedSentence, aiSuggestion, feedbackKey);
+3001: // Switch to AI tab
+3005: highlightAIFeedback(sentenceIndex, decodedFeedback);
+3007: console.error('❌ AI suggestion failed - invalid response:', {
+3008: aiSuggestion: aiSuggestion,
+3009: type: typeof aiSuggestion,
+3010: isObject: aiSuggestion && typeof aiSuggestion === 'object',
+3011: hasProperty: aiSuggestion && aiSuggestion.hasOwnProperty('suggestion'),
+3012: suggestionValue: aiSuggestion ? aiSuggestion.suggestion : 'N/A',
+3013: suggestionType: aiSuggestion && aiSuggestion.suggestion ? typeof aiSuggestion.suggestion : 'N/A',
+3014: suggestionTrimmed: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.trim() : 'N/A',
+3015: suggestionLength: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.length : 0,
+3016: suggestionTrimmedLength: aiSuggestion && aiSuggestion.suggestion ? aiSuggestion.suggestion.trim().length : 0,
+3021: console.error('❌ AI suggestion failed - invalid response');
+3023: showErrorToast('AI suggestion not available. Check console for details - invalid response structure.');
+3027: console.error('❌ Error in showAIFeedback:', error);
+3030: showErrorToast('Error getting AI suggestion: ' + error.message);
+3034: // Function to regenerate AI suggestions
+3037: async function regenerateAISuggestion(sentenceIndex, feedback, sentence, feedbackKey) {
+3039: console.log('=== REGENERATE AI SUGGESTION ===');
+3042: // Increment option number for next suggestion
+3050: const loadingToast = showLoadingToast(`Generating alternative suggestion (Option ${currentOptionNumber})...`);
+3052: // Get AI suggestion with option number
+3053: const aiSuggestion = await getAISuggestion(decodedFeedback, decodedSentence, currentOptionNumber);
+3058: // Check if we have a valid response (either AI suggestion or validation fallback guidance)
+3059: const hasAISuggestion = aiSuggestion && typeof aiSuggestion === 'object' &&
+3060: aiSuggestion.suggestion && aiSuggestion.suggestion.trim();
+3061: const hasValidationFallback = aiSuggestion && typeof aiSuggestion === 'object' &&
+3062: (aiSuggestion.validation_failed ||
+3063: (aiSuggestion.suggestion === "" && aiSuggestion.ai_answer));
+3065: if (hasAISuggestion || hasValidationFallback) {
+3066: console.log('✅ Regenerated AI response received');
+3068: // Find and update the existing AI feedback item
+3071: // Update the suggestion content in the existing item
+3072: const suggestionDiv = existingItem.querySelector('.suggestion-text');
+3073: if (suggestionDiv) {
+3074: if (hasAISuggestion) {
+3075: // Update with new suggestion
+3076: suggestionDiv.className = 'suggestion-text bg-light text-dark p-3 rounded';
+3077: suggestionDiv.innerHTML = formatAISuggestion(aiSuggestion.suggestion);
+3080: suggestionDiv.className = 'suggestion-text bg-warning bg-opacity-10 text-light p-3 rounded border border-warning';
+3081: suggestionDiv.innerHTML = `<i class="fas fa-info-circle me-2"></i>${aiSuggestion.ai_answer || 'No specific suggestion available. Please review manually.'}`;
+3087: aiFeedbackData[feedbackKey].aiSuggestion = aiSuggestion;
+3091: highlightAIFeedback(sentenceIndex, decodedFeedback);
+3093: showSuccessToast(`Generated alternative suggestion (Option ${currentOptionNumber})`);
+3096: console.error('❌ Regenerate AI suggestion failed - invalid response');
+3097: showErrorToast('Could not generate alternative suggestion at this time. Please try again or review manually.');
+3101: console.error('❌ Error in regenerateAISuggestion:', error);
+3102: showErrorToast('Error regenerating AI suggestion: ' + error.message);
+3125: // Function to apply suggestion and teach the AI
+3126: // Update internal data when user edits the suggestion (RLHF)
+3127: function updateInternalSuggestion(feedbackKey, newValue) {
+3128: if (aiFeedbackData[feedbackKey] && aiFeedbackData[feedbackKey].aiSuggestion) {
+3129: aiFeedbackData[feedbackKey].aiSuggestion.suggestion = newValue;
+3130: console.log(`Updated internal suggestion for ${feedbackKey}`);
+3134: // Function to handle clicking "Apply & Teach AI" (RLHF)
+3135: async function applyAndTeachAI(sentenceIndex, feedbackKey) {
+3137: if (!data || !data.aiSuggestion.suggestion) return;
+3141: const corrected = editor ? editor.value : data.aiSuggestion.suggestion;
+3150: span.classList.add('applied-suggestion');
+3173: console.error('❌ Failed to teach AI:', error);
+3185: // Function to highlight AI feedback item
+3186: function highlightAIFeedback(sentenceIndex, feedbackType = null) {
+3714: // Format AI suggestion (structured output)
+3715: function formatAISuggestion(suggestionText) {
+3716: // Try to parse and format structured AI output
+3717: if (!suggestionText) return '';
+3719: const lines = suggestionText.split(/\n|<br\s*\/?>(?=\w+:)/g);
+3722: // More restrictive regex - only match actual structured output like "IMPROVED:", "SUGGESTION:", etc.
+3733: return html || suggestionText;
+3736: // Enhanced feedback rendering with AI suggestions and hover highlighting
+3737: async function renderFeedbackWithAI(feedback, sentence, sentenceIndex) {
+3844: aiButton.setAttribute('title', 'Get AI-powered suggestions');
+3873: async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null, multipleFeedback = null) {
+3882: console.log('=== AI SUGGESTION DEBUG ===');
+3905: console.error('❌ VALIDATION FAILED - Missing required feedback parameter:', {
+3914: // Sentence is optional - AI can provide suggestions even without specific sentence context
+3916: console.log('ℹ️ No sentence context provided - AI will use general examples');
+3950: const response = await fetch('/ai_suggestion', {
+3963: console.log('✅ AI suggestion HTTP success - analyzing response...');
+3967: console.log('Suggestion property exists:', 'suggestion' in result);
+3968: console.log('Suggestion property value:', result.suggestion);
+3969: console.log('Suggestion property type:', typeof result.suggestion);
+3970: console.log('Suggestion property length:', result.suggestion?.length);
+3971: console.log('Suggestion is truthy:', !!result.suggestion);
+3975: // Accept response if it has suggestion OR ai_answer (for validation fallback cases)
+3977: ('suggestion' in result || 'ai_answer' in result)) {
+3978: console.log('✅ Valid AI response object confirmed - validation passed');
+3981: console.error('❌ Invalid AI suggestion response structure - validation failed:');
+3984: console.error('  - has suggestion field:', 'suggestion' in result);
+3986: console.error('  - suggestion value:', result.suggestion);
+3991: console.error('❌ AI suggestion HTTP error:', response.status);
+3997: console.error('❌ AI suggestion exception:', error);
+4003: function updateAIPerformance(suggestion) {
+4010: document.getElementById('qualityScore').textContent = confidenceMap[suggestion.confidence] || '-';
+4011: document.getElementById('aiMethod').textContent = suggestion.method || '-';
+4016: indicator.textContent = `AI Response: ${suggestion.confidence} confidence`;
+4041: // Reset AI feedback tab
+4043: <h5 class="mb-3">AI-Powered Suggestions</h5>
+4046: <p>Click the AI icon next to any issue to get intelligent suggestions</p>
+4061: // Clear AI feedback data and any cached sentence data
+4093: // Process sentences with AI enhancement - in document order
+4106: promise: renderFeedbackWithAI(sentenceData.feedback, sentenceData.sentence, index)
+4175: <br><small>The AI analysis found your writing to be clear and well-structured.</small>
+4273: // AI Suggestion Modal logic
+4276: if (e.target.id === 'closeSuggestionModal') {
+4277: document.getElementById('suggestionModal').style.display = 'none';
+4283: const modal = document.getElementById('suggestionModal');
+4284: const loading = document.getElementById('suggestionLoading');
+4285: const textDiv = document.getElementById('suggestionText');
+4303: // Fetch suggestion using getAISuggestion
+4304: const result = await getAISuggestion(feedback, sentence, 1, item, multipleFeedback);
+4311: <i class="fas fa-exclamation-circle me-2"></i> Failed to generate suggestion. Please try again.
+4340: const hasRewrite = result.suggestion && result.suggestion.trim() !== '' && result.suggestion.trim().toLowerCase() !== sentence.trim().toLowerCase();
+4343: // Save results in aiFeedbackData so applyAndTeachAI works
+4348: aiSuggestion: result
+4374: <span>✏️ Proposed Correction</span>
+4378: if (m.includes('ollama')) return '🤖 Local AI';
+4379: if (m.includes('gemini')) return '☁️ Gemini AI';
+4390: let s = result.suggestion || '';
+4401: const suggestion = result.suggestion || '';
+4402: const whyIdx = suggestion.indexOf('\nWHY:');
+4404: explanation = suggestion.substring(whyIdx + 5).trim();
+4420: <button type="button" class="btn btn-sm btn-outline-secondary text-white px-3" style="border-color: rgba(255,255,255,0.2);" onclick="document.getElementById('suggestionModal').style.display='none'">Cancel</button>
+4422: <i class="fas fa-check"></i> Apply Correction
+4453: ${result.ai_answer || result.semantic_explanation || 'No automatic correction can be safely suggested. Please review and revise manually.'}
+4466: <button type="button" class="btn btn-sm btn-outline-secondary text-white px-4" style="border-color: rgba(255,255,255,0.2);" onclick="document.getElementById('suggestionModal').style.display='none'">Close</button>
+4467: <button type="button" class="btn btn-sm px-4" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);" onclick="applyManualFix('${sentenceIndex}', '${feedbackKey}')">Apply & Teach AI</button>
+4500: // Set the manual fix as the suggestion so applyAndTeachAI can pick it up
+4501: if (!data.aiSuggestion) data.aiSuggestion = {};
+4502: data.aiSuggestion.suggestion = manualSentence;
+4509: await applyAndTeachAI(sentenceIndex, feedbackKey);
+4510: document.getElementById('suggestionModal').style.display = 'none';
+4823: const config = data.suggestion_config || {};
+4830: AI Suggestion Behavior
+4838: <span>More suggestions (0.1)</span>
+4845: <label style="display:block; margin-bottom:0.5rem; font-weight:500;">Max Suggestions per Issue</label>
+4846: <select id="maxSuggestions" style="width:100%; padding:0.5rem; border:1px solid #ddd; border-radius:4px;">
+4847: <option value="1" ${config.max_suggestions_per_issue === 1 ? 'selected' : ''}>1 suggestion</option>
+4848: <option value="2" ${config.max_suggestions_per_issue === 2 ? 'selected' : ''}>2 suggestions</option>
+4849: <option value="3" ${config.max_suggestions_per_issue === 3 ? 'selected' : ''}>3 suggestions</option>
+4850: <option value="5" ${config.max_suggestions_per_issue === 5 ? 'selected' : ''}>5 suggestions</option>
+4864: <span>Include alternative suggestions</span>
+4876: <span>Personalize suggestions</span>
+4889: <input type="checkbox" id="aiPoweredSuggestions" ${flags.ai_powered_suggestions !== false ? 'checked' : ''} style="margin-right:0.5rem;">
+4890: <span>AI-Powered Suggestions</span>
+4891: <div style="margin-left:auto; font-size:0.8rem; color:#666;">Use AI for complex grammar improvements</div>
+4897: <div style="margin-left:auto; font-size:0.8rem; color:#666;">Consider document context for better suggestions</div>
+4903: <div style="margin-left:auto; font-size:0.8rem; color:#666;">Improve suggestions based on your feedback</div>
+4922: suggestion_config: {
+4924: max_suggestions_per_issue: parseInt(document.getElementById('maxSuggestions').value),
+4930: ai_powered_suggestions: document.getElementById('aiPoweredSuggestions').checked,
+4968: suggestion_config: {
+4970: max_suggestions_per_issue: 3,
+4976: ai_powered_suggestions: true,
+5002: <div class="progress-subtitle">Processing your document with AI-powered insights</div>
+5049: <!-- Beautiful Premium Suggestion Modal -->
+5050: <div id="suggestionModal"
+5062: <h5 class="mb-0 font-weight-bold" style="font-size: 1.1rem; letter-spacing: 0.25px;">AI Smart Correction</h5>
+5066: <button id="closeSuggestionModal" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; line-height:1; padding:0; cursor:pointer; transition:color 0.2s;" onmouseover="this.style.color='#f8fafc'" onmouseout="this.style.color='#94a3b8'">&times;</button>
+5072: <div id="suggestionLoading" style="display:none; text-align:center; padding:3rem 1rem;">
+5083: Querying AI Assistant
+5122: <div id="suggestionText"></div>
+5134: Suggestion History
+5155: AI Assistant Settings

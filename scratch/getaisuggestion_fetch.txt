@@ -1,0 +1,50 @@
+                const response = await fetch('/ai_suggestion', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ AI suggestion HTTP success - analyzing response...');
+                    console.log('Response type:', typeof result);
+                    console.log('Response keys:', Object.keys(result || {}));
+                    console.log('Full response object:', result);
+                    console.log('Suggestion property exists:', 'suggestion' in result);
+                    console.log('Suggestion property value:', result.suggestion);
+                    console.log('Suggestion property type:', typeof result.suggestion);
+                    console.log('Suggestion property length:', result.suggestion?.length);
+                    console.log('Suggestion is truthy:', !!result.suggestion);
+                    console.log('Has ai_answer:', !!result.ai_answer);
+                    console.log('Validation failed flag:', result.validation_failed);
+
+                    // Accept response if it has suggestion OR ai_answer (for validation fallback cases)
+                    if (result && typeof result === 'object' &&
+                        ('suggestion' in result || 'ai_answer' in result)) {
+                        console.log('✅ Valid AI response object confirmed - validation passed');
+                        return result;
+                    } else {
+                        console.error('❌ Invalid AI suggestion response structure - validation failed:');
+                        console.error('  - result exists:', !!result);
+                        console.error('  - result is object:', typeof result === 'object');
+                        console.error('  - has suggestion field:', 'suggestion' in result);
+                        console.error('  - has ai_answer field:', 'ai_answer' in result);
+                        console.error('  - suggestion value:', result.suggestion);
+                        console.error('  - ai_answer value:', result.ai_answer);
+                        return null;
+                    }
+                } else {
+                    console.error('❌ AI suggestion HTTP error:', response.status);
+                    const errorText = await response.text();
+                    console.error('Error response body:', errorText);
+                    return null;
+                }
+            } catch (error) {
+                console.error('❌ AI suggestion exception:', error);
+                console.error('Error stack:', error.stack);
+                return null;

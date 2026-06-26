@@ -624,128 +624,6 @@ def start_upload():
         logger.error(f"Failed to initialize upload session: {str(e)}", exc_info=True)
         return jsonify({"error": f"Failed to initialize upload: {str(e)}"}), 500
 
-@main.route('/analyze_intelligent', methods=['POST'])
-def analyze_intelligent():
-    """Intelligent AI analysis endpoint - returns JSON response."""
-    logger.info("🧠 Intelligent analysis endpoint called")
-    
-    try:
-        # Get request data (could be JSON or form data)
-        if request.is_json:
-            data = request.get_json()
-            text = data.get('text', '')
-            context = data.get('context', '')
-            document_type = data.get('document_type', 'general')
-        else:
-            # Handle file upload for intelligent analysis
-            if 'file' not in request.files:
-                return jsonify({"error": "No file provided"}), 400
-            
-            file = request.files['file']
-            if file.filename == '':
-                return jsonify({"error": "No file selected"}), 400
-            
-            # Extract text from file (reuse existing logic from upload route)
-            try:
-                html_content = parse_file(file)
-                from bs4 import BeautifulSoup
-                soup = BeautifulSoup(html_content, "html.parser")
-                text = soup.get_text(separator="\n")
-            except Exception as e:
-                return jsonify({"error": f"Failed to extract text: {str(e)}"}), 400
-            
-            context = 'file_analysis'
-            document_type = request.form.get('document_type', 'general')
-        
-        if not text.strip():
-            return jsonify({"error": "No text content to analyze"}), 400
-        
-        # Use intelligent AI system
-        try:
-            from .intelligent_ai_improvement import get_enhanced_ai_suggestion
-            
-            # Perform intelligent analysis
-            result = get_enhanced_ai_suggestion(
-                feedback_text="Perform comprehensive intelligent analysis",
-                sentence_context=text[:500],  # First 500 chars for context
-                document_type=document_type,
-                writing_goals=['clarity', 'conciseness', 'professionalism'],
-                document_content=text,
-                option_number=1
-            )
-            
-            if result.get('success'):
-                logger.info("✅ Intelligent analysis completed successfully")
-                return jsonify({
-                    "success": True,
-                    "analysis": result.get('suggestion', ''),
-                    "method": result.get('method', 'intelligent_ai'),
-                    "confidence": result.get('confidence', 0.8),
-                    "explanation": result.get('explanation', ''),
-                    "content_length": len(text),
-                    "document_type": document_type
-                })
-            else:
-                return jsonify({
-                    "success": False,
-                    "error": "Intelligent analysis failed: " + result.get('error', 'Unknown error')
-                }), 500
-                
-        except ImportError:
-            logger.warning("Intelligent AI not available, falling back to regular analysis")
-            return jsonify({
-                "success": False,
-                "error": "Intelligent AI analysis not available - dependencies missing"
-            }), 503
-            
-    except Exception as e:
-        logger.error(f"Error in intelligent analysis: {e}")
-        return jsonify({
-            "success": False,
-            "error": f"Analysis error: {str(e)}"
-        }), 500
-
-@main.route('/intelligent_results')
-def intelligent_results():
-    """Render intelligent analysis results page."""
-    # Get analysis data from query parameters or session
-    analysis_data = request.args.get('data')
-    
-    if analysis_data:
-        import json
-        try:
-            # Parse the JSON data
-            analysis_result = json.loads(analysis_data)
-            
-            # Convert single analysis result to suggestions list format expected by template
-            if analysis_result.get('success'):
-                suggestions = [{
-                    'method': analysis_result.get('method', 'intelligent_analysis'),
-                    'confidence': analysis_result.get('confidence', 'medium'),
-                    'suggestion': analysis_result.get('analysis', 'No suggestion available'),
-                    'success': True,
-                    'ai_answer': analysis_result.get('explanation', ''),
-                    'sentence': f"Analyzed {analysis_result.get('content_length', 0)} characters",
-                    'original_sentence': f"Document type: {analysis_result.get('document_type', 'general')}",
-                    'content_length': analysis_result.get('content_length', 0),
-                    'document_type': analysis_result.get('document_type', 'general')
-                }]
-            else:
-                suggestions = []
-                
-        except json.JSONDecodeError:
-            analysis_result = {"error": "Invalid analysis data"}
-            suggestions = []
-    else:
-        # Default empty result
-        analysis_result = {"error": "No analysis data provided"}
-        suggestions = []
-    
-    return render_template('intelligent_results.html', 
-                         analysis=analysis_result,
-                         suggestions=suggestions,
-                         title="Intelligent AI Analysis Results")
-
 @main.route('/debug')
 def debug_page():
     """Serve the sentence debugging page"""
@@ -1202,77 +1080,6 @@ def generate_report(sentences):
     return {"avgQualityScore": 75}
 
 feedback_list = []
-@main.route('/api/knowledge/learn', methods=['POST'])
-def learn_from_correction():
-    """
-    API endpoint to save an accepted correction to the knowledge base.
-    This enables 'Continuous Learning' from user-approved AI suggestions.
-    """
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-            
-        original = data.get('original')
-        corrected = data.get('corrected')
-        issue_type = data.get('issue_type')
-        
-        if not original or not corrected:
-            return jsonify({"error": "Missing original or corrected text"}), 400
-            
-        from .services.enrichment import ingest_correction
-        
-        success = ingest_correction(original, corrected, issue_type)
-        
-        if success:
-            logger.info(f"🎓 System learned new 'Golden Pair' for {issue_type}")
-            return jsonify({"status": "success", "message": "Correction saved to knowledge base"})
-        else:
-            return jsonify({"status": "error", "message": "Failed to save correction"}), 500
-            
-    except Exception as e:
-        logger.error(f"❌ learning correction failed: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@main.route('/api/enrich_issue', methods=['POST'])
-def enrich_issue_on_demand():
-    """
-    On-demand AI enrichment endpoint.
-    Called by the frontend when a user clicks an issue to get the detailed AI suggestion.
-    """
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-            
-        sentence = data.get('sentence', '')
-        message = data.get('message', '')
-        
-        if not sentence:
-            return jsonify({"error": "Missing sentence context"}), 400
-            
-        logger.info(f"🧠 On-demand enrichment requested for: {sentence[:30]}...")
-        
-        from .services.enrichment import enrich_issue_with_solution
-        
-        # Prepare the issue object for enrichment
-        issue_to_enrich = {
-            "context": sentence,
-            "message": message,
-            "text": sentence,
-            "start": 0,
-            "end": len(sentence)
-        }
-        
-        # Call the enrichment service (non-blocking for other users)
-        enriched = enrich_issue_with_solution(issue_to_enrich)
-        
-        return jsonify(enriched)
-        
-    except Exception as e:
-        logger.error(f"❌ On-demand enrichment failed: {e}")
-        return jsonify({"error": str(e)}), 500
-
 @main.route('/feedback', methods=['POST'])
 def submit_feedback():
     data = request.get_json()
@@ -1291,380 +1098,87 @@ def get_feedbacks():
 @main.route('/ai_suggestion', methods=['POST'])
 def ai_suggestion():
     """
-    Returns an AI-powered suggestion for a single sentence:
-    - NEW: Tries hybrid intelligence (phi3:mini + llama3:8b) first
-    - Falls back to vector-DB solutions (polished by LLM) when hybrid unavailable  
-    - Final fallback to deterministic rewrite
-    - Always returns a concrete rewrite + short guidance + sources
+    Community Edition: No AI rewriting. 
+    Returns document references from RAG instead.
     """
     global current_document_content, current_sentences_list
+    import uuid
+    import time
+    from .advanced_retrieval import create_retriever, retrieve_for_writing_feedback
+    import logging
 
-    print("[DEBUG] ENDPOINT: AI suggestion endpoint called")
-    logger.info("🔧 ENDPOINT: AI suggestion endpoint called")
-
-    from .intelligent_ai_improvement import get_enhanced_ai_suggestion
-    from .performance_monitor import track_suggestion, learning_system
-    import uuid, time
+    logger = logging.getLogger(__name__)
 
     data = request.get_json() or {}
     feedback_text   = data.get('feedback')
-    multiple_feedback = data.get('multiple_feedback', []) # NEW: For Master Fix
+    multiple_feedback = data.get('multiple_feedback', [])
     sentence_context = data.get('sentence', '') or ''
     document_type   = data.get('document_type', 'general')
-    document_title  = data.get('document_title', 'Unknown Document') # NEW: Global Context
+    document_title  = data.get('document_title', 'Unknown Document')
     writing_goals   = data.get('writing_goals', ['clarity', 'conciseness'])
     option_number   = data.get('option_number', 1)
-    sentence_index  = data.get('sentence_index', -1)  # New: get sentence position
+    sentence_index  = data.get('sentence_index', -1)
     
-    # If multiple_feedback provided but no feedback_text, use the first one as primary
     if not feedback_text and multiple_feedback:
         feedback_text = multiple_feedback[0]
 
-    # Extract adjacent sentences for context
-    adjacent_context = {}
-    if sentence_index >= 0 and current_sentences_list:
-        # Get previous sentence (if exists)
-        if sentence_index > 0:
-            prev_sent = current_sentences_list[sentence_index - 1]
-            adjacent_context['previous_sentence'] = prev_sent.text if hasattr(prev_sent, 'text') else str(prev_sent)
-        
-        # Get next sentence (if exists)
-        if sentence_index < len(current_sentences_list) - 1:
-            next_sent = current_sentences_list[sentence_index + 1]
-            adjacent_context['next_sentence'] = next_sent.text if hasattr(next_sent, 'text') else str(next_sent)
-        
-        logger.info(f"📚 Adjacent context: prev={bool(adjacent_context.get('previous_sentence'))}, "
-                   f"next={bool(adjacent_context.get('next_sentence'))}")
-
-    logger.info(f"AI suggestion request: feedback='{(feedback_text or '')[:50]}...', "
-                f"sentence='{sentence_context[:50]}...', master_fix={bool(multiple_feedback)}")
-
-    if not feedback_text and not multiple_feedback:
-        logger.error("No feedback provided in AI suggestion request")
-        return jsonify({"error": "No feedback provided"}), 400
+    logger.info(f"RAG suggestion request: feedback='{feedback_text[:50] if feedback_text else ''}...', sentence='{sentence_context[:50]}...'")
 
     suggestion_id = str(uuid.uuid4())
     start_time = time.time()
 
-    # 🧠 NEW: Try hybrid intelligence first (phi3:mini + llama3:8b)
+    # Query RAG for references
+    sources = []
     try:
-        from .hybrid_intelligence_integration import enhance_ai_suggestion_with_hybrid_intelligence
+        retriever = create_retriever()
+        query = f"{feedback_text} {sentence_context}"
+        rag_results = retrieve_for_writing_feedback(query, retriever, current_document_content)
         
-        logger.info(f"🧠 Trying hybrid intelligence {'(MASTER FIX)' if multiple_feedback else ''}...")
-        hybrid_result = enhance_ai_suggestion_with_hybrid_intelligence(
-            feedback_text=feedback_text,
-            sentence_context=sentence_context, 
-            document_type=document_type,
-            complexity=data.get('complexity', 'default'),
-            adjacent_context=adjacent_context,
-            multiple_feedback=multiple_feedback,
-            document_metadata={'title': document_title},
-            rule_metadata=data.get('issue')  # PASS THE FULL RULE OBJECT
-        )
-        
-        if hybrid_result.get('success'):
-            response_time = time.time() - start_time
-            track_suggestion(suggestion_id, feedback_text, sentence_context,
-                           document_type, hybrid_result.get('method', 'hybrid_intelligence'), response_time,
-                           suggested_text=hybrid_result.get('suggestion'))
-            
-            logger.info(f"✅ Hybrid intelligence success with {hybrid_result.get('model_used', 'unknown')}")
-            
-            return jsonify({
-                "suggestion": hybrid_result.get('suggestion', ''),
-                "ai_answer": hybrid_result.get('ai_answer', ''),
-                "confidence": hybrid_result.get('confidence', 'high'),
-                "method": hybrid_result.get('method', 'hybrid_intelligence'),
-                "suggestion_id": suggestion_id,
-                "sources": hybrid_result.get('sources', []),
-                "context_used": hybrid_result.get('context_used', {}),
-                "model_used": hybrid_result.get('model_used'),
-                "intelligence_mode": hybrid_result.get('intelligence_mode'),
-                "processing_time": hybrid_result.get('processing_time', response_time),
-                "note": f"Generated using Hybrid Intelligence ({hybrid_result.get('model_used', 'unknown')})"
-            })
-        else:
-            logger.warning(f"Hybrid intelligence unavailable: {hybrid_result.get('error', 'unknown error')}")
-    
-    except Exception as e:
-        logger.warning(f"Hybrid intelligence failed: {str(e)}")
-    
-    # Continue with existing logic if hybrid intelligence fails...
-
-    try:
-        # 1) Check if we have a learned pattern from prior feedback
-        learned_suggestion = learning_system.get_learned_suggestion(feedback_text, sentence_context)
-        if learned_suggestion:
-            response_time = time.time() - start_time
-            track_suggestion(suggestion_id, feedback_text, sentence_context,
-                             document_type, "learned_pattern", response_time,
-                             suggested_text=learned_suggestion)
-            logger.info("Using learned pattern suggestion.")
-            return jsonify({
-                "suggestion": learned_suggestion,                # concrete rewrite
-                "ai_answer": "Using learned pattern.",           # short guidance
-                "confidence": "high",
-                "method": "learned_pattern",
-                "suggestion_id": suggestion_id,
-                "sources": [],                                    # none for learned
-                "context_used": {"document_type": document_type,
-                                 "writing_goals": writing_goals},
-                "note": "Generated from learned user feedback"
-            })
-
-        # 2) Primary path: build minimal issue object so enrichment can do RAG
-        # Try to infer issue_type if caller didn’t supply one
-        issue_type = data.get('issue_type')
-        if not issue_type:
-            m = (feedback_text or "").lower()
-            if "adverb" in m:
-                issue_type = "Adverb Overuse"
-            elif "passive" in m:
-                issue_type = "Passive Voice"
-            elif "long sentence" in m or "too long" in m:
-                issue_type = "Long Sentence"
-            elif "modal" in m or "click on" in m or "may now" in m:
-                issue_type = "Modal Fluff"
+        for res in rag_results:
+            rule_name = res.metadata.get('rule_id', res.metadata.get('issue_type', ''))
+            doc_title = res.metadata.get('meta_doc_title', res.metadata.get('source_doc_id', 'Knowledge Base'))
+            if rule_name:
+                display_name = f"{doc_title} ({rule_name})"
             else:
-                issue_type = "General"
+                display_name = doc_title
+                
+            sources.append({
+                "rule_id": rule_name or "Style Rule",
+                "content": res.content,
+                "source": display_name,
+                "score": res.relevance_score
+            })
+    except Exception as e:
+        logger.error(f"RAG retrieval error: {e}")
 
-        # Check if UI passed a full rule decision (has decision_type/reviewer_rationale)
+    # Ensure we use rule feedback as Suggested Action
+    ai_answer = data.get('ai_answer', '')
+    if not ai_answer:
         ui_issue = data.get('issue')
-        if ui_issue and isinstance(ui_issue, dict) and 'decision_type' in ui_issue and 'reviewer_rationale' in ui_issue:
-            # Use the full rule decision from the UI
-            issue_obj = ui_issue
-            logger.info(f"Using full rule decision from UI: decision_type={ui_issue.get('decision_type')}")
+        if ui_issue and isinstance(ui_issue, dict) and 'reviewer_rationale' in ui_issue:
+            ai_answer = ui_issue['reviewer_rationale']
         else:
-            # Build minimal issue object for enrichment
-            issue_obj = {
-                "message": feedback_text,        # the rule feedback text
-                "context": sentence_context,     # the original sentence
-                "issue_type": issue_type,
-            }
-            logger.info(f"Building minimal issue object for enrichment")
+            ai_answer = f"Review needed based on rule: {feedback_text}"
 
-        logger.info("Getting enhanced AI suggestion with RAG context...")
-        result = get_enhanced_ai_suggestion(
-            feedback_text=feedback_text,
-            sentence_context=sentence_context,
-            document_type=document_type,
-            writing_goals=writing_goals,
-            document_content=current_document_content,  # full page text for context if needed
-            option_number=option_number,
-            issue=issue_obj,  # <<< IMPORTANT
-            adjacent_context=adjacent_context  # Pass adjacent sentences for better context
-        )
-
-        logger.info(f"🔧 ENDPOINT: get_enhanced_ai_suggestion returned: "
-                    f"method={result.get('method', 'unknown')}, "
-                    f"suggestion_present={bool(result.get('suggestion'))}, "
-                    f"ai_answer_present={bool(result.get('ai_answer'))}, "
-                    f"success={result.get('success', 'not_specified')}")
-
-        # 3) Validate structure
-        if not isinstance(result, dict):
-            logger.error(f"🚨 CRITICAL: Result is not a dict! Type: {type(result)}")
-            raise ValueError(f"Invalid result structure: {type(result)}")
-        
-        # Debug: Log the actual result keys to understand what we're getting
-        logger.info(f"🔍 Result keys: {list(result.keys())}")
-        logger.info(f"🔍 Result.suggestion type: {type(result.get('suggestion'))}")
-
-        # Prefer enriched rewrite; never echo placeholder text
-        # Ensure we always get a string, never None or other types
-        suggestion_raw = result.get("suggestion") or result.get("proposed_rewrite") or ""
-        
-        # Type safety: convert to string if needed
-        if not isinstance(suggestion_raw, str):
-            logger.warning(f"⚠️ suggestion is not a string, got type: {type(suggestion_raw)}")
-            # Check if it's the whole result dict accidentally
-            if isinstance(suggestion_raw, dict) and 'suggestion' in suggestion_raw:
-                logger.error(f"🚨 CRITICAL: suggestion field contains entire result dict! Extracting...")
-                suggestion_raw = str(suggestion_raw.get('suggestion', ''))
-            else:
-                suggestion_raw = str(suggestion_raw) if suggestion_raw else ""
-        
-        suggestion = suggestion_raw.strip()
-
-        logger.info(f"🔧 ENDPOINT: Extracted suggestion: '{suggestion[:100]}...' "
-                    f"(length: {len(suggestion)})")
-
-        ai_answer_raw = result.get("ai_answer") or result.get("solution_text") or ""
-        
-        # Type safety: convert to string if needed
-        if not isinstance(ai_answer_raw, str):
-            logger.warning(f"⚠️ ai_answer is not a string, got type: {type(ai_answer_raw)}")
-            ai_answer_raw = str(ai_answer_raw) if ai_answer_raw else ""
-        
-        ai_answer = ai_answer_raw.strip()
-
-        logger.info(f"🔧 ENDPOINT: Extracted ai_answer: '{ai_answer[:100]}...' "
-                    f"(length: {len(ai_answer)})")
-        
-        # As a last safety net, if suggestion is empty, use validation fallback
-        if not suggestion:
-            logger.warning("Empty suggestion from AI; validation likely rejected output.")
-            # Check if validation returned fallback_guidance
-            if result.get('validation_failed') and result.get('fallback_guidance'):
-                fallback_guidance = result['fallback_guidance']
-                suggestion = ""  # Keep empty - no valid AI suggestion available
-                ai_answer = fallback_guidance.get('guidance', ai_answer or "Review the sentence and address the detected issue.")
-                logger.info("🔧 ENDPOINT: Using validation fallback guidance")
-            else:
-                # No AI suggestion available
-                suggestion = ""
-                ai_answer = ai_answer or f"Consider: {feedback_text}"
-                logger.info("🔧 ENDPOINT: No AI suggestion available")
-        else:
-            logger.info(f"🔧 ENDPOINT: Using AI suggestion: '{suggestion[:100]}...'")
-
-        # Guard against "No exact solution…" leaking through
-        if suggestion and "no exact solution" in suggestion.lower():
-            logger.warning("Found 'no exact solution' in suggestion, clearing it")
-            suggestion = ""
-            if not ai_answer:
-                ai_answer = f"Manual review needed for: {feedback_text}"
-
-        # 4) Build response
-        response_time = time.time() - start_time
-        track_suggestion(suggestion_id, feedback_text, sentence_context,
-                         document_type, result.get('method', 'intelligent_ai'), response_time,
-                         suggested_text=result.get('suggestion'))
-
-
-        # Type safety: Ensure all response fields are strings (not None or other types)
-        suggestion = str(suggestion) if suggestion is not None else ""
-        ai_answer = str(ai_answer) if ai_answer is not None else ""
-        
-        # Critical fix: If the suggestion looks like a stringified dict, it means we have a bug
-        if suggestion.startswith('{') and "'suggestion':" in suggestion:
-            logger.error(f"🚨 CRITICAL BUG: Suggestion is a stringified dict! Raw value: {suggestion[:200]}")
-            # Try to parse it and extract the actual suggestion
-            try:
-                import ast
-                parsed = ast.literal_eval(suggestion)
-                if isinstance(parsed, dict) and 'suggestion' in parsed:
-                    suggestion = str(parsed['suggestion'])
-                    if not ai_answer and 'ai_answer' in parsed:
-                        ai_answer = str(parsed['ai_answer'])
-                    logger.info(f"✅ Recovered suggestion from stringified dict: {suggestion[:100]}")
-            except Exception as parse_error:
-                logger.error(f"❌ Failed to parse stringified dict: {parse_error}")
-                # Keep the stringified version as last resort
-
-        return jsonify({
-        # ✅ Concrete rewrite to show in the “AI Suggestion” box
-        "suggestion": suggestion,
-
-        # ✅ Polished guidance from LLM presenter (or explanation from KB)
+    return jsonify({
+        "suggestion": "", # No AI generation
         "ai_answer": ai_answer,
-
-        "confidence": result.get("confidence", "high" if suggestion else "medium"),
-        "method": result.get("method", "rag_rewrite"),
+        "confidence": "high",
+        "method": "community_edition_rag",
         "suggestion_id": suggestion_id,
-
-        # ✅ Sources for UI to render rule IDs / refs
-        "sources": result.get("sources", []),
-
-        # Optional context/debug info for telemetry
-        "context_used": result.get("context_used", {
+        "sources": sources,
+        "context_used": {
             "document_type": document_type,
-            "writing_goals": writing_goals,
-            "primary_ai": "local",
-            "issue_detection": "rule_based"
-        }),
-        "note": f"Generated using {result.get('method', 'rag_rewrite')}",
-        # ✅ CRITICAL: Pass through all UI rendering flags
-        "is_semantic_explanation": result.get("is_semantic_explanation", False),
-        "is_guidance_only": result.get("is_guidance_only", False),
-        "is_reviewer_rationale": result.get("is_reviewer_rationale", False),
-        "guidance_category": result.get("guidance_category", "readability"),
-        "semantic_explanation": result.get("semantic_explanation", ""),
-        "decision_type": result.get("decision_type", "")
+            "writing_goals": writing_goals
+        },
+        "note": "Generated using Rule-Based Engine + RAG (Community Edition)",
+        "is_semantic_explanation": False,
+        "is_guidance_only": True,
+        "is_reviewer_rationale": False,
+        "guidance_category": "readability",
+        "semantic_explanation": "",
+        "decision_type": ""
     })
-
-    except Exception as e:
-        logger.error(f"❌ AI suggestion error: {str(e)}", exc_info=True)
-        logger.error(f"❌ Error details - feedback: '{feedback_text[:100]}', sentence: '{sentence_context[:100]}'")
-        logger.error(f"❌ Error type: {type(e).__name__}")
-        response_time = time.time() - start_time
-
-        track_suggestion(suggestion_id, feedback_text, sentence_context,
-                         document_type, "rule_based_fallback", response_time)
-
-        # Use deterministic fallback that gives real, issue-specific guidance
-        try:
-            from .intelligent_ai_improvement import get_deterministic_fallback
-            from .ai_improvement import AISuggestionEngine
-            det_fallback = get_deterministic_fallback(feedback_text or "", sentence_context or "")
-            rewrite_engine = AISuggestionEngine()
-            rewrite = rewrite_engine.generate_minimal_fallback(feedback_text, sentence_context, option_number)
-            rewrite_suggestion = str(rewrite.get("suggestion", "")).strip()
-            # Only use the rewrite if it actually changed the sentence
-            if rewrite_suggestion and rewrite_suggestion.lower().strip() != (sentence_context or "").lower().strip():
-                final_suggestion = rewrite_suggestion
-            else:
-                final_suggestion = ""
-            return jsonify({
-                "suggestion": final_suggestion,
-                "ai_answer": det_fallback.get("guidance", f"Consider revising: {feedback_text}"),
-                "confidence": "medium",
-                "method": "rule_based_fallback",
-                "suggestion_id": suggestion_id,
-                "sources": ["Writing style guidelines"],
-                "note": "Rule-based suggestion"
-            })
-        except Exception as fallback_error:
-            logger.error(f"❌ Fallback also failed: {fallback_error}")
-            return jsonify({
-                "suggestion": "",
-                "ai_answer": f"Consider revising this sentence to address: {feedback_text}",
-                "confidence": "low",
-                "method": "emergency_fallback",
-                "suggestion_id": suggestion_id,
-                "sources": [],
-                "note": "Emergency fallback"
-            })
-
-def generate_smart_suggestion(feedback_text):
-    """Generate intelligent suggestions based on feedback content"""
-    feedback_lower = feedback_text.lower()
-    
-    # Grammar and style suggestions
-    if "passive" in feedback_lower or "passive voice" in feedback_lower:
-        return "Try using active voice instead of passive voice. Replace 'was done by' with the subject doing the action directly."
-    
-    elif "long" in feedback_lower and ("sentence" in feedback_lower or "paragraph" in feedback_lower):
-        return "Break this into shorter sentences. Aim for 15-20 words per sentence for better readability."
-    
-    elif "complex" in feedback_lower or "complicated" in feedback_lower:
-        return "Simplify the language. Use shorter words and clearer phrases to make your meaning more accessible."
-    
-    elif "unclear" in feedback_lower or "confusing" in feedback_lower:
-        return "Add more specific details or context. Consider providing examples or breaking down complex concepts."
-    
-    elif "repetitive" in feedback_lower or "redundant" in feedback_lower:
-        return "Remove repeated words or phrases. Vary your sentence structure and vocabulary for better flow."
-    
-    elif "formal" in feedback_lower and ("too" in feedback_lower or "overly" in feedback_lower):
-        return "Use more conversational language. Replace formal terms with everyday words your audience will understand."
-    
-    elif "informal" in feedback_lower and ("too" in feedback_lower or "overly" in feedback_lower):
-        return "Use more professional language. Avoid contractions and casual expressions in formal writing."
-    
-    elif "transition" in feedback_lower or "flow" in feedback_lower:
-        return "Add transition words like 'however', 'therefore', 'furthermore' to connect your ideas more smoothly."
-    
-    elif "evidence" in feedback_lower or "support" in feedback_lower:
-        return "Add supporting evidence, examples, or data to strengthen your argument and make it more convincing."
-    
-    elif "conclusion" in feedback_lower:
-        return "Strengthen your conclusion by summarizing key points and clearly stating the implications or next steps."
-    
-    else:
-        # General suggestion based on common writing issues
-        return "Consider breaking long sentences into shorter ones, using active voice, and adding specific examples to support your points."
-
 @main.route('/suggestion_feedback', methods=['POST'])
 def suggestion_feedback():
     """Record user feedback on AI suggestions."""

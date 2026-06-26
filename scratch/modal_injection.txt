@@ -1,0 +1,60 @@
+4292: textDiv.innerHTML = '';
+
+            // Animate the ellipsis dots on the loading subtitle
+            const dotsEl = document.getElementById('loadingDots');
+            let dotCount = 0;
+            const dotsInterval = setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                if (dotsEl) dotsEl.textContent = '.'.repeat(dotCount);
+            }, 450);
+            
+            try {
+                // Fetch suggestion using getAISuggestion
+                const result = await getAISuggestion(feedback, sentence, 1, item, multipleFeedback);
+                clearInterval(dotsInterval);
+                loading.style.display = 'none';
+4309: textDiv.innerHTML = `
+                        <div class="alert alert-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-20">
+                            <i class="fas fa-exclamation-circle me-2"></i> Failed to generate suggestion. Please try again.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Format the matched rules if any (RAG evidence)
+                let rulesHtml = '';
+                if (result.sources && result.sources.length > 0) {
+                    rulesHtml = `
+                        <div class="mt-4 p-3 rounded" style="background: rgba(148, 163, 184, 0.08); border-left: 4px solid #06b6d4;">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-book text-info me-2"></i>
+4479: textDiv.innerHTML = modalContent;
+                
+            } catch (err) {
+                console.error("Error in openQuickFixModal:", err);
+                clearInterval(dotsInterval);
+                loading.style.display = 'none';
+                textDiv.innerHTML = `
+                    <div class="alert alert-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-20">
+                        <i class="fas fa-exclamation-circle me-2"></i> Error: ${err.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function applyManualFix(sentenceIndex, feedbackKey) {
+4485: textDiv.innerHTML = `
+                    <div class="alert alert-danger bg-danger bg-opacity-10 text-danger border-danger border-opacity-20">
+                        <i class="fas fa-exclamation-circle me-2"></i> Error: ${err.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function applyManualFix(sentenceIndex, feedbackKey) {
+            const inputEl = document.getElementById(`manualFixInput_${sentenceIndex}`);
+            if (!inputEl) return;
+            
+            const manualSentence = inputEl.value.trim();
+            if (!manualSentence) {
+                alert("Please enter a corrected sentence before applying.");

@@ -1,0 +1,40 @@
+                const result = await response.json();
+                console.log('📊 Analysis completed successfully');
+
+                uploadCompleted = true;
+                resultData = result;
+
+                // ✅ VISUAL JOURNEY: Ensure we wait for the progress journey to finish before showing results
+                // This prevents jumping to 100% if the backend is very fast
+                console.log('⏳ Processing finished, waiting for progress animation to catch up...');
+
+                // ✅ SYNCING STATE: Update UI to show we are now working locally in the browser
+                queueProgressUpdate({
+                    percentage: 98,
+                    message: "Rendering document and issues...",
+                    stage_name: "Rendering",
+                    completed: false
+                });
+
+                // Wait for queue to drain so user sees the "Rendering" step
+                while (isProcessingQueue || progressQueue.length > 0) {
+                    await new Promise(r => setTimeout(r, 50));
+                }
+
+                console.log('🏁 Data received, starting visual render');
+
+                // 🚀 DISPLAY RESULTS
+                try {
+                    window.lastReport = result.report || {}; 
+                    // renderContent will now handle hiding the loader when its internal promises finish
+                    renderChart(result.report || {}, result.sentences || []);
+                    renderContent(result.content || '', result.sentences || []);
+                } catch (renderError) {
+                    console.error('❌ Rendering error:', renderError);
+                    alert('Analysis finished, but there was an error displaying the results: ' + renderError.message);
+                    hideProgressLoader();
+                }
+
+                return result;
+
+            } catch (error) {

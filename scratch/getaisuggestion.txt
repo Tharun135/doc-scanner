@@ -1,0 +1,80 @@
+        async function getAISuggestion(feedback, sentence, optionNumber = 1, item = null, multipleFeedback = null) {
+            try {
+                // Safe document type retrieval - fallback to 'technical' if element doesn't exist
+                let documentType = 'technical';
+                const documentTypeElement = document.getElementById('documentType');
+                if (documentTypeElement && documentTypeElement.value) {
+                    documentType = documentTypeElement.value;
+                }
+
+                console.log('=== AI SUGGESTION DEBUG ===');
+                console.log('Document type used:', documentType);
+                console.log('Raw inputs:', {
+                    feedback: feedback,
+                    sentence: sentence,
+                    feedbackType: typeof feedback,
+                    sentenceType: typeof sentence,
+                    feedbackLength: feedback?.length,
+                    sentenceLength: sentence?.length
+                });
+
+                // Clean and validate required parameters
+                const cleanFeedback = feedback ? feedback.trim() : '';
+                const cleanSentence = sentence ? sentence.trim() : '';
+
+                console.log('Cleaned inputs:', {
+                    cleanFeedback: cleanFeedback,
+                    cleanSentence: cleanSentence,
+                    cleanFeedbackLength: cleanFeedback.length,
+                    cleanSentenceLength: cleanSentence.length
+                });
+
+                if (!cleanFeedback) {
+                    console.error('❌ VALIDATION FAILED - Missing required feedback parameter:', {
+                        feedback: cleanFeedback,
+                        sentence: cleanSentence,
+                        feedbackEmpty: !cleanFeedback,
+                        sentenceEmpty: !cleanSentence
+                    });
+                    return null;
+                }
+
+                // Sentence is optional - AI can provide suggestions even without specific sentence context
+                if (!cleanSentence) {
+                    console.log('ℹ️ No sentence context provided - AI will use general examples');
+                }
+
+                // Extract just the core issue description from feedback if it contains structured data
+                let coreIssue = cleanFeedback;
+                if (cleanFeedback.includes('Issue:')) {
+                    const issueMatch = cleanFeedback.match(/Issue:\s*([^\n]+)/);
+                    if (issueMatch) {
+                        coreIssue = issueMatch[1].trim();
+                        console.log('Extracted core issue:', coreIssue);
+                    }
+                }
+
+                const documentTitle = document.getElementById('uploadBtnText')?.innerText !== 'Upload & Analyze' 
+                    ? document.getElementById('uploadBtnText').innerText.replace('...', '').trim() 
+                    : 'Untitled Document';
+
+                const requestData = {
+                    feedback: coreIssue,
+                    multiple_feedback: multipleFeedback,
+                    sentence: cleanSentence,
+                    document_type: documentType,
+                    document_title: documentTitle, // NEW: For Global Context
+                    writing_goals: selectedWritingGoals || ['clarity', 'conciseness'],
+                    option_number: optionNumber
+                };
+
+                // Add full item if available (for rule authority check)
+                if (item) {
+                    requestData.issue = item;
+                }
+
+                console.log('Request payload:', requestData);
+
+                const response = await fetch('/ai_suggestion', {
+                    method: 'POST',
+                    headers: {

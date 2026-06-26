@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Doc Scanner – Advanced Analysis</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -697,7 +698,7 @@
             }
         }
 
-        /* NEW: Intelligent AI Analysis Button Styles */
+        /* NEW: Intelligent Rule Analysis Button Styles */
         .btn-gradient-intelligent {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
@@ -877,7 +878,7 @@
             z-index: 1000;
         }
 
-        /* Enhanced AI Writing Assistant Dashboard */
+        /* Enhanced Rule Guidance Assistant Dashboard */
         .metric-card {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 8px;
@@ -1145,25 +1146,25 @@
                             <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
 
-                        <!-- NEW: Intelligent AI Analysis Option -->
+                        <!-- NEW: Intelligent Rule Analysis Option -->
                         <div class="mt-3">
                             <button class="btn btn-gradient-intelligent w-100" type="button"
                                 id="intelligentAnalysisBtn">
-                                <i class="fas fa-brain"></i> Intelligent AI Analysis
+                                <i class="fas fa-brain"></i> Intelligent Rule Analysis
                                 <span class="intelligent-badge">RAG-Powered</span>
                             </button>
                             <small class="text-muted d-block mt-1 text-center">
-                                <i class="fas fa-magic"></i> Context-aware suggestions using advanced AI
+                                <i class="fas fa-magic"></i> Context-aware guidance using advanced rules
                             </small>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- AI Writing Assistant Dashboard -->
+            <!-- Rule Guidance Assistant Dashboard -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h5><i class="fas fa-brain"></i> AI Writing Assistant</h5>
+                    <h5><i class="fas fa-brain"></i> Rule Guidance Assistant</h5>
                 </div>
                 <div class="card-body">
                     <!-- Document Metrics -->
@@ -1263,10 +1264,10 @@
                                     <!-- Feedback content will be populated here -->
                                 </div>
                                 <div class="tab-content" id="aiFeedbackContent" style="display: none;">
-                                    <h5 class="mb-3">AI-Powered Suggestions</h5>
+                                    <h5 class="mb-3">Rule-Based Guidance</h5>
                                     <div class="text-muted text-center py-4">
                                         <i class="fas fa-robot fa-2x mb-2"></i>
-                                        <p>Click the AI icon next to any issue to get intelligent suggestions</p>
+                                        <p>Click the guidance icon next to any issue to get rule details</p>
                                     </div>
                                 </div>
                                 <div class="tab-content" id="structural-feedback">
@@ -1441,7 +1442,7 @@
                     // Hold at 95% while waiting for backend
                     updateRealTimeProgress({
                         percentage: 95,
-                        message: "Processing with AI... this may take a few minutes.",
+                        message: "Processing with Rule Engine...",
                         stage_name: "Analyzing",
                         completed: false
                     });
@@ -2027,7 +2028,7 @@
             }
         });
 
-        // NEW: Intelligent AI Analysis Button Handler
+        // NEW: Intelligent Rule Analysis Button Handler
         document.getElementById('intelligentAnalysisBtn').addEventListener('click', async (e) => {
             e.preventDefault();
 
@@ -2038,7 +2039,7 @@
 
             const btn = e.target;
             const originalContent = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-brain fa-spin"></i> Analyzing with AI...';
+            btn.innerHTML = '<i class="fas fa-brain fa-spin"></i> Analyzing with Rules...';
             btn.disabled = true;
 
             try {
@@ -2052,7 +2053,7 @@
 
                 // Show progress with intelligent analysis message
                 showProgressLoader(false);
-                updateProgressMessage('🧠 Initializing Intelligent AI Analysis...');
+                updateProgressMessage('🧠 Initializing Intelligent Rule Analysis...');
 
                 const response = await fetch('/analyze_intelligent', {
                     method: 'POST',
@@ -2827,7 +2828,7 @@
                     <div class="mt-3 d-flex gap-2">
                         <button class="btn btn-success btn-sm flex-grow-1" 
                                 onclick="applyAndTeachAI(${sentenceIndex}, '${feedbackKey}')">
-                            <i class="fas fa-magic me-1"></i> Apply & Teach AI
+                            <i class="fas fa-magic me-1"></i> Apply Correction
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" 
                                 onclick="copyToClipboard(document.getElementById('editor_${feedbackKey}').value)">
@@ -2850,14 +2851,15 @@
                             const isRule = (source && source.rule_id && source.rule_id.startsWith('rule_'));
                             const sourceLabel = isRule ? '📋 Resident Rule Engine' : '📄 Knowledge Base (ChromaDB)';
                             const sourceTitle = source && (source.rule_id || source.source || 'Knowledge Source');
+                            const sourceLink = `<a href="/rag/dashboard?q=${encodeURIComponent(sourceTitle)}" target="_blank" class="text-info text-decoration-none" title="View in RAG Dashboard">${sourceTitle} <i class="fas fa-external-link-alt" style="font-size: 0.8em;"></i></a>`;
                             return `
-                            <div class="source-item bg-dark bg-opacity-25 p-2 rounded mb-2 border-start border-3 ${isRule ? 'border-primary' : 'border-success'}">
-                                <div class="d-flex justify-content-between">
+                            <div class="source-item bg-dark bg-opacity-25 p-3 rounded mb-2 border-start border-3 ${isRule ? 'border-primary' : 'border-info'}">
+                                <div class="d-flex justify-content-between border-bottom border-secondary border-opacity-50 pb-2 mb-2">
                                     <small class="text-info"><strong>${sourceLabel}</strong></small>
-                                    <small class="text-muted opacity-75">ID: ${sourceTitle}</small>
+                                    <small class="text-muted opacity-75">ID: ${sourceLink}</small>
                                 </div>
-                                <div class="source-content text-light mt-1" style="font-size: 0.85rem; max-height: 80px; overflow: hidden; text-overflow: ellipsis;">
-                                    ${source && source.content ? source.content : 'No preview available'}
+                                <div class="source-content text-light fst-italic mt-2" style="font-size: 0.9rem; line-height: 1.4;">
+                                    ${source && source.content ? source.content : 'No detailed preview available'}
                                 </div>
                             </div>
                             `;
@@ -2951,7 +2953,7 @@
                 // Always get a fresh AI suggestion when the AI icon is clicked
                 // Show loading state
                 console.log('Getting fresh AI suggestion...');
-                const loadingToast = showLoadingToast('Getting AI suggestions...');
+                const loadingToast = showLoadingToast('Getting guidance...');
 
                 // Get AI suggestion
                 console.log('About to call getAISuggestion with:', {
@@ -3131,7 +3133,7 @@
             }
         }
 
-        // Function to handle clicking "Apply & Teach AI" (RLHF)
+        // Function to handle clicking "Apply Correction" (RLHF)
         async function applyAndTeachAI(sentenceIndex, feedbackKey) {
             const data = aiFeedbackData[feedbackKey];
             if (!data || !data.aiSuggestion.suggestion) return;
@@ -3841,7 +3843,7 @@
                 aiButton.setAttribute('data-multiple-feedback', encodeURIComponent(JSON.stringify(item.multipleFeedback)));
                 aiButton.setAttribute('title', 'Master Fix: Resolve all issues at once');
             } else {
-                aiButton.setAttribute('title', 'Get AI-powered suggestions');
+                aiButton.setAttribute('title', 'Get rule-based guidance');
             }
             
             aiButton.innerHTML = item.isMasterFix ? '<i class="fas fa-magic"></i>' : '<i class="fas fa-robot"></i>';
@@ -4040,10 +4042,10 @@
 
             // Reset AI feedback tab
             aiFeedbackContent.innerHTML = `
-                <h5 class="mb-3">AI-Powered Suggestions</h5>
+                <h5 class="mb-3">Rule-Based Guidance</h5>
                 <div class="text-muted text-center py-4">
                     <i class="fas fa-robot fa-2x mb-2"></i>
-                    <p>Click the AI icon next to any issue to get intelligent suggestions</p>
+                    <p>Click the guidance icon next to any issue to get rule details</p>
                 </div>
             `;
             aiFeedbackContent.scrollTop = 0; // Reset scroll position to top
@@ -4172,7 +4174,7 @@
                         <i class="fas fa-check-circle me-2"></i>
                         <div>
                             <strong>Great work!</strong> No issues detected in your document.
-                            <br><small>The AI analysis found your writing to be clear and well-structured.</small>
+                            <br><small>The rule engine found your writing to be clear and well-structured.</small>
                         </div>
                     </div>
                 `;
@@ -4326,9 +4328,15 @@
                             <div style="font-size: 0.85rem; max-height: 120px; overflow-y: auto; color: #cbd5e1;">
                                 ${result.sources.map(src => {
                                     if (typeof src === 'object') {
-                                        return `<div class="mb-2"><strong>${src.rule_id || src.source || 'Matched Rule'}:</strong> ${src.content || ''}</div>`;
+                                        const ruleId = src.rule_id || src.source || 'Matched Rule';
+                                        const ruleLink = `<a href="/rag/dashboard?q=${encodeURIComponent(ruleId)}" target="_blank" class="text-info text-decoration-none border-bottom border-info border-opacity-50 hover-text-white" title="View rule in RAG Dashboard">${ruleId} <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i></a>`;
+                                        return `<div class="mb-3 p-2 rounded" style="background: rgba(0,0,0,0.2); border-left: 3px solid #38bdf8;">
+                                            <div class="mb-1"><strong>${ruleLink}</strong></div>
+                                            <div class="fst-italic" style="color: #e2e8f0; line-height: 1.4;">${src.content || 'No detailed content available.'}</div>
+                                        </div>`;
                                     } else {
-                                        return `<div class="mb-1">${src}</div>`;
+                                        const ruleLink = `<a href="/rag/dashboard?q=${encodeURIComponent(src)}" target="_blank" class="text-info text-decoration-none border-bottom border-info border-opacity-50 hover-text-white" title="View rule in RAG Dashboard">${src} <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7em;"></i></a>`;
+                                        return `<div class="mb-1">${ruleLink}</div>`;
                                     }
                                 }).join('')}
                             </div>
@@ -4464,7 +4472,7 @@
                             
                             <div class="mt-4 pt-3 d-flex justify-content-end gap-2" style="border-top: 1px solid rgba(255,255,255,0.15);">
                                 <button type="button" class="btn btn-sm btn-outline-secondary text-white px-4" style="border-color: rgba(255,255,255,0.2);" onclick="document.getElementById('suggestionModal').style.display='none'">Close</button>
-                                <button type="button" class="btn btn-sm px-4" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);" onclick="applyManualFix('${sentenceIndex}', '${feedbackKey}')">Apply & Teach AI</button>
+                                <button type="button" class="btn btn-sm px-4" style="background: linear-gradient(135deg, #0284c7, #2563eb); color: white; border: none; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);" onclick="applyManualFix('${sentenceIndex}', '${feedbackKey}')">Apply Correction</button>
                             </div>
                         </div>
                     `;
@@ -4887,7 +4895,7 @@
                     <div style="display:grid; gap:1rem;">
                         <label style="display:flex; align-items:center; cursor:pointer;">
                             <input type="checkbox" id="aiPoweredSuggestions" ${flags.ai_powered_suggestions !== false ? 'checked' : ''} style="margin-right:0.5rem;">
-                            <span>AI-Powered Suggestions</span>
+                            <span>Rule-Based Guidance</span>
                             <div style="margin-left:auto; font-size:0.8rem; color:#666;">Use AI for complex grammar improvements</div>
                         </label>
                         
@@ -4999,7 +5007,7 @@
         <div class="progress-container">
             <div class="progress-header">
                 <div class="progress-title">Document Analysis</div>
-                <div class="progress-subtitle">Processing your document with AI-powered insights</div>
+                <div class="progress-subtitle">Processing your document with rule-based insights</div>
             </div>
 
             <div class="progress-percentage" id="progressPercentage">0%</div>
@@ -5059,7 +5067,7 @@
                         <i class="fas fa-wand-magic-sparkles text-white"></i>
                     </div>
                     <div>
-                        <h5 class="mb-0 font-weight-bold" style="font-size: 1.1rem; letter-spacing: 0.25px;">AI Smart Correction</h5>
+                        <h5 class="mb-0 font-weight-bold" style="font-size: 1.1rem; letter-spacing: 0.25px;">Rule Guidance</h5>
                         <small class="text-muted" style="font-size: 0.75rem;">Grounded in Siemens Style Guidelines</small>
                     </div>
                 </div>
@@ -5080,12 +5088,12 @@
 
                     <!-- Primary heading -->
                     <h6 style="font-size:1rem; font-weight:700; color:#c4b5fd; margin-bottom:0.5rem; letter-spacing:0.3px;">
-                        Querying AI Assistant
+                        Querying Knowledge Base
                     </h6>
 
                     <!-- Visible subtitle with animated dots -->
                     <p style="font-size:0.9rem; color:#e2e8f0; margin-bottom:1.5rem; line-height:1.6; font-weight:500;">
-                        Retrieving guideline standards and generating rewrite<span id="loadingDots" style="display:inline-block; width:24px; text-align:left;"></span>
+                        Retrieving guideline standards and extracting exact guidance<span id="loadingDots" style="display:inline-block; width:24px; text-align:left;"></span>
                     </p>
 
                     <!-- Progress steps -->
@@ -5104,9 +5112,9 @@
                         </div>
                         <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
                             <div style="width:32px; height:32px; border-radius:8px; background:rgba(6,182,212,0.2); border:1px solid rgba(6,182,212,0.4); display:flex; align-items:center; justify-content:center; animation:pulseFade 1.4s ease-in-out 0.6s infinite;">
-                                <i class="fas fa-pen-nib" style="color:#22d3ee; font-size:0.75rem;"></i>
+                                <i class="fas fa-list-ul" style="color:#22d3ee; font-size:0.75rem;"></i>
                             </div>
-                            <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Rewriting</span>
+                            <span style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Extraction</span>
                         </div>
                     </div>
                     <style>
@@ -5190,4 +5198,4 @@
 
 </body>
 
-</html>
+</html>
