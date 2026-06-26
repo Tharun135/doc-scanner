@@ -46,11 +46,16 @@ COPY wsgi.py ./
 # Create necessary directories (don't copy data/ as it will be mounted)
 RUN mkdir -p data/uploads data/databases data/rag_knowledge logs
 
-# Set environment variables
+# Set environment variables for memory optimization
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASK_APP=app \
-    PORT=5000
+    PORT=5000 \
+    OMP_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    VECLIB_MAXIMUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
