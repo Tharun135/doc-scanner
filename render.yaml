@@ -4,7 +4,7 @@ services:
     runtime: docker
     plan: starter  # or starter for free tier
     buildCommand: docker build -t docscanner-ai .
-    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 wsgi:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120 wsgi:application
     envVars:
       - key: FLASK_ENV
         value: production
