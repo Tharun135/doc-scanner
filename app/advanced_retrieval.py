@@ -20,12 +20,8 @@ try:
 except ImportError:
     CHROMADB_AVAILABLE = False
 
-# Embedding imports
-try:
-    from sentence_transformers import SentenceTransformer
-    EMBEDDINGS_AVAILABLE = True
-except ImportError:
-    EMBEDDINGS_AVAILABLE = False
+# Embedding imports removed to save memory. ChromaDB handles this natively.
+EMBEDDINGS_AVAILABLE = False
 
 # TF-IDF for keyword search
 try:
@@ -95,17 +91,8 @@ class AdvancedRetriever:
             self.collection = None
     
     def _init_embedding_model(self):
-        """Initialize sentence transformer model."""
-        if not EMBEDDINGS_AVAILABLE:
-            logger.warning("Sentence transformers not available. Embedding search will be disabled.")
-            return
-        
-        try:
-            self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            logger.info("✅ Loaded embedding model: all-MiniLM-L6-v2")
-        except Exception as e:
-            logger.error(f"Failed to load embedding model: {e}")
-            self.embedding_model = None
+        """Sentence transformer model is no longer used. ChromaDB handles embeddings internally via ONNX."""
+        self.embedding_model = None
     
     def _init_tfidf(self):
         """Initialize TF-IDF vectorizer."""

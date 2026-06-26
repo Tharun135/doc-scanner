@@ -224,10 +224,8 @@ def init_rag_modules():
         import chromadb as _chromadb
         chromadb = _chromadb
         
-        # Import sentence transformers without loading models
-        import sentence_transformers as _st
-        sentence_transformers = _st
-        
+        # Remove sentence transformers import as it causes 300MB memory spike
+        sentence_transformers = None
         # Import our modules
         from .data_ingestion import DocumentLoader, quick_load_folder, get_supported_formats
         from .chunking_strategies import TextChunker, chunk_documents, get_chunking_statistics
