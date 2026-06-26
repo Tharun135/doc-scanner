@@ -51,7 +51,7 @@ gunicorn==22.0.0
 # google-generativeai==0.8.5  # Removed - Google dependencies removed
 flask-socketio==5.3.7
 python-socketio==5.11.4
-chromadb==1.0.15
+# chromadb removed (using zero-memory JSON lookup)
 python-dotenv==1.1.1
 
 # Enhanced AI and NLP capabilities

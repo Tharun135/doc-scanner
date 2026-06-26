@@ -1120,25 +1120,44 @@ def ai_suggestion():
     # Query RAG for references
     sources = []
     try:
-        global _global_retriever
-        if '_global_retriever' not in globals() or _global_retriever is None:
-            _global_retriever = create_retriever()
-        retriever = _global_retriever
+        import json
+        rules_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'rules', 'rules.json')
         
+        # Zero-memory fallback: read rules directly from JSON instead of massive ChromaDB ONNX model
         rag_results = []
         seen_rules = set()
         
-        # Split feedback_text by '|' to handle multiple issues in one sentence
-        issues = [issue.strip() for issue in feedback_text.split('|') if issue.strip()]
-        
-        for issue in issues:
-            query = f"{issue} {sentence_context}"
-            issue_results = retrieve_for_writing_feedback(query, retriever, current_document_content)
+        if os.path.exists(rules_path):
+            with open(rules_path, 'r', encoding='utf-8') as f:
+                rules = json.load(f)
+                
+            issues = [issue.strip() for issue in feedback_text.split('|') if issue.strip()]
             
-            for res in issue_results:
-                if res.content not in seen_rules:
-                    rag_results.append(res)
-                    seen_rules.add(res.content)
+            for issue in issues:
+                # Find matching rule by message or suggestion
+                for rule in rules:
+                    if (issue in rule.get('message', '') or rule.get('message', '') in issue or
+                        issue in rule.get('suggestion', '') or rule.get('suggestion', '') in issue):
+                        
+                        # Format identically to old RAG results
+                        content = f"Rule: {rule.get('message', '')}\nGuidance: {rule.get('suggestion', '')}"
+                        if rule.get('example_violation') and rule.get('example_correction'):
+                            content += f"\nBad: '{rule.get('example_violation')}'\nGood: '{rule.get('example_correction')}'"
+                            
+                        if content not in seen_rules:
+                            # Create a mock RetrievalResult using a simple object class
+                            class MockResult:
+                                def __init__(self, content, metadata):
+                                    self.content = content
+                                    self.metadata = metadata
+                                    self.relevance_score = 1.0
+                            
+                            rag_results.append(MockResult(
+                                content=content,
+                                metadata={'rule_id': rule.get('rule_id', ''), 'meta_doc_title': 'Siemens Style Guide'}
+                            ))
+                            seen_rules.add(content)
+                            break
         
         for res in rag_results:
             rule_name = res.metadata.get('rule_id', res.metadata.get('issue_type', ''))

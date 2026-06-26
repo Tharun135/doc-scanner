@@ -70,8 +70,7 @@ RUN useradd -m -u 1000 appuser && \
 
 USER appuser
 
-# Pre-download ChromaDB ONNX model to prevent memory spikes and delays at runtime
-RUN python -c "import chromadb.utils.embedding_functions as ef; ef.DefaultEmbeddingFunction()(['test'])"
+# Pre-caching removed (ChromaDB is completely removed from app)
 
 # Command to run the app directly to avoid gunicorn master process overhead
 CMD ["python", "run.py"]
