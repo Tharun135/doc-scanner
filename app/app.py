@@ -1130,7 +1130,10 @@ def ai_suggestion():
     # Query RAG for references
     sources = []
     try:
-        retriever = create_retriever()
+        global _global_retriever
+        if '_global_retriever' not in globals() or _global_retriever is None:
+            _global_retriever = create_retriever()
+        retriever = _global_retriever
         
         rag_results = []
         seen_rules = set()
