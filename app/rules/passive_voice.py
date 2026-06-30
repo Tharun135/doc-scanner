@@ -112,9 +112,44 @@ def check(content, previous_sentence=None, next_sentence=None):
         if is_code_or_diagram(sentence_text):
             continue
             
+        is_passive = False
+        target_verb = ""
+        
         if token.dep_ == "auxpass":
-            # PRECISISON FIX: Whitelist technical state verbs that are appropriate in passive/state form
+            is_passive = True
             target_verb = token.head.lemma_.lower()
+        elif getattr(token, 'dep_', '') == "":
+            # Regex fallback when using DummySpacy
+            regular_passive = [
+                r'\bis\s+\w+ed\b', r'\bare\s+\w+ed\b', r'\bwas\s+\w+ed\b', r'\bwere\s+\w+ed\b',
+                r'\bhas\s+been\s+\w+ed\b', r'\bhave\s+been\s+\w+ed\b', r'\bbeing\s+\w+ed\b', r'\bto\s+be\s+\w+ed\b'
+            ]
+            irregular_participles = [
+                'written', 'taken', 'given', 'shown', 'known', 'thrown', 'drawn', 'driven',
+                'flown', 'grown', 'blown', 'broken', 'chosen', 'frozen', 'spoken', 'stolen',
+                'woken', 'forgotten', 'hidden', 'ridden', 'risen', 'fallen', 'eaten', 'beaten',
+                'seen', 'done', 'gone', 'come', 'become', 'overcome', 'run', 'begun', 'sung',
+                'rung', 'swung', 'hung', 'spun', 'won', 'built', 'bent', 'sent', 'spent',
+                'lent', 'meant', 'kept', 'left', 'felt', 'dealt', 'dreamt', 'learnt', 'burnt',
+                'thought', 'brought', 'caught', 'taught', 'fought', 'bought', 'sought', 'sold',
+                'told', 'held', 'found', 'bound', 'wound', 'lost', 'cost', 'cut', 'put', 'set',
+                'hit', 'let', 'bet', 'shut', 'hurt', 'split', 'quit', 'spread', 'made', 'read', 'kept'
+            ]
+            all_patterns = regular_passive + [fr'\b(is|are|was|were|has been|have been|being|to be)\s+{p}\b' for p in irregular_participles]
+            
+            for pattern in all_patterns:
+                if re.search(pattern, sentence_text, re.IGNORECASE):
+                    is_passive = True
+                    target_verb = "regex_match"
+                    break
+            
+            # Since dummy tokens will iterate for every word in the sentence, only process the sentence once
+            # to avoid duplicate suggestions for the same sentence
+            if is_passive and any(s.get('text') == sentence_text for s in suggestions if isinstance(s, dict)):
+                continue
+
+        if is_passive:
+            # PRECISISON FIX: Whitelist technical state verbs that are appropriate in passive/state form
             if target_verb in ['abstract', 'integrate', 'store', 'equip', 'locate', 'configure', 'setup', 'set']:
                 continue
             # ============================================================
