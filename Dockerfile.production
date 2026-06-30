@@ -38,10 +38,12 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy application code
 COPY app/ ./app/
+COPY core/ ./core/
 COPY config/ ./config/
 COPY run.py ./
 COPY wsgi.py ./
 COPY gunicorn.conf.py ./
+COPY spacy.py ./
 
 # Create necessary directories (don't copy data/ as it will be mounted)
 RUN mkdir -p chroma_db data/uploads data/databases data/rag_knowledge logs && \
