@@ -61,9 +61,9 @@ def check(sentence_text):
             "guide"
         ),
         (
-            r"\b(it is)\b",
-            "Technical Style: Avoid weak expression 'it is'",
-            "Rewrite to remove 'it is'. Weak expletive constructions dilute clarity. Example: 'It is important to save the file' → 'Save the file'.",
+            r"\b(it is (?:important|necessary|recommended|possible|required|advised|noted|obvious|clear))\b",
+            "Technical Style: Avoid weak expression 'it is [adjective]'",
+            "Rewrite to remove the weak expletive construction. Example: 'It is important to save the file' → 'Save the file'.",
             "guide"
         ),
         (
@@ -113,12 +113,6 @@ def check(sentence_text):
             "Technical Style: Avoid Latin abbreviations (e.g., i.e.)",
             "Do not use Latin abbreviations. Replace 'e.g.' with 'for example', 'such as', or 'including'. Replace 'i.e.' with 'that is' or 'in other words'.",
             "guide"
-        ),
-        (
-            r"^to\s+.*,\s+follow\s+these\s+steps",
-            "Start procedural steps with imperative verbs",
-            "Technical Style Guide recommends starting procedural steps with direct imperatives. Instead of 'To [action], follow these steps:', use 'Follow these steps to [action]:'.",
-            "rewrite"
         ),
     ]
 

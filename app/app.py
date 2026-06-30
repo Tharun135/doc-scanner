@@ -1155,11 +1155,26 @@ def ai_suggestion():
     
     if not ai_answer:
         ui_issue = data.get('issue')
-        if ui_issue and isinstance(ui_issue, dict) and 'reviewer_rationale' in ui_issue:
+        if not isinstance(ui_issue, dict):
+            ui_issue = {}
+            
+        if 'reviewer_rationale' in ui_issue:
             ai_answer = ui_issue['reviewer_rationale']
             is_reviewer_rationale = True
         else:
             ai_answer = f"Review needed based on rule: {feedback_text}"
+            
+        # Only inject the local rule fallback if no rules were matched via JSON
+        if not sources:
+            rule_id = ui_issue.get('rule', 'Style Rule')
+            message = ui_issue.get('message', feedback_text)
+            
+            sources.append({
+                "rule_id": rule_id,
+                "content": f"{message}\nGuidance: {ai_answer}",
+                "source": "Local Rule Engine",
+                "score": 1.0
+            })
 
     return jsonify({
         "suggestion": "", # No AI generation

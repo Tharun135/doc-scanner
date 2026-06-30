@@ -61,9 +61,7 @@ def check(content):
     # Terminology consistency
     # ------------------------------
     common_terms = {
-        "login": "log in",
-        "log-in": "log in",
-        "Log in": "log in",
+        "log-in": "login", # Usually login (noun) is preferred over log-in
     }
     for wrong, correct in common_terms.items():
         if wrong in text_content and correct not in text_content:

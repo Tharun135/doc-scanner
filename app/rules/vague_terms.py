@@ -65,7 +65,7 @@ def check(content):
 def _process_vague_terms_chunk(doc, offset=0):
     """Process a spaCy doc for vague terms and return suggestions with position offset."""
     chunk_suggestions = []
-    vague_terms = {"some", "several", "various", "stuff", "things"}
+    vague_terms = {"some", "several", "stuff", "things"}
     
     for token in doc:
         # Skip if token is in a title or heading (for full content check)

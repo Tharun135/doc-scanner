@@ -43,7 +43,7 @@ Next to any sentence that has an issue, you will see a small 🤖 **Robot Icon**
 
 Doc Scanner doesn't just tell you what's wrong—it helps you fix it!
 
-1. **Click the Robot/Wand Icon:** Whenever you see an issue, click the icon next to that sentence.
+1. **Click the Issue Card:** Whenever you see an issue in the right-hand pane, click directly on the issue card.
 2. **Read the Rule Guidance:** A pop-up window will appear showing you exactly which rule was broken. It will explain *why* it's an issue in simple terms. 🧠
 3. **Make Your Correction:** 
    * Use the guidance and rationale provided to understand how to improve your sentence.

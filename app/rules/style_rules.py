@@ -117,7 +117,7 @@ def check(content):
             # ============================================================
             # "VERY" DETECTION
             # ============================================================
-            if "very" in sent.text.lower():
+            if re.search(r'\bvery\b', sent.text, re.IGNORECASE):
                 # DECISION: guide - Generic intensifier
                 suggestions.append({
                     'text': sent.text.strip(),

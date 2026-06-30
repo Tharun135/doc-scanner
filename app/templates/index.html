@@ -3779,23 +3779,7 @@
                 </div>
             `;
 
-            const aiButton = document.createElement('button');
-            aiButton.className = `ai-feedback-icon ${item.isMasterFix ? 'master-fix' : ''}`;
-            aiButton.setAttribute('data-sentence-index', sentenceIndex);
-            aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
-            aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
-            aiButton.setAttribute('data-item', encodeURIComponent(JSON.stringify(item)));
-            
-            if (item.isMasterFix && item.multipleFeedback) {
-                aiButton.setAttribute('data-multiple-feedback', encodeURIComponent(JSON.stringify(item.multipleFeedback)));
-                aiButton.setAttribute('title', 'Master Fix: Resolve all issues at once');
-            } else {
-                aiButton.setAttribute('title', 'Get rule-based guidance');
-            }
-            
-            aiButton.innerHTML = '<i class="fas fa-robot"></i>';
             wrapperDiv.appendChild(contentDiv);
-            wrapperDiv.appendChild(aiButton);
             feedbackDiv.appendChild(wrapperDiv);
             
             return feedbackDiv;

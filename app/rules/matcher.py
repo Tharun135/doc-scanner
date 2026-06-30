@@ -32,6 +32,20 @@ def apply_rules(sentence: str, rules: List[Dict[str, Any]]) -> List[Dict[str, An
     
     if not sentence or not sentence.strip():
         return violations
+        
+    # Mask characters inside double quotes with spaces to preserve length
+    # This prevents rules from triggering on literal UI labels or code strings
+    masked_chars = []
+    in_quotes = False
+    for char in sentence:
+        if char == '"':
+            in_quotes = not in_quotes
+            masked_chars.append(char)
+        elif in_quotes:
+            masked_chars.append(' ')
+        else:
+            masked_chars.append(char)
+    masked_sentence = "".join(masked_chars)
     
     for rule in rules:
         try:
@@ -39,17 +53,20 @@ def apply_rules(sentence: str, rules: List[Dict[str, Any]]) -> List[Dict[str, An
             if not pattern:
                 continue
             
-            # Perform case-insensitive regex search
-            matches = re.finditer(pattern, sentence, flags=re.IGNORECASE)
+            # Perform case-insensitive regex search on the MASKED sentence
+            matches = re.finditer(pattern, masked_sentence, flags=re.IGNORECASE)
             
             for match in matches:
+                # Use original sentence to extract the actual matched text
+                actual_text = sentence[match.start():match.end()]
+                
                 violation = {
                     "rule_id": rule.get("rule_id", "UNKNOWN"),
                     "category": rule.get("category", "general"),
                     "severity": rule.get("severity", "warn"),
                     "message": rule.get("message", "Style violation detected"),
                     "suggestion": rule.get("suggestion", ""),
-                    "matched_text": match.group(0),
+                    "matched_text": actual_text,
                     "match_start": match.start(),
                     "match_end": match.end()
                 }
