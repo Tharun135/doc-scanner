@@ -19,7 +19,8 @@ if __name__ == '__main__':
             debug=debug_mode, 
             host='0.0.0.0', 
             port=port,
-            use_reloader=False  # Re-disabling for stability on Windows with Eventlet
+            use_reloader=False,  # Re-disabling for stability on Windows with Eventlet
+            allow_unsafe_werkzeug=True
         )
     else:
         print("[WARN] Running without SocketIO support")
