@@ -9,7 +9,7 @@ bind = f"0.0.0.0:{os.getenv('PORT', '5000')}"
 backlog = 2048
 
 # Worker processes
-workers = int(os.getenv('GUNICORN_WORKERS', multiprocessing.cpu_count() * 2 + 1))
+workers = int(os.getenv('GUNICORN_WORKERS', 1))
 worker_class = 'sync'  # Use 'gevent' for async support
 worker_connections = 1000
 max_requests = 1000  # Restart workers after N requests (prevents memory leaks)

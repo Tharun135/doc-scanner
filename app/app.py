@@ -14,13 +14,9 @@ import textstat
 import time
 from dataclasses import asdict
 
-# Try to import spacy but handle import errors gracefully
-try:
-    import spacy
-    SPACY_IMPORT_SUCCESS = True
-except ImportError:
-    SPACY_IMPORT_SUCCESS = False
-    spacy = None
+# Spacy removed for memory efficiency
+SPACY_IMPORT_SUCCESS = False
+spacy = None
 
 # Load environment variables from .env file
 try:
@@ -40,31 +36,9 @@ main = Blueprint('main', __name__)
 logging.basicConfig(level=logging.INFO)  # Changed from DEBUG to hide RAG debug messages
 logger = logging.getLogger(__name__)
 
-# Load spaCy English model (make sure to run: python -m spacy download en_core_web_sm)
-if SPACY_IMPORT_SUCCESS and os.environ.get('FLASK_ENV') != 'production':
-    try:
-        # Try to load with reduced memory footprint
-        nlp = spacy.load("en_core_web_sm", disable=["ner", "textcat"])
-        SPACY_AVAILABLE = True
-        logger.info("spaCy model loaded successfully with reduced components")
-    except MemoryError as e:
-        logger.warning(f"spaCy model loading failed due to memory constraints: {e}")
-        logger.warning("Running without spaCy - sentence splitting will use basic methods")
-        nlp = None
-        SPACY_AVAILABLE = False
-    except ImportError as e:
-        logger.warning(f"spaCy not available: {e}")
-        nlp = None
-        SPACY_AVAILABLE = False
-    except Exception as e:
-        logger.warning(f"spaCy model not available: {e}")
-        logger.warning("Falling back to basic sentence processing")
-        nlp = None
-        SPACY_AVAILABLE = False
-else:
-    logger.warning("spaCy package not installed - using basic sentence processing")
-    nlp = None
-    SPACY_AVAILABLE = False
+# Spacy removed - using basic sentence processing
+nlp = None
+SPACY_AVAILABLE = False
 
 ############################
 # SENTENCE EXTRACTION HELPERS
@@ -112,14 +86,8 @@ def extract_sentences_with_html_preservation(html_content):
         # Get the plain text version for analysis with a space separator to preserve word boundaries
         element_text = element.get_text(separator=' ')
         
-        # Split the text into sentences
-        raw_fragments = []
-        if SPACY_AVAILABLE and nlp:
-            doc = nlp(element_text)
-            raw_fragments = [sent.text.strip() for sent in doc.sents if sent.text.strip()]
-        else:
-            # Fallback for splitting sentences when spacy is not available
-            raw_fragments = [s.strip() for s in re.split(r'[.!?]+\s+', element_text) if s.strip()]
+        # Split the text into sentences (using simple regex since spacy is removed)
+        raw_fragments = [s.strip() for s in re.split(r'(?<=[.!?])\s+', element_text) if s.strip()]
 
         # 🔗 MERGING STEP: Unify technical fragments (e.g. "Label: Content")
         merged_fragments = []

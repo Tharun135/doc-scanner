@@ -9,8 +9,8 @@ pydantic==2.10.6
 pydantic-settings==2.6.1
 
 # Vector store and embeddings
-chromadb==1.0.15
-sentence-transformers==2.2.2
+# chromadb==1.0.15
+# sentence-transformers==2.2.2
 
 # Document parsing
 PyPDF2==3.0.1
@@ -20,7 +20,7 @@ lxml==5.3.0
 
 # NLP and text processing
 nltk==3.8.1
-spacy==3.7.2
+# spacy==3.7.2
 
 # HTTP and async
 aiohttp==3.9.1

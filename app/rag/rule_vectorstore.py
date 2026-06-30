@@ -22,19 +22,9 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Optional deps — fail gracefully so Flask still starts
 # ---------------------------------------------------------------------------
-try:
-    import chromadb
-    CHROMADB_AVAILABLE = True
-except ImportError:
-    CHROMADB_AVAILABLE = False
-    logger.warning("[RuleVectorStore] chromadb not installed — rule retrieval disabled")
-
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
-    logger.warning("[RuleVectorStore] sentence_transformers not installed — falling back to ChromaDB default embedding")
+CHROMADB_AVAILABLE = False
+SENTENCE_TRANSFORMERS_AVAILABLE = False
+logger.warning("[RuleVectorStore] RAG replaced with JSON lookup to save memory")
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -198,129 +188,21 @@ class RuleVectorStore:
     # ------------------------------------------------------------------
 
     def _init(self):
-        if not CHROMADB_AVAILABLE:
-            logger.warning("[RuleVectorStore] ChromaDB not available — store disabled")
-            return
-        try:
-            self._client = chromadb.PersistentClient(path=self.db_path)
-            logger.info(f"[RuleVectorStore] Connected to ChromaDB at {self.db_path}")
-        except Exception as exc:
-            logger.error(f"[RuleVectorStore] ChromaDB init failed: {exc}")
-            return
-
-        try:
-            self._collection = self._client.get_or_create_collection(
-                name=self.collection_name,
-                metadata={
-                    "description": "DocScanner style rules — rule-first RAG knowledge base",
-                    "version": "2.0",
-                },
-            )
-            logger.info(
-                f"[RuleVectorStore] Collection '{self.collection_name}' ready "
-                f"({self._collection.count()} rules)"
-            )
-        except Exception as exc:
-            logger.error(f"[RuleVectorStore] Collection init failed: {exc}")
-            return
-
-        # Load embedding model if available
-        if SENTENCE_TRANSFORMERS_AVAILABLE:
-            try:
-                self._embedding_model = SentenceTransformer(self.embedding_model_name)
-                logger.info(f"[RuleVectorStore] Embedding model '{self.embedding_model_name}' loaded")
-            except Exception as exc:
-                logger.warning(f"[RuleVectorStore] Embedding model load failed: {exc}")
-
+        # Memory-optimized: We no longer initialize ChromaDB or SentenceTransformers
+        # We will just load the JSON directly when needed
         self._ready = True
+        logger.info("[RuleVectorStore] Initialized in JSON-only mode for Community Edition")
 
     # ------------------------------------------------------------------
     # Ingestion
     # ------------------------------------------------------------------
 
     def ingest_rules(self, force_reingest: bool = False) -> int:
-        """
-        Populate the vector store with style rules from rules.json.
-        Each rule becomes one document in ChromaDB.
-
-        Args:
-            force_reingest: If True, clears existing rules and re-ingests.
-
-        Returns:
-            Number of rules successfully ingested.
-        """
-        if not self._ready:
-            logger.error("[RuleVectorStore] Store not ready — skipping ingestion")
-            return 0
-
-        existing_count = self._collection.count()
-        if existing_count > 0 and not force_reingest:
-            logger.info(f"[RuleVectorStore] {existing_count} rules already in store — skipping (use force_reingest=True to override)")
-            return existing_count
-
-        # Load rules.json
+        # In JSON-only mode, we don't ingest into a vector DB
         rules = self._load_rules_json()
-        if not rules:
-            logger.error("[RuleVectorStore] No rules loaded from rules.json")
-            return 0
-
-        if force_reingest and existing_count > 0:
-            logger.info(f"[RuleVectorStore] Force re-ingest: deleting {existing_count} existing rules")
-            self._client.delete_collection(self.collection_name)
-            self._collection = self._client.create_collection(
-                name=self.collection_name,
-                metadata={"description": "DocScanner style rules v2", "version": "2.0"},
-            )
-
-        ids: List[str] = []
-        documents: List[str] = []
-        metadatas: List[Dict[str, Any]] = []
-
-        for rule in rules:
-            rule_id = rule.get("rule_id", "UNKNOWN")
-            category = rule.get("category", "general")
-            severity = rule.get("severity", "warn")
-            message = rule.get("message", "")
-            suggestion = rule.get("suggestion", "")
-            example_bad = rule.get("example_violation", "")
-            example_good = rule.get("example_correction", "")
-
-            # Build the embeddable text: rich description + examples + category keywords
-            embed_text = RULE_EMBED_TEMPLATES.get(rule_id) or (
-                f"{message} {suggestion} "
-                f"Bad example: {example_bad} "
-                f"Good example: {example_good} "
-                f"Category: {category}"
-            )
-
-            # Add category keyword boosting text
-            kw = " ".join(CATEGORY_KEYWORDS.get(category, []))
-            embed_text = f"{embed_text} {kw}".strip()
-
-            ids.append(rule_id)
-            documents.append(embed_text)
-            metadatas.append({
-                "rule_id": rule_id,
-                "category": category,
-                "severity": severity,
-                "message": message,
-                "suggestion": suggestion,
-                "example_violation": example_bad,
-                "example_correction": example_good,
-            })
-
-        try:
-            self._collection.upsert(
-                ids=ids,
-                documents=documents,
-                metadatas=metadatas,
-            )
-            count = self._collection.count()
-            logger.info(f"[RuleVectorStore] ✅ Ingested {count} style rules into '{self.collection_name}'")
-            return count
-        except Exception as exc:
-            logger.error(f"[RuleVectorStore] Ingestion failed: {exc}")
-            return 0
+        self._cached_rules = rules
+        logger.info(f"[RuleVectorStore] ✅ Loaded {len(rules)} style rules into memory")
+        return len(rules)
 
     def _load_rules_json(self) -> List[Dict[str, Any]]:
         """Load rules from rules.json."""
@@ -347,70 +229,50 @@ class RuleVectorStore:
         category_filter: Optional[str] = None,
         severity_filter: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """
-        Retrieve the most relevant style rules for a given sentence.
-
-        Args:
-            sentence:         The sentence to evaluate.
-            top_k:            Number of rules to retrieve.
-            category_filter:  Optional ChromaDB $eq filter on category.
-            severity_filter:  Optional ChromaDB $eq filter on severity.
-
-        Returns:
-            List of dicts: {rule_id, category, severity, message, suggestion,
-                            example_violation, example_correction, score}
-        """
-        if not self._ready:
-            logger.warning("[RuleVectorStore] Store not ready — returning empty results")
-            return []
-
+        if not hasattr(self, '_cached_rules') or not self._cached_rules:
+            self.ingest_rules()
+            
         if not sentence or not sentence.strip():
             return []
 
-        # Build where clause
-        where = self._build_where_clause(category_filter, severity_filter)
-
-        try:
-            kwargs: Dict[str, Any] = {
-                "query_texts": [sentence],
-                "n_results": min(top_k, self._collection.count() or 1),
-                "include": ["documents", "metadatas", "distances"],
-            }
-            if where:
-                kwargs["where"] = where
-
-            results = self._collection.query(**kwargs)
-        except Exception as exc:
-            logger.error(f"[RuleVectorStore] Query failed: {exc}")
-            return []
-
-        out: List[Dict[str, Any]] = []
-        if not results or not results.get("ids") or not results["ids"][0]:
-            return out
-
-        for doc, meta, dist in zip(
-            results["documents"][0],
-            results["metadatas"][0],
-            results["distances"][0],
-        ):
-            # ChromaDB can return L2 distances (range 0..∞) or cosine distances (0..2).
-            # Normalise to [0,1] using: score = 1 / (1 + distance)
-            # This is monotonically decreasing in distance and always ∈ (0,1].
-            score = 1.0 / (1.0 + float(dist))
-            out.append({
-                "rule_id": meta.get("rule_id", "?"),
-                "category": meta.get("category", "general"),
-                "severity": meta.get("severity", "warn"),
-                "message": meta.get("message", ""),
-                "suggestion": meta.get("suggestion", ""),
-                "example_violation": meta.get("example_violation", ""),
-                "example_correction": meta.get("example_correction", ""),
-                "embed_text": doc,
-                "score": round(score, 4),
-            })
-
-        logger.debug(f"[RuleVectorStore] {len(out)} rules retrieved for: '{sentence[:60]}'")
-        return out
+        out = []
+        s_lower = sentence.lower()
+        
+        for rule in getattr(self, '_cached_rules', []):
+            if category_filter and rule.get("category") != category_filter:
+                continue
+            if severity_filter and rule.get("severity") != severity_filter:
+                continue
+                
+            rule_id = rule.get("rule_id", "?")
+            category = rule.get("category", "general")
+            
+            # Simple keyword matching score
+            score = 0.1 # Base score
+            
+            # Match keywords
+            keywords = CATEGORY_KEYWORDS.get(category, [])
+            for kw in keywords:
+                if kw.lower() in s_lower:
+                    score += 0.2
+            
+            # If we matched some keywords or it's a general match, include it
+            if score > 0.1:
+                out.append({
+                    "rule_id": rule_id,
+                    "category": category,
+                    "severity": rule.get("severity", "warn"),
+                    "message": rule.get("message", ""),
+                    "suggestion": rule.get("suggestion", ""),
+                    "example_violation": rule.get("example_violation", ""),
+                    "example_correction": rule.get("example_correction", ""),
+                    "embed_text": f"Rule {rule_id}: {rule.get('message')}",
+                    "score": min(1.0, score),
+                })
+        
+        # Sort by score descending and take top_k
+        out.sort(key=lambda x: x["score"], reverse=True)
+        return out[:top_k]
 
     def _build_where_clause(
         self,
@@ -436,12 +298,9 @@ class RuleVectorStore:
 
     def count(self) -> int:
         """Return number of rules in the store."""
-        if not self._ready:
+        if not hasattr(self, '_cached_rules') or not self._cached_rules:
             return 0
-        try:
-            return self._collection.count()
-        except Exception:
-            return 0
+        return len(self._cached_rules)
 
     def is_ready(self) -> bool:
         return self._ready
@@ -459,8 +318,4 @@ def get_rule_vectorstore() -> RuleVectorStore:
     global _store
     if _store is None:
         _store = RuleVectorStore()
-        # Auto-ingest rules on first use if store is empty
-        if _store.is_ready() and _store.count() == 0:
-            logger.info("[RuleVectorStore] Auto-ingesting rules on first use...")
-            _store.ingest_rules()
     return _store
