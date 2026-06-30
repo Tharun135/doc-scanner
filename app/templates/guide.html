@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide - Doc Scanner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #00d2ff;
+            --accent: #ff7675;
+            --bg-color: #f0f3f8;
+            --card-bg: #ffffff;
+            --text-dark: #2d3436;
+        }
+
+        body { 
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            color: var(--text-dark); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        .guide-container { 
+            max-width: 900px; 
+            margin: 40px auto; 
+        }
+
+        .guide-card {
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05); 
+            animation: slideUpFade 0.8s ease forwards;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Top decorative gradient line */
+        .guide-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+
+        h1 { 
+            color: var(--text-dark); 
+            font-weight: 800;
+            margin-bottom: 30px; 
+            display: flex;
+            align-items: center;
+        }
+
+        h1 .icon-wrapper {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-right: 15px;
+            animation: pulse-icon 2s infinite;
+        }
+
+        h2 { 
+            color: var(--primary); 
+            margin-top: 40px; 
+            font-weight: 700;
+            padding-bottom: 10px; 
+            border-bottom: 2px dashed rgba(108, 92, 231, 0.2); 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 { 
+            color: #4b6584; 
+            margin-top: 25px; 
+            font-size: 1.3rem; 
+            font-weight: 600;
+        }
+
+        .feature-box {
+            background: rgba(108, 92, 231, 0.05);
+            border-left: 4px solid var(--primary);
+            padding: 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        .feature-box:hover {
+            transform: translateX(5px);
+            background: rgba(108, 92, 231, 0.08);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .step-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .step-list li {
+            position: relative;
+            padding-left: 50px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            counter-increment: step-counter;
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .step-list {
+            counter-reset: step-counter;
+        }
+
+        .step-list li:hover {
+            transform: translateX(10px);
+        }
+
+        .step-list li:hover::before {
+            transform: translateY(-50%) scale(1.15);
+            box-shadow: 0 6px 15px rgba(108, 92, 231, 0.5);
+        }
+
+        .back-btn { 
+            margin-bottom: 25px; 
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+        }
+
+        .icon-badge { 
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            color: white; 
+            width: 30px; 
+            height: 30px; 
+            display: inline-flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 50%; 
+            font-size: 14px; 
+            box-shadow: 0 4px 10px rgba(108,92,231,0.4);
+            animation: bounce-gentle 2s infinite ease-in-out;
+        }
+
+        .highlight-card {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .highlight-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .highlight-success { background: rgba(39, 174, 96, 0.1); border: 1px solid rgba(39, 174, 96, 0.2); }
+        .highlight-warning { background: rgba(243, 156, 18, 0.1); border: 1px solid rgba(243, 156, 18, 0.2); }
+        .highlight-error { background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.2); }
+
+        /* Animations */
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse-icon {
+            0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(0,210,255,0)); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 10px rgba(0,210,255,0.6)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(0,210,255,0)); }
+        }
+
+        @keyframes bounce-gentle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
+
+        /* Staggered entrance for sections */
+        section {
+            opacity: 0;
+            animation: slideUpFade 0.6s ease forwards;
+        }
+        section:nth-child(1) { animation-delay: 0.1s; }
+        section:nth-child(2) { animation-delay: 0.2s; }
+        section:nth-child(3) { animation-delay: 0.3s; }
+        section:nth-child(4) { animation-delay: 0.4s; }
+        section:nth-child(5) { animation-delay: 0.5s; }
+        section:nth-child(6) { animation-delay: 0.6s; }
+
+        .btn-gradient {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            color: white;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 210, 255, 0.3);
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container guide-container">
+        <a href="/" class="btn btn-light back-btn"><i class="fas fa-arrow-left"></i> Back to Scanner</a>
+        
+        <div class="guide-card">
+            <h1><span class="icon-wrapper"><i class="fas fa-file-contract"></i></span> Doc Scanner User Guide</h1>
+            
+            <p class="lead text-muted" style="font-size: 1.15rem; line-height: 1.6;">
+                Welcome to <strong>Doc Scanner</strong>! This tool is designed to help you write clearer, more precise, and highly professional technical documents. Think of it as your intelligent built-in editor that enforces industry-standard style guidelines instantly.
+            </p>
+
+            <section>
+                <h2><i class="fas fa-rocket text-warning"></i> 1. Getting Started</h2>
+                <div class="feature-box">
+                    <h3>What does Doc Scanner do?</h3>
+                    <p>It reads your documents (<code>.txt</code>, <code>.md</code>, or <code>.pdf</code>) and identifies areas that could be improved, including:</p>
+                    <ul class="mb-0" style="line-height: 1.8;">
+                        <li><i class="fas fa-pen-nib text-primary me-2"></i><strong>Passive Voice:</strong> Makes your sentences more direct and active.</li>
+                        <li><i class="fas fa-compress-arrows-alt text-primary me-2"></i><strong>Complex Sentences:</strong> Breaks down long, confusing text.</li>
+                        <li><i class="fas fa-spell-check text-primary me-2"></i><strong>Terminology:</strong> Ensures standard UI terms (e.g., using "Click" instead of "Click on").</li>
+                        <li><i class="fas fa-glasses text-primary me-2"></i><strong>Readability:</strong> Guarantees your document is accessible to your audience.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2><i class="fas fa-upload text-info"></i> 2. How to Scan a Document</h2>
+                <ul class="step-list">
+                    <li><strong>Upload your file:</strong> Locate the <strong>Upload Document</strong> section on the left side of the dashboard.</li>
+                    <li><strong>Select a file:</strong> Click the area or simply drag and drop your document.</li>
+                    <li><strong>Analyze:</strong> Click the <span class="btn-gradient"><i class="fas fa-bolt"></i> Upload & Analyze</span> button.</li>
+                    <li><strong>Wait a moment:</strong> The scanner will process your document line by line and display the results in the reading pane on the right.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><i class="fas fa-search-chart text-success"></i> 3. Understanding Your Results</h2>
+                <p>Once analysis finishes, your document is split into interactive sentences in the <strong>Document Content & Feedback</strong> area.</p>
+                
+                <h3 class="mt-4 mb-3">Visual Indicators</h3>
+                <div class="highlight-card highlight-success">
+                    <i class="fas fa-check-circle text-success fs-4"></i>
+                    <div>
+                        <strong>Clean Text (Green/No highlights)</strong>
+                        <div class="text-muted small">Sentences that are perfectly written and follow all rules!</div>
+                    </div>
+                </div>
+                <div class="highlight-card highlight-warning">
+                    <i class="fas fa-exclamation-triangle text-warning fs-4"></i>
+                    <div>
+                        <strong>Highlighted Text (Yellow/Orange)</strong>
+                        <div class="text-muted small">Sentences with stylistic warnings or readability improvements.</div>
+                    </div>
+                </div>
+                <div class="highlight-card highlight-error">
+                    <i class="fas fa-times-circle text-danger fs-4"></i>
+                    <div>
+                        <strong>Highlighted Text (Red)</strong>
+                        <div class="text-muted small">Critical errors that violate strict style or formatting rules.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><i class="fas fa-magic text-primary"></i> 4. Fixing Issues</h2>
+                <p>Doc Scanner doesn't just point out mistakes—it actively helps you resolve them!</p>
+                <div class="feature-box mt-3" style="border-left-color: var(--secondary);">
+                    <ul class="step-list mb-0">
+                        <li><strong>Click the Assistant Icon:</strong> Look for the <span class="icon-badge ms-1 me-1"><i class="fas fa-robot"></i></span> next to problematic sentences and click it.</li>
+                        <li><strong>Read the Guidance:</strong> A detailed pop-up will explain exactly which rule was broken and why.</li>
+                        <li><strong>Apply the Correction:</strong> The tool will often offer a perfect rewrite. Click <span class="badge bg-primary">Apply Correction</span> to instantly inject the good sentence!</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2><i class="fas fa-download text-secondary"></i> 5. Exporting Your Work</h2>
+                <p>When you're happy with your polished document, save your progress:</p>
+                <ul class="step-list">
+                    <li>Look for the <strong>Export</strong> button at the top right of the Document Content area.</li>
+                    <li>Click it to download your pristine, fully-corrected text file back to your computer.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><i class="fas fa-lightbulb text-warning"></i> 6. Tips for Success</h2>
+                <div class="row mt-3">
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-tachometer-alt fs-1 text-primary mb-2"></i>
+                        <h5>Pace Yourself</h5>
+                        <p class="small text-muted">Don't get overwhelmed by a sea of red! Click through issues one by one.</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-user-shield fs-1 text-success mb-2"></i>
+                        <h5>You Are In Control</h5>
+                        <p class="small text-muted">You don't have to accept every suggestion. Your judgement overrides the rules.</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-moon fs-1 text-dark mb-2"></i>
+                        <h5>Use Dark Mode</h5>
+                        <p class="small text-muted">Toggle the Dark Mode switch in the navbar to save your eyes during long sessions!</p>
+                    </div>
+                </div>
+            </section>
+            
+            <div class="mt-5 text-center p-4" style="background: rgba(108, 92, 231, 0.05); border-radius: 15px;">
+                <h4 class="mb-0" style="color: var(--primary);">Happy Writing! <i class="fas fa-heart text-danger ms-2" style="animation: pulse-icon 1s infinite;"></i></h4>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

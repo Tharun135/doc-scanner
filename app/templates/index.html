@@ -1067,6 +1067,37 @@
             border-color: var(--secondary-color);
             background: rgba(42, 155, 170, 0.2);
         }
+        
+        .logo-scanner-icon {
+            position: relative;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 32px;
+            height: 32px;
+            color: #00d2ff;
+            font-size: 1.2rem;
+            overflow: hidden;
+            border-radius: 6px;
+            background: rgba(0, 210, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+        }
+        .logo-scanner-icon .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #00d2ff;
+            box-shadow: 0 0 5px #00d2ff, 0 0 10px #00d2ff;
+            animation: scanning 2s linear infinite;
+        }
+        @keyframes scanning {
+            0% { top: -2px; opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
     </style>
 </head>
 
@@ -1074,21 +1105,24 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="#"><i class="fas fa-check-circle"></i> Doc Scanner</a>
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <div class="logo-scanner-icon">
+                    <i class="fas fa-file-contract"></i>
+                    <div class="scan-line"></div>
+                </div>
+                <span class="fw-bold" style="letter-spacing: 0.5px;">Doc Scanner</span>
+            </a>
             <div class="d-flex align-items-center">
                 <button class="btn btn-outline-light btn-sm me-2" id="historyBtn">
                     <i class="fas fa-history"></i> History
                 </button>
+                <a href="{{ url_for('main.user_guide') }}" class="btn btn-outline-light btn-sm me-2" target="_blank">
+                    <i class="fas fa-book-open"></i> User Guide
+                </a>
                 <a href="{{ url_for('rag.rag_dashboard') }}" class="btn btn-outline-light btn-sm me-2">
                     <i class="fas fa-brain"></i> RAG Dashboard
                 </a>
-                <!-- Hybrid Intelligence Status -->
-                <div class="btn btn-outline-light btn-sm me-2" id="hybridIntelligenceStatus"
-                    title="Hybrid Intelligence Status">
-                    <i class="fas fa-robot"></i>
-                    <span id="hybridStatusText">Checking...</span>
-                    <span id="hybridStatusIndicator" class="badge ms-1" style="background-color: #6c757d;">●</span>
-                </div>
+
                 <div class="form-check form-switch me-3">
                     <input class="form-check-input" type="checkbox" id="darkModeToggle">
                     <label class="form-check-label" for="darkModeToggle">Dark Mode</label>
@@ -1143,20 +1177,8 @@
                         </div>
                         <button class="btn btn-primary w-100" type="submit">
                             <i class="fas fa-upload"></i> <span id="uploadBtnText">Upload & Analyze</span>
-                            <span class="ai-enhancement-badge">AI Enhanced</span>
                         </button>
 
-                        <!-- NEW: Intelligent Rule Analysis Option -->
-                        <div class="mt-3">
-                            <button class="btn btn-gradient-intelligent w-100" type="button"
-                                id="intelligentAnalysisBtn">
-                                <i class="fas fa-brain"></i> Intelligent Rule Analysis
-                                <span class="intelligent-badge">RAG-Powered</span>
-                            </button>
-                            <small class="text-muted d-block mt-1 text-center">
-                                <i class="fas fa-magic"></i> Context-aware guidance using advanced rules
-                            </small>
-                        </div>
                     </form>
                 </div>
             </div>
@@ -1233,7 +1255,6 @@
                         <h4>Document Content & Feedback</h4>
                         <div class="toolbar">
                             <button id="exportBtn"><i class="fas fa-download"></i> Export</button>
-                            <button id="settingsBtn"><i class="fas fa-cog"></i> Settings</button>
                         </div>
                     </div>
                 </div>
@@ -2028,65 +2049,7 @@
             }
         });
 
-        // NEW: Intelligent Rule Analysis Button Handler
-        document.getElementById('intelligentAnalysisBtn').addEventListener('click', async (e) => {
-            e.preventDefault();
 
-            if (selectedFiles.length === 0) {
-                alert('Please select at least one file first.');
-                return;
-            }
-
-            const btn = e.target;
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-brain fa-spin"></i> Analyzing with Rules...';
-            btn.disabled = true;
-
-            try {
-                // Create form data with intelligent analysis flag
-                const formData = new FormData();
-                formData.append('file', selectedFiles[0]);
-                formData.append('document_type', 'general'); // Could be made configurable
-                formData.append('writing_goals', 'clarity');
-                formData.append('writing_goals', 'conciseness');
-                formData.append('writing_goals', 'directness');
-
-                // Show progress with intelligent analysis message
-                showProgressLoader(false);
-                updateProgressMessage('🧠 Initializing Intelligent Rule Analysis...');
-
-                const response = await fetch('/analyze_intelligent', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (response.ok) {
-                    // Get JSON response and redirect to intelligent results page
-                    const analysisResult = await response.json();
-
-                    if (analysisResult.success) {
-                        // Encode the analysis data for URL parameter
-                        const analysisDataEncoded = encodeURIComponent(JSON.stringify(analysisResult));
-
-                        // Redirect to the intelligent results page with nice UI
-                        window.location.href = `/intelligent_results?data=${analysisDataEncoded}`;
-                    } else {
-                        throw new Error(analysisResult.error || 'Analysis failed');
-                    }
-                } else {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Analysis failed');
-                }
-
-            } catch (error) {
-                console.error('Intelligent analysis error:', error);
-                alert('Intelligent analysis failed: ' + error.message);
-            } finally {
-                hideProgressLoader();
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
-            }
-        });
 
         async function processSingleFile(file) {
             let uploadCompleted = false;
@@ -3838,6 +3801,7 @@
             aiButton.setAttribute('data-sentence-index', sentenceIndex);
             aiButton.setAttribute('data-feedback', encodeURIComponent(item.message));
             aiButton.setAttribute('data-sentence', encodeURIComponent(sentence));
+            aiButton.setAttribute('data-item', encodeURIComponent(JSON.stringify(item)));
             
             if (item.isMasterFix && item.multipleFeedback) {
                 aiButton.setAttribute('data-multiple-feedback', encodeURIComponent(JSON.stringify(item.multipleFeedback)));
@@ -3846,9 +3810,7 @@
                 aiButton.setAttribute('title', 'Get rule-based guidance');
             }
             
-            aiButton.innerHTML = item.isMasterFix ? '<i class="fas fa-magic"></i>' : '<i class="fas fa-robot"></i>';
-            if (item.isMasterFix) aiButton.style.color = '#6f42c1';
-
+            aiButton.innerHTML = '<i class="fas fa-robot"></i>';
             wrapperDiv.appendChild(contentDiv);
             wrapperDiv.appendChild(aiButton);
             feedbackDiv.appendChild(wrapperDiv);
@@ -4606,11 +4568,6 @@
         // History functionality
         document.getElementById('historyBtn').addEventListener('click', () => {
             showHistoryModal();
-        });
-
-        // Settings functionality
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            showSettingsModal();
         });
 
         // Initialize modal event handlers when DOM is ready

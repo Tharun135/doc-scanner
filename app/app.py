@@ -599,6 +599,11 @@ def debug_page():
     import os
     return send_from_directory(os.path.dirname(os.path.dirname(__file__)), 'debug_sentences.html')
 
+@main.route('/guide')
+def user_guide():
+    """Render the end-user guide"""
+    return render_template('guide.html')
+
 @main.route('/debug_sentences', methods=['POST'])
 def debug_sentences():
     """Debug endpoint to check sentence data for malformed HTML"""
@@ -1146,10 +1151,13 @@ def ai_suggestion():
 
     # Ensure we use rule feedback as Suggested Action
     ai_answer = data.get('ai_answer', '')
+    is_reviewer_rationale = False
+    
     if not ai_answer:
         ui_issue = data.get('issue')
         if ui_issue and isinstance(ui_issue, dict) and 'reviewer_rationale' in ui_issue:
             ai_answer = ui_issue['reviewer_rationale']
+            is_reviewer_rationale = True
         else:
             ai_answer = f"Review needed based on rule: {feedback_text}"
 
@@ -1167,7 +1175,7 @@ def ai_suggestion():
         "note": "Generated using Rule-Based Engine + RAG (Community Edition)",
         "is_semantic_explanation": False,
         "is_guidance_only": True,
-        "is_reviewer_rationale": False,
+        "is_reviewer_rationale": is_reviewer_rationale,
         "guidance_category": "readability",
         "semantic_explanation": "",
         "decision_type": ""

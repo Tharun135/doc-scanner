@@ -29,7 +29,6 @@ def _get_nlp():
 
 # Example terminology dictionary (customize for your manuals)
 TERMINOLOGY = {
-    "click on": "click",
     "shut down": "power off",
     "USB stick": "USB drive"
 }
