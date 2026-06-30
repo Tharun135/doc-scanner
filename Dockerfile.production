@@ -20,8 +20,6 @@ COPY deployment/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir gunicorn gevent
 
-# Download spaCy model
-RUN python -m spacy download en_core_web_sm
 
 # Final production stage
 FROM python:3.11-slim
