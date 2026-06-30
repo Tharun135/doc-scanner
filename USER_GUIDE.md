@@ -45,10 +45,10 @@ Doc Scanner doesn't just tell you what's wrong—it helps you fix it!
 
 1. **Click the Robot/Wand Icon:** Whenever you see an issue, click the icon next to that sentence.
 2. **Read the Rule Guidance:** A pop-up window will appear showing you exactly which rule was broken. It will explain *why* it's an issue in simple terms. 🧠
-3. **Apply the Correction:** 
-   * Often, the tool will provide a perfectly rewritten version of your sentence. 
-   * If you like the suggestion, you can usually click **Apply Correction** to instantly replace the bad sentence with the good one! ✨
-   * If the tool asks for "Human Review," you can type your own corrected sentence into the text box and apply it.
+3. **Make Your Correction:** 
+   * Use the guidance and rationale provided to understand how to improve your sentence.
+   * Type your corrected version directly into the provided text box.
+   * Click **Apply Correction** to instantly replace the problematic sentence in your document! ✨
 
 ---
 

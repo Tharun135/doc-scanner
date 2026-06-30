@@ -8,16 +8,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
         :root {
-            --primary: #6c5ce7;
-            --secondary: #00d2ff;
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
             --accent: #ff7675;
-            --bg-color: #f0f3f8;
-            --card-bg: #ffffff;
-            --text-dark: #2d3436;
+            --bg-color: #0f2027;
+            --card-bg: rgba(22, 33, 62, 0.85);
+            --text-dark: #e0e6ed;
         }
 
         body { 
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
             color: var(--text-dark); 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             min-height: 100vh;
@@ -80,10 +80,14 @@
         }
 
         h3 { 
-            color: #4b6584; 
+            color: #a0aec0; 
             margin-top: 25px; 
             font-size: 1.3rem; 
             font-weight: 600;
+        }
+
+        .text-muted {
+            color: #a0aec0 !important;
         }
 
         .feature-box {
@@ -307,7 +311,7 @@
                     <ul class="step-list mb-0">
                         <li><strong>Click the Assistant Icon:</strong> Look for the <span class="icon-badge ms-1 me-1"><i class="fas fa-robot"></i></span> next to problematic sentences and click it.</li>
                         <li><strong>Read the Guidance:</strong> A detailed pop-up will explain exactly which rule was broken and why.</li>
-                        <li><strong>Apply the Correction:</strong> The tool will often offer a perfect rewrite. Click <span class="badge bg-primary">Apply Correction</span> to instantly inject the good sentence!</li>
+                        <li><strong>Make Your Correction:</strong> Use the provided rule rationale to understand the issue. Type your improved version into the text box and click <span class="badge bg-primary">Apply Correction</span> to instantly update your document!</li>
                     </ul>
                 </div>
             </section>
@@ -335,14 +339,14 @@
                         <p class="small text-muted">You don't have to accept every suggestion. Your judgement overrides the rules.</p>
                     </div>
                     <div class="col-md-4 text-center mb-3">
-                        <i class="fas fa-moon fs-1 text-dark mb-2"></i>
+                        <i class="fas fa-moon fs-1 text-light mb-2"></i>
                         <h5>Use Dark Mode</h5>
                         <p class="small text-muted">Toggle the Dark Mode switch in the navbar to save your eyes during long sessions!</p>
                     </div>
                 </div>
             </section>
             
-            <div class="mt-5 text-center p-4" style="background: rgba(108, 92, 231, 0.05); border-radius: 15px;">
+            <div class="mt-5 text-center p-4" style="background: rgba(0, 210, 255, 0.05); border-radius: 15px;">
                 <h4 class="mb-0" style="color: var(--primary);">Happy Writing! <i class="fas fa-heart text-danger ms-2" style="animation: pulse-icon 1s infinite;"></i></h4>
             </div>
         </div>
