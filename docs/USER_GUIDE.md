@@ -61,7 +61,17 @@ Once you have gone through the document and fixed the highlighted issues, you wi
 
 ---
 
-## 6. 💡 Tips for Success
+## 6. 🧠 Expanding the Knowledge Base
+
+**"Expand Knowledge Base" Button (Top Right)** 
+Clicking the purple Expand Knowledge Base button in the top right corner will take you to a dedicated upload page. There, you can select chunking methods (like adaptive or sentence-based) and upload multiple source documents (PDFs, DOCX, Markdown, TXT, etc.).
+
+**"Hot Ingestion" Drop Zone (Bottom Right)** 
+If you have a document handy, you can quickly drag and drop it into the Hot Ingestion panel on the bottom right of the dashboard, or click it to open your file browser. This immediately processes the file into your vector database.
+
+---
+
+## 7. 💡 Tips for Success
 * **Take it one step at a time:** If a document has many issues, don't get overwhelmed! Just click through them one by one.
 * **You are in control:** You don't *have* to accept every suggestion. If you feel your original sentence is better for your specific audience, you can ignore the warning. 🛡️
 * **Use Dark Mode:** If your eyes get tired, toggle the **Dark Mode** 🌙 switch in the top navigation bar for a darker, high-contrast reading experience!

@@ -1,3 +1,0 @@
-The Data Source table is updated with the updated list of the data points.
-To delete a data point, follow these steps:
-The Configurator home page is displayed.

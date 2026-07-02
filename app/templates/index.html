@@ -1794,6 +1794,57 @@
             if (batchResultsDiv) batchResultsDiv.remove();
 
             updateFileList();
+
+            // Clear previously analyzed document content
+            const documentContent = document.getElementById('documentContent');
+            if (documentContent) {
+                documentContent.innerHTML = '<h4>Document Content</h4>';
+            }
+            
+            // Clear issues tab
+            const feedbackContent = document.getElementById('feedbackContent');
+            if (feedbackContent) {
+                feedbackContent.innerHTML = '<h5 class="mb-3">Document Issues</h5>';
+            }
+            
+            // Reset metrics
+            const wordCount = document.getElementById('wordCount');
+            if (wordCount) wordCount.textContent = '0';
+            
+            const sentenceCount = document.getElementById('sentenceCount');
+            if (sentenceCount) sentenceCount.textContent = '0';
+            
+            // Reset quality score
+            const qualityScore = document.getElementById('qualityScore');
+            if (qualityScore) qualityScore.textContent = '-';
+            
+            const qualityProgressBar = document.getElementById('qualityProgressBar');
+            if (qualityProgressBar) {
+                qualityProgressBar.style.width = '0%';
+                qualityProgressBar.className = 'progress-bar';
+            }
+            
+            const qualityDescription = document.getElementById('qualityDescription');
+            if (qualityDescription) qualityDescription.textContent = 'Upload text to see quality metrics';
+            
+            // Reset issues progress
+            const issuesStats = document.getElementById('issuesStats');
+            if (issuesStats) issuesStats.textContent = '0';
+            
+            const issuesProgressBar = document.getElementById('issuesProgressBar');
+            if (issuesProgressBar) {
+                issuesProgressBar.style.width = '100%';
+                issuesProgressBar.className = 'progress-bar bg-success';
+            }
+            
+            const issuesDescription = document.getElementById('issuesDescription');
+            if (issuesDescription) issuesDescription.textContent = 'No issues detected';
+            
+            // Reset Chart if it exists
+            if (typeof analysisChart !== 'undefined' && analysisChart) {
+                analysisChart.destroy();
+                analysisChart = null;
+            }
         }
 
         function resetDropzone() {
@@ -5001,6 +5052,9 @@
         style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
         <div
             style="background:#fff; color:#222; padding:2rem; border-radius:12px; min-width:800px; max-width:90vw; max-height:80vh; overflow:auto; position:relative;">
+            <button type="button" aria-label="Close" onclick="document.getElementById('historyModal').style.display='none'" style="position:absolute; top:20px; right:20px; font-size:1.5rem; cursor:pointer; background:none; border:none; color:#666; padding:10px;">
+                <i class="fas fa-times"></i>
+            </button>
             <h3 style="margin-top:0; color:#2c3e50; display:flex; align-items:center;">
                 <i class="fas fa-history" style="margin-right:10px; color:#3498db;"></i>
                 Suggestion History
