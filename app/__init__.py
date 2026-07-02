@@ -33,9 +33,15 @@ def create_app():
 
     # ── Security & DB configuration ──────────────────────────────────────────
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-in-production-random-string')
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), 'app.db'
-    )
+    # Use DATABASE_URL from environment if available (for production Postgres), otherwise fallback to local SQLite
+    db_url = os.environ.get('DATABASE_URL')
+    if not db_url:
+        db_url = 'sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app.db')
+    # SQLAlchemy requires 'postgresql://' but some hosts like Render provide 'postgres://'
+    elif db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     # ── Initialize extensions ────────────────────────────────────────────────
